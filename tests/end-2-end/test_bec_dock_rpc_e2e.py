@@ -59,7 +59,7 @@ def test_rpc_add_dock_with_plots_e2e(qtbot, bec_client_lib, connected_client_gui
 
     mm.map("samx", "samy")
     curve = wf.plot(x_name="samx", y_name="bpm4i")
-    im_item = im.image("eiger")
+    im_item = im.image(device_name="eiger", device_entry="preview")
 
     assert curve.__class__.__name__ == "RPCReference"
     assert curve.__class__ == RPCReference

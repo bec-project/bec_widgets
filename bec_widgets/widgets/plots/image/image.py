@@ -1,27 +1,25 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Literal, Sequence
+from typing import Literal
 
 import numpy as np
 from bec_lib import bec_logger
 from bec_lib.endpoints import MessageEndpoints
 from pydantic import BaseModel, Field, field_validator
-from qtpy.QtCore import Qt, QTimer
-from qtpy.QtWidgets import QComboBox, QStyledItemDelegate, QWidget
+from qtpy.QtCore import QTimer
+from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils import ConnectionConfig
-from bec_widgets.utils.colors import Colors
+from bec_widgets.utils.colors import Colors, apply_theme
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
-from bec_widgets.utils.toolbars.actions import NoCheckDelegate, WidgetAction
-from bec_widgets.utils.toolbars.bundles import ToolbarBundle
-from bec_widgets.widgets.control.device_input.base_classes.device_input_base import (
-    BECDeviceFilter,
-    ReadoutPriority,
-)
-from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.plots.image.image_base import ImageBase
 from bec_widgets.widgets.plots.image.image_item import ImageItem
+from bec_widgets.widgets.plots.image.toolbar_components.device_selection import (
+    DeviceSelection,
+    DeviceSelectionConnection,
+    device_selection_bundle,
+)
 from bec_widgets.widgets.plots.plot_base import PlotBase
 
 logger = bec_logger.logger
@@ -44,11 +42,19 @@ class ImageConfig(ConnectionConfig):
 
 
 class ImageLayerConfig(BaseModel):
-    monitor: str | tuple | None = Field(None, description="The name of the monitor.")
-    monitor_type: Literal["1d", "2d", "auto"] = Field("auto", description="The type of monitor.")
-    source: Literal["device_monitor_1d", "device_monitor_2d", "auto"] = Field(
-        "auto", description="The source of the image data."
+    device_name: str = Field("", description="The device name to monitor.")
+    device_entry: str = Field("", description="The signal/entry name to monitor on the device.")
+    monitor_type: Literal["1d", "2d"] | None = Field(None, description="The type of monitor.")
+    source: Literal["device_monitor_1d", "device_monitor_2d"] | None = Field(
+        None, description="The source of the image data."
     )
+    async_signal_name: str | None = Field(
+        None, description="Async signal name (obj_name) used for async endpoints."
+    )
+    connection_status: Literal["connected", "disconnected", "error"] = Field(
+        "disconnected", description="Current connection status."
+    )
+    connection_error: str | None = Field(None, description="Last connection error, if any.")
 
 
 class Image(ImageBase):
@@ -74,8 +80,10 @@ class Image(ImageBase):
         "autorange.setter",
         "autorange_mode",
         "autorange_mode.setter",
-        "monitor",
-        "monitor.setter",
+        "device_name",
+        "device_name.setter",
+        "device_entry",
+        "device_entry.setter",
         "enable_colorbar",
         "enable_simple_colorbar",
         "enable_simple_colorbar.setter",
@@ -96,6 +104,8 @@ class Image(ImageBase):
         "rois",
     ]
 
+    SUPPORTED_SIGNALS = ["AsyncSignal", "AsyncMultiSignal", "DynamicSignal"]
+
     def __init__(
         self,
         parent: QWidget | None = None,
@@ -108,15 +118,27 @@ class Image(ImageBase):
         if config is None:
             config = ImageConfig(widget_class=self.__class__.__name__)
         self.gui_id = config.gui_id
-        self.subscriptions: defaultdict[str, ImageLayerConfig] = defaultdict(
-            lambda: ImageLayerConfig(monitor=None, monitor_type="auto", source="auto")
-        )
+        self.subscriptions: defaultdict[str, ImageLayerConfig] = defaultdict(ImageLayerConfig)
+        # Store signal configs separately (not serialized to QSettings)
+        self._signal_configs: dict[str, dict] = {}
+
         super().__init__(
             parent=parent, config=config, client=client, gui_id=gui_id, popups=popups, **kwargs
         )
+        self._device_selection_updating = False
+        self._autorange_on_next_update = False
         self._init_toolbar_image()
         self.layer_removed.connect(self._on_layer_removed)
+        self.old_scan_id = None
         self.scan_id = None
+        self.async_update = False
+        self.bec_dispatcher.connect_slot(self.on_scan_status, MessageEndpoints.scan_status())
+        self.bec_dispatcher.connect_slot(self.on_scan_progress, MessageEndpoints.scan_progress())
+
+    @property
+    def _config(self) -> ImageLayerConfig:
+        """Helper property to access the main layer config."""
+        return self.subscriptions["main"]
 
     ##################################
     ### Toolbar Initialization
@@ -126,38 +148,13 @@ class Image(ImageBase):
         """
         Initializes the toolbar for the image widget.
         """
-        self.device_combo_box = DeviceComboBox(
-            parent=self,
-            device_filter=BECDeviceFilter.DEVICE,
-            readout_priority_filter=[ReadoutPriority.ASYNC],
+        self.toolbar.add_bundle(
+            device_selection_bundle(self.toolbar.components, client=self.client)
         )
-        self.device_combo_box.addItem("", None)
-        self.device_combo_box.setCurrentText("")
-        self.device_combo_box.setToolTip("Select Device")
-        self.device_combo_box.setFixedWidth(150)
-        self.device_combo_box.setItemDelegate(NoCheckDelegate(self.device_combo_box))
-
-        self.dim_combo_box = QComboBox(parent=self)
-        self.dim_combo_box.addItems(["auto", "1d", "2d"])
-        self.dim_combo_box.setCurrentText("auto")
-        self.dim_combo_box.setToolTip("Monitor Dimension")
-        self.dim_combo_box.setFixedWidth(100)
-        self.dim_combo_box.setItemDelegate(NoCheckDelegate(self.dim_combo_box))
-
-        self.toolbar.components.add_safe(
-            "image_device_combo", WidgetAction(widget=self.device_combo_box, adjust_size=False)
+        self.toolbar.connect_bundle(
+            "device_selection",
+            DeviceSelectionConnection(self.toolbar.components, target_widget=self),
         )
-        self.toolbar.components.add_safe(
-            "image_dim_combo", WidgetAction(widget=self.dim_combo_box, adjust_size=False)
-        )
-
-        bundle = ToolbarBundle("monitor_selection", self.toolbar.components)
-        bundle.add_action("image_device_combo")
-        bundle.add_action("image_dim_combo")
-
-        self.toolbar.add_bundle(bundle)
-        self.device_combo_box.currentTextChanged.connect(self.connect_monitor)
-        self.dim_combo_box.currentTextChanged.connect(self.connect_monitor)
 
         crosshair_bundle = self.toolbar.get_bundle("image_crosshair")
         crosshair_bundle.add_action("image_autorange")
@@ -165,7 +162,7 @@ class Image(ImageBase):
 
         self.toolbar.show_bundles(
             [
-                "monitor_selection",
+                "device_selection",
                 "plot_export",
                 "mouse_interaction",
                 "image_crosshair",
@@ -178,85 +175,350 @@ class Image(ImageBase):
 
     def _adjust_and_connect(self):
         """
-        Adjust the size of the device combo box and populate it with preview signals.
+        Sync the device selection toolbar with current properties.
         Has to be done with QTimer.singleShot to ensure the UI is fully initialized, needed for testing.
-        """
-        self._populate_preview_signals()
-        self._reverse_device_items()
-        self.device_combo_box.setCurrentText("")  # set again default to empty string
 
-    def _populate_preview_signals(self) -> None:
+        Note: DeviceComboBox and SignalComboBox auto-populate themselves, no manual population needed.
         """
-        Populate the device combo box with preview-signal devices in the
-        format '<device>_<signal>' and store the tuple(device, signal) in
-        the item's userData for later use.
-        """
-        preview_signals = self.client.device_manager.get_bec_signals("PreviewSignal")
-        for device, signal, signal_config in preview_signals:
-            label = signal_config.get("obj_name", f"{device}_{signal}")
-            self.device_combo_box.addItem(label, (device, signal, signal_config))
-
-    def _reverse_device_items(self) -> None:
-        """
-        Reverse the current order of items in the device combo box while
-        keeping their userData and restoring the previous selection.
-        """
-        current_text = self.device_combo_box.currentText()
-        items = [
-            (self.device_combo_box.itemText(i), self.device_combo_box.itemData(i))
-            for i in range(self.device_combo_box.count())
-        ]
-        self.device_combo_box.clear()
-        for text, data in reversed(items):
-            self.device_combo_box.addItem(text, data)
-        if current_text:
-            self.device_combo_box.setCurrentText(current_text)
+        self._sync_device_selection()
 
     @SafeSlot()
-    def connect_monitor(self, *args, **kwargs):
+    def on_device_selection_changed(self, _):
         """
-        Connect the target widget to the selected monitor based on the current device and dimension.
-
-        If the selected device is a preview-signal device, it will use the tuple (device, signal) as the monitor.
+        Called when device or signal selection changes in the toolbar.
+        This reads from the toolbar and updates the widget properties.
         """
-        dim = self.dim_combo_box.currentText()
-        data = self.device_combo_box.currentData()
+        if self._device_selection_updating:
+            return
 
-        if isinstance(data, tuple):
-            self.image(monitor=data, monitor_type="auto")
-        else:
-            self.image(monitor=self.device_combo_box.currentText(), monitor_type=dim)
+        self._device_selection_updating = True
+        try:
+            try:
+                action = self.toolbar.components.get_action("device_selection")
+            except Exception:
+                return
+
+            if action is None:
+                return
+
+            device_selection: DeviceSelection = action.widget
+            device = device_selection.device_combo_box.currentText()
+            signal_text = device_selection.signal_combo_box.currentText()
+
+            if not device:
+                self.device_name = ""
+                return
+            if not device_selection.device_combo_box.is_valid_input:
+                return
+
+            if not device_selection.signal_combo_box.is_valid_input:
+                if self._config.device_entry:
+                    self.device_entry = ""
+                if device != self._config.device_name:
+                    self.device_name = device
+                return
+
+            if device == self._config.device_name and signal_text == self._config.device_entry:
+                return
+
+            # Get the signal config stored in the combobox
+            signal_config = device_selection.signal_combo_box.get_signal_config()
+
+            if not signal_config:
+                # Fallback: try to get config from device
+                try:
+                    device_obj = self.dev[device]
+                    signal_config = device_obj._info["signals"].get(signal_text, {})
+                except (KeyError, AttributeError):
+                    logger.warning(f"Could not get signal config for {device}.{signal_text}")
+                    signal_config = None
+
+            # Store signal config and set properties which will trigger the connection
+            self._signal_configs["main"] = signal_config
+            self.device_name = device
+            self.device_entry = signal_text
+        finally:
+            self._device_selection_updating = False
 
     ################################################################################
     # Data Acquisition
 
-    @SafeProperty(str)
-    def monitor(self) -> str:
+    @SafeProperty(str, auto_emit=True)
+    def device_name(self) -> str:
         """
-        The name of the monitor to use for the image.
+        The name of the device to monitor for image data.
         """
-        return self.subscriptions["main"].monitor or ""
+        return self._config.device_name
 
-    @monitor.setter
-    def monitor(self, value: str):
+    @device_name.setter
+    def device_name(self, value: str):
         """
-        Set the monitor for the image.
+        Set the device name for the image. This should be used together with device_entry.
+        When both device_name and device_entry are set, the widget connects to that device signal.
 
         Args:
-            value(str): The name of the monitor to set.
+            value(str): The name of the device to monitor.
         """
-        if self.subscriptions["main"].monitor == value:
+        if not value:
+            # Clear the monitor if empty device name
+            if self._config.device_name:
+                self._disconnect_current_monitor()
+                self._config.device_name = ""
+                self._config.device_entry = ""
+                self._signal_configs.pop("main", None)
+                self._set_connection_status("disconnected")
             return
-        try:
-            self.entry_validator.validate_monitor(value)
-        except ValueError:
+
+        old_device = self._config.device_name
+        self._config.device_name = value
+
+        # If we have a device_entry, reconnect with the new device
+        if self._config.device_entry:
+            # Try to get fresh signal config for the new device
+            try:
+                device_obj = self.dev[value]
+                # Try to get signal config for the current entry
+                if self._config.device_entry in device_obj._info.get("signals", {}):
+                    self._signal_configs["main"] = device_obj._info["signals"][
+                        self._config.device_entry
+                    ]
+                    self._setup_connection()
+                else:
+                    # Signal doesn't exist on new device
+                    logger.warning(
+                        f"Signal '{self._config.device_entry}' doesn't exist on device '{value}'"
+                    )
+                    self._disconnect_current_monitor()
+                    self._config.device_entry = ""
+                    self._signal_configs.pop("main", None)
+                    self._set_connection_status(
+                        "error", f"Signal '{self._config.device_entry}' doesn't exist"
+                    )
+            except (KeyError, AttributeError):
+                # Device doesn't exist
+                logger.warning(f"Device '{value}' not found")
+                if old_device:
+                    self._disconnect_current_monitor()
+                self._set_connection_status("error", f"Device '{value}' not found")
+
+        # Toolbar sync happens via SafeProperty auto_emit property_changed handling.
+
+    @SafeProperty(str, auto_emit=True)
+    def device_entry(self) -> str:
+        """
+        The signal/entry name to monitor on the device.
+        """
+        return self._config.device_entry
+
+    @device_entry.setter
+    def device_entry(self, value: str):
+        """
+        Set the device entry (signal) for the image. This should be used together with device_name.
+        When set, it will connect to updates from that device signal.
+
+        Args:
+            value(str): The signal name to monitor.
+        """
+        if not value:
+            if self._config.device_entry:
+                self._disconnect_current_monitor()
+                self._config.device_entry = ""
+                self._signal_configs.pop("main", None)
+                self._set_connection_status("disconnected")
             return
-        self.image(monitor=value)
+
+        self._config.device_entry = value
+
+        # If we have a device_name, try to connect
+        if self._config.device_name:
+            try:
+                device_obj = self.dev[self._config.device_name]
+                signal_config = device_obj._info["signals"].get(value)
+                if not isinstance(signal_config, dict) or not signal_config.get("signal_class"):
+                    logger.warning(
+                        f"Could not find valid configuration for signal '{value}' "
+                        f"on device '{self._config.device_name}'."
+                    )
+                    self._signal_configs.pop("main", None)
+                    self._set_connection_status("error", f"Signal '{value}' not found")
+                    return
+
+                self._signal_configs["main"] = signal_config
+                self._setup_connection()
+            except (KeyError, AttributeError):
+                logger.warning(
+                    f"Could not find signal '{value}' on device '{self._config.device_name}'."
+                )
+                # Remove signal config if it can't be fetched
+                self._signal_configs.pop("main", None)
+                self._set_connection_status("error", f"Signal '{value}' not found")
+
+        else:
+            logger.debug(f"device_entry setter: No device set yet for signal '{value}'")
 
     @property
     def main_image(self) -> ImageItem:
         """Access the main image item."""
         return self.layer_manager["main"].image
+
+    def _setup_connection(self):
+        """
+        Internal method to setup connection based on current device_name, device_entry, and signal_config.
+        """
+        if not self._config.device_name or not self._config.device_entry:
+            logger.warning("Cannot setup connection without both device_name and device_entry")
+            self._set_connection_status("disconnected")
+            return
+
+        signal_config = self._signal_configs.get("main")
+        if not signal_config:
+            logger.warning(
+                f"Cannot setup connection for {self._config.device_name}.{self._config.device_entry} without signal_config"
+            )
+            self._set_connection_status("error", "Missing signal config")
+            return
+
+        # Disconnect any existing monitor first
+        self._disconnect_current_monitor()
+
+        # Determine monitor type and source from signal_config
+        signal_class = signal_config.get("signal_class", None)
+        supported_classes = ["PreviewSignal"] + self.SUPPORTED_SIGNALS
+
+        if signal_class not in supported_classes:
+            logger.warning(
+                f"Signal '{self._config.device_name}.{self._config.device_entry}' has unsupported signal class '{signal_class}'. "
+                f"Supported classes: {supported_classes}"
+            )
+            self._set_connection_status("error", f"Unsupported signal class '{signal_class}'")
+            return
+
+        describe = signal_config.get("describe") or {}
+        signal_info = describe.get("signal_info") or {}
+        ndim = signal_info.get("ndim", None)
+
+        if ndim is None:
+            logger.warning(
+                f"Signal '{self._config.device_name}.{self._config.device_entry}' does not have a valid 'ndim' in its signal_info."
+            )
+            self._set_connection_status("error", "Missing ndim in signal_info")
+            return
+
+        config = self.subscriptions["main"]
+        self.async_update = False
+        config.async_signal_name = None
+
+        if ndim == 1:
+            config.source = "device_monitor_1d"
+            config.monitor_type = "1d"
+            if signal_class == "PreviewSignal":
+                self.bec_dispatcher.connect_slot(
+                    self.on_image_update_1d,
+                    MessageEndpoints.device_preview(
+                        self._config.device_name, self._config.device_entry
+                    ),
+                )
+            elif signal_class in self.SUPPORTED_SIGNALS:
+                self.async_update = True
+                config.async_signal_name = signal_config.get(
+                    "obj_name", f"{self._config.device_name}_{self._config.device_entry}"
+                )
+                self._setup_async_image(self.scan_id)
+        elif ndim == 2:
+            config.source = "device_monitor_2d"
+            config.monitor_type = "2d"
+            if signal_class == "PreviewSignal":
+                self.bec_dispatcher.connect_slot(
+                    self.on_image_update_2d,
+                    MessageEndpoints.device_preview(
+                        self._config.device_name, self._config.device_entry
+                    ),
+                )
+            elif signal_class in self.SUPPORTED_SIGNALS:
+                self.async_update = True
+                config.async_signal_name = signal_config.get(
+                    "obj_name", f"{self._config.device_name}_{self._config.device_entry}"
+                )
+                self._setup_async_image(self.scan_id)
+        else:
+            logger.warning(
+                f"Unsupported ndim '{ndim}' for monitor '{self._config.device_name}.{self._config.device_entry}'."
+            )
+            self._set_connection_status("error", f"Unsupported ndim '{ndim}'")
+            return
+
+        self._set_connection_status("connected")
+        logger.info(
+            f"Connected to {self._config.device_name}.{self._config.device_entry} with type {config.monitor_type}"
+        )
+        self._autorange_on_next_update = True
+
+    def _disconnect_current_monitor(self):
+        """
+        Internal method to disconnect the current monitor subscriptions.
+        """
+        if not self._config.device_name or not self._config.device_entry:
+            return
+
+        config = self.subscriptions["main"]
+
+        if self.async_update:
+            async_signal_name = config.async_signal_name or self._config.device_entry
+            ids_to_check = [self.scan_id, self.old_scan_id]
+
+            if config.source == "device_monitor_1d":
+                for scan_id in ids_to_check:
+                    if scan_id is None:
+                        continue
+                    self.bec_dispatcher.disconnect_slot(
+                        self.on_image_update_1d,
+                        MessageEndpoints.device_async_signal(
+                            scan_id, self._config.device_name, async_signal_name
+                        ),
+                    )
+                    logger.info(
+                        f"Disconnecting 1d update ScanID:{scan_id}, Device Name:{self._config.device_name},Device Entry:{async_signal_name}"
+                    )
+            elif config.source == "device_monitor_2d":
+                for scan_id in ids_to_check:
+                    if scan_id is None:
+                        continue
+                    self.bec_dispatcher.disconnect_slot(
+                        self.on_image_update_2d,
+                        MessageEndpoints.device_async_signal(
+                            scan_id, self._config.device_name, async_signal_name
+                        ),
+                    )
+                    logger.info(
+                        f"Disconnecting 2d update ScanID:{scan_id}, Device Name:{self._config.device_name},Device Entry:{async_signal_name}"
+                    )
+
+        else:
+            if config.source == "device_monitor_1d":
+                self.bec_dispatcher.disconnect_slot(
+                    self.on_image_update_1d,
+                    MessageEndpoints.device_preview(
+                        self._config.device_name, self._config.device_entry
+                    ),
+                )
+                logger.info(
+                    f"Disconnecting preview 1d update Device Name:{self._config.device_name}, Device Entry:{self._config.device_entry}"
+                )
+            elif config.source == "device_monitor_2d":
+                self.bec_dispatcher.disconnect_slot(
+                    self.on_image_update_2d,
+                    MessageEndpoints.device_preview(
+                        self._config.device_name, self._config.device_entry
+                    ),
+                )
+                logger.info(
+                    f"Disconnecting preview 2d update Device Name:{self._config.device_name}, Device Entry:{self._config.device_entry}"
+                )
+
+        # Reset async state
+        self.async_update = False
+        config.async_signal_name = None
+        self._set_connection_status("disconnected")
 
     ################################################################################
     # High Level methods for API
@@ -264,8 +526,8 @@ class Image(ImageBase):
     @SafeSlot(popup_error=True)
     def image(
         self,
-        monitor: str | tuple | None = None,
-        monitor_type: Literal["auto", "1d", "2d"] = "auto",
+        device_name: str | None = None,
+        device_entry: str | None = None,
         color_map: str | None = None,
         color_bar: Literal["simple", "full"] | None = None,
         vrange: tuple[int, int] | None = None,
@@ -274,30 +536,39 @@ class Image(ImageBase):
         Set the image source and update the image.
 
         Args:
-            monitor(str|tuple|None): The name of the monitor to use for the image, or a tuple of (device, signal) for preview signals. If None or empty string, the current monitor will be disconnected.
-            monitor_type(str): The type of monitor to use. Options are "1d", "2d", or "auto".
+            device_name(str|None): The name of the device to monitor. If None or empty string, the current monitor will be disconnected.
+            device_entry(str|None): The signal/entry name to monitor on the device.
             color_map(str): The color map to use for the image.
             color_bar(str): The type of color bar to use. Options are "simple" or "full".
             vrange(tuple): The range of values to use for the color map.
 
         Returns:
-            ImageItem: The image object.
+            ImageItem: The image object, or None if connection failed.
         """
+        # Disconnect existing monitor if any
+        if self._config.device_name and self._config.device_entry:
+            self._disconnect_current_monitor()
 
-        if self.subscriptions["main"].monitor:
-            self.disconnect_monitor(self.subscriptions["main"].monitor)
-        if monitor is None or monitor == "":
-            logger.warning(f"No monitor specified, cannot set image, old monitor is unsubscribed")
+        if not device_name or not device_entry:
+            if device_name or device_entry:
+                logger.warning("Both device_name and device_entry must be specified")
+            else:
+                logger.info("Disconnecting image monitor")
+            self.device_name = ""
             return None
 
-        if isinstance(monitor, str):
-            self.entry_validator.validate_monitor(monitor)
-        elif isinstance(monitor, Sequence):
-            self.entry_validator.validate_monitor(monitor[0])
-        else:
-            raise ValueError(f"Invalid monitor type: {type(monitor)}")
+        # Validate device
+        self.entry_validator.validate_monitor(device_name)
 
-        self.set_image_update(monitor=monitor, type=monitor_type)
+        # Clear old entry first to avoid reconnect attempts on the new device
+        if self._config.device_entry:
+            self.device_entry = ""
+
+        # Set properties to trigger connection
+        self.device_name = device_name
+        self.device_entry = device_entry
+
+        # Apply visual settings
         if color_map is not None:
             self.main_image.color_map = color_map
         if color_bar is not None:
@@ -305,32 +576,85 @@ class Image(ImageBase):
         if vrange is not None:
             self.vrange = vrange
 
-        self._sync_device_selection()
-
         return self.main_image
 
     def _sync_device_selection(self):
         """
-        Synchronize the device selection with the current monitor.
+        Synchronize the device and signal comboboxes with the current monitor state.
+        This ensures the toolbar reflects the device_name and device_entry properties.
         """
-        config = self.subscriptions["main"]
-        if config.monitor is not None:
-            for combo in (self.device_combo_box, self.dim_combo_box):
-                combo.blockSignals(True)
-            if isinstance(config.monitor, (list, tuple)):
-                self.device_combo_box.setCurrentText(f"{config.monitor[0]}_{config.monitor[1]}")
-            else:
-                self.device_combo_box.setCurrentText(config.monitor)
-            self.dim_combo_box.setCurrentText(config.monitor_type)
-            for combo in (self.device_combo_box, self.dim_combo_box):
-                combo.blockSignals(False)
-        else:
-            for combo in (self.device_combo_box, self.dim_combo_box):
-                combo.blockSignals(True)
-            self.device_combo_box.setCurrentText("")
-            self.dim_combo_box.setCurrentText("auto")
-            for combo in (self.device_combo_box, self.dim_combo_box):
-                combo.blockSignals(False)
+        try:
+            device_selection_action = self.toolbar.components.get_action("device_selection")
+        except Exception:  # noqa: BLE001 - toolbar might not be ready during early init
+            logger.warning(f"Image ({self.object_name}) toolbar was not ready during init.")
+            return
+
+        if device_selection_action is None:
+            return
+
+        device_selection: DeviceSelection = device_selection_action.widget
+        target_device = self._config.device_name or ""
+        target_entry = self._config.device_entry or ""
+
+        # Check if already synced
+        if (
+            device_selection.device_combo_box.currentText() == target_device
+            and device_selection.signal_combo_box.currentText() == target_entry
+        ):
+            return
+
+        device_selection.set_device_and_signal(target_device, target_entry)
+
+    def _sync_device_entry_from_toolbar(self) -> None:
+        """
+        Pull the signal selection from the toolbar if it differs from the current device_entry.
+        This keeps CLI-driven device_name updates in sync with the signal combobox state.
+        """
+        if self._device_selection_updating:
+            return
+
+        if not self._config.device_name:
+            return
+
+        try:
+            device_selection_action = self.toolbar.components.get_action("device_selection")
+        except Exception:  # noqa: BLE001 - toolbar might not be ready during early init
+            return
+
+        if device_selection_action is None:
+            return
+
+        device_selection: DeviceSelection = device_selection_action.widget
+        if device_selection.device_combo_box.currentText() != self._config.device_name:
+            return
+
+        signal_text = device_selection.signal_combo_box.currentText()
+        if not signal_text or signal_text == self._config.device_entry:
+            return
+
+        signal_config = device_selection.signal_combo_box.get_signal_config()
+        if not signal_config:
+            try:
+                device_obj = self.dev[self._config.device_name]
+                signal_config = device_obj._info["signals"].get(signal_text, {})
+            except (KeyError, AttributeError):
+                signal_config = None
+
+        if not signal_config:
+            return
+
+        self._signal_configs["main"] = signal_config
+        self._device_selection_updating = True
+        try:
+            self.device_entry = signal_text
+        finally:
+            self._device_selection_updating = False
+
+    def _set_connection_status(self, status: str, message: str | None = None) -> None:
+        self._config.connection_status = status
+        self._config.connection_error = message
+        self.property_changed.emit("connection_status", status)
+        self.property_changed.emit("connection_error", message or "")
 
     ################################################################################
     # Post Processing
@@ -411,107 +735,183 @@ class Image(ImageBase):
     ########################################
     # Connections
 
-    @SafeSlot()
-    def set_image_update(self, monitor: str | tuple, type: Literal["1d", "2d", "auto"]):
+    @SafeSlot(dict, dict)
+    def on_scan_status(self, msg: dict, meta: dict):
         """
-        Set the image update method for the given monitor.
+        Initial scan status message handler, which is triggered at the beginning and end of scan.
+        Needed for setup of AsyncSignal connections.
 
         Args:
-            monitor(str): The name of the monitor to use for the image.
-            type(str): The type of monitor to use. Options are "1d", "2d", or "auto".
+            msg(dict): The message content.
+            meta(dict): The message metadata.
         """
+        current_scan_id = msg.get("scan_id", None)
+        if current_scan_id is None:
+            return
+        self._handle_scan_change(current_scan_id)
 
-        # TODO consider moving connecting and disconnecting logic to Image itself if multiple images
-        if isinstance(monitor, (list, tuple)):
-            device = self.dev[monitor[0]]
-            signal = monitor[1]
-            if len(monitor) == 3:
-                signal_config = monitor[2]
-            else:
-                signal_config = device._info["signals"][signal]
-            signal_class = signal_config.get("signal_class", None)
-            if signal_class != "PreviewSignal":
-                logger.warning(f"Signal '{monitor}' is not a PreviewSignal.")
-                return
+    @SafeSlot(dict, dict)
+    def on_scan_progress(self, msg: dict, meta: dict):
+        """
+        For setting async image readback during scan progress updates if widget is started later than scan.
 
-            ndim = signal_config.get("describe", None).get("signal_info", None).get("ndim", None)
-            if ndim is None:
-                logger.warning(
-                    f"Signal '{monitor}' does not have a valid 'ndim' in its signal_info."
-                )
-                return
+        Args:
+            msg(dict): The message content.
+            meta(dict): The message metadata.
+        """
+        current_scan_id = meta.get("scan_id", None)
+        if current_scan_id is None:
+            return
+        self._handle_scan_change(current_scan_id)
 
-            if ndim == 1:
-                self.bec_dispatcher.connect_slot(
-                    self.on_image_update_1d, MessageEndpoints.device_preview(device.name, signal)
-                )
-                self.subscriptions["main"].source = "device_monitor_1d"
-                self.subscriptions["main"].monitor_type = "1d"
-            elif ndim == 2:
-                self.bec_dispatcher.connect_slot(
-                    self.on_image_update_2d, MessageEndpoints.device_preview(device.name, signal)
-                )
-                self.subscriptions["main"].source = "device_monitor_2d"
-                self.subscriptions["main"].monitor_type = "2d"
+    def _handle_scan_change(self, current_scan_id: str):
+        """
+        Update internal scan ids and refresh async connections if needed.
+        Also clears image buffers when scan changes.
 
-        else:  # FIXME old monitor 1d/2d endpoint handling, present for backwards compatibility, will be removed in future versions
-            if type == "1d":
-                self.bec_dispatcher.connect_slot(
-                    self.on_image_update_1d, MessageEndpoints.device_monitor_1d(monitor)
-                )
-                self.subscriptions["main"].source = "device_monitor_1d"
-                self.subscriptions["main"].monitor_type = "1d"
-            elif type == "2d":
-                self.bec_dispatcher.connect_slot(
-                    self.on_image_update_2d, MessageEndpoints.device_monitor_2d(monitor)
-                )
-                self.subscriptions["main"].source = "device_monitor_2d"
-                self.subscriptions["main"].monitor_type = "2d"
-            elif type == "auto":
-                self.bec_dispatcher.connect_slot(
-                    self.on_image_update_1d, MessageEndpoints.device_monitor_1d(monitor)
-                )
-                self.bec_dispatcher.connect_slot(
-                    self.on_image_update_2d, MessageEndpoints.device_monitor_2d(monitor)
-                )
-                self.subscriptions["main"].source = "auto"
-                logger.warning(
-                    f"Updates for '{monitor}' will be fetch from both 1D and 2D monitor endpoints."
-                )
-                self.subscriptions["main"].monitor_type = "auto"
+        Args:
+            current_scan_id (str): The current scan identifier.
+        """
+        if current_scan_id == self.scan_id:
+            return
 
-        logger.info(f"Connected to {monitor} with type {type}")
-        self.subscriptions["main"].monitor = monitor
+        # Scan ID changed - clear buffers and reset image
+        self.old_scan_id = self.scan_id
+        self.scan_id = current_scan_id
 
-    def disconnect_monitor(self, monitor: str | tuple):
+        # Clear image buffer for 1D data accumulation
+        self.main_image.clear()
+        if hasattr(self.main_image, "buffer"):
+            self.main_image.buffer = []
+            self.main_image.max_len = 0
+
+        # Reset crosshair if present
+        if self.crosshair is not None:
+            self.crosshair.reset()
+
+        # Reconnect async image subscription with new scan_id
+        if self.async_update:
+            self._setup_async_image(scan_id=self.scan_id)
+
+    def _get_async_signal_name(self) -> tuple[str, str] | None:
+        """
+        Returns device name and async signal name used for endpoints/messages.
+
+        Returns:
+            tuple[str, str] | None: (device_name, async_signal_name) or None if not available.
+        """
+        if not self._config.device_name or not self._config.device_entry:
+            return None
+
+        config = self.subscriptions["main"]
+        async_signal = config.async_signal_name or self._config.device_entry
+        return self._config.device_name, async_signal
+
+    def _setup_async_image(self, scan_id: str | None):
+        """
+        (Re)connect async image readback for the current scan.
+
+        Args:
+            scan_id (str | None): The scan identifier to subscribe to.
+        """
+        if not self.async_update:
+            return
+
+        config = self.subscriptions["main"]
+        async_names = self._get_async_signal_name()
+        if async_names is None:
+            logger.info("Async image setup skipped because monitor information is incomplete.")
+            return
+
+        device_name, async_signal = async_names
+        if config.monitor_type == "1d":
+            slot = self.on_image_update_1d
+        elif config.monitor_type == "2d":
+            slot = self.on_image_update_2d
+        else:
+            logger.warning(
+                f"Async image setup skipped due to unsupported monitor type '{config.monitor_type}'."
+            )
+            return
+
+        # Disconnect any previous scan subscriptions to avoid stale updates.
+        for prev_scan_id in (self.old_scan_id, self.scan_id):
+            if prev_scan_id is None:
+                continue
+            self.bec_dispatcher.disconnect_slot(
+                slot, MessageEndpoints.device_async_signal(prev_scan_id, device_name, async_signal)
+            )
+
+        if scan_id is None:
+            logger.info("Scan ID not available yet; delaying async image subscription.")
+            return
+
+        self.bec_dispatcher.connect_slot(
+            slot,
+            MessageEndpoints.device_async_signal(scan_id, device_name, async_signal),
+            from_start=True,
+            cb_info={"scan_id": scan_id},
+        )
+        logger.info(f"Setup async image for {device_name}.{async_signal} and scan {scan_id}.")
+
+    def disconnect_monitor(self, device_name: str | None = None, device_entry: str | None = None):
         """
         Disconnect the monitor from the image update signals, both 1D and 2D.
 
         Args:
-            monitor(str|tuple): The name of the monitor to disconnect, or a tuple of (device, signal) for preview signals.
+            device_name(str|None): The name of the device to disconnect. Defaults to current device.
+            device_entry(str|None): The signal/entry name to disconnect. Defaults to current entry.
         """
-        if isinstance(monitor, (list, tuple)):
-            if self.subscriptions["main"].source == "device_monitor_1d":
+        config = self.subscriptions["main"]
+        target_device = device_name or self._config.device_name
+        target_entry = device_entry or self._config.device_entry
+
+        if not target_device or not target_entry:
+            logger.warning("Cannot disconnect monitor without both device_name and device_entry")
+            return
+
+        if self.async_update:
+            async_signal_name = config.async_signal_name or target_entry
+            ids_to_check = [self.scan_id, self.old_scan_id]
+            if config.source == "device_monitor_1d":
+                for scan_id in ids_to_check:
+                    if scan_id is None:
+                        continue
+                    self.bec_dispatcher.disconnect_slot(
+                        self.on_image_update_1d,
+                        MessageEndpoints.device_async_signal(
+                            scan_id, target_device, async_signal_name
+                        ),
+                    )
+            elif config.source == "device_monitor_2d":
+                for scan_id in ids_to_check:
+                    if scan_id is None:
+                        continue
+                    self.bec_dispatcher.disconnect_slot(
+                        self.on_image_update_2d,
+                        MessageEndpoints.device_async_signal(
+                            scan_id, target_device, async_signal_name
+                        ),
+                    )
+        else:
+            if config.source == "device_monitor_1d":
                 self.bec_dispatcher.disconnect_slot(
-                    self.on_image_update_1d, MessageEndpoints.device_preview(monitor[0], monitor[1])
+                    self.on_image_update_1d,
+                    MessageEndpoints.device_preview(target_device, target_entry),
                 )
-            elif self.subscriptions["main"].source == "device_monitor_2d":
+            elif config.source == "device_monitor_2d":
                 self.bec_dispatcher.disconnect_slot(
-                    self.on_image_update_2d, MessageEndpoints.device_preview(monitor[0], monitor[1])
+                    self.on_image_update_2d,
+                    MessageEndpoints.device_preview(target_device, target_entry),
                 )
             else:
                 logger.warning(
-                    f"Cannot disconnect monitor {monitor} with source {self.subscriptions['main'].source}"
+                    f"Cannot disconnect monitor {target_device}.{target_entry} with source {self.subscriptions['main'].source}"
                 )
                 return
-        else:  # FIXME old monitor 1d/2d endpoint handling, present for backwards compatibility, will be removed in future versions
-            self.bec_dispatcher.disconnect_slot(
-                self.on_image_update_1d, MessageEndpoints.device_monitor_1d(monitor)
-            )
-            self.bec_dispatcher.disconnect_slot(
-                self.on_image_update_2d, MessageEndpoints.device_monitor_2d(monitor)
-            )
-        self.subscriptions["main"].monitor = None
+
+        self.subscriptions["main"].async_signal_name = None
+        self.async_update = False
         self._sync_device_selection()
 
     ########################################
@@ -521,32 +921,37 @@ class Image(ImageBase):
     def on_image_update_1d(self, msg: dict, metadata: dict):
         """
         Update the image with 1D data.
+        For preview signals: metadata doesn't contain scan_id.
+        For async signals: scan_id is managed via on_scan_status/on_scan_progress.
 
         Args:
             msg(dict): The message containing the data.
             metadata(dict): The metadata associated with the message.
         """
-        data = msg["data"]
-        current_scan_id = metadata.get("scan_id", None)
-
-        if current_scan_id is None:
+        try:
+            image = self.main_image
+        except Exception:
             return
-        if current_scan_id != self.scan_id:
-            self.scan_id = current_scan_id
-            self.main_image.clear()
-            self.main_image.buffer = []
-            self.main_image.max_len = 0
-            if self.crosshair is not None:
-                self.crosshair.reset()
-        image_buffer = self.adjust_image_buffer(self.main_image, data)
+        data = self._get_payload_data(msg)
+
+        if data is None:
+            logger.warning("No data received for image update from 1D.")
+            return
+
+        image_buffer = self.adjust_image_buffer(image, data)
+
         if self._color_bar is not None:
             self._color_bar.blockSignals(True)
-        self.main_image.set_data(image_buffer)
+        image.set_data(image_buffer)
         if self._color_bar is not None:
             self._color_bar.blockSignals(False)
+        if self._autorange_on_next_update:
+            self._autorange_on_next_update = False
+            self.auto_range()
         self.image_updated.emit()
 
-    def adjust_image_buffer(self, image: ImageItem, new_data: np.ndarray) -> np.ndarray:
+    @staticmethod
+    def adjust_image_buffer(image: ImageItem, new_data: np.ndarray) -> np.ndarray:
         """
         Adjusts the image buffer to accommodate the new data, ensuring that all rows have the same length.
 
@@ -582,6 +987,7 @@ class Image(ImageBase):
     ########################################
     # 2D updates
 
+    @SafeSlot(dict, dict)
     def on_image_update_2d(self, msg: dict, metadata: dict):
         """
         Update the image with 2D data.
@@ -590,13 +996,39 @@ class Image(ImageBase):
             msg(dict): The message containing the data.
             metadata(dict): The metadata associated with the message.
         """
-        data = msg["data"]
+        try:
+            image = self.main_image
+        except Exception:
+            return
+        data = self._get_payload_data(msg)
+        if data is None:
+            logger.warning("No data received for image update from 2D.")
+            return
         if self._color_bar is not None:
             self._color_bar.blockSignals(True)
-        self.main_image.set_data(data)
+        image.set_data(data)
         if self._color_bar is not None:
             self._color_bar.blockSignals(False)
+        if self._autorange_on_next_update:
+            self._autorange_on_next_update = False
+            self.auto_range()
         self.image_updated.emit()
+
+    def _get_payload_data(self, msg: dict) -> np.ndarray | None:
+        """
+        Extract payload from async/preview/monitor1D/2D message structures due to inconsistent formats in backend.
+
+        Args:
+            msg (dict): The incoming message containing data.
+        """
+        if not self.async_update:
+            return msg.get("data")
+        async_names = self._get_async_signal_name()
+        if async_names is None:
+            logger.warning("Async payload extraction failed; monitor info incomplete.")
+            return None
+        _, async_signal = async_names
+        return msg.get("signals", {}).get(async_signal, {}).get("value", None)
 
     ################################################################################
     # Clean up
@@ -612,28 +1044,33 @@ class Image(ImageBase):
         """
         if layer_name not in self.subscriptions:
             return
-        config = self.subscriptions[layer_name]
-        if config.monitor is not None:
-            self.disconnect_monitor(config.monitor)
-            config.monitor = None
+        # For the main layer, disconnect current monitor
+        if layer_name == "main" and self._config.device_name and self._config.device_entry:
+            self._disconnect_current_monitor()
+            self._config.device_name = ""
+            self._config.device_entry = ""
+            self._signal_configs.pop("main", None)
 
     def cleanup(self):
         """
         Disconnect the image update signals and clean up the image.
         """
         self.layer_removed.disconnect(self._on_layer_removed)
-        for layer_name in list(self.subscriptions.keys()):
-            config = self.subscriptions[layer_name]
-            if config.monitor is not None:
-                self.disconnect_monitor(config.monitor)
-            del self.subscriptions[layer_name]
+
+        # Disconnect current monitor
+        if self._config.device_name and self._config.device_entry:
+            self._disconnect_current_monitor()
+
         self.subscriptions.clear()
 
-        # Toolbar cleanup
-        self.device_combo_box.close()
-        self.device_combo_box.deleteLater()
-        self.dim_combo_box.close()
-        self.dim_combo_box.deleteLater()
+        # Toolbar cleanup - disconnect the device_selection bundle
+        try:
+            self.toolbar.disconnect_bundle("device_selection")
+        except Exception:  # noqa: BLE001
+            pass
+
+        self.bec_dispatcher.disconnect_slot(self.on_scan_status, MessageEndpoints.scan_status())
+        self.bec_dispatcher.disconnect_slot(self.on_scan_progress, MessageEndpoints.scan_progress())
         super().cleanup()
 
 
@@ -643,6 +1080,7 @@ if __name__ == "__main__":  # pragma: no cover
     from qtpy.QtWidgets import QApplication, QHBoxLayout
 
     app = QApplication(sys.argv)
+    apply_theme("dark")
     win = QWidget()
     win.setWindowTitle("Image Demo")
     ml = QHBoxLayout(win)
