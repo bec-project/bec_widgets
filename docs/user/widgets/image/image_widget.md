@@ -32,7 +32,7 @@ dock_area = gui.new()
 img_widget = dock_area.new().new(gui.available_widgets.Image)
 
 # Add an ImageWidget to the BECFigure for a 2D detector
-img_widget.image(monitor='eiger', monitor_type='2d')
+img_widget.image(device_name='eiger', device_entry='preview')
 img_widget.title = "Camera Image - Eiger Detector"
 ```
 
@@ -46,7 +46,7 @@ dock_area = gui.new()
 img_widget = dock_area.new().new(gui.available_widgets.Image)
 
 # Add an ImageWidget to the BECFigure for a 2D detector
-img_widget.image(monitor='waveform', monitor_type='1d')
+img_widget.image(device_name='waveform', device_entry='data')
 img_widget.title = "Line Detector Data"
 
 # Optional: Set the color map and value range
@@ -84,7 +84,7 @@ The Image Widget can be configured for different detectors by specifying the cor
 
 ```python
 # For a 2D camera detector
-img_widget = fig.image(monitor='eiger', monitor_type='2d')
+img_widget = fig.image(device_name='eiger', device_entry='preview')
 img_widget.set_title("Eiger Camera Image")
 ```
 
@@ -92,7 +92,7 @@ img_widget.set_title("Eiger Camera Image")
 
 ```python
 # For a 1D line detector
-img_widget = fig.image(monitor='waveform', monitor_type='1d')
+img_widget = fig.image(device_name='waveform', device_entry='data')
 img_widget.set_title("Line Detector Data")
 ```
 
