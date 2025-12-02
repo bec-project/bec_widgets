@@ -1,6 +1,7 @@
 import numpy as np
 import pyqtgraph as pg
 import pytest
+from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtCore import QPointF
 
 from bec_widgets.widgets.plots.image.image import Image
@@ -176,6 +177,114 @@ def test_image_setup_preview_signal_2d(qtbot, mocked_client, monkeypatch):
     test_data = np.arange(16, dtype=float).reshape(4, 4)
     view.on_image_update_2d({"data": test_data}, {})
     np.testing.assert_array_equal(view.main_image.image, test_data)
+
+
+def test_preview_signals_skip_0d_entries(qtbot, mocked_client, monkeypatch):
+    """
+    Preview/async combobox should omit 0‑D signals.
+    """
+    view = create_widget(qtbot, Image, client=mocked_client)
+
+    def fake_get(sign_cls):
+        if sign_cls == "PreviewSignal":
+            return [
+                (
+                    "dev",
+                    "sig0d",
+                    {
+                        "obj_name": "sig0d",
+                        "signal_class": "PreviewSignal",
+                        "describe": {"signal_info": {"ndim": 0}},
+                    },
+                ),
+                (
+                    "dev",
+                    "sig2d",
+                    {
+                        "obj_name": "sig2d",
+                        "signal_class": "PreviewSignal",
+                        "describe": {"signal_info": {"ndim": 2}},
+                    },
+                ),
+            ]
+        return []
+
+    monkeypatch.setattr(view.client.device_manager, "get_bec_signals", fake_get)
+    view.device_combo_box.clear()
+    view.device_combo_box.addItem("", None)
+    view._populate_signals()
+
+    texts = [view.device_combo_box.itemText(i) for i in range(view.device_combo_box.count())]
+    assert "sig0d" not in texts
+    assert "sig2d" in texts
+
+
+def test_image_async_signal_uses_obj_name(qtbot, mocked_client, monkeypatch):
+    """
+    Verify async signals use obj_name for endpoints/payloads and reconnect with scan_id.
+    """
+    view = create_widget(qtbot, Image, client=mocked_client)
+    signal_config = {
+        "obj_name": "async_obj",
+        "signal_class": "AsyncSignal",
+        "describe": {"signal_info": {"ndim": 1}},
+    }
+
+    view.image(monitor=("eiger", "img", signal_config))
+    assert view.subscriptions["main"].async_signal_name == "async_obj"
+
+    # Prepare scan ids and capture dispatcher calls
+    view.old_scan_id = "old_scan"
+    view.scan_id = "new_scan"
+    connected = []
+    disconnected = []
+    monkeypatch.setattr(
+        view.bec_dispatcher,
+        "connect_slot",
+        lambda slot, endpoint, from_start=False, cb_info=None: connected.append(
+            (slot, endpoint, from_start, cb_info)
+        ),
+    )
+    monkeypatch.setattr(
+        view.bec_dispatcher,
+        "disconnect_slot",
+        lambda slot, endpoint: disconnected.append((slot, endpoint)),
+    )
+
+    view._setup_async_image(view.scan_id)
+
+    expected_new = MessageEndpoints.device_async_signal("new_scan", "eiger", "async_obj")
+    expected_old = MessageEndpoints.device_async_signal("old_scan", "eiger", "async_obj")
+    assert any(ep == expected_new for _, ep, _, _ in connected)
+    assert any(ep == expected_old for _, ep in disconnected)
+
+    # Payload extraction should use obj_name
+    payload = np.array([1, 2, 3])
+    msg = {"signals": {"async_obj": {"value": payload}}}
+    assert view._get_payload_data(msg) is payload
+
+
+def test_disconnect_monitor_clears_async_state(qtbot, mocked_client, monkeypatch):
+    view = create_widget(qtbot, Image, client=mocked_client)
+    signal_config = {
+        "obj_name": "async_obj",
+        "signal_class": "AsyncSignal",
+        "describe": {"signal_info": {"ndim": 2}},
+    }
+
+    view.image(monitor=("eiger", "img", signal_config))
+    view.scan_id = "scan_x"
+    view.old_scan_id = "scan_y"
+    view.subscriptions["main"].async_signal_name = "async_obj"
+
+    # Avoid touching real dispatcher
+    monkeypatch.setattr(view.bec_dispatcher, "disconnect_slot", lambda *args, **kwargs: None)
+
+    view.disconnect_monitor(("eiger", "img", signal_config))
+
+    assert view.subscriptions["main"].monitor is None
+    assert view.subscriptions["main"].async_signal_name is None
+    assert view.async_update is False
 
 
 ##############################################
@@ -600,9 +709,9 @@ def test_monitor_selection_reverse_device_items(qtbot, mocked_client):
     assert combo.currentText() == "samy"
 
 
-def test_monitor_selection_populate_preview_signals(qtbot, mocked_client, monkeypatch):
+def test_monitor_selection_populate_signals(qtbot, mocked_client, monkeypatch):
     """
-    Verify that _populate_preview_signals adds preview‑signal devices to the combo‑box
+    Verify that _populate_signals adds preview‑signal and async-signal devices to the combo‑box
     with the correct userData.
     """
     view = create_widget(qtbot, Image, client=mocked_client)
@@ -610,23 +719,32 @@ def test_monitor_selection_populate_preview_signals(qtbot, mocked_client, monkey
     # Provide a deterministic fake device_manager with get_bec_signals
     class _FakeDM:
         def get_bec_signals(self, _filter):
-            return [
-                ("eiger", "img", {"obj_name": "eiger_img"}),
-                ("async_device", "img2", {"obj_name": "async_device_img2"}),
-            ]
+            if _filter == "PreviewSignal":
+                return [
+                    ("eiger", "img", {"obj_name": "eiger_img"}),
+                    ("eiger2", "img2", {"obj_name": "eiger_img2"}),
+                ]
+            if _filter == "AsyncSignal":
+                return [("async_device", "img_async", {"obj_name": "async_device_img_async"})]
+            return []
 
     monkeypatch.setattr(view.client, "device_manager", _FakeDM())
 
     initial_count = view.device_combo_box.count()
 
-    view._populate_preview_signals()
+    view._populate_signals()
 
-    # Two new entries should have been added
-    assert view.device_combo_box.count() == initial_count + 2
+    # PreviewSignal + AsyncSignal entries were added
+    assert view.device_combo_box.count() == initial_count + 3
 
     # The first newly added item should carry tuple userData describing the device/signal
     data = view.device_combo_box.itemData(initial_count)
     assert isinstance(data, tuple) and data[0] == "eiger"
+    texts = [
+        view.device_combo_box.itemText(i)
+        for i in range(initial_count, view.device_combo_box.count())
+    ]
+    assert "async_device_img_async" in texts
 
 
 def test_monitor_selection_adjust_and_connect(qtbot, mocked_client, monkeypatch):
@@ -641,7 +759,9 @@ def test_monitor_selection_adjust_and_connect(qtbot, mocked_client, monkeypatch)
     # Deterministic fake device_manager
     class _FakeDM:
         def get_bec_signals(self, _filter):
-            return [("eiger", "img", {"obj_name": "eiger_img"})]
+            if _filter == "PreviewSignal":
+                return [("eiger", "img", {"obj_name": "eiger_img"})]
+            return []
 
     monkeypatch.setattr(view.client, "device_manager", _FakeDM())
 
