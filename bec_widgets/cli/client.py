@@ -2502,16 +2502,30 @@ class Image(RPCBase):
 
     @property
     @rpc_call
-    def monitor(self) -> "str":
+    def device_name(self) -> "str":
         """
-        The name of the monitor to use for the image.
+        The name of the device to monitor for image data.
         """
 
-    @monitor.setter
+    @device_name.setter
     @rpc_call
-    def monitor(self) -> "str":
+    def device_name(self) -> "str":
         """
-        The name of the monitor to use for the image.
+        The name of the device to monitor for image data.
+        """
+
+    @property
+    @rpc_call
+    def device_entry(self) -> "str":
+        """
+        The signal/entry name to monitor on the device.
+        """
+
+    @device_entry.setter
+    @rpc_call
+    def device_entry(self) -> "str":
+        """
+        The signal/entry name to monitor on the device.
         """
 
     @rpc_call
@@ -2617,8 +2631,8 @@ class Image(RPCBase):
     @rpc_call
     def image(
         self,
-        monitor: "str | tuple | None" = None,
-        monitor_type: "Literal['auto', '1d', '2d']" = "auto",
+        device_name: "str | None" = None,
+        device_entry: "str | None" = None,
         color_map: "str | None" = None,
         color_bar: "Literal['simple', 'full'] | None" = None,
         vrange: "tuple[int, int] | None" = None,
@@ -2627,14 +2641,14 @@ class Image(RPCBase):
         Set the image source and update the image.
 
         Args:
-            monitor(str|tuple|None): The name of the monitor to use for the image, or a tuple of (device, signal) for preview signals. If None or empty string, the current monitor will be disconnected.
-            monitor_type(str): The type of monitor to use. Options are "1d", "2d", or "auto".
+            device_name(str|None): The name of the device to monitor. If None or empty string, the current monitor will be disconnected.
+            device_entry(str|None): The signal/entry name to monitor on the device.
             color_map(str): The color map to use for the image.
             color_bar(str): The type of color bar to use. Options are "simple" or "full".
             vrange(tuple): The range of values to use for the color map.
 
         Returns:
-            ImageItem: The image object.
+            ImageItem: The image object, or None if connection failed.
         """
 
     @property
