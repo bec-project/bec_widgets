@@ -124,6 +124,9 @@ class Image(ImageBase):
         self.async_update = False
         self.bec_dispatcher.connect_slot(self.on_scan_status, MessageEndpoints.scan_status())
         self.bec_dispatcher.connect_slot(self.on_scan_progress, MessageEndpoints.scan_progress())
+        self.bec_dispatcher.connect_slot(
+            self._populate_signals, MessageEndpoints.device_config_update()
+        )
 
     ##################################
     ### Toolbar Initialization
@@ -189,15 +192,21 @@ class Image(ImageBase):
         Has to be done with QTimer.singleShot to ensure the UI is fully initialized, needed for testing.
         """
         self._populate_signals()
-        self._reverse_device_items()
-        self.device_combo_box.setCurrentText("")  # set again default to empty string
 
-    def _populate_signals(self) -> None:
+    @SafeSlot(dict, dict)
+    def _populate_signals(self, data: dict | None = None, meta: dict | None = None) -> None:
         """
-        Populate the device combo box with preview-signal devices in the
-        format '<device>_<signal>' and store the tuple(device, signal) in
-        the item's userData for later use.
+        (Re)populate the device combo box with preview/async signals,
+        matching the initial setup logic.
         """
+        self.device_combo_box.blockSignals(True)
+        self.device_combo_box.clear()
+        # Rebuild base device list via the combobox' own filtering logic
+        self.device_combo_box.update_devices_from_filters()
+        base_count = self.device_combo_box.count()
+        # Place an empty default entry between base devices and signal entries
+        self.device_combo_box.insertItem(base_count, "", None)
+
         preview_signals = self.client.device_manager.get_bec_signals("PreviewSignal")
         async_signals = self.client.device_manager.get_bec_signals("AsyncSignal")
         all_signals = preview_signals + async_signals
@@ -209,6 +218,8 @@ class Image(ImageBase):
                 continue
             label = signal_config.get("obj_name", f"{device}_{signal}")
             self.device_combo_box.addItem(label, (device, signal, signal_config))
+        self.device_combo_box.setCurrentText("")
+        self.device_combo_box.blockSignals(False)
 
     def _reverse_device_items(self) -> None:
         """

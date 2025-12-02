@@ -730,21 +730,32 @@ def test_monitor_selection_populate_signals(qtbot, mocked_client, monkeypatch):
 
     monkeypatch.setattr(view.client, "device_manager", _FakeDM())
 
-    initial_count = view.device_combo_box.count()
-
     view._populate_signals()
 
-    # PreviewSignal + AsyncSignal entries were added
-    assert view.device_combo_box.count() == initial_count + 3
+    # Base devices first, then empty separator, then signal entries
+    signal_texts = []
+    separator_seen = False
+    for i in range(view.device_combo_box.count()):
+        data = view.device_combo_box.itemData(i)
+        text = view.device_combo_box.itemText(i)
+        if data is None and text == "":
+            separator_seen = True
+            continue
+        if separator_seen is False:
+            # base device entries
+            continue
+        # After separator we expect signal tuples
+        assert isinstance(data, tuple)
+        signal_texts.append(text)
 
-    # The first newly added item should carry tuple userData describing the device/signal
-    data = view.device_combo_box.itemData(initial_count)
-    assert isinstance(data, tuple) and data[0] == "eiger"
-    texts = [
-        view.device_combo_box.itemText(i)
-        for i in range(initial_count, view.device_combo_box.count())
-    ]
-    assert "async_device_img_async" in texts
+    assert {"eiger_img", "eiger_img2", "async_device_img_async"}.issubset(set(signal_texts))
+    first_signal_idx = next(
+        i
+        for i in range(view.device_combo_box.count())
+        if isinstance(view.device_combo_box.itemData(i), tuple)
+    )
+    data = view.device_combo_box.itemData(first_signal_idx)
+    assert isinstance(data, tuple) and data[0] in ["eiger", "eiger2", "async_device"]
 
 
 def test_monitor_selection_adjust_and_connect(qtbot, mocked_client, monkeypatch):
@@ -774,9 +785,13 @@ def test_monitor_selection_adjust_and_connect(qtbot, mocked_client, monkeypatch)
     # Execute the method under test
     view._adjust_and_connect()
 
-    # Expect exactly two items: preview label followed by the empty default
-    assert combo.count() == 2
-    # Because of the reversal, the preview label comes first
-    assert combo.itemText(0) == "eiger_img"
+    # Base devices should appear first, then empty separator, then signals
+    sep_idx = next(
+        i for i in range(combo.count()) if combo.itemData(i) is None and combo.itemText(i) == ""
+    )
+    first_signal_idx = sep_idx + 1
+    assert isinstance(combo.itemData(first_signal_idx), tuple)
+    assert combo.itemText(first_signal_idx) == "eiger_img"
+    assert combo.itemText(sep_idx) == ""
     # Current selection remains empty
     assert combo.currentText() == ""
