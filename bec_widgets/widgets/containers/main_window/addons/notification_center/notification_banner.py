@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 import sys
 from datetime import datetime
-from enum import Enum, auto
+from enum import Enum
 from typing import Literal
 from uuid import uuid4
 
@@ -28,6 +28,7 @@ from qtpy.QtWidgets import QApplication, QFrame, QMainWindow, QScrollArea, QWidg
 
 from bec_widgets import SafeProperty, SafeSlot
 from bec_widgets.utils import BECConnector
+from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.widget_io import WidgetIO
 
 
@@ -53,10 +54,10 @@ DARK_PALETTE = {
 }
 
 LIGHT_PALETTE = {
-    "base": "#e9ecef",
-    "title": "#212121",
-    "body": "#424242",
-    "separator": "rgba(0,0,0,40)",
+    "base": "#f5f5f7",
+    "title": "#111827",
+    "body": "#374151",
+    "separator": "rgba(15,23,42,40)",
 }
 
 
@@ -108,6 +109,7 @@ class NotificationToast(QFrame):
         self._kind = kind if isinstance(kind, SeverityKind) else SeverityKind(kind)
         self._traceback = traceback
         self._accent_color = QtGui.QColor(SEVERITY[self._kind.value]["color"])
+        self._accent_alpha = 50
         self.setFrameShape(QtWidgets.QFrame.StyledPanel)
 
         self.created = datetime.now()
@@ -379,22 +381,31 @@ class NotificationToast(QFrame):
 
         # buttons (text colour)
         base_btn_color = palette["title"]
+        card_bg = QtGui.QColor(palette["base"])
+        # tune card background and hover contrast per theme
+        if theme == "light":
+            card_bg.setAlphaF(0.98)
+            btn_hover = self._accent_color.darker(105).name()
+        else:
+            card_bg.setAlphaF(0.88)
+            btn_hover = self._accent_color.name()
+
         self.setStyleSheet(
-            """
-            #NotificationToast {
-                background: transparent;
+            f"""
+            #NotificationToast {{
+                background: {card_bg.name(QtGui.QColor.HexArgb)};
                 border-radius: 12px;
-                color: %s;
-            }
-            #NotificationToast QPushButton {
+                color: {base_btn_color};
+                border: 1px solid {palette["separator"]};
+            }}
+            #NotificationToast QPushButton {{
                 background: transparent;
                 border: none;
-                color: %s;
+                color: {base_btn_color};
                 font-size: 14px;
-            }
-            #NotificationToast QPushButton:hover { color: %s; }
+            }}
+            #NotificationToast QPushButton:hover {{ color: {btn_hover}; }}
             """
-            % (base_btn_color, base_btn_color, self._accent_color.name())
         )
         # traceback panel colours
         trace_bg = "#1e1e1e" if theme == "dark" else "#f0f0f0"
@@ -407,6 +418,37 @@ class NotificationToast(QFrame):
             """
         )
 
+        # icon glyph vs badge background: darker badge, lighter icon in light mode
+        icon_fg = "#ffffff" if theme == "light" else self._accent_color.name()
+        icon = material_icon(
+            icon_name=SEVERITY[self._kind.value]["icon"],
+            color=icon_fg,
+            filled=True,
+            size=(24, 24),
+            convert_to_pixmap=False,
+        )
+        self._icon_btn.setIcon(icon)
+
+        badge_bg = QtGui.QColor(self._accent_color)
+        if theme == "light":
+            # darken and strengthen the badge on light cards for contrast
+            badge_bg = badge_bg.darker(115)
+            badge_bg.setAlphaF(0.70)
+        else:
+            badge_bg.setAlphaF(0.30)
+        icon_bg = badge_bg.name(QtGui.QColor.HexArgb)
+        self._icon_btn.setStyleSheet(
+            f"""
+            QToolButton {{
+                background: {icon_bg};
+                border: none;
+                border-radius: 20px;
+            }}
+            """
+        )
+
+        # stronger accent wash in light mode, slightly stronger in dark too
+        self._accent_alpha = 110 if theme == "light" else 60
         self.update()
 
     ########################################
@@ -488,7 +530,9 @@ class NotificationToast(QFrame):
         # accent gradient, fades to transparent
         grad = QtGui.QLinearGradient(0, 0, self.width() * 0.7, 0)
         accent = QtGui.QColor(self._accent_color)
-        accent.setAlpha(50)
+        if getattr(self, "_theme", "dark") == "light":
+            accent = accent.darker(115)
+        accent.setAlpha(getattr(self, "_accent_alpha", 50))
         grad.setColorAt(0.0, accent)
         fade = QtGui.QColor(self._accent_color)
         fade.setAlpha(0)
@@ -1223,6 +1267,7 @@ class DemoWindow(QMainWindow):  # pragma: no cover
 
 def main():  # pragma: no cover
     app = QtWidgets.QApplication(sys.argv)
+    apply_theme("dark")
     win = DemoWindow()
     win.show()
     sys.exit(app.exec())
