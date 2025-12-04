@@ -4,10 +4,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from bec_lib.messages import ProcedureExecutionMessage, ProcedureRequestMessage
-from bec_server.scan_server.procedures.helper import BackendProcedureHelper
-from bec_server.scan_server.procedures.manager import ProcedureManager
-from bec_server.scan_server.procedures.procedure_registry import register
-from bec_server.scan_server.procedures.worker_base import ProcedureWorker
+from bec_lib.procedures.helper import BackendProcedureHelper
+from bec_server.procedures.manager import ProcedureManager
+from bec_server.procedures.procedure_registry import register
+from bec_server.procedures.worker_base import ProcedureWorker
 
 from bec_widgets.widgets.control.procedure_control.procedure_control import (
     ProcedureControl,
@@ -40,8 +40,7 @@ def proc_ctrl_w_helper(qtbot, mocked_client: MagicMock):
     proc_ctrl = ProcedureControl(client=mocked_client)
     qtbot.addWidget(proc_ctrl)
     with patch(
-        "bec_server.scan_server.procedures.manager.RedisConnector",
-        lambda _: proc_ctrl.client.connector,
+        "bec_server.procedures.manager.RedisConnector", lambda _: proc_ctrl.client.connector
     ):
         manager = ProcedureManager(MagicMock(), MockWorker)
     yield proc_ctrl, BackendProcedureHelper(proc_ctrl.client.connector)

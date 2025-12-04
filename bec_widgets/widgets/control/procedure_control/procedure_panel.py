@@ -12,7 +12,12 @@ class ProcedurePanel(DockAreaWidget):
         self.procedure_logs = ProcedureLogs(parent=self)
         self.procedure_logs.setObjectName("Procedure Logs")
 
-        _dock_kwargs = {"closable": False, "movable": False, "floatable": False}
+        _dock_kwargs = {
+            "closable": False,
+            "movable": False,
+            "floatable": False,
+            "title_buttons": {"float": False, "close": False, "menu": False},
+        }
         self.new(self.procedure_control, **_dock_kwargs)
         self.new(self.procedure_logs, where="bottom", **_dock_kwargs)
 
