@@ -9,8 +9,8 @@ from bec_lib.messages import (
     ProcedureQNotifMessage,
     ProcedureRequestMessage,
 )
+from bec_lib.procedures.helper import FrontendProcedureHelper
 from bec_qthemes._icon.material_icons import material_icon
-from bec_server.scan_server.procedures.helper import FrontendProcedureHelper
 from pydantic import BaseModel, ConfigDict
 from qtpy.QtCore import QSize, Qt, Signal
 from qtpy.QtWidgets import (
@@ -217,6 +217,8 @@ class CategoryItem(QTreeWidgetItem):
 
 
 class ProcedureControl(BECWidget, QWidget):
+
+    RPC = False
 
     queue_selected = Signal(str)
 
