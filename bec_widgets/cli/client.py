@@ -3642,7 +3642,7 @@ class MotorMap(RPCBase):
             x_name(str): The name of the x motor.
             y_name(str): The name of the y motor.
             validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
-            suppress_errors(bool, optional): If True, suppress errors during validation. Defaults to False. Used for properties setting.
+            suppress_errors(bool, optional): If True, suppress errors during validation. Defaults to False. Used for properties setting. If the validation fails, the changes are not applied.
         """
 
     @rpc_call
