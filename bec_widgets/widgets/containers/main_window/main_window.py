@@ -22,6 +22,7 @@ from bec_widgets.utils import UILoader
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.toolbars.status_bar import StatusToolBar
 from bec_widgets.widgets.containers.main_window.addons.hover_widget import HoverWidget
 from bec_widgets.widgets.containers.main_window.addons.notification_center.notification_banner import (
     BECNotificationBroker,
@@ -114,14 +115,11 @@ class BECMainWindow(BECWidget, QMainWindow):
         Prepare the BEC specific widgets in the status bar.
         """
 
-        # Left: App‑ID label
-        self._app_id_label = QLabel()
-        self._app_id_label.setAlignment(
-            Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
-        )
-        self.status_bar.addWidget(self._app_id_label)
+        # Left: Beamline condition status toolbar (auto-fetches all conditions)
+        self._status_toolbar = StatusToolBar(parent=self, names=None)
+        self.status_bar.addWidget(self._status_toolbar)
 
-        # Add a separator after the app ID label
+        # Add a separator after the status toolbar
         self._add_separator()
 
         # Centre: Client‑info label (stretch=1 so it expands)
@@ -394,13 +392,17 @@ class BECMainWindow(BECWidget, QMainWindow):
         help_menu.addAction(bec_docs)
         help_menu.addAction(widgets_docs)
         help_menu.addAction(bug_report)
+        help_menu.addSeparator()
+        self._app_id_action = QAction(self)
+        self._app_id_action.setEnabled(False)
+        help_menu.addAction(self._app_id_action)
 
     ################################################################################
     # Status Bar Addons
     ################################################################################
     def display_app_id(self):
         """
-        Display the app ID in the status bar.
+        Display the app ID in the Help menu.
         """
         if self.bec_dispatcher.cli_server is None:
             status_message = "Not connected"
@@ -408,7 +410,8 @@ class BECMainWindow(BECWidget, QMainWindow):
             # Get the server ID from the dispatcher
             server_id = self.bec_dispatcher.cli_server.gui_id
             status_message = f"App ID: {server_id}"
-        self._app_id_label.setText(status_message)
+        if hasattr(self, "_app_id_action"):
+            self._app_id_action.setText(status_message)
 
     @SafeSlot(dict, dict)
     def display_client_message(self, msg: dict, meta: dict):
