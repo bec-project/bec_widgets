@@ -21,6 +21,7 @@ from uuid import uuid4
 import pyqtgraph as pg
 from bec_lib.alarm_handler import Alarms  # external enum
 from bec_lib.endpoints import MessageEndpoints
+from bec_lib.messages import ErrorInfo
 from bec_qthemes import material_icon
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtCore import QObject, QTimer
@@ -1062,12 +1063,13 @@ class BECNotificationBroker(BECConnector, QObject):
         """
         centres = WidgetIO.find_widgets(NotificationCentre)
         kind = self._banner_kind_from_severity(msg.get("severity", 0))
+        notification_id = msg.get("info").id if msg.get("info") else uuid4().hex
         # build title and body
         scan_id = meta.get("scan_id")
         scan_number = meta.get("scan_number")
-        formatted_trace = self._err_util.format_traceback(msg.get("msg", ""))
-        short_msg = self._err_util.parse_error_message(formatted_trace)
-        title = msg.get("alarm_type", "Alarm")
+        formatted_trace = msg.get("info").error_message
+        short_msg = msg.get("info").compact_error_message
+        title = msg.get("info").exception_type or "Alarm"
         if scan_number:
             title += f" - Scan #{scan_number}"
         body_text = short_msg
@@ -1076,15 +1078,12 @@ class BECNotificationBroker(BECConnector, QObject):
         if scan_id:
             sections.extend(["-------- SCAN_ID --------\n", scan_id])
         sections.extend(["-------- TRACEBACK --------", formatted_trace])
-        source = msg.get("source")
-        if source:
-            source_pretty = json.dumps(source, indent=4, default=str)
-            sections.extend(["", "-------- SOURCE --------", source_pretty])
         detailed_trace = "\n".join(sections)
         lifetime = 0 if kind == SeverityKind.MAJOR else 5_000
 
         # generate one ID for all toasts of this event
-        notification_id = uuid4().hex
+        if notification_id in self._active_notifications:
+            return  # already posted
         # record this notification for future centres
         self._active_notifications[notification_id] = {
             "title": title,
@@ -1245,10 +1244,12 @@ class DemoWindow(QMainWindow):  # pragma: no cover
         """Simulate an error that would be caught by the notification broker."""
         self.notification_broker.client.connector.raise_alarm(
             severity=severity,
-            alarm_type="ValueError",
-            source={"device": "samx", "source": "async_file_writer"},
-            msg=f"test alarm",
-            metadata={"test": 1},
+            info=ErrorInfo(
+                id=uuid4().hex,
+                exception_type="ValueError",
+                error_message="An example error occurred in DemoWindowApp.",
+                compact_error_message="An example error occurred.",
+            ),
         )
 
     # this part is same as implemented in the BECMainWindow
