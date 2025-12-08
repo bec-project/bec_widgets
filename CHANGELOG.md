@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v2.45.8 (2025-12-08)
+
+### Bug Fixes
+
+- **notification_banner**: Backwards compatibility to push messages from Broker to Centre as dict
+  ([`440e778`](https://github.com/bec-project/bec_widgets/commit/440e778162ebb359fc33be26e3d22f99b4f9dcfe))
+
+- **notification_banner**: Better contrast in light mode
+  ([`5c90983`](https://github.com/bec-project/bec_widgets/commit/5c90983dd4c3ff96e5625ebda0054a1ac1256227))
+
+- **notification_banner**: Expired messages are hidden in notification center but still accessible
+  ([`4171de1`](https://github.com/bec-project/bec_widgets/commit/4171de1e454c4832513ca599c0fd0eaa365c7c32))
+
+- **notification_banner**: Formatted error messages fetched directly from BECMessage; do not repreat
+  notifications ids
+  ([`fdeb8fc`](https://github.com/bec-project/bec_widgets/commit/fdeb8fcb0f223d64933f2791585756527c2f41ed))
+
+
 ## v2.45.7 (2025-12-08)
 
 ### Bug Fixes
