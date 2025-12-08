@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.45.7 (2025-12-08)
+
+### Bug Fixes
+
+- Handle none in literal combobox
+  ([`ce8e5f0`](https://github.com/bec-project/bec_widgets/commit/ce8e5f0bec7643c9f826e06f987775de95abb91d))
+
+
 ## v2.45.6 (2025-11-27)
 
 ### Bug Fixes
