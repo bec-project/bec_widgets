@@ -74,15 +74,15 @@ def test_available_widgets(qtbot, connected_client_gui_obj):
     """This test checks that all widgets that are available via gui.available_widgets can be created and removed."""
     gui = connected_client_gui_obj
     dock_area = gui.bec
-    # Number of top level widgets, should be 4
-    top_level_widgets_count = 12
+    # Number of top level widgets, should be 5
+    top_level_widgets_count = 13
     assert len(gui._server_registry) == top_level_widgets_count
     names = set(list(gui._server_registry.keys()))
-    # Number of widgets with parent_id == None, should be 2
+    # Number of widgets with parent_id == None, should be 3
     widgets = [
         widget for widget in gui._server_registry.values() if widget["config"]["parent_id"] is None
     ]
-    assert len(widgets) == 2
+    assert len(widgets) == 3
 
     # Test all relevant widgets
     for object_name in gui.available_widgets.__dict__:
@@ -115,7 +115,7 @@ def test_available_widgets(qtbot, connected_client_gui_obj):
             for widget in gui._server_registry.values()
             if widget["config"]["parent_id"] is None
         ]
-        assert len(widgets) == 2
+        assert len(widgets) == 3
 
         #############################
         ####### Remove widget #######
