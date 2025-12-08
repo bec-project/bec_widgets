@@ -1060,25 +1060,50 @@ class BECNotificationBroker(BECConnector, QObject):
         """
         Called when a new alarm arrives. Builds and pushes a toast to each centre
         with a shared notification_id, and hooks its close/expire signals.
+
+        Args:
+            msg(dict): The message containing alarm details.
+            meta(dict): Metadata about the alarm.
         """
+        msg = msg or {}
+        meta = meta or {}
+
         centres = WidgetIO.find_widgets(NotificationCentre)
         kind = self._banner_kind_from_severity(msg.get("severity", 0))
-        notification_id = msg.get("info").id if msg.get("info") else uuid4().hex
+
+        # Normalise the incoming info payload (can be ErrorInfo, dict or missing entirely)
+        raw_info = msg.get("info")
+        if isinstance(raw_info, dict):
+            try:
+                raw_info = ErrorInfo(**raw_info)
+            except Exception:
+                raw_info = None
+
+        notification_id = getattr(raw_info, "id", None) or uuid4().hex
+
         # build title and body
         scan_id = meta.get("scan_id")
         scan_number = meta.get("scan_number")
-        formatted_trace = msg.get("info").error_message
-        short_msg = msg.get("info").compact_error_message
-        title = msg.get("info").exception_type or "Alarm"
+        alarm_type = msg.get("alarm_type") or getattr(raw_info, "exception_type", None) or "Alarm"
+        title = alarm_type
         if scan_number:
             title += f" - Scan #{scan_number}"
-        body_text = short_msg
-        # build detailed traceback
-        sections: list[str] = []
-        if scan_id:
-            sections.extend(["-------- SCAN_ID --------\n", scan_id])
-        sections.extend(["-------- TRACEBACK --------", formatted_trace])
-        detailed_trace = "\n".join(sections)
+
+        trace_text = getattr(raw_info, "error_message", None) or msg.get("msg") or ""
+        compact_msg = getattr(raw_info, "compact_error_message", None)
+
+        # Prefer the compact message; fall back to parsing the traceback for a human‑readable snippet
+        body_text = compact_msg or self._err_util.parse_error_message(trace_text)
+
+        # build detailed traceback for the expandable panel
+        detailed_trace: str | None = None
+        if trace_text:
+            sections: list[str] = []
+            if scan_id:
+                sections.extend(["-------- SCAN_ID --------\n", scan_id])
+            sections.extend(["-------- TRACEBACK --------", trace_text])
+            detailed_trace = "\n".join(sections)
+
         lifetime = 0 if kind == SeverityKind.MAJOR else 5_000
 
         # generate one ID for all toasts of this event
@@ -1127,6 +1152,13 @@ class BECNotificationBroker(BECConnector, QObject):
         Translate an integer severity (0/1/2) into a SeverityKind enum.
         Unknown values fall back to SeverityKind.WARNING.
         """
+        if isinstance(severity, SeverityKind):
+            return severity
+        if isinstance(severity, str):
+            try:
+                return SeverityKind(severity)
+            except ValueError:
+                pass
         try:
             return SeverityKind[Alarms(severity).name]  # e.g. WARNING → SeverityKind.WARNING
         except (ValueError, KeyError):
@@ -1205,10 +1237,10 @@ class DemoWindow(QMainWindow):  # pragma: no cover
 
         # ----- wiring ------------------------------------------------------------
         self._counter = 1
-        self.info_btn.clicked.connect(lambda: self._post("info"))
-        self.warning_btn.clicked.connect(lambda: self._post("warning"))
-        self.minor_btn.clicked.connect(lambda: self._post("minor"))
-        self.major_btn.clicked.connect(lambda: self._post("major"))
+        self.info_btn.clicked.connect(lambda: self._post(SeverityKind.INFO))
+        self.warning_btn.clicked.connect(lambda: self._post(SeverityKind.WARNING))
+        self.minor_btn.clicked.connect(lambda: self._post(SeverityKind.MINOR))
+        self.major_btn.clicked.connect(lambda: self._post(SeverityKind.MAJOR))
         # Raise buttons simulate alarms
         self.raise_warning_btn.clicked.connect(lambda: self._raise_error(Alarms.WARNING))
         self.raise_minor_btn.clicked.connect(lambda: self._raise_error(Alarms.MINOR))
@@ -1224,20 +1256,16 @@ class DemoWindow(QMainWindow):  # pragma: no cover
         indicator.hide_all_requested.connect(self.notification_centre.hide_all)
 
     # ------------------------------------------------------------------
-    def _post(self, kind):
-        expire = 0 if kind == "error" else 5000
-        trace = (
-            'Traceback (most recent call last):\n  File "<stdin>", line 1\nZeroDivisionError: 1/0'
-            if kind == "error"
-            else None
-        )
-        self.notification_centre.add_notification(
-            title=f"{kind.capitalize()} #{self._counter}",
-            body="Lorem ipsum dolor sit amet.",
-            kind=SeverityKind(kind),
-            lifetime_ms=expire,
-            traceback=trace,
-        )
+    def _post(self, kind: SeverityKind):
+        """
+        Send a simple notification through the broker (non-error case).
+        """
+        msg = {
+            "severity": kind.value,  # handled by broker for SeverityKind
+            "alarm_type": f"{kind.value.capitalize()}",
+            "msg": f"{kind.value.capitalize()} #{self._counter}",
+        }
+        self.notification_broker.post_notification(msg, meta={})
         self._counter += 1
 
     def _raise_error(self, severity):
