@@ -549,7 +549,7 @@ class LaunchWindow(BECMainWindow):
         remaining_connections = [
             connection for connection in connections.values() if connection.parent_id != self.gui_id
         ]
-        return len(remaining_connections) <= 4
+        return len(remaining_connections) <= 5
 
     def _turn_off_the_lights(self, connections: dict):
         """
