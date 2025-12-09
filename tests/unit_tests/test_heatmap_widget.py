@@ -446,8 +446,9 @@ def test_pending_request_queueing_and_start(heatmap_widget):
         metadata={},
         info={"positions": [[0, 0], [1, 1], [2, 2], [3, 3]]},
     )
-    heatmap_widget._interpolation_thread = mock.MagicMock()
-    heatmap_widget._interpolation_thread.isRunning.return_value = True
+    # Simulate an active worker processing a job so new requests are queued.
+    heatmap_widget._interpolation_worker = mock.MagicMock()
+    heatmap_widget._interpolation_worker.is_processing = True
 
     with mock.patch.object(heatmap_widget, "_start_step_scan_interpolation") as start_mock:
         heatmap_widget._request_step_scan_interpolation(
@@ -459,7 +460,7 @@ def test_pending_request_queueing_and_start(heatmap_widget):
         assert heatmap_widget._pending_interpolation_request is not None
 
         # Now simulate worker finished and thread cleaned up
-        heatmap_widget._interpolation_thread = None
+        heatmap_widget._interpolation_worker.is_processing = False
         pending = heatmap_widget._pending_interpolation_request
         heatmap_widget._pending_interpolation_request = pending
         heatmap_widget._maybe_start_pending_interpolation()
