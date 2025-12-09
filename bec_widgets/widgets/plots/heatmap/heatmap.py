@@ -127,6 +127,12 @@ class _StepInterpolationWorker(QObject):
     def __init__(self, parent: QObject | None = None):
         super().__init__(parent=parent)
         self._active_request: _InterpolationRequest | None = None
+        self._processing = False
+
+    @property
+    def is_processing(self) -> bool:
+        """Return whether the worker is currently processing a request."""
+        return self._processing
 
     @SafeSlot(object, int)
     def process(self, request: _InterpolationRequest, data_version: int):
@@ -138,6 +144,7 @@ class _StepInterpolationWorker(QObject):
             data_version(int): The data version for the request.
         """
         self._active_request = request
+        self._processing = True
         try:
             image, transform = Heatmap.compute_step_scan_image(
                 x_data=np.asarray(request.x_data, dtype=float),
@@ -149,7 +156,9 @@ class _StepInterpolationWorker(QObject):
         except Exception as exc:  # pragma: no cover - defensive
             logger.warning(f"Step-scan interpolation failed with: {exc}")
             self.failed.emit(str(exc), data_version, request.scan_id)
+            self._processing = False
             return
+        self._processing = False
         self.finished.emit(image, transform, data_version, request.scan_id)
 
 
@@ -700,7 +709,7 @@ class Heatmap(ImageBase):
             oversampling_factor=self._image_config.oversampling_factor,
         )
 
-        if self._interpolation_thread is not None and self._interpolation_thread.isRunning():
+        if self._interpolation_worker is not None and self._interpolation_worker.is_processing:
             self._pending_interpolation_request = request
             return
 
@@ -739,16 +748,10 @@ class Heatmap(ImageBase):
             self._apply_image_update(img, transform)
         else:
             logger.info("Discarding outdated interpolation result.")
-        if self._interpolation_thread is not None and self._interpolation_thread.isRunning():
-            self._interpolation_thread.quit()
-            self._interpolation_thread.wait()
         self._maybe_start_pending_interpolation()
 
     def _on_interpolation_failed(self, error: str, data_version: int, scan_id: str):
         logger.warning(f"Interpolation failed for scan {scan_id} (version {data_version}): {error}")
-        if self._interpolation_thread is not None and self._interpolation_thread.isRunning():
-            self._interpolation_thread.quit()
-            self._interpolation_thread.wait()
         self._maybe_start_pending_interpolation()
 
     def _finish_interpolation_thread(self):
@@ -756,23 +759,29 @@ class Heatmap(ImageBase):
         if self._interpolation_worker is not None:
             try:
                 self.interpolation_requested.disconnect(self._interpolation_worker.process)
-            except (TypeError, RuntimeError):
-                # Defensive: disconnect may fail if already disconnected or during shutdown.
+            except (TypeError, RuntimeError) as ext:
+                logger.warning(f"Processing thread already disconnected: {ext}")
                 pass
             self._interpolation_worker.deleteLater()
             self._interpolation_worker = None
         if self._interpolation_thread is not None:
             if self._interpolation_thread.isRunning():
                 self._interpolation_thread.quit()
-                self._interpolation_thread.wait()
+                if not self._interpolation_thread.wait(3000):  # 3s timeout
+                    logger.error(
+                        f"Interpolation thread of widget {self.gui_id} did not stop within timeout 3s; leaving it dangling."
+                    )
             self._interpolation_thread.deleteLater()
             self._interpolation_thread = None
+        logger.info(f"Interpolation thread finished of widget {self.gui_id}")
 
     def _maybe_start_pending_interpolation(self):
         if self._pending_interpolation_request is None:
             return
         if self._pending_interpolation_request.scan_id != self.scan_id:
             self._pending_interpolation_request = None
+            return
+        if self._interpolation_worker is not None and self._interpolation_worker.is_processing:
             return
 
         pending = self._pending_interpolation_request
