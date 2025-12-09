@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.45.9 (2025-12-09)
+
+### Bug Fixes
+
+- **rpc**: Add expiration to GUI registry state updates
+  ([`5fc96bd`](https://github.com/bec-project/bec_widgets/commit/5fc96bd299115c1849240bae3b37112aad8f5a54))
+
+
 ## v2.45.8 (2025-12-08)
 
 ### Bug Fixes
