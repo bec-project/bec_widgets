@@ -134,7 +134,7 @@ def test_update_cycle(update_dialog, qtbot):
                 "deviceClass": "TestDevice",
                 "deviceConfig": {"param1": "val1"},
                 "readoutPriority": "monitored",
-                "description": None,
+                "description": "",
                 "readOnly": False,
                 "softwareTrigger": False,
                 "onFailure": "retry",
