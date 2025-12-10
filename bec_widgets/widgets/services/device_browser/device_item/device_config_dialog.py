@@ -65,7 +65,7 @@ class DeviceConfigDialog(BECWidget, QDialog):
         self._initial_config = {}
         super().__init__(parent=parent, **kwargs)
         self._config_helper = config_helper or ConfigHelper(
-            self.client.connector, self.client._service_name
+            self.client.connector, self.client._service_name, self.client.device_manager
         )
         self._device = device
         self._action: Literal["update", "add"] = action
