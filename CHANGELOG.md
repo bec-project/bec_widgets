@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.45.10 (2025-12-10)
+
+### Bug Fixes
+
+- **devices**: Minor fix to comply with new config helper in bec_lib
+  ([`04f1ff4`](https://github.com/bec-project/bec_widgets/commit/04f1ff4fe7869215f010bf73f7271e063e21f2a2))
+
+
 ## v2.45.9 (2025-12-09)
 
 ### Bug Fixes
