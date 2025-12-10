@@ -47,7 +47,9 @@ class DeviceBrowser(BECWidget, QWidget):
     ) -> None:
         super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
         self.get_bec_shortcuts()
-        self._config_helper = ConfigHelper(self.client.connector, self.client._service_name)
+        self._config_helper = ConfigHelper(
+            self.client.connector, self.client._service_name, self.client.device_manager
+        )
         self._q_threadpool = QThreadPool()
         self.ui = None
         self.init_ui()

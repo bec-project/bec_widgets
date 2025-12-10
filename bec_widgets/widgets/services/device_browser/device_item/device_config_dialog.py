@@ -229,7 +229,7 @@ class DirectUpdateDeviceConfigDialog(BECWidget, DeviceConfigDialog):
         self._device = device
         self._q_threadpool = threadpool or QThreadPool()
         self._config_helper = config_helper or ConfigHelper(
-            self.client.connector, self.client._service_name
+            self.client.connector, self.client._service_name, self.client.device_manager
         )
         super().__init__(parent=parent, **kwargs)
         self.get_bec_shortcuts()
