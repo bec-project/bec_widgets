@@ -25,11 +25,9 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets import BECWidget
 from bec_widgets.cli.rpc.rpc_widget_handler import widget_handler
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.widget_io import WidgetHierarchy as wh
-from bec_widgets.widgets.containers.dock import BECDockArea
 from bec_widgets.widgets.editors.jupyter_console.jupyter_console import BECJupyterConsole
 
 
@@ -366,15 +364,6 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
 
     def closeEvent(self, event):
         """Override to handle things when main window is closed."""
-        # clean up any widgets that might have custom cleanup
-        try:
-            # call cleanup on known containers if present
-            dock = self._widgets_by_name.get("dock")
-            if isinstance(dock, BECDockArea):
-                dock.cleanup()
-                dock.close()
-        except Exception:
-            pass
 
         # Ensure the embedded kernel and BEC client are shut down before window teardown
         self.console.shutdown_kernel()
