@@ -268,6 +268,20 @@ class Heatmap(ImageBase):
         if show_config_label is None:
             show_config_label = self._image_config.show_config_label
 
+        def _device_key(device: HeatmapDeviceSignal | None) -> tuple[str | None, str | None]:
+            return (device.name if device else None, device.entry if device else None)
+
+        prev_cfg = getattr(self, "_image_config", None)
+        config_changed = False
+        if prev_cfg and prev_cfg.x_device and prev_cfg.y_device and prev_cfg.z_device:
+            config_changed = any(
+                (
+                    _device_key(prev_cfg.x_device) != (x_name, x_entry),
+                    _device_key(prev_cfg.y_device) != (y_name, y_entry),
+                    _device_key(prev_cfg.z_device) != (z_name, z_entry),
+                )
+            )
+
         self._image_config = HeatmapConfig(
             parent_id=self.gui_id,
             x_device=HeatmapDeviceSignal(name=x_name, entry=x_entry),
@@ -282,7 +296,10 @@ class Heatmap(ImageBase):
             show_config_label=show_config_label,
         )
         self.color_map = color_map
-        self.reload = reload
+        self.reload = reload or config_changed
+        if config_changed:
+            self._grid_index = None
+            self.main_image.clear()
         self.update_labels()
 
         self._fetch_running_scan()
@@ -612,6 +629,8 @@ class Heatmap(ImageBase):
 
         if data is None or data.shape != shape:
             data = np.empty(shape)
+            data.fill(np.nan)
+        elif self.reload:
             data.fill(np.nan)
 
         def _get_grid_data(axis, snaked=True):
