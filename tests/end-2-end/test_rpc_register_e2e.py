@@ -9,16 +9,16 @@ from bec_widgets.cli.rpc.rpc_base import RPCReference
 
 def test_rpc_reference_objects(connected_client_gui_obj):
     gui = connected_client_gui_obj
-    dock = gui.window_list[0].new()
-    plt = dock.new(name="fig", widget="Waveform")
+    dock_area = gui.window_list[0]
+    plt = dock_area.new("Waveform", object_name="fig")
 
     plt.plot(x_name="samx", y_name="bpm4i")
 
-    im = dock.new("Image")
+    im = dock_area.new("Image")
     im.image("eiger")
-    motor_map = dock.new("MotorMap")
+    motor_map = dock_area.new("MotorMap")
     motor_map.map("samx", "samy")
-    plt_z = dock.new("Waveform")
+    plt_z = dock_area.new("Waveform")
     plt_z.plot(x_name="samx", y_name="samy", z_name="bpm4i")
 
     assert len(plt_z.curves) == 1

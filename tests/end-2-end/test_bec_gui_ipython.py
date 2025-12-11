@@ -22,4 +22,4 @@ def test_ipython_tab_completion(bec_ipython_shell):
     _, completer = bec_ipython_shell
     assert "gui.bec" in completer.all_completions("gui.")
     assert "gui.bec.new" in completer.all_completions("gui.bec.")
-    assert "gui.bec.panels" in completer.all_completions("gui.bec.pan")
+    assert "gui.bec.widget_list" in completer.all_completions("gui.bec.widget_")

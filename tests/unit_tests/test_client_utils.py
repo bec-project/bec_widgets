@@ -3,13 +3,13 @@ from unittest import mock
 
 import pytest
 
-from bec_widgets.cli.client import BECDockArea
+from bec_widgets.cli.client import AdvancedDockArea
 from bec_widgets.cli.client_utils import BECGuiClient, _start_plot_process
 
 
 @pytest.fixture
 def cli_dock_area():
-    dock_area = BECDockArea(gui_id="test")
+    dock_area = AdvancedDockArea(gui_id="test")
     with mock.patch.object(dock_area, "_run_rpc") as mock_rpc_call:
         with mock.patch.object(dock_area, "_gui_is_alive", return_value=True):
             yield dock_area, mock_rpc_call
@@ -31,13 +31,13 @@ def test_rpc_call_new_dock(cli_dock_area):
 )
 def test_client_utils_start_plot_process(config, call_config):
     with mock.patch("bec_widgets.cli.client_utils.subprocess.Popen") as mock_popen:
-        _start_plot_process("gui_id", "bec", config, gui_class="BECDockArea")
+        _start_plot_process("gui_id", "bec", config, gui_class="AdvancedDockArea")
         command = [
             "bec-gui-server",
             "--id",
             "gui_id",
             "--gui_class",
-            "BECDockArea",
+            "AdvancedDockArea",
             "--gui_class_id",
             "bec",
             "--hide",

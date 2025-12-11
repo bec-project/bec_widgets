@@ -1,20 +1,15 @@
-import enum
-from importlib import reload
-from types import SimpleNamespace
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import patch
 
-from bec_widgets.cli import client
-from bec_widgets.cli.rpc.rpc_base import RPCBase
 from bec_widgets.cli.rpc.rpc_widget_handler import RPCWidgetHandler
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.plugin_utils import BECClassContainer, BECClassInfo
-from bec_widgets.widgets.containers.dock.dock import BECDock
 
 
 def test_rpc_widget_handler():
     handler = RPCWidgetHandler()
     assert "Image" in handler.widget_classes
     assert "RingProgressBar" in handler.widget_classes
+    assert "AdvancedDockArea" in handler.widget_classes
 
 
 class _TestPluginWidget(BECWidget): ...

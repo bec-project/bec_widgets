@@ -29,8 +29,9 @@ from bec_widgets.utils.plugin_utils import get_plugin_auto_updates
 from bec_widgets.utils.round_frame import RoundedFrame
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.utils.ui_loader import UILoader
+from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import AdvancedDockArea
+from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import list_profiles
 from bec_widgets.widgets.containers.auto_update.auto_updates import AutoUpdates
-from bec_widgets.widgets.containers.dock.dock_area import BECDockArea
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow, BECMainWindowNoRPC
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
 
@@ -211,10 +212,11 @@ class LaunchWindow(BECMainWindow):
             name="dock_area",
             icon_path=os.path.join(MODULE_PATH, "assets", "app_icons", "bec_widgets_icon.png"),
             top_label="Get started",
-            main_label="BEC Dock Area",
-            description="Highly flexible and customizable dock area application with modular widgets.",
-            action_button=lambda: self.launch("dock_area"),
-            show_selector=False,
+            main_label="BEC Advanced Dock Area",
+            description="Flexible application for managing modular widgets and user profiles.",
+            action_button=self._open_dock_area,
+            show_selector=True,
+            selector_items=list_profiles("bec"),
         )
 
         self.available_auto_updates: dict[str, type[AutoUpdates]] = (
@@ -347,7 +349,7 @@ class LaunchWindow(BECMainWindow):
         from bec_widgets.applications import bw_launch
 
         with RPCRegister.delayed_broadcast() as rpc_register:
-            existing_dock_areas = rpc_register.get_names_of_rpc_by_class_type(BECDockArea)
+            existing_dock_areas = rpc_register.get_names_of_rpc_by_class_type(AdvancedDockArea)
             if name is not None:
                 if name in existing_dock_areas:
                     raise ValueError(
@@ -384,7 +386,7 @@ class LaunchWindow(BECMainWindow):
             if launch is None:
                 raise ValueError(f"Launch script {launch_script} not found.")
 
-            result_widget = launch(name)
+            result_widget = launch(name, **kwargs)
             result_widget.resize(result_widget.minimumSizeHint())
             # TODO Should we simply use the specified name as title here?
             result_widget.window().setWindowTitle(f"BEC - {name}")
@@ -491,6 +493,17 @@ class LaunchWindow(BECMainWindow):
                 auto_update = None
         return self.launch("auto_update", auto_update=auto_update)
 
+    def _open_dock_area(self):
+        """
+        Open Advanced Dock Area using the selected profile (if any).
+        """
+        tile = self.tiles.get("dock_area")
+        if tile is None or tile.selector is None:
+            profile = None
+        else:
+            profile = tile.selector.currentText().strip() or None
+        return self.launch("dock_area", profile=profile)
+
     def _open_widget(self):
         """
         Open a widget from the available widgets.
@@ -584,7 +597,10 @@ class LaunchWindow(BECMainWindow):
 if __name__ == "__main__":
     import sys
 
+    from bec_widgets.utils.colors import apply_theme
+
     app = QApplication(sys.argv)
+    apply_theme("dark")
     launcher = LaunchWindow()
     launcher.show()
     sys.exit(app.exec())

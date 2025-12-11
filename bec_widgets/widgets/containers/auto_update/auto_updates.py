@@ -7,12 +7,12 @@ from bec_lib.logger import bec_logger
 from bec_lib.messages import ScanStatusMessage
 
 from bec_widgets.utils.error_popups import SafeSlot
-from bec_widgets.widgets.containers.dock.dock_area import BECDockArea
+from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import AdvancedDockArea
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
+from bec_widgets.widgets.containers.qt_ads import CDockWidget
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_widgets.utils.bec_widget import BECWidget
-    from bec_widgets.widgets.containers.dock.dock import BECDock
     from bec_widgets.widgets.plots.image.image import Image
     from bec_widgets.widgets.plots.motor_map.motor_map import MotorMap
     from bec_widgets.widgets.plots.multi_waveform.multi_waveform import MultiWaveform
@@ -24,7 +24,7 @@ logger = bec_logger.logger
 
 
 class AutoUpdates(BECMainWindow):
-    _default_dock: BECDock
+    _default_dock: CDockWidget | None
     USER_ACCESS = ["enabled", "enabled.setter", "selected_device", "selected_device.setter"]
     RPC = True
     PLUGIN = False
@@ -37,7 +37,12 @@ class AutoUpdates(BECMainWindow):
     ):
         super().__init__(parent=parent, gui_id=gui_id, window_title=window_title, **kwargs)
 
-        self.dock_area = BECDockArea(parent=self, object_name="dock_area")
+        self.dock_area = AdvancedDockArea(
+            parent=self,
+            object_name="dock_area",
+            enable_profile_management=False,
+            restore_initial_profile=False,
+        )
         self.setCentralWidget(self.dock_area)
         self._auto_update_selected_device: str | None = None
 
@@ -106,9 +111,11 @@ class AutoUpdates(BECMainWindow):
         """
         Create a default dock for the auto updates.
         """
+        self.dock_area.delete_all()
         self.dock_name = "update_dock"
-        self._default_dock = self.dock_area.new(self.dock_name)
-        self.current_widget = self._default_dock.new("Waveform")
+        self.current_widget = self.dock_area.new("Waveform")
+        docks = self.dock_area.dock_list()
+        self._default_dock = docks[0] if docks else None
 
     @overload
     def set_dock_to_widget(self, widget: Literal["Waveform"]) -> Waveform: ...
@@ -138,16 +145,18 @@ class AutoUpdates(BECMainWindow):
         Returns:
             BECWidget: The widget that was set.
         """
-        if self._default_dock is None or self.current_widget is None:
+        if self.current_widget is None:
             logger.warning(
                 f"Auto Updates: No default dock found. Creating a new one with name {self.dock_name}"
             )
             self.start_default_dock()
         assert self.current_widget is not None
 
-        if not self.current_widget.__class__.__name__ == widget:
-            self._default_dock.delete(self.current_widget.object_name)
-            self.current_widget = self._default_dock.new(widget)
+        if self.current_widget.__class__.__name__ != widget:
+            self.dock_area.delete_all()
+            self.current_widget = self.dock_area.new(widget)
+            docks = self.dock_area.dock_list()
+            self._default_dock = docks[0] if docks else None
         return self.current_widget
 
     def get_selected_device(

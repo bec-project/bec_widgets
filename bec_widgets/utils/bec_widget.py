@@ -39,7 +39,6 @@ class BECWidget(BECConnector):
         theme_update: bool = False,
         start_busy: bool = False,
         busy_text: str = "Loading…",
-        parent_dock: BECDock | None = None,  # TODO should go away -> issue created #473
         **kwargs,
     ):
         """
@@ -58,9 +57,7 @@ class BECWidget(BECConnector):
             theme_update(bool, optional): Whether to subscribe to theme updates. Defaults to False. When set to True, the
                 widget's apply_theme method will be called when the theme changes.
         """
-        super().__init__(
-            client=client, config=config, gui_id=gui_id, parent_dock=parent_dock, **kwargs
-        )
+        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
         if not isinstance(self, QObject):
             raise RuntimeError(f"{repr(self)} is not a subclass of QWidget")
         if theme_update:

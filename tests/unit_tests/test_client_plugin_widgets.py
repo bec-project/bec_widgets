@@ -1,6 +1,5 @@
 import enum
 import inspect
-import sys
 from importlib import reload
 from types import SimpleNamespace
 from unittest.mock import MagicMock, call, patch
@@ -59,4 +58,4 @@ def test_duplicate_plugins_not_allowed(_, bec_logger: MagicMock):
         )
         in bec_logger.logger.warning.mock_calls
     )
-    assert client.BECDock is not _TestDuplicatePlugin
+    assert client.Waveform is not _TestDuplicatePlugin

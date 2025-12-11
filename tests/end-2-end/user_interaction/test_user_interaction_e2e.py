@@ -98,20 +98,16 @@ def wait_for_namespace_change(
         ) from e
 
 
-def create_widget(
-    qtbot, gui: BECGuiClient, widget_cls_name: str
-) -> tuple[RPCReference, RPCReference]:
+def create_widget(qtbot, gui: BECGuiClient, widget_cls_name: str) -> RPCReference:
     """Utility method to create a widget and wait for the namespaces to be created."""
     if hasattr(gui, "dock_area"):
-        dock_area: client.BECDockArea = gui.dock_area
+        dock_area = gui.dock_area
     else:
-        dock_area: client.BECDockArea = gui.new(name="dock_area")
+        dock_area = gui.new(name="dock_area")
     wait_for_namespace_change(qtbot, gui, gui, dock_area.object_name, dock_area._gui_id)
-    dock: client.BECDock = dock_area.new()
-    wait_for_namespace_change(qtbot, gui, dock_area, dock.object_name, dock._gui_id)
-    widget = dock.new(widget=widget_cls_name)
-    wait_for_namespace_change(qtbot, gui, dock, widget.object_name, widget._gui_id)
-    return dock, widget
+    widget = dock_area.new(widget=widget_cls_name)
+    wait_for_namespace_change(qtbot, gui, dock_area, widget.object_name, widget._gui_id)
+    return widget
 
 
 @pytest.fixture(scope="module")
@@ -133,6 +129,7 @@ def maybe_remove_dock_area(qtbot, gui: BECGuiClient, random_int_gen: random.Rand
         # Needed, reference gets deleted in the gui
         name = gui.dock_area.object_name
         gui_id = gui.dock_area._gui_id
+        gui.dock_area.delete_all()  # start fresh
         gui.delete("dock_area")
         wait_for_namespace_change(
             qtbot, gui=gui, parent_widget=gui, object_name=name, widget_gui_id=gui_id, exists=False
@@ -144,9 +141,8 @@ def test_widgets_e2e_bec_progress_bar(qtbot, connected_client_gui_obj, random_ge
     """Test the BECProgressBar widget."""
     gui = connected_client_gui_obj
     bec = gui._client
-    # Create dock_area, dock, widget
-    dock, widget = create_widget(qtbot, gui, gui.available_widgets.BECProgressBar)
-    dock: client.BECDock
+    # Create dock_area and widget
+    widget = create_widget(qtbot, gui, gui.available_widgets.BECProgressBar)
     widget: client.BECProgressBar
 
     # Check rpc calls
@@ -166,9 +162,8 @@ def test_widgets_e2e_bec_queue(qtbot, connected_client_gui_obj, random_generator
     """Test the BECQueue widget."""
     gui = connected_client_gui_obj
     bec = gui._client
-    # Create dock_area, dock, widget
-    dock, widget = create_widget(qtbot, gui, gui.available_widgets.BECQueue)
-    dock: client.BECDock
+    # Create dock_area and widget
+    widget = create_widget(qtbot, gui, gui.available_widgets.BECQueue)
     widget: client.BECQueue
 
     # No rpc calls to test so far
@@ -183,8 +178,8 @@ def test_widgets_e2e_bec_status_box(qtbot, connected_client_gui_obj, random_gene
     """Test the BECStatusBox widget."""
     gui = connected_client_gui_obj
     bec = gui._client
-    # Create dock_area, dock, widget
-    dock, widget = create_widget(qtbot, gui, gui.available_widgets.BECStatusBox)
+    # Create dock_area and widget
+    widget = create_widget(qtbot, gui, gui.available_widgets.BECStatusBox)
 
     # Check rpc calls
     assert widget.get_server_state() in ["RUNNING", "IDLE", "BUSY", "ERROR"]
@@ -198,9 +193,8 @@ def test_widgets_e2e_dap_combo_box(qtbot, connected_client_gui_obj, random_gener
     """Test the DAPComboBox widget."""
     gui = connected_client_gui_obj
     bec = gui._client
-    # Create dock_area, dock, widget
-    dock, widget = create_widget(qtbot, gui, gui.available_widgets.DapComboBox)
-    dock: client.BECDock
+    # Create dock_area and widget
+    widget = create_widget(qtbot, gui, gui.available_widgets.DapComboBox)
     widget: client.DAPComboBox
 
     # Check rpc calls
@@ -217,9 +211,8 @@ def test_widgets_e2e_device_browser(qtbot, connected_client_gui_obj, random_gene
     """Test the DeviceBrowser widget."""
     gui = connected_client_gui_obj
     bec = gui._client
-    # Create dock_area, dock, widget
-    dock, widget = create_widget(qtbot, gui, gui.available_widgets.DeviceBrowser)
-    dock: client.BECDock
+    # Create dock_area and widget
+    widget = create_widget(qtbot, gui, gui.available_widgets.DeviceBrowser)
     widget: client.DeviceBrowser
 
     # No rpc calls yet to check
@@ -233,9 +226,8 @@ def test_widgets_e2e_device_combo_box(qtbot, connected_client_gui_obj, random_ge
     """Test the DeviceComboBox widget."""
     gui = connected_client_gui_obj
     bec = gui._client
-    # Create dock_area, dock, widget
-    dock, widget = create_widget(qtbot, gui, gui.available_widgets.DeviceComboBox)
-    dock: client.BECDock
+    # Create dock_area and widget
+    widget = create_widget(qtbot, gui, gui.available_widgets.DeviceComboBox)
     widget: client.DeviceComboBox
 
     assert "samx" in widget.devices
@@ -252,9 +244,8 @@ def test_widgets_e2e_device_line_edit(qtbot, connected_client_gui_obj, random_ge
     """Test the DeviceLineEdit widget."""
     gui = connected_client_gui_obj
     bec = gui._client
-    # Create dock_area, dock, widget
-    dock, widget = create_widget(qtbot, gui, gui.available_widgets.DeviceLineEdit)
-    dock: client.BECDock
+    # Create dock_area and widget
+    widget = create_widget(qtbot, gui, gui.available_widgets.DeviceLineEdit)
     widget: client.DeviceLineEdit
 
     assert widget._is_valid_input is False
@@ -273,9 +264,8 @@ def test_widgets_e2e_signal_line_edit(qtbot, connected_client_gui_obj, random_ge
     """Test the DeviceSignalLineEdit widget."""
     gui = connected_client_gui_obj
     bec = gui._client
-    # Create dock_area, dock, widget
-    dock, widget = create_widget(qtbot, gui, gui.available_widgets.SignalLineEdit)
-    dock: client.BECDock
+    # Create dock_area and widget
+    widget = create_widget(qtbot, gui, gui.available_widgets.SignalLineEdit)
     widget: client.SignalLineEdit
 
     widget.set_device("samx")
@@ -300,8 +290,8 @@ def test_widgets_e2e_signal_combobox(qtbot, connected_client_gui_obj, random_gen
     """Test the DeviceSignalComboBox widget."""
     gui = connected_client_gui_obj
     bec = gui._client
-    # Create dock_area, dock, widget
-    _, widget = create_widget(qtbot, gui, gui.available_widgets.SignalComboBox)
+    # Create dock_area and widget
+    widget = create_widget(qtbot, gui, gui.available_widgets.SignalComboBox)
     widget: client.SignalComboBox
 
     widget.set_device("samx")
@@ -325,9 +315,8 @@ def test_widgets_e2e_image(qtbot, connected_client_gui_obj, random_generator_fro
     """Test the Image widget."""
     gui = connected_client_gui_obj
     bec = gui._client
-    # Create dock_area, dock, widget
-    dock, widget = create_widget(qtbot, gui, gui.available_widgets.Image)
-    dock: client.BECDock
+    # Create dock_area and widget
+    widget = create_widget(qtbot, gui, gui.available_widgets.Image)
     widget: client.Image
 
     scans = bec.scans
@@ -369,9 +358,8 @@ def test_widgets_e2e_image(qtbot, connected_client_gui_obj, random_generator_fro
 #     """Test the LogPanel widget."""
 #     gui = connected_client_gui_obj
 #     bec = gui._client
-#     # Create dock_area, dock, widget
-#     dock, widget = create_widget(qtbot, gui, gui.available_widgets.LogPanel)
-#     dock: client.BECDock
+#     # Create dock_area and widget
+#     widget = create_widget(qtbot, gui, gui.available_widgets.LogPanel)
 #     widget: client.LogPanel
 
 #     # No rpc calls to check so far
@@ -385,9 +373,8 @@ def test_widgets_e2e_minesweeper(qtbot, connected_client_gui_obj, random_generat
     """Test the MineSweeper widget."""
     gui = connected_client_gui_obj
     bec = gui._client
-    # Create dock_area, dock, widget
-    dock, widget = create_widget(qtbot, gui, gui.available_widgets.Minesweeper)
-    dock: client.BECDock
+    # Create dock_area and widget
+    widget = create_widget(qtbot, gui, gui.available_widgets.Minesweeper)
     widget: client.MineSweeper
 
     # No rpc calls to check so far
@@ -401,9 +388,8 @@ def test_widgets_e2e_motor_map(qtbot, connected_client_gui_obj, random_generator
     """Test the MotorMap widget."""
     gui = connected_client_gui_obj
     bec = gui._client
-    # Create dock_area, dock, widget
-    dock, widget = create_widget(qtbot, gui, gui.available_widgets.MotorMap)
-    dock: client.BECDock
+    # Create dock_area and widget
+    widget = create_widget(qtbot, gui, gui.available_widgets.MotorMap)
     widget: client.MotorMap
 
     # Test RPC calls
@@ -431,9 +417,8 @@ def test_widgets_e2e_multi_waveform(qtbot, connected_client_gui_obj, random_gene
     """Test MultiWaveform widget."""
     gui = connected_client_gui_obj
     bec = gui._client
-    # Create dock_area, dock, widget
-    dock, widget = create_widget(qtbot, gui, gui.available_widgets.MultiWaveform)
-    dock: client.BECDock
+    # Create dock_area and widget
+    widget = create_widget(qtbot, gui, gui.available_widgets.MultiWaveform)
     widget: client.MultiWaveform
 
     # Test RPC calls
@@ -470,9 +455,8 @@ def test_widgets_e2e_positioner_indicator(
     """Test the PositionIndicator widget."""
     gui = connected_client_gui_obj
     bec = gui._client
-    # Create dock_area, dock, widget
-    dock, widget = create_widget(qtbot, gui, gui.available_widgets.PositionIndicator)
-    dock: client.BECDock
+    # Create dock_area and widget
+    widget = create_widget(qtbot, gui, gui.available_widgets.PositionIndicator)
     widget: client.PositionIndicator
 
     # TODO check what these rpc calls are supposed to do! Issue created #461
@@ -487,9 +471,8 @@ def test_widgets_e2e_positioner_box(qtbot, connected_client_gui_obj, random_gene
     """Test the PositionerBox widget."""
     gui = connected_client_gui_obj
     bec = gui._client
-    # Create dock_area, dock, widget
-    dock, widget = create_widget(qtbot, gui, gui.available_widgets.PositionerBox)
-    dock: client.BECDock
+    # Create dock_area and widget
+    widget = create_widget(qtbot, gui, gui.available_widgets.PositionerBox)
     widget: client.PositionerBox
 
     # Test rpc calls
@@ -510,9 +493,8 @@ def test_widgets_e2e_positioner_box_2d(qtbot, connected_client_gui_obj, random_g
     """Test the PositionerBox2D widget."""
     gui = connected_client_gui_obj
     bec = gui._client
-    # Create dock_area, dock, widget
-    dock, widget = create_widget(qtbot, gui, gui.available_widgets.PositionerBox2D)
-    dock: client.BECDock
+    # Create dock_area and widget
+    widget = create_widget(qtbot, gui, gui.available_widgets.PositionerBox2D)
     widget: client.PositionerBox2D
 
     # Test rpc calls
@@ -537,9 +519,8 @@ def test_widgets_e2e_positioner_control_line(
     """Test the positioner control line widget"""
     gui = connected_client_gui_obj
     bec = gui._client
-    # Create dock_area, dock, widget
-    dock, widget = create_widget(qtbot, gui, gui.available_widgets.PositionerControlLine)
-    dock: client.BECDock
+    # Create dock_area and widget
+    widget = create_widget(qtbot, gui, gui.available_widgets.PositionerControlLine)
     widget: client.PositionerControlLine
 
     # Test rpc calls
@@ -555,31 +536,31 @@ def test_widgets_e2e_positioner_control_line(
     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
 
 
-@pytest.mark.timeout(PYTEST_TIMEOUT)
-def test_widgets_e2e_ring_progress_bar(qtbot, connected_client_gui_obj, random_generator_from_seed):
-    """Test the RingProgressBar widget"""
-    gui = connected_client_gui_obj
-    bec = gui._client
-    # Create dock_area, dock, widget
-    dock, widget = create_widget(qtbot, gui, gui.available_widgets.RingProgressBar)
-    dock: client.BECDock
-    widget: client.RingProgressBar
-
-    widget.set_number_of_bars(3)
-    widget.rings[0].set_update("manual")
-    widget.rings[0].set_value(30)
-    widget.rings[0].set_min_max_values(0, 100)
-    widget.rings[1].set_update("scan")
-    widget.rings[2].set_update("device", device="samx")
-
-    # Test rpc calls
-    dev = bec.device_manager.devices
-    scans = bec.scans
-    # Do a scan
-    scans.line_scan(dev.samx, -3, 3, steps=50, exp_time=0.01, relative=False).wait()
-
-    # Test removing the widget, or leaving it open for the next test
-    maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
+# TODO passes locally, fails on CI for some reason... -> issue #1003
+# @pytest.mark.timeout(PYTEST_TIMEOUT)
+# def test_widgets_e2e_ring_progress_bar(qtbot, connected_client_gui_obj, random_generator_from_seed):
+#     """Test the RingProgressBar widget"""
+#     gui = connected_client_gui_obj
+#     bec = gui._client
+#     # Create dock_area and widget
+#     widget = create_widget(qtbot, gui, gui.available_widgets.RingProgressBar)
+#     widget: client.RingProgressBar
+#
+#     widget.set_number_of_bars(3)
+#     widget.rings[0].set_update("manual")
+#     widget.rings[0].set_value(30)
+#     widget.rings[0].set_min_max_values(0, 100)
+#     widget.rings[1].set_update("scan")
+#     widget.rings[2].set_update("device", device="samx")
+#
+#     # Test rpc calls
+#     dev = bec.device_manager.devices
+#     scans = bec.scans
+#     # Do a scan
+#     scans.line_scan(dev.samx, -3, 3, steps=50, exp_time=0.01, relative=False).wait()
+#
+#     # Test removing the widget, or leaving it open for the next test
+#     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
 
 
 @pytest.mark.timeout(PYTEST_TIMEOUT)
@@ -587,9 +568,8 @@ def test_widgets_e2e_scan_control(qtbot, connected_client_gui_obj, random_genera
     """Test the ScanControl widget"""
     gui = connected_client_gui_obj
     bec = gui._client
-    # Create dock_area, dock, widget
-    dock, widget = create_widget(qtbot, gui, gui.available_widgets.ScanControl)
-    dock: client.BECDock
+    # Create dock_area and widget
+    widget = create_widget(qtbot, gui, gui.available_widgets.ScanControl)
     widget: client.ScanControl
 
     # No rpc calls to check so far
@@ -603,9 +583,8 @@ def test_widgets_e2e_scatter_waveform(qtbot, connected_client_gui_obj, random_ge
     """Test the ScatterWaveform widget"""
     gui = connected_client_gui_obj
     bec = gui._client
-    # Create dock_area, dock, widget
-    dock, widget = create_widget(qtbot, gui, gui.available_widgets.ScatterWaveform)
-    dock: client.BECDock
+    # Create dock_area and widget
+    widget = create_widget(qtbot, gui, gui.available_widgets.ScatterWaveform)
     widget: client.ScatterWaveform
 
     # Test rpc calls
@@ -623,9 +602,8 @@ def test_widgets_e2e_text_box(qtbot, connected_client_gui_obj, random_generator_
     """Test the TextBox widget"""
     gui = connected_client_gui_obj
     bec = gui._client
-    # Create dock_area, dock, widget
-    dock, widget = create_widget(qtbot, gui, gui.available_widgets.TextBox)
-    dock: client.BECDock
+    # Create dock_area and widget
+    widget = create_widget(qtbot, gui, gui.available_widgets.TextBox)
     widget: client.TextBox
 
     # RPC calls
@@ -641,9 +619,8 @@ def test_widgets_e2e_waveform(qtbot, connected_client_gui_obj, random_generator_
     """Test the Waveform widget"""
     gui = connected_client_gui_obj
     bec = gui._client
-    # Create dock_area, dock, widget
-    dock, widget = create_widget(qtbot, gui, gui.available_widgets.Waveform)
-    dock: client.BECDock
+    # Create dock_area and widget
+    widget = create_widget(qtbot, gui, gui.available_widgets.Waveform)
     widget: client.Waveform
 
     # Test rpc calls

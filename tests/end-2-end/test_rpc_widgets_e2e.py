@@ -1,5 +1,3 @@
-from typing import TYPE_CHECKING
-
 import pytest
 
 from bec_widgets.cli.rpc.rpc_base import RPCBase, RPCReference
@@ -64,13 +62,11 @@ def wait_for_namespace_change(
 
 def create_widget(
     qtbot, gui: RPCBase, dock_area: RPCReference, widget_cls_name: str
-) -> tuple[RPCReference, RPCReference, RPCReference]:
+) -> RPCReference:
     """Utility method to create a widget and wait for the namespaces to be created."""
-    dock = dock_area.new(widget=widget_cls_name)
-    wait_for_namespace_change(qtbot, gui, dock_area, dock.object_name, dock._gui_id)
-    widget = dock.element_list[-1]
-    wait_for_namespace_change(qtbot, gui, dock, widget.object_name, widget._gui_id)
-    return dock, widget
+    widget = dock_area.new(widget_cls_name)
+    wait_for_namespace_change(qtbot, gui, dock_area, widget.object_name, widget._gui_id)
+    return widget
 
 
 @pytest.mark.timeout(100)
@@ -106,15 +102,12 @@ def test_available_widgets(qtbot, connected_client_gui_obj):
         #############################
 
         # Create widget the widget and wait for the widget to be registered in the ipython registry
-        dock, widget = create_widget(
-            qtbot, gui, dock_area, getattr(gui.available_widgets, object_name)
-        )
+        widget = create_widget(qtbot, gui, dock_area, getattr(gui.available_widgets, object_name))
         # Check that the widget is indeed registered on the server and the client
         assert gui._ipython_registry.get(widget._gui_id, None) is not None
         assert gui._server_registry.get(widget._gui_id, None) is not None
         # Check that namespace was updated
-        assert hasattr(dock_area, dock.object_name)
-        assert hasattr(dock, widget.object_name)
+        assert hasattr(dock_area, widget.object_name)
 
         # Check that no additional top level widgets were created without a parent_id
         widgets = [
@@ -129,19 +122,17 @@ def test_available_widgets(qtbot, connected_client_gui_obj):
         #############################
 
         # Now we remove the widget again
-        dock_name = dock.object_name
-        dock_id = dock._gui_id
         widget_id = widget._gui_id
-        dock_area.delete(dock.object_name)
+        widget.remove()
         # Wait for namespace to change
-        wait_for_namespace_change(qtbot, gui, dock_area, dock_name, dock_id, exists=False)
-        # Assert that dock and widget are removed from the ipython registry and the namespace
-        assert hasattr(dock_area, dock_name) is False
+        wait_for_namespace_change(
+            qtbot, gui, dock_area, widget.object_name, widget_id, exists=False
+        )
+        # Assert that widget is removed from the ipython registry and the namespace
+        assert hasattr(dock_area, widget.object_name) is False
         # Client registry
-        assert gui._ipython_registry.get(dock_id, None) is None
         assert gui._ipython_registry.get(widget_id, None) is None
         # Server registry
-        assert gui._server_registry.get(dock_id, None) is None
         assert gui._server_registry.get(widget_id, None) is None
 
         # Check that the number of top level widgets is still the same. As the cleanup is done by the

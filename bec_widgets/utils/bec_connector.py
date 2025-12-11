@@ -86,7 +86,6 @@ class BECConnector:
         config: ConnectionConfig | None = None,
         gui_id: str | None = None,
         object_name: str | None = None,
-        parent_dock: BECDock | None = None,  # TODO should go away -> issue created #473
         root_widget: bool = False,
         **kwargs,
     ):
@@ -98,7 +97,6 @@ class BECConnector:
             config(ConnectionConfig, optional): The connection configuration with specific gui id.
             gui_id(str, optional): The GUI ID.
             object_name(str, optional): The object name.
-            parent_dock(BECDock, optional): The parent dock.# TODO should go away -> issue created #473
             root_widget(bool, optional): If set to True, the parent_id will be always set to None, thus enforcing that the widget is accessible as a root widget of the BECGuiClient object.
             **kwargs:
         """
@@ -119,7 +117,6 @@ class BECConnector:
         # BEC related connections
         self.bec_dispatcher = BECDispatcher(client=client)
         self.client = self.bec_dispatcher.client if client is None else client
-        self._parent_dock = parent_dock  # TODO also remove at some point -> issue created #473
         self.rpc_register = RPCRegister()
 
         if not self.client in BECConnector.EXIT_HANDLERS:
@@ -456,12 +453,8 @@ class BECConnector:
 
     def remove(self):
         """Cleanup the BECConnector"""
-        # If the widget is attached to a dock, remove it from the dock.
-        # TODO this should be handled by dock and dock are not by BECConnector  -> issue created #473
-        if self._parent_dock is not None:
-            self._parent_dock.delete(self.object_name)
         # If the widget is from Qt, trigger its close method.
-        elif hasattr(self, "close"):
+        if hasattr(self, "close"):
             self.close()
         # If the widget is neither from a Dock nor from Qt, remove it from the RPC registry.
         # i.e. Curve Item from Waveform
