@@ -628,18 +628,31 @@ class Heatmap(ImageBase):
         # If the scan's fast axis is x, we need to swap the x and y axes
         swap = bool(msg.request_inputs["arg_bundle"][4] == self._image_config.x_device.entry)
 
+        def _axis_bounds(
+            axis_values: np.ndarray, limits: list[float], axis: Literal["x", "y"]
+        ) -> tuple[float, float]:
+            start, stop = limits[:2]
+            ascending = start <= stop
+            if snaked and axis == "y":
+                ascending = start >= stop
+            if ascending:
+                return float(axis_values.min()), float(axis_values.max())
+            return float(axis_values.max()), float(axis_values.min())
+
         # calculate the QTransform to put (0,0) at the axis origin
         scan_pos = np.asarray(msg.info["positions"])
-        x_min = min(scan_pos[:, 0])
-        x_max = max(scan_pos[:, 0])
-        y_min = min(scan_pos[:, 1])
-        y_max = max(scan_pos[:, 1])
+        x_min, x_max = _axis_bounds(
+            scan_pos[:, 0], args[self._image_config.x_device.entry], axis="x"
+        )
+        y_min, y_max = _axis_bounds(
+            scan_pos[:, 1], args[self._image_config.y_device.entry], axis="y"
+        )
 
         x_range = x_max - x_min
         y_range = y_max - y_min
 
-        pixel_size_x = x_range / (shape[0] - 1)
-        pixel_size_y = y_range / (shape[1] - 1)
+        pixel_size_x = x_range / max(shape[0] - 1, 1)
+        pixel_size_y = y_range / max(shape[1] - 1, 1)
 
         transform = QTransform()
         if swap:
