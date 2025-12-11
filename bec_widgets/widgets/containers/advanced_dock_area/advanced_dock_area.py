@@ -104,6 +104,8 @@ class AdvancedDockArea(DockAreaWidget):
         "print_layout_structure",
         "mode",
         "mode.setter",
+        "save_profile",
+        "load_profile",
     ]
 
     # Define a signal for mode changes
@@ -171,10 +173,6 @@ class AdvancedDockArea(DockAreaWidget):
 
         if self._ensure_initial_profile():
             self._refresh_workspace_list()
-
-        # Sync Developer toggle icon state after initial setup #TODO temporary disable
-        # dev_action = self.toolbar.components.get_action("developer_mode").action
-        # dev_action.setChecked(self._editable)
 
         # Apply the requested mode after everything is set up
         self.mode = mode
@@ -319,7 +317,7 @@ class AdvancedDockArea(DockAreaWidget):
     def _setup_toolbar(self):
         self.toolbar = ModularToolBar(parent=self)
 
-        PLOT_ACTIONS = {
+        plot_actions = {
             "waveform": (Waveform.ICON_NAME, "Add Waveform", "Waveform"),
             "scatter_waveform": (
                 ScatterWaveform.ICON_NAME,
@@ -331,7 +329,7 @@ class AdvancedDockArea(DockAreaWidget):
             "motor_map": (MotorMap.ICON_NAME, "Add Motor Map", "MotorMap"),
             "heatmap": (Heatmap.ICON_NAME, "Add Heatmap", "Heatmap"),
         }
-        DEVICE_ACTIONS = {
+        device_actions = {
             "scan_control": (ScanControl.ICON_NAME, "Add Scan Control", "ScanControl"),
             "positioner_box": (PositionerBox.ICON_NAME, "Add Device Box", "PositionerBox"),
             "positioner_box_2D": (
@@ -340,7 +338,7 @@ class AdvancedDockArea(DockAreaWidget):
                 "PositionerBox2D",
             ),
         }
-        UTIL_ACTIONS = {
+        util_actions = {
             "queue": (BECQueue.ICON_NAME, "Add Scan Queue", "BECQueue"),
             "status": (BECStatusBox.ICON_NAME, "Add BEC Status Box", "BECStatusBox"),
             "progress_bar": (
@@ -372,9 +370,9 @@ class AdvancedDockArea(DockAreaWidget):
             b.add_action(key)
             self.toolbar.add_bundle(b)
 
-        _build_menu("menu_plots", "Add Plot ", PLOT_ACTIONS)
-        _build_menu("menu_devices", "Add Device Control ", DEVICE_ACTIONS)
-        _build_menu("menu_utils", "Add Utils ", UTIL_ACTIONS)
+        _build_menu("menu_plots", "Add Plot ", plot_actions)
+        _build_menu("menu_devices", "Add Device Control ", device_actions)
+        _build_menu("menu_utils", "Add Utils ", util_actions)
 
         # Create flat toolbar bundles for each widget type
         def _build_flat_bundles(category: str, mapping: dict[str, tuple[str, str, str]]):
@@ -398,14 +396,14 @@ class AdvancedDockArea(DockAreaWidget):
 
             self.toolbar.add_bundle(bundle)
 
-        _build_flat_bundles("plots", PLOT_ACTIONS)
-        _build_flat_bundles("devices", DEVICE_ACTIONS)
-        _build_flat_bundles("utils", UTIL_ACTIONS)
+        _build_flat_bundles("plots", plot_actions)
+        _build_flat_bundles("devices", device_actions)
+        _build_flat_bundles("utils", util_actions)
 
         # Workspace
         spacer_bundle = ToolbarBundle("spacer_bundle", self.toolbar.components)
         spacer = QWidget(parent=self.toolbar.components.toolbar)
-        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.toolbar.components.add_safe("spacer", WidgetAction(widget=spacer, adjust_size=False))
         spacer_bundle.add_action("spacer")
         self.toolbar.add_bundle(spacer_bundle)
@@ -444,16 +442,15 @@ class AdvancedDockArea(DockAreaWidget):
         bda.add_action("attach_all")
         bda.add_action("screenshot")
         bda.add_action("dark_mode")
-        # bda.add_action("developer_mode") #TODO temporary disable
         self.toolbar.add_bundle(bda)
 
         self._apply_toolbar_layout()
 
         # Store mappings on self for use in _hook_toolbar
         self._ACTION_MAPPINGS = {
-            "menu_plots": PLOT_ACTIONS,
-            "menu_devices": DEVICE_ACTIONS,
-            "menu_utils": UTIL_ACTIONS,
+            "menu_plots": plot_actions,
+            "menu_devices": device_actions,
+            "menu_utils": util_actions,
         }
 
     def _hook_toolbar(self):
@@ -699,6 +696,9 @@ class AdvancedDockArea(DockAreaWidget):
 
         Before switching, persist the current profile to the user copy.
         Prefer loading the user copy; fall back to the default copy.
+
+        Args:
+            name (str | None): The name of the profile to load. If None, prompts the user.
         """
         if not name:  # Gui fallback if the name is not provided
             name, ok = QInputDialog.getText(

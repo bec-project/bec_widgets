@@ -11,9 +11,9 @@ from bec_widgets.tests.utils import check_remote_data_size
 
 def test_rpc_waveform1d_custom_curve(qtbot, connected_client_gui_obj):
     gui = connected_client_gui_obj
-    dock = gui.bec
+    dock_area = gui.bec
 
-    wf = dock.new("wf_dock").new("Waveform")
+    wf = dock_area.new("Waveform")
 
     c1 = wf.plot(x=[1, 2, 3], y=[1, 2, 3])
     c1.set_color("red")
@@ -26,13 +26,13 @@ def test_rpc_waveform1d_custom_curve(qtbot, connected_client_gui_obj):
 
 def test_rpc_plotting_shortcuts_init_configs(qtbot, connected_client_gui_obj):
     gui = connected_client_gui_obj
-    dock = gui.bec
+    dock_area = gui.bec
 
-    wf = dock.new("wf_dock").new("Waveform")
-    im = dock.new("im_dock").new("Image")
-    mm = dock.new("mm_dock").new("MotorMap")
-    sw = dock.new("sw_dock").new("ScatterWaveform")
-    mw = dock.new("mw_dock").new("MultiWaveform")
+    wf = dock_area.new("Waveform")
+    im = dock_area.new("Image")
+    mm = dock_area.new("MotorMap")
+    sw = dock_area.new("ScatterWaveform")
+    mw = dock_area.new("MultiWaveform")
 
     c1 = wf.plot(x_name="samx", y_name="bpm4i")
     # Adding custom curves, removing one and adding it again should not crash
@@ -42,7 +42,7 @@ def test_rpc_plotting_shortcuts_init_configs(qtbot, connected_client_gui_obj):
     c3 = wf.plot(y=[1, 2, 3], x=[1, 2, 3])
     assert c3.object_name == "Curve_0"
 
-    im_item = im.image(monitor="eiger")
+    im.image(monitor="eiger")
     mm.map(x_name="samx", y_name="samy")
     sw.plot(x_name="samx", y_name="samy", z_name="bpm4i")
     assert sw.main_curve.object_name == "bpm4i_bpm4i"
@@ -53,7 +53,7 @@ def test_rpc_plotting_shortcuts_init_configs(qtbot, connected_client_gui_obj):
     # Adding multiple custom curves sho
 
     # Checking if classes are correctly initialised
-    assert len(dock.panel_list) == 5
+    assert len(dock_area.widget_list()) == 5
     assert wf.__class__.__name__ == "RPCReference"
     assert wf.__class__ == RPCReference
     assert gui._ipython_registry[wf._gui_id].__class__ == Waveform
@@ -84,14 +84,14 @@ def test_rpc_plotting_shortcuts_init_configs(qtbot, connected_client_gui_obj):
 
 def test_rpc_waveform_scan(qtbot, bec_client_lib, connected_client_gui_obj):
     gui = connected_client_gui_obj
-    dock = gui.bec
+    dock_area = gui.bec
 
     client = bec_client_lib
     dev = client.device_manager.devices
     scans = client.scans
     queue = client.queue
 
-    wf = dock.new("wf_dock").new("Waveform")
+    wf = dock_area.new("Waveform")
 
     # add 3 different curves to track
     wf.plot(x_name="samx", y_name="bpm4i")
@@ -125,19 +125,18 @@ def test_rpc_waveform_scan(qtbot, bec_client_lib, connected_client_gui_obj):
 @pytest.mark.timeout(100)
 def test_async_plotting(qtbot, bec_client_lib, connected_client_gui_obj):
     gui = connected_client_gui_obj
-    dock = gui.bec
+    dock_area = gui.bec
 
     client = bec_client_lib
     dev = client.device_manager.devices
     scans = client.scans
-    queue = client.queue
 
     # Test add
     dev.waveform.sim.select_model("GaussianModel")
     dev.waveform.sim.params = {"amplitude": 1000, "center": 4000, "sigma": 300}
     dev.waveform.async_update.set("add").wait()
     dev.waveform.waveform_shape.set(10000).wait()
-    wf = dock.new("wf_dock").new("Waveform")
+    wf = dock_area.new("Waveform")
     curve = wf.plot(y_name="waveform")
 
     status = scans.line_scan(dev.samx, -5, 5, steps=5, exp_time=0.05, relative=False)
@@ -163,14 +162,13 @@ def test_async_plotting(qtbot, bec_client_lib, connected_client_gui_obj):
 
 def test_rpc_image(qtbot, bec_client_lib, connected_client_gui_obj):
     gui = connected_client_gui_obj
-    dock = gui.bec
+    dock_area = gui.bec
 
     client = bec_client_lib
     dev = client.device_manager.devices
     scans = client.scans
-    queue = client.queue
 
-    im = dock.new("im_dock").new("Image")
+    im = dock_area.new("Image")
     im.image(monitor="eiger")
 
     status = scans.line_scan(dev.samx, -5, 5, steps=10, exp_time=0.05, relative=False)
@@ -191,8 +189,9 @@ def test_rpc_motor_map(qtbot, bec_client_lib, connected_client_gui_obj):
     dev = client.device_manager.devices
     scans = client.scans
 
-    dock = gui.bec
-    motor_map = dock.new("mm_dock").new("MotorMap")
+    dock_area = gui.bec
+
+    motor_map = dock_area.new("MotorMap")
     motor_map.map(x_name="samx", y_name="samy")
 
     initial_pos_x = dev.samx.read()["samx"]["value"]
@@ -221,8 +220,9 @@ def test_dap_rpc(qtbot, bec_client_lib, connected_client_gui_obj):
     dev = client.device_manager.devices
     scans = client.scans
 
-    dock = gui.bec
-    wf = dock.new("wf_dock").new("Waveform")
+    dock_area = gui.bec
+
+    wf = dock_area.new("Waveform")
     wf.plot(x_name="samx", y_name="bpm4i", dap="GaussianModel")
 
     dev.bpm4i.sim.select_model("GaussianModel")
@@ -262,8 +262,9 @@ def test_waveform_passing_device(qtbot, bec_client_lib, connected_client_gui_obj
     dev = client.device_manager.devices
     scans = client.scans
 
-    dock = gui.bec
-    wf = dock.new("wf_dock").new("Waveform")
+    dock_area = gui.bec
+
+    wf = dock_area.new("Waveform")
     c1 = wf.plot(
         y_name=dev.samx, y_entry=dev.samx.setpoint
     )  # using setpoint to not use readback signal
@@ -303,13 +304,13 @@ def test_rpc_waveform_history_curve(
     Note: Parameterization prevents adding the same logical curve twice (which would collide on label).
     """
     gui = connected_client_gui_obj
-    dock = gui.bec
+    dock_area = gui.bec
     client = bec_client_lib
     dev = client.device_manager.devices
     scans = client.scans
     queue = client.queue
 
-    wf = dock.new("wf_dock").new("Waveform")
+    wf = dock_area.new("Waveform")
 
     # Collect references for validation
     scan_meta = []  # list of dicts with scan_id, scan_number, data

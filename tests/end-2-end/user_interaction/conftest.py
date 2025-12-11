@@ -77,6 +77,10 @@ def connected_client_gui_obj(qtbot_scope_module, gui_id, bec_client_lib):
     try:
         gui.start(wait=True)
         qtbot_scope_module.waitUntil(lambda: hasattr(gui, "bec"), timeout=5000)
+        gui.bec.delete_all()  # ensure clean state
+        qtbot_scope_module.waitUntil(lambda: len(gui.bec.widget_list()) == 0, timeout=10000)
         yield gui
     finally:
+        gui.bec.delete_all()  # ensure clean state
+        qtbot_scope_module.waitUntil(lambda: len(gui.bec.widget_list()) == 0, timeout=10000)
         gui.kill_server()

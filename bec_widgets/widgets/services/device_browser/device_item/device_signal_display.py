@@ -7,7 +7,6 @@ from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.ophyd_kind_util import Kind
-from bec_widgets.widgets.containers.dock.dock import BECDock
 from bec_widgets.widgets.utility.signal_label.signal_label import SignalLabel
 
 
@@ -21,12 +20,11 @@ class SignalDisplay(BECWidget, QWidget):
         config: ConnectionConfig = None,
         gui_id: str | None = None,
         theme_update: bool = False,
-        parent_dock: BECDock | None = None,
         **kwargs,
     ):
         """A widget to display all the signals from a given device, and allow getting
         a fresh reading."""
-        super().__init__(client, config, gui_id, theme_update, parent_dock, **kwargs)
+        super().__init__(client, config, gui_id, theme_update, **kwargs)
         self.get_bec_shortcuts()
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)

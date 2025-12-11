@@ -8,5 +8,5 @@ def test_client_generator_classes():
 
     assert "Image" in connector_cls_names
     assert "Waveform" in connector_cls_names
-    assert "BECDockArea" in plugins
+    assert "MotorMap" in plugins
     assert "NonExisting" not in plugins
