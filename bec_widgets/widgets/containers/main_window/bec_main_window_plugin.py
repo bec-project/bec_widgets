@@ -6,6 +6,7 @@ from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.bec_designer import designer_material_icon
+from bec_widgets.utils.colors import apply_theme
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 
 DOM_XML = """
@@ -43,6 +44,8 @@ class BECMainWindowPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
 
         from qtpy.QtCore import Qt
         from qtpy.QtWidgets import QApplication
+
+        apply_theme("dark")
 
         import bec_widgets
 
