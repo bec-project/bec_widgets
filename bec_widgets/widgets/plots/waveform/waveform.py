@@ -1520,7 +1520,7 @@ class Waveform(PlotBase):
 
         self.request_dap_update.emit()
 
-    def _check_async_signal_found(self, name: str, signal: str) -> bool:
+    def _check_async_signal_found(self, name: str, signal: str) -> tuple[bool, str]:
         """
         Check if the async signal is found in the BEC device manager.
 
@@ -1529,13 +1529,16 @@ class Waveform(PlotBase):
             signal(str): The entry of the async signal.
 
         Returns:
-            bool: True if the async signal is found, False otherwise.
+            tuple[bool, str]: A tuple where the first element is True if the async signal is found (False otherwise),
+                and the second element is the signal name (either the original signal or the storage_name for AsyncMultiSignal).
         """
-        bec_async_signals = self.client.device_manager.get_bec_signals("AsyncSignal")
+        bec_async_signals = self.client.device_manager.get_bec_signals(
+            ["AsyncSignal", "AsyncMultiSignal"]
+        )
         for entry_name, _, entry_data in bec_async_signals:
             if entry_name == name and entry_data.get("obj_name") == signal:
-                return True
-        return False
+                return True, entry_data.get("storage_name")
+        return False, signal
 
     def _setup_async_curve(self, curve: Curve):
         """
@@ -1546,7 +1549,7 @@ class Waveform(PlotBase):
         """
         name = curve.config.signal.name
         signal = curve.config.signal.entry
-        async_signal_found = self._check_async_signal_found(name, signal)
+        async_signal_found, signal = self._check_async_signal_found(name, signal)
 
         try:
             curve.clear_data()
