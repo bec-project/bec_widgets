@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from bec_lib import messages
 from bec_lib.endpoints import MessageEndpoints
 from bec_qthemes import material_icon
 from qtpy.QtCore import Property, Qt, Signal, Slot
@@ -145,7 +146,16 @@ class BECQueue(BECWidget, CompactPopupWidget):
             _metadata (dict): The metadata.
         """
         # only show the primary queue for now
-        queue_info = content.get("queue", {}).get("primary", {}).get("info", [])
+        queues = content.get("queue", {})
+        if not queues:
+            self.reset_content()
+            return
+        primary_queue: messages.ScanQueueStatus | None = queues.get("primary")
+        if not primary_queue:
+            self.reset_content()
+            return
+        queue_info = primary_queue.info
+
         self.table.setRowCount(len(queue_info))
         self.table.clearContents()
 
@@ -154,19 +164,19 @@ class BECQueue(BECWidget, CompactPopupWidget):
             return
 
         for index, item in enumerate(queue_info):
-            blocks = item.get("request_blocks", [])
+            blocks = item.request_blocks
             scan_types = []
             scan_numbers = []
             scan_ids = []
-            status = item.get("status", "")
+            status = item.status
             for request_block in blocks:
-                scan_type = request_block.get("content", {}).get("scan_type", "")
+                scan_type = request_block.msg.scan_type
                 if scan_type:
                     scan_types.append(scan_type)
-                scan_number = request_block.get("scan_number", "")
+                scan_number = request_block.scan_number
                 if scan_number:
                     scan_numbers.append(str(scan_number))
-                scan_id = request_block.get("scan_id", "")
+                scan_id = request_block.scan_id
                 if scan_id:
                     scan_ids.append(scan_id)
             if scan_types:
@@ -178,7 +188,7 @@ class BECQueue(BECWidget, CompactPopupWidget):
             self.set_row(index, scan_numbers, scan_types, status, scan_ids)
         busy = (
             False
-            if all(item.get("status") in ("STOPPED", "COMPLETED", "IDLE") for item in queue_info)
+            if all(item.status in ("STOPPED", "COMPLETED", "IDLE") for item in queue_info)
             else True
         )
         self.set_global_state("warning" if busy else "default")

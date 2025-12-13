@@ -6,6 +6,7 @@ import time
 from typing import Literal
 
 import numpy as np
+from bec_lib import messages
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import QObject, QTimer, Signal
@@ -264,22 +265,28 @@ class ScanProgressBar(BECWidget, QWidget):
         """
         if not "queue" in msg_content:
             return
-        primary_queue_info = msg_content["queue"].get("primary", {}).get("info", [])
+        if "primary" not in msg_content["queue"]:
+            return
+        if (primary_queue := msg_content.get("queue").get("primary")) is None:
+            return
+        if not isinstance(primary_queue, messages.ScanQueueStatus):
+            return
+        primary_queue_info = primary_queue.info
         if len(primary_queue_info) == 0:
             return
         scan_info = primary_queue_info[0]
         if scan_info is None:
             return
-        if scan_info.get("status").lower() == "running" and self.task is None:
+        if scan_info.status.lower() == "running" and self.task is None:
             self.task = ProgressTask(parent=self)
             self.progress_started.emit()
 
-        active_request_block = scan_info.get("active_request_block", {})
+        active_request_block = scan_info.active_request_block
         if active_request_block is None:
             return
 
-        self.scan_number = active_request_block.get("scan_number")
-        report_instructions = active_request_block.get("report_instructions", [])
+        self.scan_number = active_request_block.scan_number
+        report_instructions = active_request_block.report_instructions
         if not report_instructions:
             return
 
