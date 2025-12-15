@@ -12,6 +12,7 @@ from bec_lib.client import BECClient
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import LogLevel, bec_logger
 from bec_lib.messages import LogMessage, StatusMessage
+from bec_qthemes import material_icon
 from qtpy.QtCore import Signal  # type: ignore
 from qtpy.QtCore import (
     QAbstractTableModel,
@@ -40,6 +41,7 @@ from qtpy.QtWidgets import (
     QPushButton,
     QSizePolicy,
     QTableView,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -84,6 +86,7 @@ class BecLogsQueue(BECConnector, QObject):
 
     RPC = False
     new_messages = Signal()
+    paused = Signal(bool)
     _instance: BecLogsQueue | None = None
 
     @classmethod
@@ -97,6 +100,7 @@ class BecLogsQueue(BECConnector, QObject):
             raise RuntimeError("Create no more than one BecLogsQueue - use BecLogsQueue.instance()")
         super().__init__(parent=parent, **kwargs)
         self._max_length = maxlen
+        self._paused = False
         self._data = deque(
             (
                 item["data"]
@@ -116,6 +120,11 @@ class BecLogsQueue(BECConnector, QObject):
 
     def __len__(self):
         return len(self._data)
+
+    @SafeSlot()
+    def toggle_pause(self):
+        self._paused = not self._paused
+        self.paused.emit(self._paused)
 
     def row_data(self, index: int) -> LogMessage | None:
         if index < 0 or index > (len(self._data) - 1):
@@ -162,7 +171,7 @@ class BecLogsQueue(BECConnector, QObject):
 
     @SafeSlot(verify_sender=True)
     def _proc_update(self):
-        if len(self._incoming) == 0:
+        if self._paused or len(self._incoming) == 0:
             return
         self._data.extend(self._incoming)
         self._incoming.clear()
@@ -411,6 +420,8 @@ class LogPanel(BECWidget, QWidget):
         self._toolbar.level_changed.connect(self._proxy.update_level_filter)
         self._toolbar.fuzzy_changed.connect(self._proxy.update_fuzzy)
         self._toolbar.timestamp_update.connect(self._proxy.update_timestamp)
+        self._toolbar.pause_button.clicked.connect(self._model.log_queue.toggle_pause)
+        self._model.log_queue.paused.connect(self._toolbar._update_pause_button_icon)
 
     def _update_service_filter(self, filter: set[str]):
         self._service_filter = filter
@@ -462,6 +473,18 @@ class LogPanelToolbar(QWidget):
         self.timerange_button = QPushButton("Set time range", self)
         self._layout.addWidget(self.timerange_button)
         self.timerange_button.clicked.connect(self._open_datetime_dialog)
+
+        self.pause_button = QToolButton()
+        self.pause_button.setIcon(material_icon("pause", size=(20, 20), convert_to_pixmap=False))
+        self._layout.addWidget(self.pause_button)
+
+    @SafeSlot(bool)
+    def _update_pause_button_icon(self, paused):
+        self.pause_button.setIcon(
+            material_icon(
+                "play_arrow" if paused else "pause", size=(20, 20), convert_to_pixmap=False
+            )
+        )
 
     def _string_search_box(self):
         self._layout.addWidget(QLabel("Search: "))
