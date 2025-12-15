@@ -119,7 +119,8 @@ class ImageItem(BECConnector, pg.ImageItem):
         """Set a new color map."""
         try:
             self.config.color_map = value
-            self.setColorMap(value)
+            cmap = Colors.get_colormap(self.config.color_map)
+            self.setColorMap(cmap)
         except ValidationError:
             logger.error(f"Invalid colormap '{value}' provided.")
 
