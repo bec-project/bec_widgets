@@ -5960,6 +5960,7 @@ class Waveform(RPCBase):
         color: "str | None" = None,
         label: "str | None" = None,
         dap: "str | None" = None,
+        dap_parameters: "dict | lmfit.Parameters | None | object" = None,
         scan_id: "str | None" = None,
         scan_number: "int | None" = None,
         **kwargs,
@@ -5984,6 +5985,8 @@ class Waveform(RPCBase):
             dap(str): The dap model to use for the curve. When provided, a DAP curve is
                 attached automatically for device, history, or custom data sources. Use
                 the same string as the LMFit model name.
+            dap_parameters(dict | lmfit.Parameters | None): Optional lmfit parameter overrides sent to the DAP server.
+                Values can be numeric (interpreted as fixed parameters) or dicts like`{"value": 1.0, "vary": False}`.
             scan_id(str):  Optional scan ID. When provided, the curve is treated as a **history** curve and
                 the y‑data (and optional x‑data) are fetched from that historical scan. Such curves are
                 never cleared by live‑scan resets.
@@ -6000,6 +6003,7 @@ class Waveform(RPCBase):
         dap_name: "str",
         color: "str | None" = None,
         dap_oversample: "int" = 1,
+        dap_parameters: "dict | lmfit.Parameters | None" = None,
         **kwargs,
     ) -> "Curve":
         """
@@ -6012,6 +6016,7 @@ class Waveform(RPCBase):
             dap_name(str): The name of the DAP model to use.
             color(str): The color of the curve.
             dap_oversample(int): The oversampling factor for the DAP curve.
+            dap_parameters(dict | lmfit.Parameters | None): Optional lmfit parameter overrides sent to the DAP server.
             **kwargs
 
         Returns:
