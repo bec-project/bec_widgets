@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 from bec_lib import messages
 from bec_lib.scan_history import ScanHistory
+from qtpy.QtCore import QPointF
 
 from bec_widgets.widgets.plots.heatmap.heatmap import Heatmap, HeatmapConfig, HeatmapDeviceSignal
 
@@ -125,12 +126,16 @@ def test_heatmap_get_image_data_unsupported_scan(heatmap_widget):
 
 
 def test_heatmap_get_grid_scan_image(heatmap_widget):
+    x_levels = np.linspace(-5, 5, 10).tolist()
+    y_levels = np.linspace(-5, 5, 10).tolist()
     scan_msg = messages.ScanStatusMessage(
         scan_id="123",
         status="open",
         scan_name="grid_scan",
         metadata={},
-        info={"positions": np.random.rand(100, 2).tolist()},
+        info={
+            "positions": _grid_positions(slow_levels=x_levels, fast_levels=y_levels, snaked=True)
+        },
         request_inputs={"arg_bundle": ["samx", -5, 5, 10, "samy", -5, 5, 10], "kwargs": {}},
     )
     heatmap_widget._image_config = HeatmapConfig(
@@ -143,6 +148,111 @@ def test_heatmap_get_grid_scan_image(heatmap_widget):
     img, _ = heatmap_widget.get_grid_scan_image(list(range(100)), msg=scan_msg)
     assert img.shape == (10, 10)
     assert sorted(np.asarray(img, dtype=int).flatten().tolist()) == list(range(100))
+
+
+def _grid_positions(
+    *, slow_levels: list[float], fast_levels: list[float], snaked: bool, slow_is_col0: bool = True
+) -> list[list[float]]:
+    positions: list[list[float]] = []
+    for slow_i, slow_val in enumerate(slow_levels):
+        row_fast = fast_levels if (not snaked or slow_i % 2 == 0) else list(reversed(fast_levels))
+        for fast_val in row_fast:
+            if slow_is_col0:
+                positions.append([slow_val, fast_val])
+            else:
+                positions.append([fast_val, slow_val])
+    return positions
+
+
+def test_heatmap_grid_scan_direction_and_snaking_x_fast(heatmap_widget):
+    heatmap_widget._image_config = HeatmapConfig(
+        parent_id="parent_id",
+        x_device=HeatmapDeviceSignal(name="samx", entry="samx"),
+        y_device=HeatmapDeviceSignal(name="samy", entry="samy"),
+        z_device=HeatmapDeviceSignal(name="bpm4i", entry="bpm4i"),
+        color_map="viridis",
+    )
+
+    # x decreases (relative), y increases (relative), x is fast axis
+    x0 = 10.0
+    y0 = -3.0
+    x_levels = (x0 + np.linspace(1.0, -1.0, 3)).tolist()
+    y_levels = (y0 + np.linspace(-2.0, 2.0, 2)).tolist()
+    snaked = True
+
+    scan_msg = messages.ScanStatusMessage(
+        scan_id="123",
+        status="open",
+        scan_name="grid_scan",
+        metadata={},
+        info={
+            "positions": _grid_positions(slow_levels=y_levels, fast_levels=x_levels, snaked=snaked)
+        },
+        request_inputs={
+            "arg_bundle": ["samy", -2.0, 2.0, 2, "samx", 1.0, -1.0, 3],
+            "kwargs": {"snaked": snaked, "relative": True},
+        },
+    )
+
+    img, transform = heatmap_widget.get_grid_scan_image(list(range(6)), msg=scan_msg)
+
+    assert img.shape == (3, 2)
+    assert img[0, 0] == 0  # first point: (x0,y0) in scan order
+    assert img[2, 1] == 3  # second row first point due to snaking
+    assert img[0, 1] == 5  # last point in second row
+
+    p0 = transform.map(QPointF(0.5, 0.5))
+    p1 = transform.map(QPointF(2.5, 1.5))
+    assert p0.x() == pytest.approx(x_levels[0])
+    assert p0.y() == pytest.approx(y_levels[0])
+    assert p1.x() == pytest.approx(x_levels[-1])
+    assert p1.y() == pytest.approx(y_levels[-1])
+
+
+def test_heatmap_grid_scan_direction_and_snaking_y_fast(heatmap_widget):
+    heatmap_widget._image_config = HeatmapConfig(
+        parent_id="parent_id",
+        x_device=HeatmapDeviceSignal(name="samx", entry="samx"),
+        y_device=HeatmapDeviceSignal(name="samy", entry="samy"),
+        z_device=HeatmapDeviceSignal(name="bpm4i", entry="bpm4i"),
+        color_map="viridis",
+    )
+
+    # x decreases (relative), y increases (relative), y is fast axis
+    x0 = 1.5
+    y0 = 22.0
+    x_levels = (x0 + np.linspace(1.0, -1.0, 3)).tolist()
+    y_levels = (y0 + np.linspace(-2.0, 2.0, 2)).tolist()
+    snaked = True
+
+    scan_msg = messages.ScanStatusMessage(
+        scan_id="123",
+        status="open",
+        scan_name="grid_scan",
+        metadata={},
+        info={
+            "positions": _grid_positions(slow_levels=x_levels, fast_levels=y_levels, snaked=snaked)
+        },
+        request_inputs={
+            "arg_bundle": ["samx", 1.0, -1.0, 3, "samy", -2.0, 2.0, 2],
+            "kwargs": {"snaked": snaked, "relative": True},
+        },
+    )
+
+    img, transform = heatmap_widget.get_grid_scan_image(list(range(6)), msg=scan_msg)
+
+    assert img.shape == (3, 2)
+    assert img[0, 0] == 0
+    # For y-fast scans, snaking reverses the y index on every odd x row.
+    assert img[1, 1] == 2
+    assert img[1, 0] == 3
+
+    p0 = transform.map(QPointF(0.5, 0.5))
+    p1 = transform.map(QPointF(2.5, 1.5))
+    assert p0.x() == pytest.approx(x_levels[0])
+    assert p0.y() == pytest.approx(y_levels[0])
+    assert p1.x() == pytest.approx(x_levels[-1])
+    assert p1.y() == pytest.approx(y_levels[-1])
 
 
 def test_heatmap_get_step_scan_image(heatmap_widget):
@@ -193,12 +303,16 @@ def test_heatmap_update_plot(heatmap_widget):
         color_map="viridis",
     )
     heatmap_widget.scan_item = create_dummy_scan_item()
+    x_levels = np.linspace(-5, 5, 10).tolist()
+    y_levels = np.linspace(-5, 5, 10).tolist()
     heatmap_widget.scan_item.status_message = messages.ScanStatusMessage(
         scan_id="123",
         status="open",
         scan_name="grid_scan",
         metadata={},
-        info={"positions": np.random.rand(100, 2).tolist()},
+        info={
+            "positions": _grid_positions(slow_levels=x_levels, fast_levels=y_levels, snaked=True)
+        },
         request_inputs={"arg_bundle": ["samx", -5, 5, 10, "samy", -5, 5, 10], "kwargs": {}},
     )
     with mock.patch.object(heatmap_widget.main_image, "setImage") as mock_set_image:
