@@ -620,10 +620,9 @@ class Heatmap(ImageBase):
 
         args = self.arg_bundle_to_dict(4, msg.request_inputs["arg_bundle"])
 
-        shape = (
-            args[self._image_config.x_device.entry][-1],
-            args[self._image_config.y_device.entry][-1],
-        )
+        x_entry = self._image_config.x_device.entry
+        y_entry = self._image_config.y_device.entry
+        shape = (args[x_entry][-1], args[y_entry][-1])
 
         data = self.main_image.raw_data
 
@@ -633,57 +632,39 @@ class Heatmap(ImageBase):
         elif self.reload:
             data.fill(np.nan)
 
-        def _get_grid_data(axis, snaked=True):
-            x_grid, y_grid = np.meshgrid(axis[0], axis[1])
-            if snaked:
-                y_grid.T[::2] = np.fliplr(y_grid.T[::2])
-            x_flat = x_grid.T.ravel()
-            y_flat = y_grid.T.ravel()
-            positions = np.vstack((x_flat, y_flat)).T
-            return positions
-
         snaked = msg.request_inputs["kwargs"].get("snaked", True)
 
-        # If the scan's fast axis is x, we need to swap the x and y axes
-        swap = bool(msg.request_inputs["arg_bundle"][4] == self._image_config.x_device.entry)
-
-        def _axis_bounds(
-            axis_values: np.ndarray, limits: list[float], axis: Literal["x", "y"]
-        ) -> tuple[float, float]:
-            start, stop = limits[:2]
-            ascending = start <= stop
-            if snaked and axis == "y":
-                ascending = start >= stop
-            if ascending:
-                return float(axis_values.min()), float(axis_values.max())
-            return float(axis_values.max()), float(axis_values.min())
-
-        # calculate the QTransform to put (0,0) at the axis origin
-        scan_pos = np.asarray(msg.info["positions"])
-        x_min, x_max = _axis_bounds(
-            scan_pos[:, 0], args[self._image_config.x_device.entry], axis="x"
-        )
-        y_min, y_max = _axis_bounds(
-            scan_pos[:, 1], args[self._image_config.y_device.entry], axis="y"
+        slow_entry, fast_entry = (
+            msg.request_inputs["arg_bundle"][0],
+            msg.request_inputs["arg_bundle"][4],
         )
 
-        x_range = x_max - x_min
-        y_range = y_max - y_min
+        scan_pos = np.asarray(msg.info["positions"], dtype=float)
+        relative = bool(msg.request_inputs["kwargs"].get("relative", False))
 
-        pixel_size_x = x_range / max(shape[0] - 1, 1)
-        pixel_size_y = y_range / max(shape[1] - 1, 1)
+        def _axis_column(entry: str) -> int:
+            return 0 if entry == slow_entry else 1
+
+        def _axis_levels(entry: str, npts: int) -> np.ndarray:
+            start, stop = args[entry][:2]
+            if relative:
+                origin = float(scan_pos[0, _axis_column(entry)] - start)
+                return origin + np.linspace(start, stop, npts)
+            return np.linspace(start, stop, npts)
+
+        x_levels = _axis_levels(x_entry, shape[0])
+        y_levels = _axis_levels(y_entry, shape[1])
+
+        pixel_size_x = (
+            float(x_levels[-1] - x_levels[0]) / max(shape[0] - 1, 1) if shape[0] > 1 else 1.0
+        )
+        pixel_size_y = (
+            float(y_levels[-1] - y_levels[0]) / max(shape[1] - 1, 1) if shape[1] > 1 else 1.0
+        )
 
         transform = QTransform()
-        if swap:
-            transform.scale(pixel_size_y, pixel_size_x)
-            transform.translate(y_min / pixel_size_y - 0.5, x_min / pixel_size_x - 0.5)
-        else:
-            transform.scale(pixel_size_x, pixel_size_y)
-            transform.translate(x_min / pixel_size_x - 0.5, y_min / pixel_size_y - 0.5)
-
-        target_positions = _get_grid_data(
-            (np.arange(shape[int(swap)]), np.arange(shape[int(not swap)])), snaked=snaked
-        )
+        transform.scale(pixel_size_x, pixel_size_y)
+        transform.translate(x_levels[0] / pixel_size_x - 0.5, y_levels[0] / pixel_size_y - 0.5)
 
         # Fill the data array with the z values
         if self._grid_index is None or self.reload:
@@ -691,7 +672,16 @@ class Heatmap(ImageBase):
             self.reload = False
 
         for i in range(self._grid_index, len(z_data)):
-            data[target_positions[i, int(swap)], target_positions[i, int(not swap)]] = z_data[i]
+            slow_i, fast_i = divmod(i, args[fast_entry][-1])
+            if snaked and (slow_i % 2 == 1):
+                fast_i = args[fast_entry][-1] - 1 - fast_i
+
+            if x_entry == fast_entry:
+                x_i, y_i = fast_i, slow_i
+            else:
+                x_i, y_i = slow_i, fast_i
+
+            data[x_i, y_i] = z_data[i]
         self._grid_index = len(z_data)
         return data, transform
 
