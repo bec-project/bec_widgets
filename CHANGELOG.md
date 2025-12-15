@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.45.11 (2025-12-15)
+
+### Bug Fixes
+
+- **waveform**: Support for AsyncMultiSignal
+  ([`cd11a6c`](https://github.com/bec-project/bec_widgets/commit/cd11a6cce33f3c0642984ae6b2d159c7441e22c6))
+
+
 ## v2.45.10 (2025-12-10)
 
 ### Bug Fixes
