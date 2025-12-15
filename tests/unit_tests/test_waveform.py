@@ -516,6 +516,57 @@ def test_plot_custom_curve_with_inline_dap(qtbot, mocked_client_with_dap):
     assert dap_curve.config.signal.dap == "GaussianModel"
 
 
+def test_normalize_dap_parameters_number_dict():
+    normalized = Waveform._normalize_dap_parameters({"amplitude": 1.0, "center": 2})
+    assert normalized == {
+        "amplitude": {"name": "amplitude", "value": 1.0, "vary": False},
+        "center": {"name": "center", "value": 2.0, "vary": False},
+    }
+
+
+def test_normalize_dap_parameters_dict_spec_defaults_vary_false():
+    normalized = Waveform._normalize_dap_parameters({"sigma": {"value": 0.8, "min": 0.0}})
+    assert normalized["sigma"]["name"] == "sigma"
+    assert normalized["sigma"]["value"] == 0.8
+    assert normalized["sigma"]["min"] == 0.0
+    assert normalized["sigma"]["vary"] is False
+
+
+def test_normalize_dap_parameters_invalid_type_raises():
+    with pytest.raises(TypeError):
+        Waveform._normalize_dap_parameters(["amplitude", 1.0])  # type: ignore[arg-type]
+
+
+def test_request_dap_includes_normalized_parameters(qtbot, mocked_client_with_dap, monkeypatch):
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    curve = wf.plot(
+        x=[0, 1, 2],
+        y=[1, 2, 3],
+        label="custom-inline-params",
+        dap="GaussianModel",
+        dap_parameters={"amplitude": 1.0},
+    )
+    dap_curve = wf.get_curve(f"{curve.name()}-GaussianModel")
+    assert dap_curve is not None
+    dap_curve.dap_oversample = 3
+
+    captured = {}
+
+    def capture(topic, msg, *args, **kwargs):  # noqa: ARG001
+        captured["topic"] = topic
+        captured["msg"] = msg
+
+    monkeypatch.setattr(wf.client.connector, "set_and_publish", capture)
+    wf.request_dap()
+
+    msg = captured["msg"]
+    dap_kwargs = msg.content["config"]["kwargs"]
+    assert dap_kwargs["oversample"] == 3
+    assert dap_kwargs["parameters"] == {
+        "amplitude": {"name": "amplitude", "value": 1.0, "vary": False}
+    }
+
+
 def test_fetch_scan_data_and_access(qtbot, mocked_client, monkeypatch):
     """
     Test the _fetch_scan_data_and_access method returns live_data/val if in a live scan,

@@ -72,6 +72,7 @@ def test_rpc_plotting_shortcuts_init_configs(qtbot, connected_client_gui_obj):
         "dap": None,
         "device": "bpm4i",
         "signal": "bpm4i",
+        "dap_parameters": None,
         "dap_oversample": 1,
     }
     assert c1._config_dict["source"] == "device"
