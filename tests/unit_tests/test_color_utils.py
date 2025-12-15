@@ -82,6 +82,45 @@ def test_rgba_to_hex():
     assert Colors.rgba_to_hex(255, 87, 51) == "#FF5733FF"
 
 
+def test_canonical_colormap_name_case_insensitive():
+    available = Colors.list_available_colormaps()
+    presets = Colors.list_available_gradient_presets()
+    if not available and not presets:
+        pytest.skip("No colormaps or presets available to test canonical mapping.")
+
+    name = (available or presets)[0]
+    requested = name.swapcase()
+    assert Colors.canonical_colormap_name(requested) == name
+
+
+def test_validate_color_map_returns_canonical_name():
+    available = Colors.list_available_colormaps()
+    presets = Colors.list_available_gradient_presets()
+    if not available and not presets:
+        pytest.skip("No colormaps or presets available to test validation.")
+
+    name = (available or presets)[0]
+    requested = name.swapcase()
+    assert Colors.validate_color_map(requested) == name
+
+
+def test_get_colormap_uses_gradient_preset_fallback(monkeypatch):
+    presets = Colors.list_available_gradient_presets()
+    if not presets:
+        pytest.skip("No gradient presets available to test fallback.")
+
+    preset = presets[0]
+    Colors._get_colormap_cached.cache_clear()
+
+    def _raise(*args, **kwargs):
+        raise Exception("registry unavailable")
+
+    monkeypatch.setattr(pg.colormap, "get", _raise)
+
+    cmap = Colors._get_colormap_cached(preset)
+    assert isinstance(cmap, pg.ColorMap)
+
+
 @pytest.mark.parametrize("num", [10, 100, 400])
 def test_evenly_spaced_colors(num):
     colors_qcolor = Colors.evenly_spaced_colors(colormap="magma", num=num, format="QColor")

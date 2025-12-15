@@ -4,7 +4,6 @@ import pyqtgraph as pg
 import pytest
 
 from bec_widgets.widgets.plots.image.image_base import ImageLayerManager
-from bec_widgets.widgets.plots.image.image_item import ImageItem
 
 
 @pytest.fixture()
