@@ -82,6 +82,18 @@ def test_rgba_to_hex():
     assert Colors.rgba_to_hex(255, 87, 51) == "#FF5733FF"
 
 
+def test_validate_color_map_accepts_gradient_presets_and_greys_alias():
+    presets = {p.lower() for p in Colors.list_available_gradient_presets()}
+    candidate = next(
+        (p for p in ("grey", "gray", "bipolar", "spectrum", "flame") if p in presets), None
+    )
+    if candidate is None:
+        pytest.skip("No known GradientEditorItem presets available in this environment.")
+
+    assert Colors.validate_color_map(candidate) != ""
+    assert Colors.get_colormap(candidate) is not None
+
+
 @pytest.mark.parametrize("num", [10, 100, 400])
 def test_evenly_spaced_colors(num):
     colors_qcolor = Colors.evenly_spaced_colors(colormap="magma", num=num, format="QColor")

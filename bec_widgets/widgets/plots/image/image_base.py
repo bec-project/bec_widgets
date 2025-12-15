@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from qtpy.QtCore import QPointF, Signal, SignalInstance
 from qtpy.QtWidgets import QDialog, QVBoxLayout
 
+from bec_widgets.utils import Colors
 from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.side_panel import SidePanel
@@ -131,8 +132,7 @@ class ImageLayerManager:
         image.setZValue(z_position)
         image.removed.connect(self._remove_destroyed_layer)
 
-        # FIXME: For now, we hard-code the default color map here. In the future, this should be configurable.
-        image.color_map = "plasma"
+        image.color_map = self.parent.config.color_map
 
         self.layers[name] = ImageLayer(name=name, image=image, sync=sync)
         self.plot_item.addItem(image)
@@ -460,18 +460,20 @@ class ImageBase(PlotBase):
                 self.setProperty("autorange", False)
 
             if style == "simple":
-                self._color_bar = pg.ColorBarItem(colorMap=self.config.color_map)
+                cmap = Colors.get_colormap(self.config.color_map)
+                self._color_bar = pg.ColorBarItem(colorMap=cmap)
                 self._color_bar.setImageItem(self.layer_manager["main"].image)
                 self._color_bar.sigLevelsChangeFinished.connect(disable_autorange)
+                self.config.color_bar = "simple"
 
             elif style == "full":
                 self._color_bar = pg.HistogramLUTItem()
                 self._color_bar.setImageItem(self.layer_manager["main"].image)
-                self._color_bar.gradient.loadPreset(self.config.color_map)
+                self.config.color_bar = "full"
+                self._apply_colormap_to_colorbar(self.config.color_map)
                 self._color_bar.sigLevelsChanged.connect(disable_autorange)
 
             self.plot_widget.addItem(self._color_bar, row=0, col=1)
-            self.config.color_bar = style
         else:
             if self._color_bar:
                 self.plot_widget.removeItem(self._color_bar)
@@ -483,6 +485,40 @@ class ImageBase(PlotBase):
 
         if vrange:  # should be at the end to disable the autorange if defined
             self.v_range = vrange
+
+    def _apply_colormap_to_colorbar(self, color_map: str) -> None:
+        if not self._color_bar:
+            return
+
+        cmap = Colors.get_colormap(color_map)
+
+        if self.config.color_bar == "simple":
+            self._color_bar.setColorMap(cmap)
+            return
+
+        if self.config.color_bar != "full":
+            return
+
+        self._color_bar.setColorMap(cmap)
+
+        gradient = getattr(self._color_bar, "gradient", None)
+        if gradient is None:
+            return
+
+        max_ticks = 10
+        positions = np.linspace(0.0, 1.0, max_ticks)
+        colors = cmap.map(positions, mode="byte")
+
+        colors = np.asarray(colors)
+        if colors.ndim != 2:
+            return
+        if colors.shape[1] == 3:  # add alpha
+            alpha = np.full((colors.shape[0], 1), 255, dtype=colors.dtype)
+            colors = np.concatenate([colors, alpha], axis=1)
+
+        ticks = [(float(p), tuple(int(x) for x in c)) for p, c in zip(positions, colors)]
+        state = {"mode": "rgb", "ticks": ticks}
+        gradient.restoreState(state)
 
     ################################################################################
     # Static rois with roi manager
@@ -754,10 +790,7 @@ class ImageBase(PlotBase):
                 layer.image.color_map = value
 
             if self._color_bar:
-                if self.config.color_bar == "simple":
-                    self._color_bar.setColorMap(value)
-                elif self.config.color_bar == "full":
-                    self._color_bar.gradient.loadPreset(value)
+                self._apply_colormap_to_colorbar(self.config.color_map)
         except ValidationError:
             return
 

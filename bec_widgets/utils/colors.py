@@ -138,6 +138,78 @@ def apply_theme(theme: Literal["dark", "light"]):
 
 
 class Colors:
+    @staticmethod
+    def list_available_colormaps() -> list[str]:
+        """
+        List colormap names available via the pyqtgraph colormap registry.
+
+        Note: This does not include `GradientEditorItem` presets (used by HistogramLUT menus).
+        """
+
+        def _list(source: str | None = None) -> list[str]:
+            try:
+                return pg.colormap.listMaps() if source is None else pg.colormap.listMaps(source)
+            except Exception:  # pragma: no cover - backend may be missing
+                return []
+
+        return [*_list(None), *_list("matplotlib"), *_list("colorcet")]
+
+    @staticmethod
+    def list_available_gradient_presets() -> list[str]:
+        """
+        List `GradientEditorItem` preset names (HistogramLUT right-click menu entries).
+        """
+        from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
+
+        return list(Gradients.keys())
+
+    @staticmethod
+    def canonical_colormap_name(color_map: str) -> str:
+        """
+        Return an available colormap/preset name if a case-insensitive match exists.
+        """
+        requested = (color_map or "").strip()
+        if not requested:
+            return requested
+
+        registry = Colors.list_available_colormaps()
+        presets = Colors.list_available_gradient_presets()
+        available = set(registry) | set(presets)
+
+        if requested in available:
+            return requested
+
+        # Case-insensitive match.
+        lower_to_canonical = {name.lower(): name for name in available}
+        return lower_to_canonical.get(requested.lower(), requested)
+
+    @staticmethod
+    def get_colormap(color_map: str) -> pg.ColorMap:
+        """
+        Resolve a string into a `pg.ColorMap` using either:
+        - the `pg.colormap` registry (optionally including matplotlib/colorcet backends), or
+        - `GradientEditorItem` presets (HistogramLUT right-click menu).
+        """
+        name = Colors.canonical_colormap_name(color_map)
+        if not name:
+            raise ValueError("Empty colormap name")
+
+        # 1) Registry/backends
+        try:
+            return pg.colormap.get(name)
+        except Exception:
+            pass
+        for source in ("matplotlib", "colorcet"):
+            try:
+                return pg.colormap.get(name, source=source)
+            except Exception:
+                continue
+
+        # 2) Presets -> ColorMap
+        ge = pg.GradientEditorItem()
+        ge.loadPreset(name)
+
+        return ge.colorMap()
 
     @staticmethod
     def golden_ratio(num: int) -> list:
@@ -219,7 +291,7 @@ class Colors:
         if theme_offset < 0 or theme_offset > 1:
             raise ValueError("theme_offset must be between 0 and 1")
 
-        cmap = pg.colormap.get(colormap)
+        cmap = Colors.get_colormap(colormap)
         min_pos, max_pos = Colors.set_theme_offset(theme, theme_offset)
 
         # Generate positions that are evenly spaced within the acceptable range
@@ -267,7 +339,7 @@ class Colors:
             ValueError: If theme_offset is not between 0 and 1.
         """
 
-        cmap = pg.colormap.get(colormap)
+        cmap = Colors.get_colormap(colormap)
         phi = (1 + np.sqrt(5)) / 2  # Golden ratio
         golden_angle_conjugate = 1 - (1 / phi)  # Approximately 0.38196601125
 
@@ -533,13 +605,15 @@ class Colors:
         Raises:
             PydanticCustomError: If colormap is invalid.
         """
-        available_pg_maps = pg.colormap.listMaps()
-        available_mpl_maps = pg.colormap.listMaps("matplotlib")
-        available_mpl_colorcet = pg.colormap.listMaps("colorcet")
-
-        available_colormaps = available_pg_maps + available_mpl_maps + available_mpl_colorcet
-        if color_map not in available_colormaps:
+        normalized = Colors.canonical_colormap_name(color_map)
+        try:
+            Colors.get_colormap(normalized)
+        except Exception:
             if return_error:
+                available_colormaps = sorted(
+                    set(Colors.list_available_colormaps())
+                    | set(Colors.list_available_gradient_presets())
+                )
                 raise PydanticCustomError(
                     "unsupported colormap",
                     f"Colormap '{color_map}' not found in the current installation of pyqtgraph. Choose on the following: {available_colormaps}.",
@@ -547,4 +621,4 @@ class Colors:
                 )
             else:
                 return False
-        return color_map
+        return normalized
