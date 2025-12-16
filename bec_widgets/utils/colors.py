@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from functools import lru_cache
 import re
 from typing import TYPE_CHECKING, Literal
 
 import bec_qthemes
 import numpy as np
 import pyqtgraph as pg
+from bec_lib import bec_logger
 from bec_qthemes._os_appearance.listener import OSThemeSwitchListener
 from pydantic_core import PydanticCustomError
 from qtpy.QtGui import QColor
@@ -13,6 +15,9 @@ from qtpy.QtWidgets import QApplication
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_qthemes._main import AccentColors
+
+
+logger = bec_logger.logger
 
 
 def get_theme_name():
@@ -194,6 +199,11 @@ class Colors:
         if not name:
             raise ValueError("Empty colormap name")
 
+        return Colors._get_colormap_cached(name)
+
+    @staticmethod
+    @lru_cache(maxsize=256)
+    def _get_colormap_cached(name: str) -> pg.ColorMap:
         # 1) Registry/backends
         try:
             return pg.colormap.get(name)
@@ -608,7 +618,8 @@ class Colors:
         normalized = Colors.canonical_colormap_name(color_map)
         try:
             Colors.get_colormap(normalized)
-        except Exception:
+        except Exception as ext:
+            logger.warning(f"Colormap validation error: {ext}")
             if return_error:
                 available_colormaps = sorted(
                     set(Colors.list_available_colormaps())
@@ -616,7 +627,7 @@ class Colors:
                 )
                 raise PydanticCustomError(
                     "unsupported colormap",
-                    f"Colormap '{color_map}' not found in the current installation of pyqtgraph. Choose on the following: {available_colormaps}.",
+                    f"Colormap '{color_map}' not found in the current installation of pyqtgraph. Choose from the following: {available_colormaps}.",
                     {"wrong_value": color_map},
                 )
             else:

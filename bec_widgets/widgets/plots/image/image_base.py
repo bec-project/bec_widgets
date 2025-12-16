@@ -249,6 +249,8 @@ class ImageBase(PlotBase):
     Base class for the Image widget.
     """
 
+    MAX_TICKS_COLORBAR = 10
+
     sync_colorbar_with_autorange = Signal()
     image_updated = Signal()
     layer_added = Signal(str)
@@ -499,14 +501,11 @@ class ImageBase(PlotBase):
         if self.config.color_bar != "full":
             return
 
-        self._color_bar.setColorMap(cmap)
-
         gradient = getattr(self._color_bar, "gradient", None)
         if gradient is None:
             return
 
-        max_ticks = 10
-        positions = np.linspace(0.0, 1.0, max_ticks)
+        positions = np.linspace(0.0, 1.0, self.MAX_TICKS_COLORBAR)
         colors = cmap.map(positions, mode="byte")
 
         colors = np.asarray(colors)
