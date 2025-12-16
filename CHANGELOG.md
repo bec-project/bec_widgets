@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v2.45.12 (2025-12-16)
+
+### Bug Fixes
+
+- **heatmap**: Flush image if config changes during scan
+  ([`e0fd976`](https://github.com/bec-project/bec_widgets/commit/e0fd97616d370722e2ebf12d0f93862ac35cb20d))
+
+- **heatmap**: Grid scan image correctly map to scan positions
+  ([`6af8a5c`](https://github.com/bec-project/bec_widgets/commit/6af8a5cbfe0f97327b31039033d3e6946388347c))
+
+- **heatmap**: More robust logic for fast and slow axis in grid scan
+  ([`d876ca7`](https://github.com/bec-project/bec_widgets/commit/d876ca72bc50f967f0872eb777f2378a3db68ddf))
+
+
 ## v2.45.11 (2025-12-15)
 
 ### Bug Fixes
