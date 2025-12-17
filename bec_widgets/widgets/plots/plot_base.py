@@ -6,14 +6,13 @@ import numpy as np
 import pyqtgraph as pg
 from bec_lib import bec_logger
 from qtpy.QtCore import QPoint, QPointF, Qt, Signal
-from qtpy.QtWidgets import QHBoxLayout, QLabel, QMainWindow, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QFrame, QHBoxLayout, QLabel, QMainWindow, QVBoxLayout, QWidget
 
 from bec_widgets.utils import ConnectionConfig, Crosshair, EntryValidator
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.fps_counter import FPSCounter
 from bec_widgets.utils.plot_indicator_items import BECArrowItem, BECTickItem
-from bec_widgets.utils.round_frame import RoundedFrame
 from bec_widgets.utils.side_panel import SidePanel
 from bec_widgets.utils.toolbars.performance import PerformanceConnection, performance_bundle
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
@@ -144,13 +143,20 @@ class PlotBase(BECWidget, QWidget):
         self._update_theme(None)
 
     def apply_theme(self, theme: str):
-        self.round_plot_widget.apply_theme(theme)
+        self.apply_plot_widget_style()
+        super().apply_theme(theme)
 
     def _init_ui(self):
         self.layout.addWidget(self.layout_manager)
-        self.round_plot_widget = RoundedFrame(parent=self, content_widget=self.plot_widget)
+        self.round_plot_widget = QFrame(parent=self)
+        self.round_plot_widget.setAttribute(Qt.WA_StyledBackground, True)
         self.round_plot_widget.setProperty("variant", "plot_background")
         self.round_plot_widget.setProperty("frameless", True)
+
+        plot_frame_layout = QVBoxLayout(self.round_plot_widget)
+        plot_frame_layout.setContentsMargins(5, 5, 5, 5)
+        plot_frame_layout.setSpacing(0)
+        plot_frame_layout.addWidget(self.plot_widget)
 
         self.layout_manager.add_widget(self.round_plot_widget)
         self.layout_manager.add_widget_relative(self.fps_label, self.round_plot_widget, "top")
@@ -158,10 +164,21 @@ class PlotBase(BECWidget, QWidget):
         self.layout_manager.add_widget_relative(self.side_panel, self.round_plot_widget, "left")
         self.layout_manager.add_widget_relative(self.toolbar, self.fps_label, "top")
 
+        self.apply_plot_widget_style()
+
         self.ui_mode = self._ui_mode  # to initiate the first time
 
         # PlotItem ViewBox Signals
         self.plot_item.vb.sigStateChanged.connect(self.viewbox_state_changed)
+
+    def apply_plot_widget_style(self, border: str = "none"):
+        """Let theme/QSS style the plot widget; keep custom overrides minimal."""
+        if not isinstance(self.plot_widget, pg.GraphicsLayoutWidget):
+            return
+        if border != "none":
+            self.plot_widget.setStyleSheet(f"border: {border};")
+        else:
+            self.plot_widget.setStyleSheet("")
 
     def _init_toolbar(self):
         self.toolbar.add_bundle(performance_bundle(self.toolbar.components))

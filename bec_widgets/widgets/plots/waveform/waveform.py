@@ -575,7 +575,7 @@ class Waveform(PlotBase):
         self.async_signal_update.emit()
         self.sync_signal_update.emit()
         self.plot_item.enableAutoRange(x=True)
-        self.round_plot_widget.apply_plot_widget_style()  # To keep the correct theme
+        self.apply_plot_widget_style()  # To keep the correct theme
 
     @SafeProperty(str)
     def x_entry(self) -> str | None:
@@ -604,7 +604,7 @@ class Waveform(PlotBase):
         self.async_signal_update.emit()
         self.sync_signal_update.emit()
         self.plot_item.enableAutoRange(x=True)
-        self.round_plot_widget.apply_plot_widget_style()
+        self.apply_plot_widget_style()
 
     @SafeProperty(str)
     def color_palette(self) -> str:
