@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.45.13 (2025-12-17)
+
+### Bug Fixes
+
+- **scan queue**: Adjustments for changes to the pydantic model of the scan queue
+  ([`01c6e09`](https://github.com/bec-project/bec_widgets/commit/01c6e092b9cd46ae056c43e8c6576f7a570cce80))
+
+
 ## v2.45.12 (2025-12-16)
 
 ### Bug Fixes
