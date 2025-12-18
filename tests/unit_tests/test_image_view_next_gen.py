@@ -716,17 +716,50 @@ def test_monitor_selection_populate_signals(qtbot, mocked_client, monkeypatch):
     """
     view = create_widget(qtbot, Image, client=mocked_client)
 
+    signal_configs = {
+        "PreviewSignal": [
+            ("eiger", "img", {"obj_name": "eiger_img", "describe": {"signal_info": {"ndim": 2}}}),
+            (
+                "eiger2",
+                "img2",
+                {"obj_name": "eiger_img2", "describe": {"signal_info": {"ndim": 2}}},
+            ),
+        ],
+        "AsyncSignal": [
+            (
+                "async_device",
+                "img_async",
+                {"obj_name": "async_device_img_async", "describe": {"signal_info": {"ndim": 2}}},
+            )
+        ],
+        "AsyncMultiSignal": [
+            (
+                "multi_device",
+                "img_multi",
+                {"obj_name": "multi_device_img_multi", "describe": {"signal_info": {"ndim": 2}}},
+            )
+        ],
+        "DynamicSignal": [
+            (
+                "dynamic_device",
+                "img_dyn",
+                {"obj_name": "dynamic_device_img_dyn", "describe": {"signal_info": {"ndim": 2}}},
+            )
+        ],
+    }
+
     # Provide a deterministic fake device_manager with get_bec_signals
     class _FakeDM:
         def get_bec_signals(self, _filter):
-            if _filter == "PreviewSignal":
-                return [
-                    ("eiger", "img", {"obj_name": "eiger_img"}),
-                    ("eiger2", "img2", {"obj_name": "eiger_img2"}),
-                ]
-            if _filter == "AsyncSignal":
-                return [("async_device", "img_async", {"obj_name": "async_device_img_async"})]
-            return []
+            if isinstance(_filter, str):
+                filters = [_filter]
+            else:
+                filters = list(_filter)
+
+            signals = []
+            for filt in filters:
+                signals.extend(signal_configs.get(filt, []))
+            return signals
 
     monkeypatch.setattr(view.client, "device_manager", _FakeDM())
 
@@ -748,14 +781,27 @@ def test_monitor_selection_populate_signals(qtbot, mocked_client, monkeypatch):
         assert isinstance(data, tuple)
         signal_texts.append(text)
 
-    assert {"eiger_img", "eiger_img2", "async_device_img_async"}.issubset(set(signal_texts))
+    expected_labels = {
+        "eiger_img",
+        "eiger_img2",
+        "async_device_img_async",
+        "multi_device_img_multi",
+        "dynamic_device_img_dyn",
+    }
+    assert expected_labels.issubset(set(signal_texts))
     first_signal_idx = next(
         i
         for i in range(view.device_combo_box.count())
         if isinstance(view.device_combo_box.itemData(i), tuple)
     )
     data = view.device_combo_box.itemData(first_signal_idx)
-    assert isinstance(data, tuple) and data[0] in ["eiger", "eiger2", "async_device"]
+    assert isinstance(data, tuple) and data[0] in [
+        "eiger",
+        "eiger2",
+        "async_device",
+        "multi_device",
+        "dynamic_device",
+    ]
 
 
 def test_monitor_selection_adjust_and_connect(qtbot, mocked_client, monkeypatch):
@@ -770,9 +816,26 @@ def test_monitor_selection_adjust_and_connect(qtbot, mocked_client, monkeypatch)
     # Deterministic fake device_manager
     class _FakeDM:
         def get_bec_signals(self, _filter):
-            if _filter == "PreviewSignal":
-                return [("eiger", "img", {"obj_name": "eiger_img"})]
-            return []
+            if isinstance(_filter, str):
+                filters = [_filter]
+            else:
+                filters = list(_filter)
+
+            signals = []
+            for filt in filters:
+                if filt == "PreviewSignal":
+                    signals.extend(
+                        [
+                            (
+                                "eiger",
+                                "img",
+                                {"obj_name": "eiger_img", "describe": {"signal_info": {"ndim": 2}}},
+                            )
+                        ]
+                    )
+                else:
+                    signals.extend([])
+            return signals
 
     monkeypatch.setattr(view.client, "device_manager", _FakeDM())
 

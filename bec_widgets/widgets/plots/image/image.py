@@ -98,6 +98,7 @@ class Image(ImageBase):
         "remove_roi",
         "rois",
     ]
+    SUPPORTED_SIGNALS = ["AsyncSignal", "AsyncMultiSignal", "DynamicSignal"]
 
     def __init__(
         self,
@@ -208,15 +209,15 @@ class Image(ImageBase):
         self.device_combo_box.insertItem(base_count, "", None)
 
         preview_signals = self.client.device_manager.get_bec_signals("PreviewSignal")
-        async_signals = self.client.device_manager.get_bec_signals("AsyncSignal")
+        async_signals = self.client.device_manager.get_bec_signals(self.SUPPORTED_SIGNALS)
         all_signals = preview_signals + async_signals
         for device, signal, signal_config in all_signals:
             describe = signal_config.get("describe") or {}
             signal_info = describe.get("signal_info") or {}
-            ndim = signal_info.get("ndim")
+            ndim = signal_info.get("ndim", 0)
             if ndim == 0:
                 continue
-            label = signal_config.get("obj_name", f"{device}_{signal}")
+            label = signal_config.get("storage_name", f"{device}_{signal}")
             self.device_combo_box.addItem(label, (device, signal, signal_config))
         self.device_combo_box.setCurrentText("")
         self.device_combo_box.blockSignals(False)
@@ -457,7 +458,8 @@ class Image(ImageBase):
             except KeyError:
                 logger.warning(f"Device '{monitor[0]}' not found; cannot connect monitor.")
                 return
-            signal = monitor[1]
+            # signal = monitor[1]
+            signal = self._check_async_signal_found(monitor[0], monitor[1])
             if len(monitor) == 3:
                 signal_config = monitor[2]
             else:
@@ -467,8 +469,11 @@ class Image(ImageBase):
                     logger.warning(f"Signal '{signal}' not found on device '{device.name}'.")
                     return
             signal_class = signal_config.get("signal_class", None)
-            if signal_class not in ["PreviewSignal", "AsyncSignal"]:
-                logger.warning(f"Signal '{monitor}' is not a PreviewSignal or AsyncSignal.")
+            allowed_signal_classes = ["PreviewSignal"] + self.SUPPORTED_SIGNALS
+            if signal_class not in allowed_signal_classes:
+                logger.warning(
+                    f"Signal `{monitor}` is not a PreviewSignal or a supported async signal."
+                )
                 return
 
             describe = signal_config.get("describe") or {}
@@ -487,7 +492,7 @@ class Image(ImageBase):
                         self.on_image_update_1d,
                         MessageEndpoints.device_preview(device.name, signal),
                     )
-                elif signal_class == "AsyncSignal":
+                elif signal_class in self.SUPPORTED_SIGNALS:
                     self.async_update = True
                     needs_async_setup = True
                     config.async_signal_name = signal_config.get(
@@ -504,7 +509,7 @@ class Image(ImageBase):
                         self.on_image_update_2d,
                         MessageEndpoints.device_preview(device.name, signal),
                     )
-                elif signal_class == "AsyncSignal":
+                elif signal_class in self.SUPPORTED_SIGNALS:
                     self.async_update = True
                     needs_async_setup = True
                     config.async_signal_name = signal_config.get(
@@ -603,8 +608,28 @@ class Image(ImageBase):
         if monitor is None or not isinstance(monitor, (list, tuple)) or len(monitor) < 2:
             return None
         device_name = monitor[0]
-        async_signal = config.async_signal_name or monitor[1]
+        async_signal = self._check_async_signal_found(
+            name=device_name, signal=config.async_signal_name or monitor[1]
+        )
         return device_name, async_signal
+
+    def _check_async_signal_found(self, name: str, signal: str) -> str:
+        """
+        Check if the async signal is found in the BEC device manager.
+
+        Args:
+            name(str): The name of the async signal.
+            signal(str): The entry of the async signal.
+
+        Returns:
+            tuple[bool, str]: A tuple where the first element is True if the async signal is found (False otherwise),
+                and the second element is the signal name (either the original signal or the storage_name for AsyncMultiSignal).
+        """
+        bec_async_signals = self.client.device_manager.get_bec_signals(self.SUPPORTED_SIGNALS)
+        for entry_name, _, entry_data in bec_async_signals:
+            if entry_name == name and entry_data.get("obj_name") == signal:
+                return entry_data.get("storage_name")
+        return signal
 
     def _setup_async_image(self, scan_id: str | None):
         """
