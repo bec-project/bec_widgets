@@ -27,7 +27,6 @@ class _WidgetsEnumType(str, enum.Enum):
 
 
 _Widgets = {
-    "AbortButton": "AbortButton",
     "BECDockArea": "BECDockArea",
     "BECMainWindow": "BECMainWindow",
     "BECProgressBar": "BECProgressBar",
@@ -51,7 +50,6 @@ _Widgets = {
     "PositionerBox2D": "PositionerBox2D",
     "PositionerControlLine": "PositionerControlLine",
     "PositionerGroup": "PositionerGroup",
-    "ResetButton": "ResetButton",
     "ResumeButton": "ResumeButton",
     "RingProgressBar": "RingProgressBar",
     "SBBMonitor": "SBBMonitor",
@@ -61,7 +59,6 @@ _Widgets = {
     "SignalComboBox": "SignalComboBox",
     "SignalLabel": "SignalLabel",
     "SignalLineEdit": "SignalLineEdit",
-    "StopButton": "StopButton",
     "TextBox": "TextBox",
     "VSCodeEditor": "VSCodeEditor",
     "Waveform": "Waveform",
@@ -98,13 +95,136 @@ except ImportError as e:
     logger.error(f"Failed loading plugins: \n{reduce(add, traceback.format_exception(e))}")
 
 
-class AbortButton(RPCBase):
-    """A button that abort the scan."""
+class AdvancedDockArea(RPCBase):
+    @rpc_call
+    def new(
+        self,
+        widget: "QWidget | str",
+        *,
+        closable: "bool" = True,
+        floatable: "bool" = True,
+        movable: "bool" = True,
+        start_floating: "bool" = False,
+        where: "Literal['left', 'right', 'top', 'bottom'] | None" = None,
+        on_close: "Callable[[CDockWidget, QWidget], None] | None" = None,
+        tab_with: "CDockWidget | QWidget | str | None" = None,
+        relative_to: "CDockWidget | QWidget | str | None" = None,
+        return_dock: "bool" = False,
+        show_title_bar: "bool | None" = None,
+        title_buttons: "Mapping[str, bool] | Sequence[str] | str | None" = None,
+        show_settings_action: "bool | None" = None,
+        promote_central: "bool" = False,
+        **widget_kwargs,
+    ) -> "QWidget | CDockWidget | BECWidget":
+        """
+        Override the base helper so dock settings are available by default.
+
+        The flag remains user-configurable (pass ``False`` to hide the action).
+        """
 
     @rpc_call
-    def remove(self):
+    def dock_map(self) -> "dict[str, CDockWidget]":
         """
-        Cleanup the BECConnector
+        Return the dock widgets map as dictionary with names as keys.
+        """
+
+    @rpc_call
+    def dock_list(self) -> "list[CDockWidget]":
+        """
+        Return the list of dock widgets.
+        """
+
+    @rpc_call
+    def widget_map(self) -> "dict[str, QWidget]":
+        """
+        Return a dictionary mapping widget names to their corresponding widgets.
+        """
+
+    @rpc_call
+    def widget_list(self) -> "list[QWidget]":
+        """
+        Return a list of all widgets contained in the dock area.
+        """
+
+    @property
+    @rpc_call
+    def lock_workspace(self) -> "bool":
+        """
+        Get or set the lock state of the workspace.
+
+        Returns:
+            bool: True if the workspace is locked, False otherwise.
+        """
+
+    @rpc_call
+    def attach_all(self):
+        """
+        Re-attach floating docks back into the dock manager.
+        """
+
+    @rpc_call
+    def delete_all(self):
+        """
+        Delete all docks and their associated widgets.
+        """
+
+    @rpc_call
+    def set_layout_ratios(
+        self,
+        *,
+        horizontal: "Sequence[float] | Mapping[int | str, float] | None" = None,
+        vertical: "Sequence[float] | Mapping[int | str, float] | None" = None,
+        splitter_overrides: "Mapping[int | str | Sequence[int], Sequence[float] | Mapping[int | str, float]] | None" = None,
+    ) -> "None":
+        """
+        Adjust splitter ratios in the dock layout.
+
+        Args:
+            horizontal: Weights applied to every horizontal splitter encountered.
+            vertical: Weights applied to every vertical splitter encountered.
+            splitter_overrides: Optional overrides targeting specific splitters identified
+                by their index path (e.g. ``{0: [1, 2], (1, 0): [3, 5]}``). Paths are zero-based
+                indices following the splitter hierarchy, starting from the root splitter.
+
+        Example:
+            To build three columns with custom per-column ratios::
+
+                area.set_layout_ratios(
+                    horizontal=[1, 2, 1],             # column widths
+                    splitter_overrides={
+                        0: [1, 2],                    # column 0 (two rows)
+                        1: [3, 2, 1],                 # column 1 (three rows)
+                        2: [1],                       # column 2 (single row)
+                    },
+                )
+        """
+
+    @rpc_call
+    def describe_layout(self) -> "list[dict[str, Any]]":
+        """
+        Return metadata describing splitter paths, orientations, and contained docks.
+
+        Useful for determining the keys to use in `set_layout_ratios(splitter_overrides=...)`.
+        """
+
+    @rpc_call
+    def print_layout_structure(self) -> "None":
+        """
+        Pretty-print the current splitter paths to stdout.
+        """
+
+    @property
+    @rpc_call
+    def mode(self) -> "str":
+        """
+        None
+        """
+
+    @mode.setter
+    @rpc_call
+    def mode(self) -> "str":
+        """
+        None
         """
 
 
@@ -141,6 +261,26 @@ class AutoUpdates(RPCBase):
 
         Returns:
             str: The selected device. If no device is selected, None is returned.
+        """
+
+
+class AvailableDeviceResources(RPCBase):
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
 
@@ -443,6 +583,18 @@ class BECMainWindow(RPCBase):
         Cleanup the BECConnector
         """
 
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
 
 class BECProgressBar(RPCBase):
     """A custom progress bar with smooth transitions. The displayed text can be customized using a template."""
@@ -526,6 +678,18 @@ class BECQueue(RPCBase):
         Cleanup the BECConnector
         """
 
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
 
 class BECStatusBox(RPCBase):
     """An autonomous widget to display the status of BEC services."""
@@ -540,6 +704,25 @@ class BECStatusBox(RPCBase):
     def remove(self):
         """
         Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
+    @rpc_timeout(None)
+    @rpc_call
+    def screenshot(self, file_name: "str | None" = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
         """
 
 
@@ -1003,6 +1186,18 @@ class DarkModeButton(RPCBase):
         Cleanup the BECConnector
         """
 
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
 
 class DeviceBrowser(RPCBase):
     """DeviceBrowser is a widget that displays all available devices in the current BEC session."""
@@ -1011,6 +1206,18 @@ class DeviceBrowser(RPCBase):
     def remove(self):
         """
         Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
 
@@ -1046,6 +1253,18 @@ class DeviceInputBase(RPCBase):
         Cleanup the BECConnector
         """
 
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
 
 class DeviceLineEdit(RPCBase):
     """Line edit widget for device input with autocomplete for device names."""
@@ -1077,6 +1296,161 @@ class DeviceLineEdit(RPCBase):
 
         Returns:
             bool: True if the current value is a valid device name, False otherwise.
+        """
+
+
+class DockAreaWidget(RPCBase):
+    """Lightweight dock area that exposes the core Qt ADS docking helpers without any"""
+
+    @rpc_call
+    def new(
+        self,
+        widget: "QWidget | str",
+        *,
+        closable: "bool" = True,
+        floatable: "bool" = True,
+        movable: "bool" = True,
+        start_floating: "bool" = False,
+        floating_state: "Mapping[str, object] | None" = None,
+        where: "Literal['left', 'right', 'top', 'bottom'] | None" = None,
+        on_close: "Callable[[CDockWidget, QWidget], None] | None" = None,
+        tab_with: "CDockWidget | QWidget | str | None" = None,
+        relative_to: "CDockWidget | QWidget | str | None" = None,
+        return_dock: "bool" = False,
+        show_title_bar: "bool | None" = None,
+        title_buttons: "Mapping[str, bool] | Sequence[str] | str | None" = None,
+        show_settings_action: "bool | None" = False,
+        promote_central: "bool" = False,
+        dock_icon: "QIcon | None" = None,
+        apply_widget_icon: "bool" = True,
+        **widget_kwargs,
+    ) -> "QWidget | CDockWidget | BECWidget":
+        """
+        Create a new widget (or reuse an instance) and add it as a dock.
+
+        Args:
+            widget(QWidget | str): Instance or registered widget type string.
+            closable(bool): Whether the dock is closable.
+            floatable(bool): Whether the dock is floatable.
+            movable(bool): Whether the dock is movable.
+            start_floating(bool): Whether to start the dock floating.
+            floating_state(Mapping | None): Optional floating geometry metadata to apply when floating.
+            where(Literal["left", "right", "top", "bottom"] | None): Dock placement hint relative to the dock area (ignored when
+                ``relative_to`` is provided without an explicit value).
+            on_close(Callable[[CDockWidget, QWidget], None] | None): Optional custom close handler accepting (dock, widget).
+            tab_with(CDockWidget | QWidget | str | None): Existing dock (or widget/name) to tab the new dock alongside.
+            relative_to(CDockWidget | QWidget | str | None): Existing dock (or widget/name) used as the positional anchor.
+                When supplied and ``where`` is ``None``, the new dock inherits the
+                anchor's current dock area.
+            return_dock(bool): When True, return the created dock instead of the widget.
+            show_title_bar(bool | None): Explicitly show or hide the dock area's title bar.
+            title_buttons(Mapping[str, bool] | Sequence[str] | str | None): Mapping or iterable describing which title bar buttons should
+                remain visible. Provide a mapping of button names (``"float"``,
+                ``"close"``, ``"menu"``, ``"auto_hide"``, ``"minimize"``) to booleans,
+                or a sequence of button names to hide.
+            show_settings_action(bool | None): Control whether a dock settings/property action should
+                be installed. Defaults to ``False`` for the basic dock area; subclasses
+                such as `AdvancedDockArea` override the default to ``True``.
+            promote_central(bool): When True, promote the created dock to be the dock manager's
+                central widget (useful for editor stacks or other root content).
+            dock_icon(QIcon | None): Optional icon applied to the dock via ``CDockWidget.setIcon``.
+                Provide a `QIcon` (e.g. from ``material_icon``). When ``None`` (default),
+                the widget's ``ICON_NAME`` attribute is used when available.
+            apply_widget_icon(bool): When False, skip automatically resolving the icon from
+                the widget's ``ICON_NAME`` (useful for callers who want no icon and do not pass one explicitly).
+
+        Returns:
+            The widget instance by default, or the created `CDockWidget` when `return_dock` is True.
+        """
+
+    @rpc_call
+    def dock_map(self) -> "dict[str, CDockWidget]":
+        """
+        Return the dock widgets map as dictionary with names as keys.
+        """
+
+    @rpc_call
+    def dock_list(self) -> "list[CDockWidget]":
+        """
+        Return the list of dock widgets.
+        """
+
+    @rpc_call
+    def widget_map(self) -> "dict[str, QWidget]":
+        """
+        Return a dictionary mapping widget names to their corresponding widgets.
+        """
+
+    @rpc_call
+    def widget_list(self) -> "list[QWidget]":
+        """
+        Return a list of all widgets contained in the dock area.
+        """
+
+    @rpc_call
+    def attach_all(self):
+        """
+        Re-attach floating docks back into the dock manager.
+        """
+
+    @rpc_call
+    def delete_all(self):
+        """
+        Delete all docks and their associated widgets.
+        """
+
+    @rpc_call
+    def set_layout_ratios(
+        self,
+        *,
+        horizontal: "Sequence[float] | Mapping[int | str, float] | None" = None,
+        vertical: "Sequence[float] | Mapping[int | str, float] | None" = None,
+        splitter_overrides: "Mapping[int | str | Sequence[int], Sequence[float] | Mapping[int | str, float]] | None" = None,
+    ) -> "None":
+        """
+        Adjust splitter ratios in the dock layout.
+
+        Args:
+            horizontal: Weights applied to every horizontal splitter encountered.
+            vertical: Weights applied to every vertical splitter encountered.
+            splitter_overrides: Optional overrides targeting specific splitters identified
+                by their index path (e.g. ``{0: [1, 2], (1, 0): [3, 5]}``). Paths are zero-based
+                indices following the splitter hierarchy, starting from the root splitter.
+
+        Example:
+            To build three columns with custom per-column ratios::
+
+                area.set_layout_ratios(
+                    horizontal=[1, 2, 1],             # column widths
+                    splitter_overrides={
+                        0: [1, 2],                    # column 0 (two rows)
+                        1: [3, 2, 1],                 # column 1 (three rows)
+                        2: [1],                       # column 2 (single row)
+                    },
+                )
+        """
+
+    @rpc_call
+    def describe_layout(self) -> "list[dict[str, Any]]":
+        """
+        Return metadata describing splitter paths, orientations, and contained docks.
+
+        Useful for determining the keys to use in `set_layout_ratios(splitter_overrides=...)`.
+        """
+
+    @rpc_call
+    def print_layout_structure(self) -> "None":
+        """
+        Pretty-print the current splitter paths to stdout.
+        """
+
+    @rpc_call
+    def set_central_dock(self, dock: "CDockWidget | QWidget | str") -> "None":
+        """
+        Promote an existing dock to be the dock manager's central widget.
+
+        Args:
+            dock(CDockWidget | QWidget | str): Dock reference to promote.
         """
 
 
@@ -1209,6 +1583,18 @@ class Heatmap(RPCBase):
     def remove(self):
         """
         Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
     @property
@@ -1811,6 +2197,18 @@ class Image(RPCBase):
     def remove(self):
         """
         Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
     @property
@@ -2566,26 +2964,187 @@ class LogPanel(RPCBase):
 class Minesweeper(RPCBase): ...
 
 
+class MonacoDock(RPCBase):
+    """MonacoDock is a dock widget that contains Monaco editor instances."""
+
+    @rpc_call
+    def new(
+        self,
+        widget: "QWidget | str",
+        *,
+        closable: "bool" = True,
+        floatable: "bool" = True,
+        movable: "bool" = True,
+        start_floating: "bool" = False,
+        floating_state: "Mapping[str, object] | None" = None,
+        where: "Literal['left', 'right', 'top', 'bottom'] | None" = None,
+        on_close: "Callable[[CDockWidget, QWidget], None] | None" = None,
+        tab_with: "CDockWidget | QWidget | str | None" = None,
+        relative_to: "CDockWidget | QWidget | str | None" = None,
+        return_dock: "bool" = False,
+        show_title_bar: "bool | None" = None,
+        title_buttons: "Mapping[str, bool] | Sequence[str] | str | None" = None,
+        show_settings_action: "bool | None" = False,
+        promote_central: "bool" = False,
+        dock_icon: "QIcon | None" = None,
+        apply_widget_icon: "bool" = True,
+        **widget_kwargs,
+    ) -> "QWidget | CDockWidget | BECWidget":
+        """
+        Create a new widget (or reuse an instance) and add it as a dock.
+
+        Args:
+            widget(QWidget | str): Instance or registered widget type string.
+            closable(bool): Whether the dock is closable.
+            floatable(bool): Whether the dock is floatable.
+            movable(bool): Whether the dock is movable.
+            start_floating(bool): Whether to start the dock floating.
+            floating_state(Mapping | None): Optional floating geometry metadata to apply when floating.
+            where(Literal["left", "right", "top", "bottom"] | None): Dock placement hint relative to the dock area (ignored when
+                ``relative_to`` is provided without an explicit value).
+            on_close(Callable[[CDockWidget, QWidget], None] | None): Optional custom close handler accepting (dock, widget).
+            tab_with(CDockWidget | QWidget | str | None): Existing dock (or widget/name) to tab the new dock alongside.
+            relative_to(CDockWidget | QWidget | str | None): Existing dock (or widget/name) used as the positional anchor.
+                When supplied and ``where`` is ``None``, the new dock inherits the
+                anchor's current dock area.
+            return_dock(bool): When True, return the created dock instead of the widget.
+            show_title_bar(bool | None): Explicitly show or hide the dock area's title bar.
+            title_buttons(Mapping[str, bool] | Sequence[str] | str | None): Mapping or iterable describing which title bar buttons should
+                remain visible. Provide a mapping of button names (``"float"``,
+                ``"close"``, ``"menu"``, ``"auto_hide"``, ``"minimize"``) to booleans,
+                or a sequence of button names to hide.
+            show_settings_action(bool | None): Control whether a dock settings/property action should
+                be installed. Defaults to ``False`` for the basic dock area; subclasses
+                such as `AdvancedDockArea` override the default to ``True``.
+            promote_central(bool): When True, promote the created dock to be the dock manager's
+                central widget (useful for editor stacks or other root content).
+            dock_icon(QIcon | None): Optional icon applied to the dock via ``CDockWidget.setIcon``.
+                Provide a `QIcon` (e.g. from ``material_icon``). When ``None`` (default),
+                the widget's ``ICON_NAME`` attribute is used when available.
+            apply_widget_icon(bool): When False, skip automatically resolving the icon from
+                the widget's ``ICON_NAME`` (useful for callers who want no icon and do not pass one explicitly).
+
+        Returns:
+            The widget instance by default, or the created `CDockWidget` when `return_dock` is True.
+        """
+
+    @rpc_call
+    def dock_map(self) -> "dict[str, CDockWidget]":
+        """
+        Return the dock widgets map as dictionary with names as keys.
+        """
+
+    @rpc_call
+    def dock_list(self) -> "list[CDockWidget]":
+        """
+        Return the list of dock widgets.
+        """
+
+    @rpc_call
+    def widget_map(self) -> "dict[str, QWidget]":
+        """
+        Return a dictionary mapping widget names to their corresponding widgets.
+        """
+
+    @rpc_call
+    def widget_list(self) -> "list[QWidget]":
+        """
+        Return a list of all widgets contained in the dock area.
+        """
+
+    @rpc_call
+    def attach_all(self):
+        """
+        Re-attach floating docks back into the dock manager.
+        """
+
+    @rpc_call
+    def delete_all(self):
+        """
+        Delete all docks and their associated widgets.
+        """
+
+    @rpc_call
+    def set_layout_ratios(
+        self,
+        *,
+        horizontal: "Sequence[float] | Mapping[int | str, float] | None" = None,
+        vertical: "Sequence[float] | Mapping[int | str, float] | None" = None,
+        splitter_overrides: "Mapping[int | str | Sequence[int], Sequence[float] | Mapping[int | str, float]] | None" = None,
+    ) -> "None":
+        """
+        Adjust splitter ratios in the dock layout.
+
+        Args:
+            horizontal: Weights applied to every horizontal splitter encountered.
+            vertical: Weights applied to every vertical splitter encountered.
+            splitter_overrides: Optional overrides targeting specific splitters identified
+                by their index path (e.g. ``{0: [1, 2], (1, 0): [3, 5]}``). Paths are zero-based
+                indices following the splitter hierarchy, starting from the root splitter.
+
+        Example:
+            To build three columns with custom per-column ratios::
+
+                area.set_layout_ratios(
+                    horizontal=[1, 2, 1],             # column widths
+                    splitter_overrides={
+                        0: [1, 2],                    # column 0 (two rows)
+                        1: [3, 2, 1],                 # column 1 (three rows)
+                        2: [1],                       # column 2 (single row)
+                    },
+                )
+        """
+
+    @rpc_call
+    def describe_layout(self) -> "list[dict[str, Any]]":
+        """
+        Return metadata describing splitter paths, orientations, and contained docks.
+
+        Useful for determining the keys to use in `set_layout_ratios(splitter_overrides=...)`.
+        """
+
+    @rpc_call
+    def print_layout_structure(self) -> "None":
+        """
+        Pretty-print the current splitter paths to stdout.
+        """
+
+    @rpc_call
+    def set_central_dock(self, dock: "CDockWidget | QWidget | str") -> "None":
+        """
+        Promote an existing dock to be the dock manager's central widget.
+
+        Args:
+            dock(CDockWidget | QWidget | str): Dock reference to promote.
+        """
+
+
 class MonacoWidget(RPCBase):
     """A simple Monaco editor widget"""
 
     @rpc_call
-    def set_text(self, text: str) -> None:
+    def set_text(
+        self, text: "str", file_name: "str | None" = None, reset: "bool" = False
+    ) -> "None":
         """
         Set the text in the Monaco editor.
 
         Args:
             text (str): The text to set in the editor.
+            file_name (str): Set the file name
+            reset (bool): If True, reset the original content to the new text.
         """
 
     @rpc_call
-    def get_text(self) -> str:
+    def get_text(self) -> "str":
         """
         Get the current text from the Monaco editor.
         """
 
     @rpc_call
-    def insert_text(self, text: str, line: int | None = None, column: int | None = None) -> None:
+    def insert_text(
+        self, text: "str", line: "int | None" = None, column: "int | None" = None
+    ) -> "None":
         """
         Insert text at the current cursor position or at a specified line and column.
 
@@ -2596,7 +3155,7 @@ class MonacoWidget(RPCBase):
         """
 
     @rpc_call
-    def delete_line(self, line: int | None = None) -> None:
+    def delete_line(self, line: "int | None" = None) -> "None":
         """
         Delete a line in the Monaco editor.
 
@@ -2605,7 +3164,16 @@ class MonacoWidget(RPCBase):
         """
 
     @rpc_call
-    def set_language(self, language: str) -> None:
+    def open_file(self, file_name: "str") -> "None":
+        """
+        Open a file in the editor.
+
+        Args:
+            file_name (str): The path + file name of the file that needs to be displayed.
+        """
+
+    @rpc_call
+    def set_language(self, language: "str") -> "None":
         """
         Set the programming language for syntax highlighting in the Monaco editor.
 
@@ -2614,13 +3182,13 @@ class MonacoWidget(RPCBase):
         """
 
     @rpc_call
-    def get_language(self) -> str:
+    def get_language(self) -> "str":
         """
         Get the current programming language set in the Monaco editor.
         """
 
     @rpc_call
-    def set_theme(self, theme: str) -> None:
+    def set_theme(self, theme: "str") -> "None":
         """
         Set the theme for the Monaco editor.
 
@@ -2629,13 +3197,13 @@ class MonacoWidget(RPCBase):
         """
 
     @rpc_call
-    def get_theme(self) -> str:
+    def get_theme(self) -> "str":
         """
         Get the current theme of the Monaco editor.
         """
 
     @rpc_call
-    def set_readonly(self, read_only: bool) -> None:
+    def set_readonly(self, read_only: "bool") -> "None":
         """
         Set the Monaco editor to read-only mode.
 
@@ -2646,10 +3214,10 @@ class MonacoWidget(RPCBase):
     @rpc_call
     def set_cursor(
         self,
-        line: int,
-        column: int = 1,
-        move_to_position: Literal[None, "center", "top", "position"] = None,
-    ) -> None:
+        line: "int",
+        column: "int" = 1,
+        move_to_position: "Literal[None, 'center', 'top', 'position']" = None,
+    ) -> "None":
         """
         Set the cursor position in the Monaco editor.
 
@@ -2660,7 +3228,7 @@ class MonacoWidget(RPCBase):
         """
 
     @rpc_call
-    def current_cursor(self) -> dict[str, int]:
+    def current_cursor(self) -> "dict[str, int]":
         """
         Get the current cursor position in the Monaco editor.
 
@@ -2669,7 +3237,7 @@ class MonacoWidget(RPCBase):
         """
 
     @rpc_call
-    def set_minimap_enabled(self, enabled: bool) -> None:
+    def set_minimap_enabled(self, enabled: "bool") -> "None":
         """
         Enable or disable the minimap in the Monaco editor.
 
@@ -2678,7 +3246,7 @@ class MonacoWidget(RPCBase):
         """
 
     @rpc_call
-    def set_vim_mode_enabled(self, enabled: bool) -> None:
+    def set_vim_mode_enabled(self, enabled: "bool") -> "None":
         """
         Enable or disable Vim mode in the Monaco editor.
 
@@ -2687,7 +3255,7 @@ class MonacoWidget(RPCBase):
         """
 
     @rpc_call
-    def set_lsp_header(self, header: str) -> None:
+    def set_lsp_header(self, header: "str") -> "None":
         """
         Set the LSP (Language Server Protocol) header for the Monaco editor.
         The header is used to provide context for language servers but is not displayed in the editor.
@@ -2697,12 +3265,31 @@ class MonacoWidget(RPCBase):
         """
 
     @rpc_call
-    def get_lsp_header(self) -> str:
+    def get_lsp_header(self) -> "str":
         """
         Get the current LSP header set in the Monaco editor.
 
         Returns:
             str: The LSP header.
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
+    @rpc_timeout(None)
+    @rpc_call
+    def screenshot(self, file_name: "str | None" = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
         """
 
 
@@ -2713,6 +3300,18 @@ class MotorMap(RPCBase):
     def remove(self):
         """
         Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
     @property
@@ -3107,7 +3706,9 @@ class MotorMap(RPCBase):
         """
 
     @rpc_call
-    def map(self, x_name: "str", y_name: "str", validate_bec: "bool" = True) -> "None":
+    def map(
+        self, x_name: "str", y_name: "str", validate_bec: "bool" = True, suppress_errors=False
+    ) -> "None":
         """
         Set the x and y motor names.
 
@@ -3115,6 +3716,7 @@ class MotorMap(RPCBase):
             x_name(str): The name of the x motor.
             y_name(str): The name of the y motor.
             validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
+            suppress_errors(bool, optional): If True, suppress errors during validation. Defaults to False. Used for properties setting. If the validation fails, the changes are not applied.
         """
 
     @rpc_call
@@ -3132,6 +3734,34 @@ class MotorMap(RPCBase):
             dict: Data of the motor map.
         """
 
+    @property
+    @rpc_call
+    def x_motor(self) -> "str":
+        """
+        Name of the motor shown on the X axis.
+        """
+
+    @x_motor.setter
+    @rpc_call
+    def x_motor(self) -> "str":
+        """
+        Name of the motor shown on the X axis.
+        """
+
+    @property
+    @rpc_call
+    def y_motor(self) -> "str":
+        """
+        Name of the motor shown on the Y axis.
+        """
+
+    @y_motor.setter
+    @rpc_call
+    def y_motor(self) -> "str":
+        """
+        Name of the motor shown on the Y axis.
+        """
+
 
 class MultiWaveform(RPCBase):
     """MultiWaveform widget for displaying multiple waveforms emitted by a single signal."""
@@ -3140,6 +3770,18 @@ class MultiWaveform(RPCBase):
     def remove(self):
         """
         Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
     @property
@@ -3788,6 +4430,18 @@ class PositionerBox(RPCBase):
             positioner (Positioner | str) : Positioner to set, accepts str or the device
         """
 
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
     @rpc_timeout(None)
     @rpc_call
     def screenshot(self, file_name: "str | None" = None):
@@ -3815,6 +4469,18 @@ class PositionerBox2D(RPCBase):
 
         Args:
             positioner (Positioner | str) : Positioner to set, accepts str or the device
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
     @rpc_timeout(None)
@@ -3865,6 +4531,18 @@ class PositionerControlLine(RPCBase):
             positioner (Positioner | str) : Positioner to set, accepts str or the device
         """
 
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
     @rpc_timeout(None)
     @rpc_call
     def screenshot(self, file_name: "str | None" = None):
@@ -3882,6 +4560,25 @@ class PositionerGroup(RPCBase):
         Redraw grid with positioners from device_names string
 
         Device names must be separated by space
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
+    @rpc_timeout(None)
+    @rpc_call
+    def screenshot(self, file_name: "str | None" = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
         """
 
 
@@ -4014,16 +4711,6 @@ class RectangularROI(RPCBase):
         """
 
 
-class ResetButton(RPCBase):
-    """A button that resets the scan queue."""
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-
 class ResumeButton(RPCBase):
     """A button that continue scan queue."""
 
@@ -4031,6 +4718,18 @@ class ResumeButton(RPCBase):
     def remove(self):
         """
         Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
 
@@ -4314,6 +5013,25 @@ class RingProgressBar(RPCBase):
             bool: True if scan segment updates are enabled.
         """
 
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
+    @rpc_timeout(None)
+    @rpc_call
+    def screenshot(self, file_name: "str | None" = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
+        """
+
 
 class SBBMonitor(RPCBase):
     """A widget to display the SBB monitor website."""
@@ -4325,9 +5043,15 @@ class ScanControl(RPCBase):
     """Widget to submit new scans to the queue."""
 
     @rpc_call
-    def remove(self):
+    def attach(self):
         """
-        Cleanup the BECConnector
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
     @rpc_timeout(None)
@@ -4347,6 +5071,18 @@ class ScanProgressBar(RPCBase):
         Cleanup the BECConnector
         """
 
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
 
 class ScatterCurve(RPCBase):
     """Scatter curve item for the scatter waveform widget."""
@@ -4364,6 +5100,18 @@ class ScatterWaveform(RPCBase):
     def remove(self):
         """
         Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
     @property
@@ -4953,16 +5701,6 @@ class SignalLineEdit(RPCBase):
         """
 
 
-class StopButton(RPCBase):
-    """A button that stops the current scan."""
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-
 class TextBox(RPCBase):
     """A widget that displays text in plain and HTML format"""
 
@@ -4998,6 +5736,18 @@ class Waveform(RPCBase):
     def remove(self):
         """
         Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
     @property
@@ -5559,6 +6309,18 @@ class WebConsole(RPCBase):
         Cleanup the BECConnector
         """
 
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
 
 class WebsiteWidget(RPCBase):
     """A simple widget to display a website"""
@@ -5597,4 +6359,23 @@ class WebsiteWidget(RPCBase):
     def forward(self):
         """
         Go forward in the history
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
+    @rpc_timeout(None)
+    @rpc_call
+    def screenshot(self, file_name: "str | None" = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
         """
