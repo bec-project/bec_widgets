@@ -3,7 +3,7 @@ import os
 from typing import Literal
 
 import requests
-from github import Github
+from github import Auth, Github
 from pydantic import BaseModel
 
 
@@ -24,7 +24,7 @@ class ProjectItemHandler:
 
     def __init__(self, gh_config: GHConfig):
         self.gh_config = gh_config
-        self.gh = Github(gh_config.token)
+        self.gh = Github(auth=Auth.Token(gh_config.token))
         self.repo = self.gh.get_repo(f"{gh_config.organization}/{gh_config.repository}")
         self.project_node_id = self.get_project_node_id()
 
