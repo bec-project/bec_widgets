@@ -1,7 +1,5 @@
 import time
 
-import pytest
-
 from bec_widgets.utils.widget_io import WidgetIO
 
 
@@ -24,8 +22,10 @@ def test_scan_control_populate_scans_e2e(scan_control):
         scan_control.comboBox_scan_selection.itemText(i)
         for i in range(scan_control.comboBox_scan_selection.count())
     ]
-    assert scan_control.comboBox_scan_selection.count() == len(expected_scans)
-    assert sorted(items) == sorted(expected_scans)
+    # Verify that we have at least the expected scans.
+    # There may be more scans if additional scans are added to the test plugin.
+    assert scan_control.comboBox_scan_selection.count() >= len(expected_scans)
+    assert all(scan in items for scan in expected_scans)
 
 
 def test_run_line_scan_with_parameters_e2e(scan_control, bec_client_lib, qtbot):
