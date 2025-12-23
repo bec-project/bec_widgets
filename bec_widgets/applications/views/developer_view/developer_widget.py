@@ -18,7 +18,7 @@ from bec_widgets.widgets.containers.advanced_dock_area.basic_dock_area import Do
 from bec_widgets.widgets.containers.qt_ads import CDockWidget
 from bec_widgets.widgets.editors.monaco.monaco_dock import MonacoDock
 from bec_widgets.widgets.editors.monaco.monaco_widget import MonacoWidget
-from bec_widgets.widgets.editors.web_console.web_console import WebConsole
+from bec_widgets.widgets.editors.web_console.web_console import BECShell, WebConsole
 from bec_widgets.widgets.utility.ide_explorer.ide_explorer import IDEExplorer
 
 
@@ -91,9 +91,10 @@ class DeveloperWidget(DockAreaWidget):
         # Initialize the widgets
         self.explorer = IDEExplorer(self)
         self.explorer.setObjectName("Explorer")
-        self.console = WebConsole(self)
-        self.console.setObjectName("Console")
-        self.terminal = WebConsole(self, startup_cmd="")
+
+        self.console = BECShell(self)
+        self.console.setObjectName("BEC Shell")
+        self.terminal = WebConsole(self)
         self.terminal.setObjectName("Terminal")
         self.monaco = MonacoDock(self)
         self.monaco.setObjectName("MonacoEditor")

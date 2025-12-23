@@ -30,6 +30,7 @@ _Widgets = {
     "BECMainWindow": "BECMainWindow",
     "BECProgressBar": "BECProgressBar",
     "BECQueue": "BECQueue",
+    "BECShell": "BECShell",
     "BECStatusBox": "BECStatusBox",
     "DapComboBox": "DapComboBox",
     "DarkModeButton": "DarkModeButton",
@@ -475,6 +476,28 @@ class BECProgressBar(RPCBase):
 
 class BECQueue(RPCBase):
     """Widget to display the BEC queue."""
+
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
+
+class BECShell(RPCBase):
+    """A WebConsole pre-configured to run the BEC shell."""
 
     @rpc_call
     def remove(self):
