@@ -204,7 +204,8 @@ class WebConsoleRegistry:
         if page_info.owner_gui_id == gui_id:
             page_info.owner_gui_id = None
         if not page_info.widget_ids:
-            self._page_registry[unique_id].page = None
+            if page_info.page:
+                page_info.page.deleteLater()
             del self._page_registry[unique_id]
 
         logger.info(f"Unregistered page {unique_id} for {gui_id}")
@@ -345,7 +346,7 @@ class WebConsole(BECWidget, QWidget):
 
         # If no unique_id is provided, create a new page
         if not self._unique_id:
-            self.page = BECWebEnginePage()
+            self.page = BECWebEnginePage(self)
             self.page.authenticationRequired.connect(self._authenticate)
             self.page.setUrl(QUrl(f"http://localhost:{_web_console_registry._server_port}"))
             self.browser.setPage(self.page)

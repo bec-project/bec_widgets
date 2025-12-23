@@ -34,7 +34,7 @@ def test_web_console_write(console_widget):
     with mock.patch.object(console_widget.page, "runJavaScript") as mock_run_js:
         console_widget.write("Hello, World!")
 
-        assert mock.call("window.term.paste('Hello, World!');") in mock_run_js.mock_calls
+        assert mock.call('window.term.paste("Hello, World!");') in mock_run_js.mock_calls
 
 
 def test_web_console_write_no_return(console_widget):
@@ -42,7 +42,7 @@ def test_web_console_write_no_return(console_widget):
     with mock.patch.object(console_widget.page, "runJavaScript") as mock_run_js:
         console_widget.write("Hello, World!", send_return=False)
 
-        assert mock.call("window.term.paste('Hello, World!');") in mock_run_js.mock_calls
+        assert mock.call('window.term.paste("Hello, World!");') in mock_run_js.mock_calls
         assert mock_run_js.call_count == 1
 
 
