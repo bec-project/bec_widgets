@@ -70,7 +70,7 @@ from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 from bec_widgets.widgets.containers.qt_ads import CDockWidget
 from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox, PositionerBox2D
 from bec_widgets.widgets.control.scan_control import ScanControl
-from bec_widgets.widgets.editors.web_console.web_console import WebConsole
+from bec_widgets.widgets.editors.web_console.web_console import BECShell, WebConsole
 from bec_widgets.widgets.plots.heatmap.heatmap import Heatmap
 from bec_widgets.widgets.plots.image.image import Image
 from bec_widgets.widgets.plots.motor_map.motor_map import MotorMap
@@ -378,7 +378,7 @@ class AdvancedDockArea(DockAreaWidget):
                 "RingProgressBar",
             ),
             "terminal": (WebConsole.ICON_NAME, "Add Terminal", "WebConsole"),
-            "bec_shell": (WebConsole.ICON_NAME, "Add BEC Shell", "WebConsole"),
+            "bec_shell": (BECShell.ICON_NAME, "Add BEC Shell", "BECShell"),
             "log_panel": (LogPanel.ICON_NAME, "Add LogPanel - Disabled", "LogPanel"),
             "sbb_monitor": ("train", "Add SBB Monitor", "SBBMonitor"),
         }
@@ -501,10 +501,7 @@ class AdvancedDockArea(DockAreaWidget):
                 elif key == "bec_shell":
                     act.triggered.connect(
                         lambda _, t=widget_type: self.new(
-                            widget=t,
-                            closable=True,
-                            startup_cmd=f"bec --gui-id {self.bec_dispatcher.cli_server.gui_id}",
-                            show_settings_action=True,
+                            widget=t, closable=True, show_settings_action=False
                         )
                     )
                 else:

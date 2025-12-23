@@ -2208,7 +2208,7 @@ class TestFlatToolbarActions:
             "flat_status": "BECStatusBox",
             "flat_progress_bar": "RingProgressBar",
             "flat_terminal": "WebConsole",
-            "flat_bec_shell": "WebConsole",
+            "flat_bec_shell": "BECShell",
             "flat_sbb_monitor": "SBBMonitor",
         }
 
