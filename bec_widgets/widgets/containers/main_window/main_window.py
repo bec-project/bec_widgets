@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING
 
 from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtCore import QEvent, QSize, Qt, QTimer
@@ -31,6 +30,9 @@ from bec_widgets.widgets.containers.main_window.addons.notification_center.notif
 from bec_widgets.widgets.containers.main_window.addons.scroll_label import ScrollLabel
 from bec_widgets.widgets.containers.main_window.addons.web_links import BECWebLinksMixin
 from bec_widgets.widgets.progress.scan_progressbar.scan_progressbar import ScanProgressBar
+from bec_widgets.widgets.utility.widget_hierarchy_tree.widget_hierarchy_tree import (
+    WidgetHierarchyDialog,
+)
 
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
@@ -57,6 +59,7 @@ class BECMainWindow(BECWidget, QMainWindow):
         self.notification_broker = BECNotificationBroker(parent=self)
         self._nc_margin = 16
         self._position_notification_centre()
+        self._widget_hierarchy_dialog: WidgetHierarchyDialog | None = None
 
         # Init ui
         self._init_ui()
@@ -312,6 +315,11 @@ class BECMainWindow(BECWidget, QMainWindow):
         light_theme_action.triggered.connect(lambda: self.change_theme("light"))
         dark_theme_action.triggered.connect(lambda: self.change_theme("dark"))
 
+        theme_menu.addSeparator()
+        widget_tree_action = QAction("Show Widget Hierarchy", self)
+        widget_tree_action.triggered.connect(self._show_widget_hierarchy_dialog)
+        theme_menu.addAction(widget_tree_action)
+
         # Set the default theme
         if hasattr(self.app, "theme") and self.app.theme:
             theme_name = self.app.theme.theme.lower()
@@ -395,7 +403,23 @@ class BECMainWindow(BECWidget, QMainWindow):
             return True
         return super().event(event)
 
+    def _show_widget_hierarchy_dialog(self):
+        if self._widget_hierarchy_dialog is None:
+            dialog = WidgetHierarchyDialog(root_widget=None, parent=self)
+            dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
+            dialog.destroyed.connect(lambda: setattr(self, "_widget_hierarchy_dialog", None))
+            self._widget_hierarchy_dialog = dialog
+        self._widget_hierarchy_dialog.refresh()
+        self._widget_hierarchy_dialog.show()
+        self._widget_hierarchy_dialog.raise_()
+        self._widget_hierarchy_dialog.activateWindow()
+
     def cleanup(self):
+        # Widget hierarchy dialog cleanup
+        if self._widget_hierarchy_dialog is not None:
+            self._widget_hierarchy_dialog.close()
+            self._widget_hierarchy_dialog = None
+
         # Timer cleanup
         if hasattr(self, "_client_info_expire_timer") and self._client_info_expire_timer.isActive():
             self._client_info_expire_timer.stop()
