@@ -50,6 +50,7 @@ class BECMainWindow(BECWidget, QMainWindow):
         self.app = QApplication.instance()
         self.status_bar = self.statusBar()
         self.setWindowTitle(window_title)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
 
         # Notification Centre overlay
         self.notification_centre = NotificationCentre(parent=self)  # Notification layer
