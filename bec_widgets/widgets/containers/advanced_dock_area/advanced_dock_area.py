@@ -688,6 +688,9 @@ class AdvancedDockArea(DockAreaWidget):
             QMessageBox.warning(self, "Profile not found", f"Profile '{name}' not found.")
             return
 
+        # Clear existing docks and remove all widgets
+        self.delete_all()
+
         # Rebuild widgets and restore states
         for item in read_manifest(settings):
             obj_name = item["object_name"]
