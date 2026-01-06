@@ -192,7 +192,7 @@ class BECConnector:
         try:
             if self.root_widget:
                 return None
-            connector_parent = WidgetHierarchy._get_becwidget_ancestor(self)
+            connector_parent = WidgetHierarchy.get_becwidget_ancestor(self)
             return connector_parent.gui_id if connector_parent else None
         except:
             logger.error(f"Error getting parent_id for {self.__class__.__name__}")
@@ -234,7 +234,7 @@ class BECConnector:
         if not shb.isValid(self):
             return
 
-        parent_bec = WidgetHierarchy._get_becwidget_ancestor(self)
+        parent_bec = WidgetHierarchy.get_becwidget_ancestor(self)
 
         if parent_bec:
             # We have a parent => only compare with siblings under that parent
@@ -244,7 +244,7 @@ class BECConnector:
             # Use RPCRegister to avoid QApplication.allWidgets() during event processing.
             connections = self.rpc_register.list_all_connections().values()
             all_bec = [w for w in connections if isinstance(w, BECConnector) and shb.isValid(w)]
-            siblings = [w for w in all_bec if WidgetHierarchy._get_becwidget_ancestor(w) is None]
+            siblings = [w for w in all_bec if WidgetHierarchy.get_becwidget_ancestor(w) is None]
 
         # Collect used names among siblings
         used_names = {sib.objectName() for sib in siblings if sib is not self}
