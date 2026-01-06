@@ -12,7 +12,7 @@ class DarkModeButton(BECWidget, QWidget):
 
     ICON_NAME = "dark_mode"
     PLUGIN = True
-    RPC = True
+    RPC = False
 
     def __init__(
         self,

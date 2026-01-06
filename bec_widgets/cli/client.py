@@ -33,7 +33,6 @@ _Widgets = {
     "BECShell": "BECShell",
     "BECStatusBox": "BECStatusBox",
     "DapComboBox": "DapComboBox",
-    "DarkModeButton": "DarkModeButton",
     "DeviceBrowser": "DeviceBrowser",
     "Heatmap": "Heatmap",
     "Image": "Image",
@@ -998,26 +997,6 @@ class DapComboBox(RPCBase):
 
         Args:
             default_device(str): Default device name.
-        """
-
-
-class DarkModeButton(RPCBase):
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-    @rpc_call
-    def attach(self):
-        """
-        None
-        """
-
-    @rpc_call
-    def detach(self):
-        """
-        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
 
