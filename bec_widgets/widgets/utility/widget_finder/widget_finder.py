@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from bec_qthemes import material_icon
-from qtpy.QtCore import QPropertyAnimation, QRect, QSequentialAnimationGroup, Qt, QTimer
+from qtpy.QtCore import Qt, QTimer
 from qtpy.QtWidgets import (
     QApplication,
     QComboBox,
-    QFrame,
     QGridLayout,
     QGroupBox,
     QPushButton,
@@ -16,6 +15,7 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets import SafeProperty
+from bec_widgets.utils.widget_highlighter import WidgetHighlighter
 from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindowNoRPC
 from bec_widgets.widgets.plots.image.image import Image
@@ -49,21 +49,10 @@ class WidgetFinderComboBox(QComboBox):
         self.refresh_button.setStyleSheet("QToolButton { border: none; padding: 0px; }")
         self.refresh_button.clicked.connect(self.refresh_list)
 
-        # Purple Highlighter
-        self.highlighter = None
+        self.highlighter = WidgetHighlighter()
 
         # refresh items - delay to fetch widgets after UI is ready in next event loop
         QTimer.singleShot(0, self.refresh_list)
-
-    def _init_highlighter(self):
-        """
-        Initialize the highlighter frame that will be used to highlight the inspected widget.
-        """
-        self.highlighter = QFrame(self, Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
-        self.highlighter.setAttribute(Qt.WA_TransparentForMouseEvents)
-        self.highlighter.setStyleSheet(
-            "border: 2px solid #FF00FF; border-radius: 6px; background: transparent;"
-        )
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -110,33 +99,7 @@ class WidgetFinderComboBox(QComboBox):
         target = self.currentData()
         if not target:
             return
-        # ensure highlighter exists, avoid calling methods on deleted C++ object
-        if not getattr(self, "highlighter", None):
-            self._init_highlighter()
-        else:
-            self.highlighter.hide()
-        # draw new
-        geom = target.frameGeometry()
-        pos = target.mapToGlobal(target.rect().topLeft())
-        self.highlighter.setGeometry(pos.x(), pos.y(), geom.width(), geom.height())
-        self.highlighter.show()
-        # Pulse and fade animation to draw attention
-        start_rect = QRect(pos.x() - 5, pos.y() - 5, geom.width() + 10, geom.height() + 10)
-        pulse = QPropertyAnimation(self.highlighter, b"geometry")
-        pulse.setDuration(300)
-        pulse.setStartValue(start_rect)
-        pulse.setEndValue(QRect(pos.x(), pos.y(), geom.width(), geom.height()))
-
-        fade = QPropertyAnimation(self.highlighter, b"windowOpacity")
-        fade.setDuration(2000)
-        fade.setStartValue(1.0)
-        fade.setEndValue(0.0)
-        fade.finished.connect(self.highlighter.hide)
-
-        group = QSequentialAnimationGroup(self)
-        group.addAnimation(pulse)
-        group.addAnimation(fade)
-        group.start()
+        self.highlighter.highlight(target)
 
     @SafeProperty(str)
     def widget_class_name(self) -> str:
@@ -167,9 +130,7 @@ class WidgetFinderComboBox(QComboBox):
         Clean up the highlighter frame when the combobox is deleted.
         """
         if self.highlighter:
-            self.highlighter.close()
-            self.highlighter.deleteLater()
-            self.highlighter = None
+            self.highlighter.cleanup()
 
     def closeEvent(self, event):
         """
