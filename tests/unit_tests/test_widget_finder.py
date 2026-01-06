@@ -1,9 +1,8 @@
 import pytest
-from qtpy.QtCore import QPoint, QSize, Qt
+from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QLabel, QPushButton, QVBoxLayout, QWidget
 
 from bec_widgets.widgets.utility.widget_finder.widget_finder import WidgetFinderComboBox
-from tests.unit_tests.conftest import create_widget
 
 
 @pytest.fixture
@@ -31,7 +30,10 @@ def finder_fixture(qtbot):
     qtbot.addWidget(central_widget)
     qtbot.waitExposed(central_widget)
 
-    return finder, central_widget, btn1, btn2, lbl1
+    yield finder, central_widget, btn1, btn2, lbl1
+
+    finder.cleanup()
+    central_widget.close()
 
 
 def test_initial_list_contains_buttons_only(qtbot, finder_fixture):
@@ -89,12 +91,13 @@ def test_inspect_widget_highlights_button(qtbot, finder_fixture):
     finder.inspect_widget()
     qtbot.wait(100)  # allow highlighter to show
 
-    highlighter = finder.highlighter
-    assert highlighter.isVisible()
+    frame = finder.highlighter.frame
+    assert frame is not None
+    assert frame.isVisible()
     qtbot.wait(500)  # wait ≥ pulse duration
     # Highlighter should match the target widget size
     expected_size = btn1.frameGeometry().size()
-    assert highlighter.geometry().size() == expected_size
+    assert frame.geometry().size() == expected_size
 
 
 def test_inspect_widget_highlights_label(qtbot, finder_fixture):
@@ -108,10 +111,11 @@ def test_inspect_widget_highlights_label(qtbot, finder_fixture):
     finder.inspect_widget()
     qtbot.wait(100)  # allow highlighter to show
 
-    highlighter = finder.highlighter
-    assert highlighter.isVisible()
+    frame = finder.highlighter.frame
+    assert frame is not None
+    assert frame.isVisible()
 
     qtbot.wait(500)  # wait ≥ pulse duration
     # Highlighter should match the target widget size
     expected_size = lbl1.frameGeometry().size()
-    assert highlighter.geometry().size() == expected_size
+    assert frame.geometry().size() == expected_size
