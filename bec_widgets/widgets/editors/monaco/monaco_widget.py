@@ -110,9 +110,12 @@ class MonacoWidget(BECWidget, QWidget):
             file_name (str): Set the file name
             reset (bool): If True, reset the original content to the new text.
         """
-        self._current_file = file_name if file_name else self._current_file
         if reset:
+            self._current_file = file_name
             self._original_content = text
+        else:
+            self._current_file = file_name if file_name else self._current_file
+
         self.editor.set_text(text, uri=file_name)
 
     def get_text(self) -> str:
