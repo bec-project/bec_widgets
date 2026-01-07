@@ -37,6 +37,7 @@ from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import (
     get_last_profile,
     is_profile_read_only,
     is_quick_select,
+    list_profiles,
     list_quick_profiles,
     load_default_profile_screenshot,
     load_user_profile_screenshot,
@@ -170,6 +171,9 @@ class AdvancedDockArea(DockAreaWidget):
         # Initialize default editable state based on current lock
         self._set_editable(True)  # default to editable; will sync toolbar toggle below
 
+        if self._ensure_initial_profile():
+            self._refresh_workspace_list()
+
         # Sync Developer toggle icon state after initial setup #TODO temporary disable
         # dev_action = self.toolbar.components.get_action("developer_mode").action
         # dev_action.setChecked(self._editable)
@@ -178,6 +182,44 @@ class AdvancedDockArea(DockAreaWidget):
         self.mode = mode
         if self._restore_initial_profile:
             self._fetch_initial_profile()
+
+    def _ensure_initial_profile(self) -> bool:
+        """
+        Ensure at least one workspace profile exists for the current namespace.
+
+        Returns:
+            bool: True if a profile was created, False otherwise.
+        """
+        namespace = self.profile_namespace
+        try:
+            existing_profiles = list_profiles(namespace)
+        except Exception as exc:  # pragma: no cover - defensive guard
+            logger.warning(f"Unable to enumerate profiles for namespace '{namespace}': {exc}")
+            return False
+
+        if existing_profiles:
+            return False
+
+        name = "general"
+        logger.info(
+            f"No profiles found for namespace '{namespace}'. Bootstrapping '{name}' workspace."
+        )
+
+        default_settings = open_default_settings(name, namespace=namespace)
+        self._write_snapshot_to_settings(default_settings, save_preview=False)
+        if not default_settings.value(SETTINGS_KEYS["created_at"], ""):
+            default_settings.setValue(SETTINGS_KEYS["created_at"], now_iso_utc())
+        default_settings.setValue(SETTINGS_KEYS["is_quick_select"], True)
+
+        user_settings = open_user_settings(name, namespace=namespace)
+        self._write_snapshot_to_settings(user_settings, save_preview=False)
+        if not user_settings.value(SETTINGS_KEYS["created_at"], ""):
+            user_settings.setValue(SETTINGS_KEYS["created_at"], now_iso_utc())
+        user_settings.setValue(SETTINGS_KEYS["is_quick_select"], True)
+
+        set_quick_select(name, True, namespace=namespace)
+        set_last_profile(name, namespace=namespace, instance=self._last_profile_instance_id())
+        return True
 
     def _fetch_initial_profile(self):
         # Restore last-used profile if available; otherwise fall back to combo selection
