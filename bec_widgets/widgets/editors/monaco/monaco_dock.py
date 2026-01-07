@@ -141,13 +141,12 @@ class MonacoDock(DockAreaWidget):
             # Do not remove the last dock; just wipe its editor content
             # Temporarily disable read-only mode if the editor is read-only
             # so we can clear the content for reuse
-            monaco_widget.set_readonly(False)
-            monaco_widget.set_text("", reset=True)
+            self.reset_widget(monaco_widget)
             dock.setWindowTitle("Untitled")
             dock.setTabToolTip("Untitled")
-            monaco_widget.metadata["scope"] = ""
             icon = self._resolve_dock_icon(monaco_widget, dock_icon=None, apply_widget_icon=True)
             dock.setIcon(icon)
+            self.last_focused_editor = dock
             return
 
         # Otherwise, proceed to close and delete the dock
@@ -158,6 +157,17 @@ class MonacoDock(DockAreaWidget):
             self.last_focused_editor = None
         # After topology changes, make sure single-tab areas get a plus button
         QTimer.singleShot(0, self._scan_and_fix_areas)
+
+    def reset_widget(self, widget: MonacoWidget):
+        """
+        Reset the given Monaco editor widget to its initial state.
+
+        Args:
+            widget (MonacoWidget): The Monaco editor widget to reset.
+        """
+        widget.set_readonly(False)
+        widget.set_text("", reset=True)
+        widget.metadata["scope"] = ""
 
     def _ensure_area_plus(self, area):
         if area is None:
