@@ -311,6 +311,12 @@ class DeveloperWidget(DockAreaWidget):
         widget = self.script_editor_tab.widget()
         if not isinstance(widget, MonacoWidget):
             return
+        if widget.modified:
+            # Save the file before execution if there are unsaved changes
+            self.monaco.save_file()
+            if widget.modified:
+                # If still modified, user likely cancelled save dialog
+                return
         self.current_script_id = upload_script(self.client.connector, widget.get_text())
         self.console.write(f'bec._run_script("{self.current_script_id}")')
         print(f"Uploaded script with ID: {self.current_script_id}")
