@@ -47,8 +47,6 @@ class DeviceManagerOphydValidationDialog(QtWidgets.QDialog):
         self.text_box.setReadOnly(True)
         layout.addWidget(self.text_box)
 
-        # Connect signal for validation messages
-
         # Load and apply configuration
         config = config or {}
         self.device_manager_ophyd_test.change_device_configs([config], True, True)
@@ -188,6 +186,9 @@ class DeviceFormDialog(QtWidgets.QDialog):
         self.update_variant_combo(self._control_widgets["group_combo"].currentText())
         self.finished.connect(self._finished)
 
+        # Wait dialog when adding config
+        self._wait_dialog: QtWidgets.QProgressDialog | None = None
+
     @SafeSlot(int)
     def _finished(self, state: int):
         for widget in self._control_widgets.values():
@@ -268,13 +269,24 @@ class DeviceFormDialog(QtWidgets.QDialog):
                 OPHYD_DEVICE_TEMPLATES[DEFAULT_DEVICE][DEFAULT_DEVICE]
             )
 
-    def _add_config(self):
-        config = self._device_config_template.get_config_fields()
-        config_status = ConfigStatus.UNKNOWN.value
-        connection_status = ConnectionStatus.UNKNOWN.value
-        validation_msg = ""
+    def _create_validation_dialog(self) -> QtWidgets.QProgressDialog:
+        """
+        Create and show a validation progress dialog while validating the device configuration.
+        The dialog will be modal and prevent user interaction until validation is complete.
+        """
+        wait_dialog = QtWidgets.QProgressDialog("Validating… please wait", None, 0, 0, parent=self)
+        wait_dialog.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
+        wait_dialog.setCancelButton(None)
+        wait_dialog.setMinimumDuration(0)
+        return wait_dialog
+
+    @SafeSlot(dict, int, int, str)
+    def _validation_complete(
+        self, device_config: dict, config_status: int, connection_status: int, validation_msg: str
+    ):
+        """Handle completion of validation."""
         try:
-            if DeviceModel.model_validate(config) == DeviceModel.model_validate(
+            if DeviceModel.model_validate(device_config) == DeviceModel.model_validate(
                 self._validation_result[0]
             ):
                 config_status = self._validation_result[1]
@@ -282,9 +294,25 @@ class DeviceFormDialog(QtWidgets.QDialog):
                 validation_msg = self._validation_result[3]
         except Exception:
             logger.debug(
-                f"Device config validation changed for config: {config} compared to {self._validation_result[0]}. Returning UNKNOWN statuses."
+                f"Device config validation changed for config: {device_config} compared to previous validation. Using status from recent validation ."
             )
+        self._validation_result = (device_config, config_status, connection_status, validation_msg)
+        self._wait_dialog.finished.emit(0)
+        if self._wait_dialog is not None:
+            self._wait_dialog.close()
+            self._wait_dialog.deleteLater()
+            self._wait_dialog = None
 
+    def _add_config(self):
+        """
+
+        Adding a config will always run a validation check of the config without a connection test.
+        We will check if tests have already run, and reuse the information in case they also tested the connection to the device.
+        """
+        config = self._device_config_template.get_config_fields()
+
+        # I. First we validate that the device name is valid, as this may create issues within the OphydValidation widget.
+        # Validate device name first. If invalid, this should immediately block adding the device.
         if not validate_name(config.get("name", "")):
             msg_box = self._create_warning_message_box(
                 "Invalid Device Name",
@@ -292,18 +320,36 @@ class DeviceFormDialog(QtWidgets.QDialog):
             )
             msg_box.exec()
             return
+
+        # II. Next we will run the validation check of the config without connection test.
+        # We will show a wait dialog while this is happening, and compare the results with the last known validation results.
+        # If the config is unchanged, we will use the connection status results from the last validation.
+        self._wait_dialog = self._create_validation_dialog()
+
+        ophyd_validation = OphydValidation()
+        ophyd_validation.validation_completed.connect(self._validation_complete)
+        ophyd_validation.change_device_configs([config], True, False)
+
+        res = self._wait_dialog.exec()  # This will block until the validation is complete
+
+        config, config_status, connection_status, validation_msg = self._validation_result
+
         if config_status == ConfigStatus.INVALID.value:
             msg_box = self._create_warning_message_box(
                 "Invalid Device Configuration",
-                f"Device configuration is invalid. Last known validation message:\n\nErrors:\n{validation_msg}",
+                f"Device configuration is invalid. Last known validation message:\n\nErrors:\n{self._validation_result[3]}",
             )
             msg_box.exec()
+            ophyd_validation.close()
+            ophyd_validation.deleteLater()
             return
 
         self.accepted_data.emit(
             config, config_status, connection_status, validation_msg, self._old_device_name
         )
         self.accept()
+        ophyd_validation.close()
+        ophyd_validation.deleteLater()
 
     def _create_warning_message_box(self, title: str, text: str) -> QtWidgets.QMessageBox:
         msg_box = QtWidgets.QMessageBox(self)
@@ -318,7 +364,6 @@ class DeviceFormDialog(QtWidgets.QDialog):
         result = dialog.exec()
         if result in (QtWidgets.QDialog.Accepted, QtWidgets.QDialog.Rejected):
             self.config_validation_result = dialog.validation_result
-            # self._device_config_template.set_config_fields(self.config_validation_result[0])
 
     def _reset_config(self):
         self._device_config_template.reset_to_defaults()
