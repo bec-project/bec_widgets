@@ -182,10 +182,18 @@ class LaunchTile(RoundedFrame):
 class LaunchWindow(BECMainWindow):
     RPC = True
     TILE_SIZE = (250, 300)
+    DEFAULT_WORKSPACE_OPTION = "Last used workspace"
     USER_ACCESS = ["show_launcher", "hide_launcher"]
 
     def __init__(
-        self, parent=None, gui_id: str = None, window_title="BEC Launcher", *args, **kwargs
+        self,
+        parent=None,
+        gui_id: str = None,
+        window_title="BEC Launcher",
+        launch_gui_class: str = None,
+        launch_gui_id: str = None,
+        *args,
+        **kwargs,
     ):
         super().__init__(parent=parent, gui_id=gui_id, window_title=window_title, **kwargs)
 
@@ -218,6 +226,7 @@ class LaunchWindow(BECMainWindow):
             show_selector=True,
             selector_items=list_profiles("bec"),
         )
+        self._refresh_dock_area_profiles(preserve_selection=False)
 
         self.available_auto_updates: dict[str, type[AutoUpdates]] = (
             self._update_available_auto_updates()
@@ -266,6 +275,11 @@ class LaunchWindow(BECMainWindow):
         self.register = RPCRegister()
         self.register.callbacks.append(self._turn_off_the_lights)
         self.register.broadcast()
+
+        if launch_gui_class and launch_gui_id:
+            # If a specific gui class is provided, launch it and hide the launcher
+            self.launch(launch_gui_class, name=launch_gui_id)
+            self.hide()
 
     def register_tile(
         self,
@@ -327,6 +341,38 @@ class LaunchWindow(BECMainWindow):
             tile.main_label.setFixedHeight(QFontMetrics(f).height() + 2)
 
         self.tiles[name] = tile
+
+    def _refresh_dock_area_profiles(self, preserve_selection: bool = True) -> None:
+        """
+        Refresh the dock-area profile selector, optionally preserving the selection.
+
+        Args:
+            preserve_selection(bool): Whether to preserve the current selection or not.
+        """
+        tile = self.tiles.get("dock_area")
+        if tile is None or tile.selector is None:
+            return
+
+        selector = tile.selector
+        selected_text = (
+            selector.currentText().strip() if preserve_selection and selector.count() > 0 else ""
+        )
+
+        profiles = list_profiles("bec")
+        selector.blockSignals(True)
+        selector.clear()
+        selector.addItem(self.DEFAULT_WORKSPACE_OPTION)
+        for profile in profiles:
+            selector.addItem(profile)
+
+        if not selected_text or selected_text == self.DEFAULT_WORKSPACE_OPTION:
+            idx = 0
+        else:
+            idx = selector.findText(selected_text, Qt.MatchFlag.MatchExactly)
+            if idx < 0:
+                idx = 0
+        selector.setCurrentIndex(idx)
+        selector.blockSignals(False)
 
     def launch(
         self,
@@ -501,7 +547,11 @@ class LaunchWindow(BECMainWindow):
         if tile is None or tile.selector is None:
             profile = None
         else:
-            profile = tile.selector.currentText().strip() or None
+            selection = tile.selector.currentText().strip()
+            if not selection or selection == self.DEFAULT_WORKSPACE_OPTION:
+                profile = None
+            else:
+                profile = selection
         return self.launch("dock_area", profile=profile)
 
     def _open_widget(self):
@@ -551,6 +601,7 @@ class LaunchWindow(BECMainWindow):
         self.hide()
 
     def showEvent(self, event):
+        self._refresh_dock_area_profiles()
         super().showEvent(event)
         self.setFixedSize(self.size())
 

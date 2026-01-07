@@ -20,7 +20,10 @@ def dock_area(object_name: str | None = None, profile: str | None = None) -> Adv
         AdvancedDockArea: The created advanced dock area.
     """
     widget = AdvancedDockArea(
-        object_name=object_name, restore_initial_profile=(profile is None), root_widget=True
+        object_name=object_name,
+        restore_initial_profile=(profile is None),
+        root_widget=True,
+        profile_namespace="bec",
     )
     if profile:
         widget.load_profile(profile)
