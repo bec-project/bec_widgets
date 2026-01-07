@@ -633,7 +633,7 @@ class AdvancedDockArea(DockAreaWidget):
             return profile_origin(profile_name, namespace=namespace) != "unknown"
 
         initial_name = name or ""
-        quickselect_default = is_quick_select(name, namespace=namespace) if name else False
+        quickselect_default = is_quick_select(name, namespace=namespace) if name else True
 
         current_profile = getattr(self, "_current_profile_name", "") or ""
         dialog = SaveProfileDialog(
@@ -668,22 +668,20 @@ class AdvancedDockArea(DockAreaWidget):
             self._write_snapshot_to_settings(ds)
             if not ds.value(SETTINGS_KEYS["created_at"], ""):
                 ds.setValue(SETTINGS_KEYS["created_at"], now_iso_utc())
-            # Ensure new profiles are not quick-select by default
+            # Ensure new profiles are quick-select by default
             if not ds.value(SETTINGS_KEYS["is_quick_select"], None):
-                ds.setValue(SETTINGS_KEYS["is_quick_select"], False)
+                ds.setValue(SETTINGS_KEYS["is_quick_select"], True)
 
         # Always (over)write the user copy
         us = open_user_settings(name, namespace=namespace)
         self._write_snapshot_to_settings(us)
         if not us.value(SETTINGS_KEYS["created_at"], ""):
             us.setValue(SETTINGS_KEYS["created_at"], now_iso_utc())
-        # Ensure new profiles are not quick-select by default (only if missing)
+        # Ensure new profiles are quick-select by default (only if missing)
         if not us.value(SETTINGS_KEYS["is_quick_select"], None):
-            us.setValue(SETTINGS_KEYS["is_quick_select"], False)
+            us.setValue(SETTINGS_KEYS["is_quick_select"], True)
 
-        # set quick select
-        if quickselect:
-            set_quick_select(name, quickselect, namespace=namespace)
+        set_quick_select(name, quickselect, namespace=namespace)
 
         self._refresh_workspace_list()
         if current_profile and current_profile != name and not dialog.overwrite_existing:
