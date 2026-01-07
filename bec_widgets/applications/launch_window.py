@@ -433,19 +433,18 @@ class LaunchWindow(BECMainWindow):
                 raise ValueError(f"Launch script {launch_script} not found.")
 
             result_widget = launch(name, **kwargs)
-            result_widget.resize(result_widget.minimumSizeHint())
             # TODO Should we simply use the specified name as title here?
             result_widget.window().setWindowTitle(f"BEC - {name}")
             logger.info(f"Created new dock area: {name}")
 
-            if geometry is not None:
-                result_widget.setGeometry(*geometry)
             if isinstance(result_widget, BECMainWindow):
+                self._apply_window_geometry(result_widget, geometry)
                 result_widget.show()
             else:
                 window = BECMainWindowNoRPC()
                 window.setCentralWidget(result_widget)
                 window.setWindowTitle(f"BEC - {result_widget.objectName()}")
+                self._apply_window_geometry(window, geometry)
                 window.show()
             return result_widget
 
@@ -482,6 +481,7 @@ class LaunchWindow(BECMainWindow):
 
         QApplication.processEvents()
         window.setWindowTitle(f"BEC - {filename}")
+        self._apply_window_geometry(window, None)
         window.show()
         logger.info(f"Launched custom UI: {filename}, type: {type(window).__name__}")
         return window
@@ -498,6 +498,7 @@ class LaunchWindow(BECMainWindow):
         window.resize(window.minimumSizeHint())
         QApplication.processEvents()
         window.setWindowTitle(f"BEC - {window.objectName()}")
+        self._apply_window_geometry(window, None)
         window.show()
         return window
 
@@ -515,6 +516,7 @@ class LaunchWindow(BECMainWindow):
         window.setCentralWidget(widget_instance)
         window.resize(window.minimumSizeHint())
         window.setWindowTitle(f"BEC - {widget_instance.objectName()}")
+        self._apply_window_geometry(window, None)
         window.show()
         return window
 
@@ -564,6 +566,31 @@ class LaunchWindow(BECMainWindow):
         if widget not in self.available_widgets:
             raise ValueError(f"Widget {widget} not found in available widgets.")
         return self.launch("widget", widget=self.available_widgets[widget])
+
+    def _apply_window_geometry(
+        self, window: QWidget, geometry: tuple[int, int, int, int] | None
+    ) -> None:
+        """Apply a provided geometry or center the window with an 80% layout."""
+        if geometry is not None:
+            window.setGeometry(*geometry)
+            return
+        default_geometry = self._default_window_geometry(window)
+        if default_geometry is not None:
+            window.setGeometry(*default_geometry)
+        else:
+            window.resize(window.minimumSizeHint())
+
+    @staticmethod
+    def _default_window_geometry(window: QWidget) -> tuple[int, int, int, int] | None:
+        screen = window.screen() or QApplication.primaryScreen()
+        if screen is None:
+            return None
+        available = screen.availableGeometry()
+        width = int(available.width() * 0.8)
+        height = int(available.height() * 0.8)
+        x = available.x() + (available.width() - width) // 2
+        y = available.y() + (available.height() - height) // 2
+        return x, y, width, height
 
     @SafeSlot(popup_error=True)
     def _open_custom_ui_file(self):
