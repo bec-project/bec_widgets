@@ -45,9 +45,7 @@ class BECMainApp(BECMainWindow):
 
     def _add_views(self):
         self.add_section("BEC Applications", "bec_apps")
-        self.ads = AdvancedDockArea(
-            self, profile_namespace="main_workspace", auto_profile_namespace=False
-        )
+        self.ads = AdvancedDockArea(self, profile_namespace="bec", auto_profile_namespace=False)
         self.ads.setObjectName("MainWorkspace")
         self.device_manager = DeviceManagerView(self)
         self.developer_view = DeveloperView(self)
