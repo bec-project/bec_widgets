@@ -107,16 +107,18 @@ class GUIServer:
         self.dispatcher = BECDispatcher(config=service_config, gui_id=self.gui_id)
         # self.dispatcher.start_cli_server(gui_id=self.gui_id)
 
-        self.launcher_window = LaunchWindow(gui_id=f"{self.gui_id}:launcher")
+        if self.gui_class:
+            self.launcher_window = LaunchWindow(
+                gui_id=f"{self.gui_id}:launcher",
+                launch_gui_class=self.gui_class,
+                launch_gui_id=self.gui_class_id,
+            )
+        else:
+            self.launcher_window = LaunchWindow(gui_id=f"{self.gui_id}:launcher")
         self.launcher_window.setAttribute(Qt.WA_ShowWithoutActivating)  # type: ignore
 
         self.app.aboutToQuit.connect(self.shutdown)
         self.app.setQuitOnLastWindowClosed(False)
-
-        if self.gui_class:
-            # If the server is started with a specific gui class, we launch it.
-            # This will automatically hide the launcher.
-            self.launcher_window.launch(self.gui_class, name=self.gui_class_id)
 
         def sigint_handler(*args):
             # display message, for people to let it terminate gracefully
