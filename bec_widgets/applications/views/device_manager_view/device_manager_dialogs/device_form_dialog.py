@@ -344,6 +344,7 @@ class DeviceFormDialog(QtWidgets.QDialog):
                 # Config unchanged, we can reuse previous connection status. Only do this if the new
                 # connection status is UNKNOWN as the current validation should not test the connection.
                 connection_status = self._validation_result[2]
+                validation_msg = self._validation_result[3]
         except Exception:
             logger.debug(
                 f"Device config validation changed for config: {device_config} compared to previous validation. Using status from recent validation."

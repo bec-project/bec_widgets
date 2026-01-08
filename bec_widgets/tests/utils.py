@@ -1,3 +1,4 @@
+# pylint: skip-file
 from unittest.mock import MagicMock
 
 from bec_lib.device import Device as BECDevice
@@ -254,6 +255,13 @@ class DMMock:
                 }
                 signals.append((device_name, signal_name, signal_info))
         return signals
+
+    def _get_redis_device_config(self) -> list[dict]:
+        """Mock method to emulate DeviceManager._get_redis_device_config."""
+        configs = []
+        for device in self.devices.values():
+            configs.append(device._config)
+        return configs
 
 
 DEVICES = [

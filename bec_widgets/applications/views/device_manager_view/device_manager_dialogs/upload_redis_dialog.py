@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import IntEnum
 from functools import partial
-from typing import TYPE_CHECKING, Dict, List, Tuple
+from typing import TYPE_CHECKING, List, Tuple
 
 from bec_lib.logger import bec_logger
 from bec_qthemes import apply_theme, material_icon
@@ -12,16 +12,17 @@ from qtpy import QtCore, QtGui, QtWidgets
 
 from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.utils.error_popups import SafeSlot
-from bec_widgets.widgets.control.device_manager.components import OphydValidation
 from bec_widgets.widgets.control.device_manager.components.ophyd_validation import (
     ConfigStatus,
     ConnectionStatus,
     get_validation_icons,
 )
-from bec_widgets.widgets.progress.bec_progressbar.bec_progressbar import BECProgressBar
 
 if TYPE_CHECKING:
     from bec_widgets.utils.colors import AccentColor
+    from bec_widgets.widgets.control.device_manager.components.device_table.device_table import (
+        _ValidationResultIter,
+    )
 
 logger = bec_logger.logger
 
@@ -234,22 +235,18 @@ class UploadRedisDialog(QtWidgets.QDialog):
     class UploadAction(IntEnum):
         """Enum for upload actions."""
 
-        CANCEL = QtWidgets.QDialog.Rejected
-        OK = QtWidgets.QDialog.Accepted
+        CANCEL = QtWidgets.QDialog.DialogCode.Rejected
+        OK = QtWidgets.QDialog.DialogCode.Accepted
+        CONNECTION_TEST_REQUESTED = 999
 
-    # Signal to trigger upload after confirmation
-    upload_confirmed = QtCore.Signal(int)
+    # Request ophyd validation for all untested device connections
+    # list of device configs, added: bool, connect: bool
+    request_ophyd_validation = QtCore.Signal(list, bool, bool)
 
-    def __init__(
-        self,
-        parent,
-        ophyd_test_widget: OphydValidation,
-        device_configs: dict[str, Tuple[dict, int, int]] | None = None,
-    ):
+    def __init__(self, parent, device_configs: dict[str, Tuple[dict, int, int]] | None = None):
         super().__init__(parent=parent)
 
         self.device_configs: dict[str, Tuple[dict, int, int]] = device_configs or {}
-        self.ophyd_test_widget = ophyd_test_widget
         self._transparent_button_style = "background-color: transparent; border: none;"
 
         self.colors = get_accent_colors()
@@ -267,14 +264,9 @@ class UploadRedisDialog(QtWidgets.QDialog):
         self.has_invalid_configs: int = 0
         self.has_untested_connections: int = 0
         self.has_cannot_connect: int = 0
-        self._current_progress: int | None = None
 
         self._setup_ui()
         self._update_ui()
-        # Disable validation features if no ophyd test widget provided, else connect validation
-        self._validation_connection = self.ophyd_test_widget.validation_completed.connect(
-            self._update_from_ophyd_device_tests
-        )
 
     def set_device_config(self, device_configs: dict[str, Tuple[dict, int, int]]):
         """
@@ -287,18 +279,6 @@ class UploadRedisDialog(QtWidgets.QDialog):
         self.config_section.clear_devices()
         self.device_configs = device_configs
         self._update_ui()
-
-    def accept(self):
-        self.cleanup()
-        return super().accept()
-
-    def reject(self):
-        self.cleanup()
-        return super().reject()
-
-    def cleanup(self):
-        """Cleanup on dialog finish."""
-        self.ophyd_test_widget.validation_completed.disconnect(self._validation_connection)
 
     def _setup_ui(self):
         """Setup the main UI for the dialog."""
@@ -347,11 +327,6 @@ class UploadRedisDialog(QtWidgets.QDialog):
         button_layout.addWidget(self.validate_connections_btn)
         button_layout.addStretch()
         button_layout.addSpacing(16)
-
-        # Progress bar
-        self._progress_bar = BECProgressBar(self)
-        self._progress_bar.setVisible(False)
-        button_layout.addWidget(self._progress_bar)
         action_layout.addLayout(button_layout)
 
         # Status indicator
@@ -498,7 +473,7 @@ class UploadRedisDialog(QtWidgets.QDialog):
 
     @SafeSlot()
     def _validate_connections(self):
-        """Request validation of all untested connections."""
+        """Request validation of all untested connections. This will close the dialog."""
         testable_devices: List[dict] = []
         for _, (config, _, connection_status) in self.device_configs.items():
             if connection_status == ConnectionStatus.UNKNOWN.value:
@@ -507,13 +482,8 @@ class UploadRedisDialog(QtWidgets.QDialog):
                 testable_devices.append(config)
 
         if len(testable_devices) > 0:
-            self.validate_connections_btn.setEnabled(False)
-            self._progress_bar.setVisible(True)
-            self._progress_bar.maximum = len(testable_devices)
-            self._progress_bar.minimum = 0
-            self._progress_bar.set_value(0)
-            self._current_progress = 0
-            self.ophyd_test_widget.change_device_configs(testable_devices, added=True, connect=True)
+            self.request_ophyd_validation.emit(testable_devices, True, True)
+            self.done(self.UploadAction.CONNECTION_TEST_REQUESTED)
 
     @SafeSlot()
     def _handle_upload(self):
@@ -611,35 +581,40 @@ class UploadRedisDialog(QtWidgets.QDialog):
             return
         self.update_device_status(device_config, config_status, connection_status)
 
+    @SafeSlot(list)
+    def _multiple_updates_from_ophyd_device_tests(self, validation_results: _ValidationResultIter):
+        """
+        Callback slot for receiving multiple validation result updates from the ophyd test widget.
+
+        Args:
+            validation_results (list): List of tuples containing (device_config, config_status, connection_status, validation_msg).
+        """
+        for cfg, cfg_status, conn_status, val_msg in validation_results:
+            self.update_device_status(cfg, cfg_status, conn_status)
+        self._update_ui()
+
     @SafeSlot(dict, int, int)
     def update_device_status(self, device_config: dict, config_status: int, connection_status: int):
         """Update the status of a specific device."""
         # Update device config status
+        self._update_device_configs(device_config, config_status, connection_status, "")
+        # Recalculate summaries and UI state
+        self._update_ui()
+
+    def _update_device_configs(
+        self,
+        device_config: dict[str, Any],
+        config_status: int,
+        connection_status: int,
+        validation_msg: str,
+    ):
         device_name = device_config.get("name", "")
         old_config, _, _ = self.device_configs.get(device_name, (None, None, None))
         if old_config is not None:
             self.device_configs[device_name] = (device_config, config_status, connection_status)
-            if self._current_progress is not None:
-                self._current_progress += 1
-                self._progress_bar.set_value(self._current_progress)
-                if self._current_progress >= self._progress_bar.maximum:
-                    self._progress_bar.setVisible(False)
-                    self._progress_bar.set_value(0)
-                    self._current_progress = None
-                    self.validation_completed()
-            self._update_ui()
-            return
-
-        # Update UI sections
-        self.config_section.add_device(device_config, config_status, connection_status)
-
-        # Recalculate summaries and UI state
-        self._update_ui()
-
-    def validation_completed(self):
-        """Called when connection validation is completed."""
-        self.validate_connections_btn.setEnabled(True)
-        self._update_ui()
+        else:
+            # If device not found, add it
+            self.config_section.add_device(device_config, config_status, connection_status)
 
 
 def main():  # pragma: no cover
@@ -705,12 +680,7 @@ def main():  # pragma: no cover
     ]
     configs = {cfg[0]["name"]: cfg for cfg in sample_configs}
     apply_theme("dark")
-    from unittest import mock
-
-    ophyd_test_widget = mock.MagicMock(spec=OphydValidation)
-    dialog = UploadRedisDialog(
-        parent=None, device_configs=configs, ophyd_test_widget=ophyd_test_widget
-    )
+    dialog = UploadRedisDialog(parent=None, device_configs=configs)
     dialog.show()
 
     sys.exit(app.exec_())
