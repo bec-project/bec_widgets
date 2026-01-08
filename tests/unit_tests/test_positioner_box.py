@@ -98,7 +98,9 @@ def test_positioner_box_on_stop(positioner_box):
             queue="emergency",
             metadata={"RID": "fake_uuid", "response": False},
         )
-        mock_send.assert_called_once_with(MessageEndpoints.scan_queue_request(), msg)
+        mock_send.assert_called_once_with(
+            MessageEndpoints.scan_queue_request(positioner_box.client.username), msg
+        )
 
 
 def test_positioner_box_setpoint_change(positioner_box):
