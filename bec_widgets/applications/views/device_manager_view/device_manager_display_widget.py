@@ -525,7 +525,12 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
                 devices_to_update.append(
                     (config, config_status, ConnectionStatus.CONNECTED.value, "")
                 )
+        # Update validation status in device table view
         self.device_table_view.update_multiple_device_validations(devices_to_update)
+        # Remove devices from ophyd validation view
+        self.ophyd_test_view.change_device_configs(
+            [cfg for cfg, _, _, _ in devices_to_update], added=False, skip_validation=True
+        )
 
     @SafeSlot()
     def _save_to_disk_action(self):
