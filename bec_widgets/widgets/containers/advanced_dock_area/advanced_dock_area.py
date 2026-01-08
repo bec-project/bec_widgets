@@ -94,8 +94,6 @@ class AdvancedDockArea(DockAreaWidget):
     PLUGIN = False
     USER_ACCESS = [
         "new",
-        "dock_map",
-        "dock_list",
         "widget_map",
         "widget_list",
         "lock_workspace",
