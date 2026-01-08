@@ -575,9 +575,10 @@ class TestDeviceTable:
             device_table.remove_device_configs([sample_devices[0]])
 
         # Verify signal emission
-        emitted_configs, added = blocker.args
+        emitted_configs, added, skip_validation = blocker.args
         assert len(emitted_configs) == 1
         assert added is False
+        assert skip_validation is True
 
         # Verify row was removed
         assert device_table.table.rowCount() == 1
