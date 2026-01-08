@@ -312,6 +312,7 @@ class OphydValidation(BECWidget, QtWidgets.QWidget):
     def __init__(self, parent=None, client=None, hide_legend: bool = False):
         super().__init__(parent=parent, client=client, theme_update=True)
         self._running_ophyd_tests = False
+        self._keep_visible_after_validation: list[str] = []
         if not READY_TO_TEST:
             self.setDisabled(True)
             self.thread_pool_manager = None
@@ -338,6 +339,25 @@ class OphydValidation(BECWidget, QtWidgets.QWidget):
             legend_widget = LegendLabel(parent=self)
             self._main_layout.addWidget(legend_widget)
         self._thread_pool_poll_loop()
+
+    def add_device_to_keep_visible_after_validation(self, device_name: str) -> None:
+        """Add a device name to the list of devices to keep visible after validation.
+
+        Args:
+            device_name (str): Name of the device to keep visible.
+        """
+        if device_name not in self._keep_visible_after_validation:
+            self._keep_visible_after_validation.append(device_name)
+
+    def remove_device_to_keep_visible_after_validation(self, device_name: str) -> None:
+        """Remove a device name from the list of devices to keep visible after validation.
+
+        Args:
+            device_name (str): Name of the device to remove.
+        """
+        if device_name in self._keep_visible_after_validation:
+            self._keep_visible_after_validation.remove(device_name)
+            self._remove_device(device_name)
 
     def apply_theme(self, theme: str):
         """Apply the current theme to the widget."""
@@ -507,6 +527,8 @@ class OphydValidation(BECWidget, QtWidgets.QWidget):
             connect (bool, optional): Whether to attempt connection during validation. Defaults to False.
             force_connect (bool, optional): Whether to force connection during validation. Defaults to False.
             timeout (float, optional): Timeout for connection attempt. Defaults to 5.0.
+            skip_validation (bool, optional): Whether to skip validation for the added devices. Defaults to False.
+            keep_device_item_in_list (bool, optional): Whether to keep the device item in the list after validation in success case.
         """
         if not READY_TO_TEST:
             logger.error("Cannot change device configs: dependencies not available.")
@@ -535,6 +557,20 @@ class OphydValidation(BECWidget, QtWidgets.QWidget):
                         "Device already in session.",
                     )
                 )
+                if device_name in self._keep_visible_after_validation:
+                    self._add_device_config(
+                        cfg,
+                        connect=connect,
+                        force_connect=force_connect,
+                        timeout=timeout,
+                        skip_validation=True,
+                    )
+                    self._on_device_test_completed(
+                        cfg,
+                        ConfigStatus.VALID.value,
+                        ConnectionStatus.CONNECTED.value,
+                        "Device already in session.",
+                    )
                 self._remove_device_config(cfg)
                 continue
             if not self._device_already_exists(cfg.get("name")):  # New device case
@@ -596,7 +632,12 @@ class OphydValidation(BECWidget, QtWidgets.QWidget):
         return device_name in self.list_widget
 
     def _add_device_config(
-        self, device_config: dict[str, Any], connect: bool, force_connect: bool, timeout: float
+        self,
+        device_config: dict[str, Any],
+        connect: bool,
+        force_connect: bool,
+        timeout: float,
+        skip_validation: bool = False,
     ) -> None:
         device_name = device_config.get("name")
         # Check if device is in redis session with same config, if yes don't even bother testing..
@@ -611,21 +652,27 @@ class OphydValidation(BECWidget, QtWidgets.QWidget):
         )
         widget.request_rerun_validation.connect(self._on_request_rerun_validation)
         self.list_widget.add_widget_item(device_name, widget)
-        self.__delayed_submit_test(widget, connect, force_connect, timeout)
+        if skip_validation is False:
+            self.__delayed_submit_test(widget, connect, force_connect, timeout)
 
-    def _remove_device_config(self, device_config: dict[str, Any]) -> None:
-        device_name = device_config.get("name")
-        if not device_name:
-            logger.error(f"Device config missing 'name': {device_config}. Cannot remove device.")
-            return
+    def _remove_device(self, device_name: str) -> None:
         if not self._device_already_exists(device_name):
             logger.debug(
                 f"Device with name {device_name} not found in OphydValidation, can't remove it."
             )
             return
+        if device_name in self._keep_visible_after_validation:
+            logger.debug(
+                f"Device with name {device_name} is set to be kept visible after validation, not removing it."
+            )
+            return
         if self.thread_pool_manager:
             self.thread_pool_manager.clear_device_in_queue(device_name)
         self.list_widget.remove_widget_item(device_name)
+
+    def _remove_device_config(self, device_config: dict[str, Any]) -> None:
+        device_name = device_config.get("name")
+        self._remove_device(device_name)
 
     @SafeSlot(str, dict, bool, bool, float)
     def _on_request_rerun_validation(
@@ -712,16 +759,6 @@ class OphydValidation(BECWidget, QtWidgets.QWidget):
         if not self._device_already_exists(device_name):
             logger.debug(f"Received test result for unknown device {device_name}. Ignoring.")
             return
-        if config_status == ConfigStatus.VALID.value and connection_status in [
-            ConnectionStatus.CONNECTED.value,
-            ConnectionStatus.CAN_CONNECT.value,
-        ]:
-            # Validated successfully, remove item from running list
-            self.list_widget.remove_widget_item(device_name)
-            self.validation_completed.emit(
-                device_config, config_status, connection_status, error_message
-            )
-            return
         widget = self.list_widget.get_widget(device_name)
         if widget:
             widget.on_validation_finished(
@@ -729,6 +766,12 @@ class OphydValidation(BECWidget, QtWidgets.QWidget):
                 config_status=config_status,
                 connection_status=connection_status,
             )
+            if config_status == ConfigStatus.VALID.value and connection_status in [
+                ConnectionStatus.CONNECTED.value,
+                ConnectionStatus.CAN_CONNECT.value,
+            ]:
+                # Validated successfully, remove item from running list
+                self._remove_device(device_name)
             self.validation_completed.emit(
                 device_config, config_status, connection_status, error_message
             )
