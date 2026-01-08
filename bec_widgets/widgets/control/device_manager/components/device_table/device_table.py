@@ -210,8 +210,8 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
 
     _auto_size_request = QtCore.Signal()
 
-    def __init__(self, parent: QtWidgets.QWidget | None = None):
-        super().__init__(parent=parent)
+    def __init__(self, parent: QtWidgets.QWidget | None = None, client=None):
+        super().__init__(parent=parent, client=client)
         self.headers_key_map: dict[str, str] = {
             "Valid": "valid",
             "Connect": "connect",
@@ -823,13 +823,14 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
     # Public API to be called via signals/slots
     # -------------------------------------------------------------------------
 
-    @SafeSlot(list)
+    @SafeSlot(list, bool)
     def set_device_config(self, device_configs: _DeviceCfgIter, skip_validation: bool = False):
         """
         Set the device config. This will clear any existing configs.
 
         Args:
             device_configs (Iterable[dict[str, Any]]): The device configs to set.
+            skip_validation (bool): Whether to skip validation for the set devices.
         """
         self.set_busy(True, text="Loading device configurations...")
         with self.table_sort_on_hold:
@@ -857,7 +858,7 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
         self.device_config_in_sync_with_redis.emit(in_sync_with_redis)
         self.set_busy(False, text="")
 
-    @SafeSlot(list)
+    @SafeSlot(list, bool)
     def add_device_configs(self, device_configs: _DeviceCfgIter, skip_validation: bool = False):
         """
         Add devices to the config. If a device already exists, it will be replaced. If the validation is
@@ -866,6 +867,7 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
 
         Args:
             device_configs (Iterable[dict[str, Any]]): The device configs to add.
+            skip_validation (bool): Whether to skip validation for the added devices.
         """
         self.set_busy(True, text="Adding device configurations...")
         already_in_table = []
@@ -894,13 +896,14 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
         self.device_config_in_sync_with_redis.emit(in_sync_with_redis)
         self.set_busy(False, text="")
 
-    @SafeSlot(list)
+    @SafeSlot(list, bool)
     def update_device_configs(self, device_configs: _DeviceCfgIter, skip_validation: bool = False):
         """
         Update devices in the config. If a device does not exist, it will be added.
 
         Args:
             device_configs (Iterable[dict[str, Any]]): The device configs to update.
+            skip_validation (bool): Whether to skip validation for the updated devices.
         """
         self.set_busy(True, text="Loading device configurations...")
         cfgs_updated = []

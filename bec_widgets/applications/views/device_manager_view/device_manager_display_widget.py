@@ -35,6 +35,7 @@ from bec_widgets.widgets.control.device_manager.components import (
 )
 from bec_widgets.widgets.control.device_manager.components._util import SharedSelectionSignal
 from bec_widgets.widgets.control.device_manager.components.ophyd_validation.ophyd_validation_utils import (
+    ConfigStatus,
     ConnectionStatus,
 )
 from bec_widgets.widgets.services.device_browser.device_item.config_communicator import (
@@ -57,7 +58,7 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
 
     request_ophyd_validation = Signal(list, bool, bool)
 
-    def __init__(self, parent=None, client=None, *args, **kwargs):
+    def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent=parent, variant="compact", *args, **kwargs)
 
         # Push to Redis dialog
@@ -312,6 +313,13 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
         configs = list(self.device_table_view.get_selected_device_configs())
         if not configs:
             configs = self.device_table_view.get_device_config()
+        # Adjust the state of the icons in the device table view
+        self.device_table_view.update_multiple_device_validations(
+            [
+                (cfg, ConfigStatus.UNKNOWN.value, ConnectionStatus.UNKNOWN.value, "")
+                for cfg in configs
+            ]
+        )
         self.request_ophyd_validation.emit(configs, True, connect)
 
     def _update_config_enabled_button(self, enabled: bool):
@@ -474,7 +482,10 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
         validation_results = self.device_table_view.get_validation_results()
         # Create and show upload dialog
         self._upload_redis_dialog = UploadRedisDialog(
-            parent=self, device_configs=validation_results, ophyd_test_widget=self.ophyd_test_view
+            parent=self, device_configs=validation_results
+        )
+        self._upload_redis_dialog.request_ophyd_validation.connect(
+            self.request_ophyd_validation.emit
         )
 
         # Show dialog
@@ -484,6 +495,10 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
             self._push_composition_to_redis(action="set")
         elif reply == UploadRedisDialog.UploadAction.CANCEL:
             self.ophyd_test_view.cancel_all_validations()
+        elif reply == UploadRedisDialog.UploadAction.CONNECTION_TEST_REQUESTED:
+            return QMessageBox.information(
+                self, "Connection Test Requested", "Running connection test on untested devices."
+            )
 
     def _push_composition_to_redis(self, action: ConfigAction):
         """Push the current device composition to Redis."""

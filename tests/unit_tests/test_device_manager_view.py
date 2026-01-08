@@ -41,6 +41,8 @@ from bec_widgets.widgets.control.device_manager.components.ophyd_validation.ophy
     OphydValidation,
 )
 
+from .client_mocks import mocked_client
+
 
 @pytest.fixture
 def device_config() -> dict:
@@ -163,6 +165,67 @@ class TestDeviceManagerViewDialogs:
         assert (
             connection_settings_layout.count() == fields_in_config * 2
         )  # Each field has a label and a widget
+
+    def test_device_form_dialog_help_methods(
+        self, device_form_dialog: DeviceFormDialog, device_config, qtbot
+    ):
+        """Test help methods in DeviceFormDialog."""
+        # Test handle devices already in session results
+        dialog = device_form_dialog
+
+        # Test _handle_devices_already_in_session_results
+        with mock.patch.object(dialog, "_handle_validation_result") as mock_handle_validation:
+            dialog._handle_devices_already_in_session_results([(device_config, 0, 0, "")])
+            mock_handle_validation.assert_called_once_with(device_config, 0, 0, "")
+            mock_handle_validation.reset_mock()
+            dialog._handle_devices_already_in_session_results([])
+            mock_handle_validation.assert_not_called()
+            mock_handle_validation.reset_mock()
+            dialog._handle_devices_already_in_session_results(
+                [(device_config, 1, 0, ""), (device_config, 0, 0, "")]
+            )
+            mock_handle_validation.assert_called_once_with(
+                device_config, 1, 0, ""
+            )  # Should be called with first
+
+        # Test _handle_validation_result
+        # I. No wait dialog present
+        dialog._handle_validation_result(device_config, 1, 3, "All good")
+        assert dialog._validation_result == (device_config, 1, 3, "All good")
+
+        # II. No previous validation, but wait dialog present
+        with mock.patch.object(dialog, "_wait_dialog") as mock_wait_dialog:
+            dialog._handle_validation_result(device_config, 1, 3, "All good")
+            assert dialog.config_validation_result == (device_config, 1, 3, "All good")
+            mock_wait_dialog.accept.assert_called_once()
+            mock_wait_dialog.close.assert_called_once()
+            mock_wait_dialog.deleteLater.assert_called_once()
+
+            mock_wait_dialog.reset_mock()
+            assert dialog._wait_dialog is None
+
+        # III. Previous validation present and the same config, wait dialog present
+        with mock.patch.object(dialog, "_wait_dialog") as mock_wait_dialog:
+            dialog._validation_result = (device_config, 1, 1, "Previous bad")
+            dialog._handle_validation_result(device_config, 1, 3, "All good")
+            assert dialog.config_validation_result == (device_config, 1, 1, "Previous bad")
+            mock_wait_dialog.accept.assert_called_once()
+            mock_wait_dialog.close.assert_called_once()
+            mock_wait_dialog.deleteLater.assert_called_once()
+
+            mock_wait_dialog.reset_mock()
+            assert dialog._wait_dialog is None
+
+        # IV. Previous validation present but different config, wait dialog present
+        with mock.patch.object(dialog, "_wait_dialog") as mock_wait_dialog:
+            different_config = device_config.copy()
+            different_config["deviceClass"] = "DifferentClass"
+            dialog._validation_result = (different_config, 1, 1, "Previous bad")
+            dialog._handle_validation_result(device_config, 1, 3, "All good")
+            assert dialog.config_validation_result == (device_config, 1, 3, "All good")
+            mock_wait_dialog.accept.assert_called_once()
+            mock_wait_dialog.close.assert_called_once()
+            mock_wait_dialog.deleteLater.assert_called_once()
 
     def test_set_device_config(self, device_form_dialog: DeviceFormDialog, qtbot):
         """Test setting device configuration in DeviceFormDialog."""
@@ -330,9 +393,7 @@ class TestDeviceManagerViewDialogs:
     @pytest.fixture
     def upload_redis_dialog(self, qtbot):
         """Fixture for UploadRedisDialog."""
-        dialog = UploadRedisDialog(
-            parent=None, ophyd_test_widget=mock.MagicMock(spec=OphydValidation), device_configs={}
-        )
+        dialog = UploadRedisDialog(parent=None, device_configs={})
         try:
             qtbot.addWidget(dialog)
             qtbot.waitExposed(dialog)
@@ -460,37 +521,16 @@ class TestDeviceManagerViewDialogs:
 
         assert dialog.config_section.summary_label.text() == expected_text
 
-    def test_upload_redis_validate_connections(self, device_configs_invalid, qtbot):
-        """Test the validate connections method in UploadRedisDialog."""
-        configs = device_configs_invalid
-        ophyd_test_mock = mock.MagicMock(spec=OphydValidation)
-        try:
-            dialog = UploadRedisDialog(
-                parent=None, ophyd_test_widget=ophyd_test_mock, device_configs=configs
-            )
-            qtbot.addWidget(dialog)
-            qtbot.waitExposed(dialog)
-
-            with mock.patch.object(
-                dialog.ophyd_test_widget, "change_device_configs"
-            ) as mock_change:
-                dialog._validate_connections()
-                mock_change.assert_called_once_with(
-                    [cfg for k, (cfg, _, _) in configs.items() if k in ["Device_0", "Device_3"]],
-                    added=True,
-                    connect=True,
-                )
-        finally:
-            dialog.close()
-
 
 class TestDeviceManagerView:
     """Test class for DeviceManagerView functionality."""
 
     @pytest.fixture
-    def dm_view(self, qtbot):
+    def dm_view(self, qtbot, mocked_client):
         """Fixture for DeviceManagerView."""
         widget = DeviceManagerView()
+        # Assign the mocked client
+        widget.device_manager_widget.client = mocked_client
         qtbot.addWidget(widget)
         qtbot.waitExposed(widget)
         yield widget
@@ -513,7 +553,6 @@ class TestDeviceManagerView:
         # Reset for test loading current config
         dm_widget._initialized = False
         dm_widget.stacked_layout.setCurrentWidget(dm_widget._overlay_widget)
-        dm_widget.client.device_manager = mock.MagicMock()
 
         with mock.patch.object(
             dm_widget.client.device_manager, "_get_redis_device_config"
@@ -532,12 +571,26 @@ class TestDeviceManagerView:
                     mock_set.assert_called_once_with([])
 
     @pytest.fixture
-    def device_manager_display_widget(self, qtbot):
-        """Fixture for DeviceManagerDisplayWidget within DeviceManagerView."""
-        widget = DeviceManagerDisplayWidget()
-        qtbot.addWidget(widget)
-        qtbot.waitExposed(widget)
-        yield widget
+    def device_manager_display_widget(self, qtbot, mocked_client):
+        """Fixture for DeviceManagerDisplayWidget within DeviceManagerView.
+        We will patch the OphydValidation _thread_pool_poll_loop to avoid starting threads during tests,
+        and the _is_device_in_redis_session method to avoid Redis dependencies
+        """
+
+        with (
+            mock.patch(
+                "bec_widgets.widgets.control.device_manager.components.ophyd_validation.ophyd_validation.OphydValidation._thread_pool_poll_loop",
+                return_value=None,
+            ),
+            mock.patch(
+                "bec_widgets.widgets.control.device_manager.components.ophyd_validation.ophyd_validation.OphydValidation._is_device_in_redis_session",
+                return_value=False,
+            ),
+        ):
+            widget = DeviceManagerDisplayWidget(client=mocked_client)
+            qtbot.addWidget(widget)
+            qtbot.waitExposed(widget)
+            yield widget
 
     @pytest.fixture
     def device_configs(self, device_config: dict):
