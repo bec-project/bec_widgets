@@ -2,7 +2,18 @@ name: Sync PR to Project
 
 on:
   pull_request:
-    types: [opened, edited, ready_for_review, converted_to_draft, reopened, synchronize]
+    types:
+      [
+        opened,
+        assigned,
+        unassigned,
+        edited,
+        ready_for_review,
+        converted_to_draft,
+        reopened,
+        synchronize,
+        closed,
+      ]
 
 jobs:
   sync-project:
@@ -13,28 +24,12 @@ jobs:
       pull-requests: read
       contents: read
 
-    env:
-        PROJECT_NUMBER: 3 # BEC Project
-        ORG: 'bec-project'
-        REPO: 'bec_widgets'
-        TOKEN: ${{ secrets.ADD_ISSUE_TO_PROJECT }}
-        PR_NUMBER: ${{ github.event.pull_request.number }}
-
     steps:
-      - name: Set up python environment
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.11
-
-      - name: Checkout repo
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ github.repository }}
-          ref: ${{ github.event.pull_request.head.ref }}
-
-      - name: Install dependencies
-        run: |
-          pip install -r ./.github/scripts/pr_issue_sync/requirements.txt
       - name: Sync PR to Project
-        run: |
-          python ./.github/scripts/pr_issue_sync/pr_issue_sync.py
+        uses: bec-project/action-issue-sync-pr@v1
+        with:
+          token: ${{ secrets.ADD_ISSUE_TO_PROJECT }}
+          org: ${{ github.repository_owner }}
+          repo: ${{ github.event.repository.name }}
+          project-number: 3
+          pr-number: ${{ github.event.pull_request.number }}
