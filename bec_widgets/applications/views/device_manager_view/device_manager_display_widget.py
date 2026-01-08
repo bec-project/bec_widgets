@@ -104,7 +104,7 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
                 self.ophyd_test_view.multiple_validations_completed,
                 (self.device_table_view.update_multiple_device_validations,),
             ),
-            (self.request_ophyd_validation, (self.ophyd_test_view.device_table_config_changed,)),
+            (self.request_ophyd_validation, (self.ophyd_test_view.change_device_configs,)),
             (
                 self.device_table_view.device_configs_changed,
                 (self.ophyd_test_view.device_table_config_changed,),
