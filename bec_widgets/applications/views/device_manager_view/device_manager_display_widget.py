@@ -531,6 +531,8 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
         self.ophyd_test_view.change_device_configs(
             [cfg for cfg, _, _, _ in devices_to_update], added=False, skip_validation=True
         )
+        # Config is in sync with BEC, so we update the state
+        self.device_table_view.device_config_in_sync_with_redis.emit(True)
 
     @SafeSlot()
     def _save_to_disk_action(self):

@@ -2,6 +2,7 @@
 
 # pylint: disable=protected-access,redefined-outer-name
 
+from typing import Any
 from unittest import mock
 
 import pytest
@@ -682,3 +683,35 @@ class TestDeviceManagerView:
                 "rerun_validation"
             ].action.action.triggered.emit()
             assert len(mock_change_configs.call_args[0][0]) == 1
+
+    def test_update_validation_icons_after_upload(
+        self,
+        device_manager_display_widget: DeviceManagerDisplayWidget,
+        device_configs: list[dict[str, Any]],
+    ):
+        """Test that validation icons are updated after uploading to Redis."""
+        dm_view = device_manager_display_widget
+
+        # Add device configs to the table
+        dm_view.device_table_view.add_device_configs(device_configs)
+        # Update the device manager devices to match what's in the table
+        dm_view.client.device_manager.devices = {cfg["name"]: cfg for cfg in device_configs}
+
+        # Simulate callback
+        dm_view._update_validation_icons_after_upload()
+
+        # Get validation results from the table
+        validation_results = dm_view.device_table_view.get_validation_results()
+        # Check that all devices are connected and status is updated
+        for dev_name, (cfg, _, connection_status) in validation_results.items():
+            assert cfg in device_configs
+            assert connection_status == ConnectionStatus.CONNECTED.value
+
+        # Check that no devices are in ophyd_validation widget
+        # Those should be all cleared after upload
+        cfgs = dm_view.ophyd_test_view.get_device_configs()
+        assert len(cfgs) == 0
+
+        # Check that upload config button is disabled
+        action = dm_view.toolbar.components.get_action("update_config_redis")
+        assert action.action.isEnabled() is False

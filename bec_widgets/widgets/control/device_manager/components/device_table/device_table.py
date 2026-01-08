@@ -978,6 +978,8 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
                 logger.warning(f"Device {cfg.get('name')} not found in table for session update.")
                 continue
             self._update_device_row_status(row, config_status, connection_status)
+        in_sync_with_redis = self._is_config_in_sync_with_redis()
+        self.device_config_in_sync_with_redis.emit(in_sync_with_redis)
         self.table.setSortingEnabled(True)
         self.set_busy(False, text="")
 
