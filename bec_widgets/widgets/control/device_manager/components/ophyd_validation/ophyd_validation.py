@@ -470,9 +470,19 @@ class OphydValidation(BECWidget, QtWidgets.QWidget):
         widgets: list[ValidationListItem] = self.list_widget.get_widgets()
         return [widget.device_model.device_config for widget in widgets]
 
+    @SafeSlot(list, bool, bool)
+    def device_table_config_changed(
+        self, device_configs: list[dict[str, Any]], added: bool, skip_validation: bool
+    ) -> None:
+        """Slot to handle device config changes in the device table."""
+        self.change_device_configs(
+            device_configs=device_configs, added=added, skip_validation=skip_validation
+        )
+
     @SafeSlot(list, bool)
     @SafeSlot(list, bool, bool)
     @SafeSlot(list, bool, bool, bool, float)
+    @SafeSlot(list, bool, bool, bool, float, bool)
     def change_device_configs(
         self,
         device_configs: list[dict[str, Any]],
@@ -480,10 +490,16 @@ class OphydValidation(BECWidget, QtWidgets.QWidget):
         connect: bool = False,
         force_connect: bool = False,
         timeout: float = 5.0,
+        skip_validation: bool = False,
     ) -> None:
         """
         Change the device configuration to test. If added is False, existing devices are removed.
         Device tests will be removed based on device names. No duplicates are allowed.
+
+        For validation runs, results are emitted via the validation_completed signal. Unless devices
+        are already in the running session with the same config, in which case the combined results
+        of all such devices are emitted via the multiple_validations_completed signal. NOTE Please make
+        sure to connect to both signals if you want to capture all results.
 
         Args:
             device_configs (list[dict[str, Any]]): List of device configurations.
@@ -504,7 +520,7 @@ class OphydValidation(BECWidget, QtWidgets.QWidget):
             if device_name is None:  # Config missing name, will be skipped..
                 logger.error(f"Device config missing 'name': {cfg}. Config will be skipped.")
                 continue
-            if not added:  # Remove requested
+            if not added or skip_validation is True:  # Remove requested
                 self._remove_device_config(cfg)
                 continue
             if self._is_device_in_redis_session(cfg.get("name"), cfg):
@@ -533,7 +549,14 @@ class OphydValidation(BECWidget, QtWidgets.QWidget):
                 )
         # Send out batch of updates for devices already in session
         if devices_already_in_session:
-            self.multiple_validations_completed.emit(devices_already_in_session)
+            # NOTE: Use singleShot here to ensure that the signal is emitted after all other scheduled
+            # tasks in the event loop are processed. This avoids potential deadlocks. In particular,
+            # this is relevant for the DeviceFormDialog which opens a modal dialog during validation
+            # and therefore must not have the signal emitted immediately in the same event loop iteration.
+            # Otherwise, the dialog would block signal processing.
+            QtCore.QTimer.singleShot(
+                0, lambda: self.multiple_validations_completed.emit(devices_already_in_session)
+            )
 
     def cancel_validation(self, device_name: str) -> None:
         """Cancel a running validation for a specific device.

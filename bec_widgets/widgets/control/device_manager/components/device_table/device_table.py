@@ -199,7 +199,8 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
     # Signal emitted if devices are added (updated) or removed
     #   - device_configs: List of device configurations.
     #   - added: True if devices were added/updated, False if removed.
-    device_configs_changed = QtCore.Signal(list, bool)
+    #   - skip validation: True if validation should be skipped for added/updated devices.
+    device_configs_changed = QtCore.Signal(list, bool, bool)
     # Signal emitted when device selection changes, emits list of selected device configs
     selected_devices = QtCore.Signal(list)
     # Signal emitted when a device row is double-clicked, emits the device config
@@ -823,7 +824,7 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
     # -------------------------------------------------------------------------
 
     @SafeSlot(list)
-    def set_device_config(self, device_configs: _DeviceCfgIter):
+    def set_device_config(self, device_configs: _DeviceCfgIter, skip_validation: bool = False):
         """
         Set the device config. This will clear any existing configs.
 
@@ -837,27 +838,31 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
             for cfg in device_configs:
                 self._add_row(cfg, ConfigStatus.UNKNOWN, ConnectionStatus.UNKNOWN)
                 cfgs_added.append(cfg)
-        self.device_configs_changed.emit(cfgs_added, True)
+        self.device_configs_changed.emit(cfgs_added, True, skip_validation)
         in_sync_with_redis = self._is_config_in_sync_with_redis()
         self.device_config_in_sync_with_redis.emit(in_sync_with_redis)
         self.set_busy(False, text="")
 
     @SafeSlot()
     def clear_device_configs(self):
-        """Clear the device configs."""
+        """Clear the device configs. Skips validation per default."""
         self.set_busy(True, text="Clearing device configurations...")
         device_configs = self.get_device_config()
         with self.table_sort_on_hold:
             self._clear_table()
-        self.device_configs_changed.emit(device_configs, False)
+        self.device_configs_changed.emit(
+            device_configs, False, True
+        )  # Skip validation for removals
         in_sync_with_redis = self._is_config_in_sync_with_redis()
         self.device_config_in_sync_with_redis.emit(in_sync_with_redis)
         self.set_busy(False, text="")
 
     @SafeSlot(list)
-    def add_device_configs(self, device_configs: _DeviceCfgIter):
+    def add_device_configs(self, device_configs: _DeviceCfgIter, skip_validation: bool = False):
         """
-        Add devices to the config. If a device already exists, it will be replaced.
+        Add devices to the config. If a device already exists, it will be replaced. If the validation is
+        skipped, the device will be added with UNKNOWN state to the table and has to be manually adjusted
+        by the user later on.
 
         Args:
             device_configs (Iterable[dict[str, Any]]): The device configs to add.
@@ -875,20 +880,22 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
                 # Remove existing rows first
                 if len(already_in_table) > 0:
                     self._remove_rows_by_name([cfg["name"] for cfg in already_in_table])
-                    self.device_configs_changed.emit(already_in_table, False)
+                    self.device_configs_changed.emit(
+                        already_in_table, False, True
+                    )  # Skip validation for removals
 
                 all_configs = already_in_table + not_in_table
                 if len(all_configs) > 0:
                     for cfg in already_in_table + not_in_table:
                         self._add_row(cfg, ConfigStatus.UNKNOWN, ConnectionStatus.UNKNOWN)
 
-        self.device_configs_changed.emit(already_in_table + not_in_table, True)
+        self.device_configs_changed.emit(already_in_table + not_in_table, True, skip_validation)
         in_sync_with_redis = self._is_config_in_sync_with_redis()
         self.device_config_in_sync_with_redis.emit(in_sync_with_redis)
         self.set_busy(False, text="")
 
     @SafeSlot(list)
-    def update_device_configs(self, device_configs: _DeviceCfgIter):
+    def update_device_configs(self, device_configs: _DeviceCfgIter, skip_validation: bool = False):
         """
         Update devices in the config. If a device does not exist, it will be added.
 
@@ -907,7 +914,7 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
                 row = self._update_row(cfg)
                 if row is not None:
                     cfgs_updated.append(cfg)
-        self.device_configs_changed.emit(cfgs_updated, True)
+        self.device_configs_changed.emit(cfgs_updated, True, skip_validation)
         in_sync_with_redis = self._is_config_in_sync_with_redis()
         self.device_config_in_sync_with_redis.emit(in_sync_with_redis)
         self.set_busy(False, text="")
@@ -924,7 +931,9 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
         cfgs_to_be_removed = list(device_configs)
         with self.table_sort_on_hold:
             self._remove_rows_by_name([cfg["name"] for cfg in cfgs_to_be_removed])
-        self.device_configs_changed.emit(cfgs_to_be_removed, False)  #
+        self.device_configs_changed.emit(
+            cfgs_to_be_removed, False, True
+        )  # Skip validation for removals
         in_sync_with_redis = self._is_config_in_sync_with_redis()
         self.device_config_in_sync_with_redis.emit(in_sync_with_redis)
         self.set_busy(False, text="")
@@ -946,7 +955,7 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
         with self.table_sort_on_hold:
             self._remove_rows_by_name([row_data.data["name"]])
         cfgs = [{"name": device_name, **row_data.data}]
-        self.device_configs_changed.emit(cfgs, False)
+        self.device_configs_changed.emit(cfgs, False, True)  # Skip validation for removals
         in_sync_with_redis = self._is_config_in_sync_with_redis()
         self.device_config_in_sync_with_redis.emit(in_sync_with_redis)
         self.set_busy(False, text="")
