@@ -288,6 +288,24 @@ class DeviceFormDialog(QtWidgets.QDialog):
         wait_dialog.setMinimumDuration(0)
         return wait_dialog
 
+    def _create_and_run_ophyd_validation(self, config: dict[str, Any]) -> OphydValidation:
+        """Run ophyd validation test on the current device configuration."""
+        ophyd_validation = OphydValidation(parent=self)
+        ophyd_validation.validation_completed.connect(self._handle_validation_result)
+        ophyd_validation.multiple_validations_completed.connect(
+            self._handle_devices_already_in_session_results
+        )
+
+        # NOTE Use singleShot here to ensure that the signal is emitted after all other scheduled
+        # tasks in the event loop are processed. This avoids potential deadlocks. In particular,
+        # this is relevant for the _wait_dialog exec which opens a modal dialog during validation
+        # and therefore must not have the signal emitted immediately in the same event loop iteration.
+        # Otherwise, the callback may be scheduled before the dialog is shown resulting in a deadlock.
+        QtCore.QTimer.singleShot(
+            0, lambda: ophyd_validation.change_device_configs([config], True, False)
+        )
+        return ophyd_validation
+
     @SafeSlot(list)
     def _handle_devices_already_in_session_results(
         self, validation_results: _ValidationResultIter
@@ -354,20 +372,7 @@ class DeviceFormDialog(QtWidgets.QDialog):
         # If the config is unchanged, we will use the connection status results from the last validation.
         self._wait_dialog = self._create_validation_dialog()
 
-        ophyd_validation = OphydValidation()
-        ophyd_validation.validation_completed.connect(self._handle_validation_result)
-        ophyd_validation.multiple_validations_completed.connect(
-            self._handle_devices_already_in_session_results
-        )
-
-        # NOTE Use singleShot here to ensure that the signal is emitted after all other scheduled
-        # tasks in the event loop are processed. This avoids potential deadlocks. In particular,
-        # this is relevant for the _wait_dialog exec which opens a modal dialog during validation
-        # and therefore must not have the signal emitted immediately in the same event loop iteration.
-        # Otherwise, the callback may be scheduled before the dialog is shown resulting in a deadlock.
-        QtCore.QTimer.singleShot(
-            0, lambda: ophyd_validation.change_device_configs([config], True, False)
-        )
+        ophyd_validation = self._create_and_run_ophyd_validation(config)
 
         # NOTE If dialog was already close, this means that a validation callback was already received
         # which closed the dialog. In this case, we skip exec to avoid deadlock. With the singleShot above,

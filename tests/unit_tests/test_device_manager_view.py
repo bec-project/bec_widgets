@@ -184,48 +184,67 @@ class TestDeviceManagerViewDialogs:
         assert config["name"] == "TestDevice"
         assert config["deviceClass"] == "ophyd.EpicsSignal"
         assert config["deviceConfig"]["read_pv"] == "X25DA-ES1-MOT:GET"
-        # Set the validation results, assume that test was running
-        dialog.config_validation_result = (
-            dialog._device_config_template.get_config_fields(),
-            ConfigStatus.VALID.value,
-            0,
-            "",
-        )
-        with mock.patch.object(dialog, "_create_warning_message_box") as mock_warning_box:
-            with qtbot.waitSignal(dialog.accepted_data) as sig_blocker:
-                qtbot.mouseClick(dialog.add_btn, QtCore.Qt.LeftButton)
-                config, _, _, _, _ = sig_blocker.args
-            mock_warning_box.assert_not_called()
 
-        # Called with config_status invalid should show warning
-        dialog.config_validation_result = (
-            dialog._device_config_template.get_config_fields(),
-            ConfigStatus.INVALID.value,
-            0,
-            "",
-        )
-        with mock.patch.object(dialog, "_create_warning_message_box") as mock_warning_box:
-            qtbot.mouseClick(dialog.add_btn, QtCore.Qt.LeftButton)
-            mock_warning_box.assert_called_once()
+        # Test now to add the device config with different validation results
+        # For this we have to mock the additional ophyd_validation checks
+        with (
+            mock.patch.object(dialog, "_create_validation_dialog") as mock_create_dialog,
+            mock.patch.object(dialog, "_create_and_run_ophyd_validation") as mock_create_validation,
+        ):
 
-        # Set to random config without name
-
-        random_config = {"deviceClass": "Unknown"}
-        dialog.set_device_config(random_config)
-        dialog.config_validation_result = (
-            dialog._device_config_template.get_config_fields(),
-            0,
-            0,
-            "",
-        )
-        assert group_combo.currentText() == "CustomDevice"
-        assert variant_combo.currentText() == "CustomDevice"
-        with mock.patch.object(dialog, "_create_warning_message_box") as mock_warning_box:
-            qtbot.mouseClick(dialog.add_btn, QtCore.Qt.LeftButton)
-            mock_warning_box.assert_called_once_with(
-                "Invalid Device Name",
-                f"Device is invalid, can not be empty with spaces. Please provide a valid name. {dialog._device_config_template.get_config_fields().get('name', '')!r} ",
+            # Set the validation results, assume that test was running
+            dialog.config_validation_result = (
+                dialog._device_config_template.get_config_fields(),
+                ConfigStatus.VALID.value,
+                0,
+                "",
             )
+            with mock.patch.object(dialog, "_create_warning_message_box") as mock_warning_box:
+                with qtbot.waitSignal(dialog.accepted_data) as sig_blocker:
+                    qtbot.mouseClick(dialog.add_btn, QtCore.Qt.LeftButton)
+                    config, _, _, _, _ = sig_blocker.args
+                mock_warning_box.assert_not_called()
+
+                mock_create_dialog.assert_called_once()
+                mock_create_validation.assert_called_once()
+                mock_create_dialog.reset_mock()
+                mock_create_validation.reset_mock()
+
+            # Called with config_status invalid should show warning
+            dialog.config_validation_result = (
+                dialog._device_config_template.get_config_fields(),
+                ConfigStatus.INVALID.value,
+                0,
+                "",
+            )
+            with mock.patch.object(dialog, "_create_warning_message_box") as mock_warning_box:
+                qtbot.mouseClick(dialog.add_btn, QtCore.Qt.LeftButton)
+                mock_warning_box.assert_called_once()
+                mock_create_dialog.assert_called_once()
+                mock_create_validation.assert_called_once()
+                mock_create_dialog.reset_mock()
+                mock_create_validation.reset_mock()
+
+            # Set to random config without name
+
+            random_config = {"deviceClass": "Unknown"}
+            dialog.set_device_config(random_config)
+            dialog.config_validation_result = (
+                dialog._device_config_template.get_config_fields(),
+                0,
+                0,
+                "",
+            )
+            assert group_combo.currentText() == "CustomDevice"
+            assert variant_combo.currentText() == "CustomDevice"
+            with mock.patch.object(dialog, "_create_warning_message_box") as mock_warning_box:
+                qtbot.mouseClick(dialog.add_btn, QtCore.Qt.LeftButton)
+                mock_warning_box.assert_called_once_with(
+                    "Invalid Device Name",
+                    f"Device is invalid, can not be empty with spaces. Please provide a valid name. {dialog._device_config_template.get_config_fields().get('name', '')!r} ",
+                )
+                mock_create_dialog.assert_not_called()
+                mock_create_validation.assert_not_called()
 
     def test_device_status_item(self, device_config: dict, qtbot):
         """Test the DeviceStatusItem widget."""
@@ -642,7 +661,9 @@ class TestDeviceManagerView:
         ) as mock_change_configs:
             # First, add device configs to the table
             dm_view.device_table_view.add_device_configs(device_configs)
-            assert mock_change_configs.call_args[0][1] is True  # Configs were added
+            mock_change_configs.assert_called_once_with(
+                device_configs=device_configs, added=True, skip_validation=False
+            )  # Configs were added
             mock_change_configs.reset_mock()
 
             # Trigger the validate connection action without selection, should validate all
@@ -650,7 +671,9 @@ class TestDeviceManagerView:
                 "rerun_validation"
             ].action.action.triggered.emit()
             assert len(mock_change_configs.call_args[0][0]) == len(device_configs)
-            assert mock_change_configs.call_args[0][1:] == (True, True)  # Configs were not added
+            mock_change_configs.assert_called_once_with(
+                device_configs, True, True
+            )  # Configs were added with connect=True
             mock_change_configs.reset_mock()
 
             # Select a single row and trigger again, should only validate that one
