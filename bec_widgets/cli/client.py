@@ -123,18 +123,6 @@ class AdvancedDockArea(RPCBase):
         """
 
     @rpc_call
-    def dock_map(self) -> "dict[str, CDockWidget]":
-        """
-        Return the dock widgets map as dictionary with names as keys.
-        """
-
-    @rpc_call
-    def dock_list(self) -> "list[CDockWidget]":
-        """
-        Return the list of dock widgets.
-        """
-
-    @rpc_call
     def widget_map(self) -> "dict[str, QWidget]":
         """
         Return a dictionary mapping widget names to their corresponding widgets.
