@@ -494,7 +494,14 @@ class OphydValidation(BECWidget, QtWidgets.QWidget):
     def device_table_config_changed(
         self, device_configs: list[dict[str, Any]], added: bool, skip_validation: bool
     ) -> None:
-        """Slot to handle device config changes in the device table."""
+        """
+        Slot to handle device config changes in the device table.
+
+        Args:
+            device_configs (list[dict[str, Any]]): List of device configurations.
+            added (bool): Whether the devices are added to the existing list.
+            skip_validation (bool): Whether to skip validation for the added devices.
+        """
         self.change_device_configs(
             device_configs=device_configs, added=added, skip_validation=skip_validation
         )
@@ -528,7 +535,6 @@ class OphydValidation(BECWidget, QtWidgets.QWidget):
             force_connect (bool, optional): Whether to force connection during validation. Defaults to False.
             timeout (float, optional): Timeout for connection attempt. Defaults to 5.0.
             skip_validation (bool, optional): Whether to skip validation for the added devices. Defaults to False.
-            keep_device_item_in_list (bool, optional): Whether to keep the device item in the list after validation in success case.
         """
         if not READY_TO_TEST:
             logger.error("Cannot change device configs: dependencies not available.")
@@ -652,7 +658,7 @@ class OphydValidation(BECWidget, QtWidgets.QWidget):
         )
         widget.request_rerun_validation.connect(self._on_request_rerun_validation)
         self.list_widget.add_widget_item(device_name, widget)
-        if skip_validation is False:
+        if not skip_validation:
             self.__delayed_submit_test(widget, connect, force_connect, timeout)
 
     def _remove_device(self, device_name: str) -> None:

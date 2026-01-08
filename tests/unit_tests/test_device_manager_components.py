@@ -57,6 +57,8 @@ from bec_widgets.widgets.control.device_manager.components.ophyd_validation.vali
 )
 from bec_widgets.widgets.utility.toggle.toggle import ToggleSwitch
 
+from .client_mocks import mocked_client
+
 
 class TestConstants:
     """Test class for constants and configuration values."""
@@ -296,9 +298,9 @@ class TestDeviceTable:
     """Test class for DeviceTable component."""
 
     @pytest.fixture
-    def device_table(self, qtbot) -> Generator[DeviceTable, None, None]:
+    def device_table(self, qtbot, mocked_client) -> Generator[DeviceTable, None, None]:
         """Fixture to create a DeviceTable instance."""
-        table = DeviceTable()
+        table = DeviceTable(client=mocked_client)
         qtbot.addWidget(table)
         qtbot.waitExposed(table)
         yield table
@@ -997,7 +999,7 @@ class TestOphydValidation:
         assert label.text() == "Connect Legend:"
 
     @pytest.fixture
-    def ophyd_test(self, qtbot):
+    def ophyd_test(self, qtbot, mocked_client):
         """Fixture to create an OphydValidation instance. We patch the method that starts the polling loop to avoid side effects."""
         with (
             mock.patch(
@@ -1009,7 +1011,7 @@ class TestOphydValidation:
                 return_value=False,
             ),
         ):
-            widget = OphydValidation()
+            widget = OphydValidation(client=mocked_client)
             qtbot.addWidget(widget)
             qtbot.waitExposed(widget)
             yield widget
@@ -1033,6 +1035,47 @@ class TestOphydValidation:
             # Simulate click
             qtbot.mouseClick(ophyd_test._stop_validation_button, QtCore.Qt.LeftButton)
         assert click_event.is_set()
+
+    def test_ophyd_test_keep_visible_after_validation(self, ophyd_test: OphydValidation, qtbot):
+        """Test the keep visible after validation logic."""
+        # Initially false
+        assert len(ophyd_test._keep_visible_after_validation) == 0
+
+        # Add device to keep visible
+        ophyd_test.add_device_to_keep_visible_after_validation("device_1")
+        assert "device_1" in ophyd_test._keep_visible_after_validation
+        # Add second device
+        ophyd_test.add_device_to_keep_visible_after_validation("device_2")
+        assert "device_2" in ophyd_test._keep_visible_after_validation
+        assert len(ophyd_test._keep_visible_after_validation) == 2
+
+        # Remove device
+        ophyd_test.remove_device_to_keep_visible_after_validation("device_1")
+        assert "device_1" not in ophyd_test._keep_visible_after_validation
+        assert "device_2" in ophyd_test._keep_visible_after_validation
+
+        # Change config with skip validation and device in keep visible list
+        with (
+            mock.patch.object(
+                ophyd_test, "_is_device_in_redis_session", return_value=True
+            ) as mock_is_device_in_redis_session,
+            mock.patch.object(ophyd_test, "_add_device_config") as mock_add_device_config,
+            mock.patch.object(
+                ophyd_test, "_on_device_test_completed"
+            ) as mock_on_device_test_completed,
+        ):
+            ophyd_test.change_device_configs(
+                [{"name": "device_2", "deviceClass": "TestClass"}],
+                added=True,
+                skip_validation=False,
+            )
+            mock_add_device_config.assert_called_once()
+            mock_on_device_test_completed.assert_called_once_with(
+                {"name": "device_2", "deviceClass": "TestClass"},
+                ConfigStatus.VALID.value,
+                ConnectionStatus.CONNECTED.value,
+                "Device already in session.",
+            )
 
     def test_ophyd_test_adding_devices(self, ophyd_test: OphydValidation, qtbot):
         """Test adding devices to OphydValidation widget."""
