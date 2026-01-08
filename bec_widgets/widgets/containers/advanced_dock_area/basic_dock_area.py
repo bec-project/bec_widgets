@@ -1372,7 +1372,7 @@ class DockAreaWidget(BECWidget, QWidget):
     @SafeSlot()
     def delete_all(self):
         """Delete all docks and their associated widgets."""
-        for dock in list(self.dock_manager.dockWidgets()):
+        for dock in self.dock_list():
             self._delete_dock(dock)
 
 
