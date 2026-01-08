@@ -104,10 +104,10 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
                 self.ophyd_test_view.multiple_validations_completed,
                 (self.device_table_view.update_multiple_device_validations,),
             ),
-            (self.request_ophyd_validation, (self.ophyd_test_view.change_device_configs,)),
+            (self.request_ophyd_validation, (self.ophyd_test_view.device_table_config_changed,)),
             (
                 self.device_table_view.device_configs_changed,
-                (self.ophyd_test_view.change_device_configs,),
+                (self.ophyd_test_view.device_table_config_changed,),
             ),
             (
                 self.device_table_view.device_config_in_sync_with_redis,
@@ -591,7 +591,8 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
     ):
         if old_device_name and old_device_name != data.get("name", ""):
             self.device_table_view.remove_device(old_device_name)
-        self.device_table_view.update_device_configs([data])
+        self.device_table_view.update_device_configs([data], skip_validation=True)
+        self.device_table_view.update_device_validation(data, config_status, connection_status, msg)
 
     @SafeSlot(dict, int, int, str, str)
     def _add_to_table_from_dialog(
@@ -602,7 +603,8 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
         msg: str,
         old_device_name: str = "",
     ):
-        self.device_table_view.add_device_configs([data])
+        self.device_table_view.add_device_configs([data], skip_validation=True)
+        self.device_table_view.update_device_validation(data, config_status, connection_status, msg)
 
     @SafeSlot()
     def _remove_device_action(self):

@@ -1,5 +1,7 @@
 """Dialogs for device configuration forms and ophyd testing."""
 
+from typing import Any, Iterable, Tuple
+
 from bec_lib.atlas_models import Device as DeviceModel
 from bec_lib.logger import bec_logger
 from ophyd_devices.interfaces.device_config_templates.ophyd_templates import OPHYD_DEVICE_TEMPLATES
@@ -20,6 +22,7 @@ from bec_widgets.widgets.control.device_manager.components.ophyd_validation impo
 )
 
 DEFAULT_DEVICE = "CustomDevice"
+_ValidationResultIter = Iterable[Tuple[dict[str, Any], ConfigStatus, ConnectionStatus, str]]
 
 
 logger = bec_logger.logger
@@ -194,6 +197,9 @@ class DeviceFormDialog(QtWidgets.QDialog):
         for widget in self._control_widgets.values():
             widget.close()
             widget.deleteLater()
+        if self._wait_dialog is not None:
+            self._wait_dialog.close()
+            self._wait_dialog.deleteLater()
 
     @property
     def config_validation_result(self) -> tuple[dict, int, int, str]:
@@ -274,14 +280,36 @@ class DeviceFormDialog(QtWidgets.QDialog):
         Create and show a validation progress dialog while validating the device configuration.
         The dialog will be modal and prevent user interaction until validation is complete.
         """
-        wait_dialog = QtWidgets.QProgressDialog("Validating… please wait", None, 0, 0, parent=self)
+        wait_dialog = QtWidgets.QProgressDialog(
+            "Validating config… please wait", None, 0, 0, parent=self
+        )
         wait_dialog.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
         wait_dialog.setCancelButton(None)
         wait_dialog.setMinimumDuration(0)
         return wait_dialog
 
+    @SafeSlot(list)
+    def _handle_devices_already_in_session_results(
+        self, validation_results: _ValidationResultIter
+    ) -> None:
+        """Handle completion if device is already in session."""
+        if len(validation_results) != 1:
+            logger.error(
+                "Expected a single device validation result, but got multiple. Using first result."
+            )
+        result = validation_results[0] if len(validation_results) > 0 else None
+        if result is None:
+            logger.error(
+                f"Received validation results: {validation_results} of unexpected length 0. Returning."
+            )
+            return
+        device_config, config_status, connection_status, validation_msg = result
+        self._handle_validation_result(
+            device_config, config_status, connection_status, validation_msg
+        )
+
     @SafeSlot(dict, int, int, str)
-    def _validation_complete(
+    def _handle_validation_result(
         self, device_config: dict, config_status: int, connection_status: int, validation_msg: str
     ):
         """Handle completion of validation."""
@@ -297,8 +325,8 @@ class DeviceFormDialog(QtWidgets.QDialog):
                 f"Device config validation changed for config: {device_config} compared to previous validation. Using status from recent validation ."
             )
         self._validation_result = (device_config, config_status, connection_status, validation_msg)
-        self._wait_dialog.finished.emit(0)
         if self._wait_dialog is not None:
+            self._wait_dialog.accept()
             self._wait_dialog.close()
             self._wait_dialog.deleteLater()
             self._wait_dialog = None
@@ -327,10 +355,25 @@ class DeviceFormDialog(QtWidgets.QDialog):
         self._wait_dialog = self._create_validation_dialog()
 
         ophyd_validation = OphydValidation()
-        ophyd_validation.validation_completed.connect(self._validation_complete)
-        ophyd_validation.change_device_configs([config], True, False)
+        ophyd_validation.validation_completed.connect(self._handle_validation_result)
+        ophyd_validation.multiple_validations_completed.connect(
+            self._handle_devices_already_in_session_results
+        )
 
-        res = self._wait_dialog.exec()  # This will block until the validation is complete
+        # NOTE Use singleShot here to ensure that the signal is emitted after all other scheduled
+        # tasks in the event loop are processed. This avoids potential deadlocks. In particular,
+        # this is relevant for the _wait_dialog exec which opens a modal dialog during validation
+        # and therefore must not have the signal emitted immediately in the same event loop iteration.
+        # Otherwise, the callback may be scheduled before the dialog is shown resulting in a deadlock.
+        QtCore.QTimer.singleShot(
+            0, lambda: ophyd_validation.change_device_configs([config], True, False)
+        )
+
+        # NOTE If dialog was already close, this means that a validation callback was already received
+        # which closed the dialog. In this case, we skip exec to avoid deadlock. With the singleShot above,
+        # this should not happen, but we keep the check for safety.
+        if self._wait_dialog is not None:
+            self._wait_dialog.exec()  # This will block until the validation is complete
 
         config, config_status, connection_status, validation_msg = self._validation_result
 
