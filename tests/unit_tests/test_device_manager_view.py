@@ -652,7 +652,7 @@ class TestDeviceManagerView:
             mock_add.assert_called_once()
 
     def test_run_validate_connection_action_connected(
-        self, device_manager_display_widget: DeviceManagerDisplayWidget, device_configs: dict
+        self, device_manager_display_widget: DeviceManagerDisplayWidget, device_configs: dict, qtbot
     ):
         """Test run validate connection action is connected."""
         dm_view = device_manager_display_widget
@@ -661,7 +661,12 @@ class TestDeviceManagerView:
             dm_view.ophyd_test_view, "change_device_configs"
         ) as mock_change_configs:
             # First, add device configs to the table
-            dm_view.device_table_view.add_device_configs(device_configs)
+            with qtbot.waitSignal(dm_view.device_table_view.device_configs_changed) as sig_blocker:
+                dm_view.device_table_view.add_device_configs(device_configs)
+                cfgs, added, skip_validation = sig_blocker.args
+                assert cfgs == device_configs
+                assert added is True
+                assert skip_validation is False
             mock_change_configs.assert_called_once_with(
                 device_configs=device_configs, added=True, skip_validation=False
             )  # Configs were added
