@@ -123,7 +123,7 @@ class PositionerBoxBase(BECWidget, CompactPopupWidget):
             queue="emergency",
             metadata={"RID": request_id, "response": False},
         )
-        self.client.connector.send(MessageEndpoints.scan_queue_request(), msg)
+        self.client.connector.send(MessageEndpoints.scan_queue_request(self.client.username), msg)
 
     # pylint: disable=unused-argument
     def _on_device_readback(
