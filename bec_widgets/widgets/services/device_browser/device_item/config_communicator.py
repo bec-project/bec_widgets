@@ -38,6 +38,8 @@ class CommunicateConfigAction(QRunnable):
                 self._process(
                     {"action": self.action, "config": self.config, "wait_for_response": False}
                 )
+            elif self.action == "cancel":
+                self._process_cancel()
             elif self.action in ["add", "update", "remove"]:
                 if (dev_name := self.device or self.config.get("name")) is None:
                     raise ValueError(
@@ -72,6 +74,13 @@ class CommunicateConfigAction(QRunnable):
         reply = self.config_helper.wait_for_config_reply(RID, timeout=timeout)
         self.config_helper.handle_update_reply(reply, RID, timeout)
         logger.info("Done updating config!")
+
+    def _process_cancel(self):
+        logger.info("Cancelling ongoing configuration operation")
+        self.config_helper.send_config_request(
+            action="cancel", config=None, wait_for_response=True, timeout_s=10
+        )
+        logger.info("Done cancelling configuration operation")
 
     def process_remove_readd(self, dev_name: str):
         logger.info(f"Removing and readding device: {dev_name}")

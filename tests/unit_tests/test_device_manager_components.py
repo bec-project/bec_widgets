@@ -361,6 +361,75 @@ class TestDeviceTable:
         assert device_table.search_input is not None
         assert device_table.fuzzy_is_disabled.isChecked() is False
         assert device_table.table.selectionBehavior() == QtWidgets.QAbstractItemView.SelectRows
+        assert hasattr(device_table, "client_callback_id")
+
+    def test_device_table_client_device_update_callback(
+        self, device_table: DeviceTable, mocked_client, qtbot
+    ):
+        """
+        Test that runs the client device update callback. This should update the status of devices in the table
+        that are in sync with the client.
+
+        I. First test will run a callback when no devices are in the table, should do nothing.
+        II. Second test will add devices all devices from the mocked_client, then remove one
+        device from the client and run the callback. The table should update the status of the
+        removed device to CAN_CONNECT and all others to CONNECTED.
+        """
+        device_configs_changed_calls = []
+        requested_update_for_multiple_device_validations = []
+
+        def _device_configs_changed_cb(cfgs: list[dict], added: bool, skip_validation: bool):
+            """Callback to capture device config changes."""
+            device_configs_changed_calls.append((cfgs, added, skip_validation))
+
+        def _requested_update_for_multiple_device_validations_cb(device_names: list):
+            """Callback to capture requests for multiple device validations."""
+            requested_update_for_multiple_device_validations.append(device_names)
+
+        device_table.device_configs_changed.connect(_device_configs_changed_cb)
+        device_table.request_update_multiple_device_validations.connect(
+            _requested_update_for_multiple_device_validations_cb
+        )
+
+        # I. First test case with no devices in the table
+        with qtbot.waitSignal(device_table.request_update_after_client_device_update) as blocker:
+            device_table.request_update_after_client_device_update.emit()
+            assert blocker.signal_triggered is True
+            # Table should remain empty, and no updates should have occurred
+            assert not device_configs_changed_calls
+            assert not requested_update_for_multiple_device_validations
+
+        # II. Second test case, add all devices from mocked client to table
+        # Add all devices from mocked client to table.
+        device_configs = mocked_client.device_manager._get_redis_device_config()
+        device_table.add_device_configs(device_configs, skip_validation=True)
+        mocked_client.device_manager.devices.pop("samx")  # Remove samx from client
+        with qtbot.waitSignal(device_table.request_update_after_client_device_update) as blocker:
+            validation_results = {
+                cfg.get("name"): (
+                    DeviceModel.model_validate(cfg).model_dump(),
+                    ConfigStatus.VALID,
+                    ConnectionStatus.CONNECTED,
+                )
+                for cfg in device_configs
+            }
+            with mock.patch.object(
+                device_table, "get_validation_results", return_value=validation_results
+            ):
+                device_table.request_update_after_client_device_update.emit()
+                assert blocker.signal_triggered is True
+                # Table should remain empty, and no updates should have occurred
+                # One for add_device_configs, one for the update
+                assert len(device_configs_changed_calls) == 2
+                # The first call should have one more device than the second
+                assert (
+                    len(device_configs_changed_calls[0][0])
+                    - len(device_configs_changed_calls[1][0])
+                    == 1
+                )
+                # Only one device should have been marked for validation update
+                assert len(requested_update_for_multiple_device_validations) == 1
+                assert len(requested_update_for_multiple_device_validations[0]) == 1
 
     def test_add_row(self, device_table: DeviceTable, sample_devices: dict):
         """Test adding a single device row."""
@@ -1060,9 +1129,7 @@ class TestOphydValidation:
                 ophyd_test, "_is_device_in_redis_session", return_value=True
             ) as mock_is_device_in_redis_session,
             mock.patch.object(ophyd_test, "_add_device_config") as mock_add_device_config,
-            mock.patch.object(
-                ophyd_test, "_on_device_test_completed"
-            ) as mock_on_device_test_completed,
+            mock.patch.object(ophyd_test.list_widget, "get_widget") as mock_get_widget,
         ):
             ophyd_test.change_device_configs(
                 [{"name": "device_2", "deviceClass": "TestClass"}],
@@ -1070,12 +1137,7 @@ class TestOphydValidation:
                 skip_validation=False,
             )
             mock_add_device_config.assert_called_once()
-            mock_on_device_test_completed.assert_called_once_with(
-                {"name": "device_2", "deviceClass": "TestClass"},
-                ConfigStatus.VALID.value,
-                ConnectionStatus.CONNECTED.value,
-                "Device already in session.",
-            )
+            mock_get_widget.assert_called_once_with("device_2")
 
     def test_ophyd_test_adding_devices(self, ophyd_test: OphydValidation, qtbot):
         """Test adding devices to OphydValidation widget."""

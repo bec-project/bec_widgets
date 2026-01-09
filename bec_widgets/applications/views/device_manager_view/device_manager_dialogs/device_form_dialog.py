@@ -6,6 +6,7 @@ from bec_lib.atlas_models import Device as DeviceModel
 from bec_lib.logger import bec_logger
 from ophyd_devices.interfaces.device_config_templates.ophyd_templates import OPHYD_DEVICE_TEMPLATES
 from qtpy import QtCore, QtWidgets
+from zmq.devices import Device
 
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.widgets.control.device_manager.components import OphydValidation
@@ -56,8 +57,6 @@ class DeviceManagerOphydValidationDialog(QtWidgets.QDialog):
         if device_name:
             self.device_manager_ophyd_test.add_device_to_keep_visible_after_validation(device_name)
 
-        self.device_manager_ophyd_test.change_device_configs([config], True, True)
-
         # Dialog Buttons: equal size, stacked horizontally
         button_box = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.StandardButton.Close)
         for button in button_box.buttons():
@@ -70,6 +69,9 @@ class DeviceManagerOphydValidationDialog(QtWidgets.QDialog):
         self.device_manager_ophyd_test.validation_completed.connect(self._on_device_validated)
         self._resize_dialog()
         self.finished.connect(self._finished)
+
+        # Add and test device config
+        self.device_manager_ophyd_test.change_device_configs([config], added=True, connect=True)
 
     def _resize_dialog(self):
         """Resize the dialog based on the screen size."""
@@ -285,7 +287,7 @@ class DeviceFormDialog(QtWidgets.QDialog):
         The dialog will be modal and prevent user interaction until validation is complete.
         """
         wait_dialog = QtWidgets.QProgressDialog(
-            "Validating config… please wait", None, 0, 0, parent=self
+            "Validating config... please wait", None, 0, 0, parent=self
         )
         wait_dialog.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
         wait_dialog.setCancelButton(None)
@@ -368,7 +370,7 @@ class DeviceFormDialog(QtWidgets.QDialog):
         if not validate_name(config.get("name", "")):
             msg_box = self._create_warning_message_box(
                 "Invalid Device Name",
-                f"Device is invalid, can not be empty with spaces. Please provide a valid name. {config.get('name', '')!r} ",
+                f"Device is invalid, cannot be empty or contain spaces. Please provide a valid name. {config.get('name', '')!r}",
             )
             msg_box.exec()
             return

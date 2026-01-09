@@ -36,6 +36,7 @@ _Widgets = {
     "DarkModeButton": "DarkModeButton",
     "DeviceBrowser": "DeviceBrowser",
     "DeviceComboBox": "DeviceComboBox",
+    "DeviceInitializationProgressBar": "DeviceInitializationProgressBar",
     "DeviceLineEdit": "DeviceLineEdit",
     "Heatmap": "Heatmap",
     "Image": "Image",
@@ -1068,6 +1069,79 @@ class DeviceComboBox(RPCBase):
 
         Returns:
             list[str]: List of devices.
+        """
+
+
+class DeviceInitializationProgressBar(RPCBase):
+    """A progress bar that displays the progress of device initialization."""
+
+    @rpc_call
+    def set_value(self, value):
+        """
+        Set the value of the progress bar.
+
+        Args:
+            value (float): The value to set.
+        """
+
+    @rpc_call
+    def set_maximum(self, maximum: float):
+        """
+        Set the maximum value of the progress bar.
+
+        Args:
+            maximum (float): The maximum value.
+        """
+
+    @rpc_call
+    def set_minimum(self, minimum: float):
+        """
+        Set the minimum value of the progress bar.
+
+        Args:
+            minimum (float): The minimum value.
+        """
+
+    @property
+    @rpc_call
+    def label_template(self):
+        """
+        The template for the center label. Use $value, $maximum, and $percentage to insert the values.
+
+        Examples:
+        >>> progressbar.label_template = "$value / $maximum - $percentage %"
+        >>> progressbar.label_template = "$value / $percentage %"
+        """
+
+    @label_template.setter
+    @rpc_call
+    def label_template(self):
+        """
+        The template for the center label. Use $value, $maximum, and $percentage to insert the values.
+
+        Examples:
+        >>> progressbar.label_template = "$value / $maximum - $percentage %"
+        >>> progressbar.label_template = "$value / $percentage %"
+        """
+
+    @property
+    @rpc_call
+    def state(self):
+        """
+        None
+        """
+
+    @state.setter
+    @rpc_call
+    def state(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def _get_label(self) -> str:
+        """
+        Return the label text. mostly used for testing rpc.
         """
 
 

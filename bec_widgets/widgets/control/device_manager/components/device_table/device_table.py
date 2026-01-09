@@ -5,10 +5,12 @@ in DeviceTableRow entries.
 
 from __future__ import annotations
 
+import traceback
 from copy import deepcopy
-from typing import Any, Callable, Iterable, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Literal, Tuple
 
 from bec_lib.atlas_models import Device as DeviceModel
+from bec_lib.callback_handler import EventType
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from qtpy import QtCore, QtGui, QtWidgets
@@ -25,6 +27,9 @@ from bec_widgets.widgets.control.device_manager.components.ophyd_validation impo
     ConnectionStatus,
     get_validation_icons,
 )
+
+if TYPE_CHECKING:  # pragma: no cover
+    from bec_lib.messages import ConfigAction
 
 logger = bec_logger.logger
 
@@ -208,6 +213,11 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
     # Signal emitted when the device config is in sync with Redis
     device_config_in_sync_with_redis = QtCore.Signal(bool)
 
+    # Request multiple validation updates for devices
+    request_update_multiple_device_validations = QtCore.Signal(list)
+    # Request update after client DEVICE_UPDATE event
+    request_update_after_client_device_update = QtCore.Signal()
+
     _auto_size_request = QtCore.Signal()
 
     def __init__(self, parent: QtWidgets.QWidget | None = None, client=None):
@@ -267,14 +277,65 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
         # Connect slots
         self.table.selectionModel().selectionChanged.connect(self._on_selection_changed)
         self.table.cellDoubleClicked.connect(self._on_cell_double_clicked)
+        self.request_update_multiple_device_validations.connect(
+            self.update_multiple_device_validations
+        )
+        self.request_update_after_client_device_update.connect(self._on_device_config_update)
         # Install event filter
         self.table.installEventFilter(self)
+
+        # Add hook to BECClient for DeviceUpdates
+        self.client_callback_id = self.client.callbacks.register(
+            event_type=EventType.DEVICE_UPDATE, callback=self.__on_client_device_update_event
+        )
 
     def cleanup(self):
         """Cleanup resources."""
         self.row_data.clear()  # Drop references to row data..
-        # self._autosize_timer.stop()
+        self.client.callbacks.remove(self.client_callback_id)  # Unregister callback
         super().cleanup()
+
+    def __on_client_device_update_event(
+        self, action: "ConfigAction", config: dict[str, dict[str, Any]]
+    ) -> None:
+        """Handle DEVICE_UPDATE events from the BECClient."""
+        self.request_update_after_client_device_update.emit()
+
+    @SafeSlot()
+    def _on_device_config_update(self) -> None:
+        """Handle device configuration updates from the BECClient."""
+        # Determine the overlapping device configs between Redis and the table
+        device_config_overlap_with_bec = self._get_overlapping_configs()
+        if len(device_config_overlap_with_bec) > 0:
+            # Notify any listeners about the update, the device manager devices will now be up to date
+            self.device_configs_changed.emit(device_config_overlap_with_bec, True, True)
+
+        # Correct all connection statuses in the table which are ConnectionStatus.CONNECTED
+        # to ConnectionStatus.CAN_CONNECT
+        device_status_updates = []
+        validation_results = self.get_validation_results()
+        for device_name, (cfg, config_status, connection_status) in validation_results.items():
+            if device_name is None:
+                continue
+            # Check if config is not in the overlap, but connection status is CONNECTED
+            # Update to CAN_CONNECT
+            if cfg not in device_config_overlap_with_bec:
+                if connection_status == ConnectionStatus.CONNECTED.value:
+                    device_status_updates.append(
+                        (cfg, config_status, ConnectionStatus.CAN_CONNECT.value, "")
+                    )
+        # Update only if there are any updates
+        if len(device_status_updates) > 0:
+            # NOTE We need to emit here a signal to call update_multiple_device_validations
+            # as this otherwise can cause problems with being executed from a python callback
+            # thread which are not properly scheduled in the Qt event loop. We see that this
+            # has caused issues in form of segfaults under certain usage of the UI. Please
+            # do not remove this signal & slot mechanism!
+            self.request_update_multiple_device_validations.emit(device_status_updates)
+
+        # Check if in sync with BEC server session
+        in_sync_with_redis = self._is_config_in_sync_with_redis()
+        self.device_config_in_sync_with_redis.emit(in_sync_with_redis)
 
     # -------------------------------------------------------------------------
     # Custom hooks for table events
@@ -769,6 +830,51 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
             logger.error(f"Error comparing device configs: {e}")
             return False
 
+    def _get_overlapping_configs(self) -> list[dict[str, Any]]:
+        """
+        Get the device configs that overlap between the table and the config in the current running BEC session.
+        A device will be ignored if it is disabled in the BEC session.
+
+        Args:
+            device_configs (Iterable[dict[str, Any]]): The device configs to check.
+
+        Returns:
+            list[dict[str, Any]]: The list of overlapping device configs.
+        """
+        overlapping_configs = []
+        for cfg in self.get_device_config():
+            device_name = cfg.get("name", None)
+            if device_name is None:
+                continue
+            if self._is_device_in_redis_session(device_name, cfg):
+                overlapping_configs.append(cfg)
+
+        return overlapping_configs
+
+    def _is_device_in_redis_session(self, device_name: str, device_config: dict) -> bool:
+        """Check if a device is in the running section."""
+        dev_obj = self.client.device_manager.devices.get(device_name, None)
+        if dev_obj is None or dev_obj.enabled is False:
+            return False
+        return self._compare_device_configs(dev_obj._config, device_config)
+
+    def _compare_device_configs(self, config1: dict, config2: dict) -> bool:
+        """Compare two device configurations through the Device model in bec_lib.atlas_models.
+
+        Args:
+            config1 (dict): The first device configuration.
+            config2 (dict): The second device configuration.
+
+        Returns:
+            bool: True if the configurations are equivalent, False otherwise.
+        """
+        try:
+            model1 = DeviceModel.model_validate(config1)
+            model2 = DeviceModel.model_validate(config2)
+            return model1 == model2
+        except Exception:
+            return False
+
     # -------------------------------------------------------------------------
     # Public API to manage device configs in the table
     # -------------------------------------------------------------------------
@@ -832,7 +938,7 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
             device_configs (Iterable[dict[str, Any]]): The device configs to set.
             skip_validation (bool): Whether to skip validation for the set devices.
         """
-        self.set_busy(True, text="Loading device configurations...")
+        self.set_busy(True)
         with self.table_sort_on_hold:
             self.clear_device_configs()
             cfgs_added = []
@@ -842,12 +948,12 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
         self.device_configs_changed.emit(cfgs_added, True, skip_validation)
         in_sync_with_redis = self._is_config_in_sync_with_redis()
         self.device_config_in_sync_with_redis.emit(in_sync_with_redis)
-        self.set_busy(False, text="")
+        self.set_busy(False)
 
     @SafeSlot()
     def clear_device_configs(self):
-        """Clear the device configs. Skips validation per default."""
-        self.set_busy(True, text="Clearing device configurations...")
+        """Clear the device configs. Skips validation by default."""
+        self.set_busy(True)
         device_configs = self.get_device_config()
         with self.table_sort_on_hold:
             self._clear_table()
@@ -856,7 +962,7 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
         )  # Skip validation for removals
         in_sync_with_redis = self._is_config_in_sync_with_redis()
         self.device_config_in_sync_with_redis.emit(in_sync_with_redis)
-        self.set_busy(False, text="")
+        self.set_busy(False)
 
     @SafeSlot(list, bool)
     def add_device_configs(self, device_configs: _DeviceCfgIter, skip_validation: bool = False):
@@ -869,7 +975,7 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
             device_configs (Iterable[dict[str, Any]]): The device configs to add.
             skip_validation (bool): Whether to skip validation for the added devices.
         """
-        self.set_busy(True, text="Adding device configurations...")
+        self.set_busy(True)
         already_in_table = []
         not_in_table = []
         with self.table_sort_on_hold:
@@ -894,7 +1000,7 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
         self.device_configs_changed.emit(already_in_table + not_in_table, True, skip_validation)
         in_sync_with_redis = self._is_config_in_sync_with_redis()
         self.device_config_in_sync_with_redis.emit(in_sync_with_redis)
-        self.set_busy(False, text="")
+        self.set_busy(False)
 
     @SafeSlot(list, bool)
     def update_device_configs(self, device_configs: _DeviceCfgIter, skip_validation: bool = False):
@@ -905,7 +1011,7 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
             device_configs (Iterable[dict[str, Any]]): The device configs to update.
             skip_validation (bool): Whether to skip validation for the updated devices.
         """
-        self.set_busy(True, text="Loading device configurations...")
+        self.set_busy(True)
         cfgs_updated = []
         with self.table_sort_on_hold:
             for cfg in device_configs:
@@ -920,7 +1026,7 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
         self.device_configs_changed.emit(cfgs_updated, True, skip_validation)
         in_sync_with_redis = self._is_config_in_sync_with_redis()
         self.device_config_in_sync_with_redis.emit(in_sync_with_redis)
-        self.set_busy(False, text="")
+        self.set_busy(False)
 
     @SafeSlot(list)
     def remove_device_configs(self, device_configs: _DeviceCfgIter):
@@ -930,7 +1036,7 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
         Args:
             device_configs (dict[str, dict]): The device configs to remove.
         """
-        self.set_busy(True, text="Removing device configurations...")
+        self.set_busy(True)
         cfgs_to_be_removed = list(device_configs)
         with self.table_sort_on_hold:
             self._remove_rows_by_name([cfg["name"] for cfg in cfgs_to_be_removed])
@@ -939,7 +1045,7 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
         )  # Skip validation for removals
         in_sync_with_redis = self._is_config_in_sync_with_redis()
         self.device_config_in_sync_with_redis.emit(in_sync_with_redis)
-        self.set_busy(False, text="")
+        self.set_busy(False)
 
     @SafeSlot(str)
     def remove_device(self, device_name: str):
@@ -949,11 +1055,11 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
         Args:
             device_name (str): The name of the device to remove.
         """
-        self.set_busy(True, text=f"Removing device configuration for {device_name}...")
+        self.set_busy(True)
         row_data = self.row_data.get(device_name)
         if not row_data:
             logger.warning(f"Device {device_name} not found in table for removal.")
-            self.set_busy(False, text="")
+            self.set_busy(False)
             return
         with self.table_sort_on_hold:
             self._remove_rows_by_name([row_data.data["name"]])
@@ -961,7 +1067,7 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
         self.device_configs_changed.emit(cfgs, False, True)  # Skip validation for removals
         in_sync_with_redis = self._is_config_in_sync_with_redis()
         self.device_config_in_sync_with_redis.emit(in_sync_with_redis)
-        self.set_busy(False, text="")
+        self.set_busy(False)
 
     @SafeSlot(list)
     def update_multiple_device_validations(self, validation_results: _ValidationResultIter):
@@ -973,9 +1079,15 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
         Args:
             device_configs (Iterable[dict[str, Any]]): The device configs to update.
         """
-        self.set_busy(True, text="Updating device validations in session...")
+        self.set_busy(True)
         self.table.setSortingEnabled(False)
+        logger.info(
+            f"Updating multiple device validation statuses with names {[cfg.get('name', '') for cfg, _, _, _ in validation_results]}..."
+        )
         for cfg, config_status, connection_status, _ in validation_results:
+            logger.info(
+                f"Updating device {cfg.get('name', '')} with config status {config_status} and connection status {connection_status}..."
+            )
             row = self._find_row_by_name(cfg.get("name", ""))
             if row is None:
                 logger.warning(f"Device {cfg.get('name')} not found in table for session update.")
@@ -984,7 +1096,7 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
         in_sync_with_redis = self._is_config_in_sync_with_redis()
         self.device_config_in_sync_with_redis.emit(in_sync_with_redis)
         self.table.setSortingEnabled(True)
-        self.set_busy(False, text="")
+        self.set_busy(False)
 
     @SafeSlot(dict, int, int, str)
     def update_device_validation(
@@ -997,13 +1109,13 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
         Args:
 
         """
-        self.set_busy(True, text="Updating device validation status...")
+        self.set_busy(True)
         row = self._find_row_by_name(device_config.get("name", ""))
         if row is None:
             logger.warning(
                 f"Device {device_config.get('name')} not found in table for validation update."
             )
-            self.set_busy(False, text="")
+            self.set_busy(False)
             return
         # Disable here sorting without context manager to avoid triggering of registered
         # resizing methods. Those can be quite heavy, thus, should not run on every
@@ -1013,4 +1125,4 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
         self.table.setSortingEnabled(True)
         in_sync_with_redis = self._is_config_in_sync_with_redis()
         self.device_config_in_sync_with_redis.emit(in_sync_with_redis)
-        self.set_busy(False, text="")
+        self.set_busy(False)

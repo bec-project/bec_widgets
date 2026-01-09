@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from qtpy.QtCore import QEvent, QObject, Qt, QTimer
-from qtpy.QtGui import QColor, QFont
+from qtpy.QtCore import QEvent, QObject, Qt, QTimer, Signal
+from qtpy.QtGui import QColor
 from qtpy.QtWidgets import (
     QApplication,
     QFrame,
@@ -15,8 +15,8 @@ from qtpy.QtWidgets import (
 
 from bec_widgets import BECWidget
 from bec_widgets.utils.colors import apply_theme
+from bec_widgets.utils.error_popups import SafeProperty
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
-from bec_widgets.widgets.utility.spinner.spinner import SpinnerWidget
 
 
 class _OverlayEventFilter(QObject):
@@ -53,132 +53,200 @@ class BusyLoaderOverlay(QWidget):
         BusyLoaderOverlay: The overlay instance.
     """
 
-    def __init__(self, parent: QWidget, text: str = "Loading…", opacity: float = 0.85, **kwargs):
+    foreground_color_changed = Signal(QColor)
+    scrim_color_changed = Signal(QColor)
+
+    def __init__(self, parent: QWidget, opacity: float = 0.85, **kwargs):
         super().__init__(parent=parent, **kwargs)
+
         self.setAttribute(Qt.WA_StyledBackground, True)
         self.setAutoFillBackground(False)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self._opacity = opacity
+        self._scrim_color = QColor(0, 0, 0, 110)
+        self._label_color = QColor(240, 240, 240)
+        self._filter: QObject | None = None
 
-        self._label = QLabel(text, self)
-        self._label.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-        f = QFont(self._label.font())
-        f.setBold(True)
-        f.setPointSize(f.pointSize() + 1)
-        self._label.setFont(f)
+        # Set Main Layout
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(10)
+        self.setLayout(layout)
 
-        self._spinner = SpinnerWidget(self)
-        self._spinner.setFixedSize(42, 42)
+        # Custom widget placeholder
+        self._custom_widget: QWidget | None = None
 
-        lay = QVBoxLayout(self)
-        lay.setContentsMargins(24, 24, 24, 24)
-        lay.setSpacing(10)
-        lay.addStretch(1)
-        lay.addWidget(self._spinner, 0, Qt.AlignHCenter)
-        lay.addWidget(self._label, 0, Qt.AlignHCenter)
-        lay.addStretch(1)
-
+        # Add a frame around the content
         self._frame = QFrame(self)
         self._frame.setObjectName("busyFrame")
         self._frame.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         self._frame.lower()
 
         # Defaults
-        self._scrim_color = QColor(0, 0, 0, 110)
-        self._label_color = QColor(240, 240, 240)
-        self.update_palette()
+        self._update_palette()
 
         # Start hidden; interactions beneath are blocked while visible
         self.hide()
 
-    # --- API ---
-    def set_text(self, text: str):
+    @SafeProperty(QColor, notify=scrim_color_changed)
+    def scrim_color(self) -> QColor:
         """
-        Update the overlay text.
+        The overlay scrim color.
+        """
+        return self._scrim_color
+
+    @scrim_color.setter
+    def scrim_color(self, value: QColor):
+        if not isinstance(value, QColor):
+            raise TypeError("scrim_color must be a QColor")
+        self._scrim_color = value
+        self.update()
+
+    @SafeProperty(QColor, notify=foreground_color_changed)
+    def foreground_color(self) -> QColor:
+        """
+        The overlay foreground color (text, spinner).
+        """
+        return self._label_color
+
+    @foreground_color.setter
+    def foreground_color(self, value: QColor):
+        if not isinstance(value, QColor):
+            try:
+                color = QColor(value)
+                if not color.isValid():
+                    raise ValueError(f"Invalid color: {value}")
+            except Exception:
+                # pylint: disable=raise-missing-from
+                raise ValueError(f"Color {value} is invalid, cannot be converted to QColor")
+        self._label_color = value
+        self.update()
+
+    def set_filter(self, filt: _OverlayEventFilter):
+        """
+        Set an event filter to keep the overlay sized and stacked over its target.
 
         Args:
-            text(str): The text to display on the overlay.
+            filt(QObject): The event filter instance.
         """
-        self._label.setText(text)
+        self._filter = filt
+        target = filt._target
+        if self.parent() != target:
+            logger.warning(f"Overlay parent {self.parent()} does not match filter target {target}")
+        target.installEventFilter(self._filter)
+
+    ######################
+    ### Public methods ###
+    ######################
+
+    def set_widget(self, widget: QWidget):
+        """
+        Set a custom widget as an overlay for the busy overlay.
+
+        Args:
+            widget(QWidget): The custom widget to display.
+        """
+        lay = self.layout()
+        if lay is None:
+            return
+        self._custom_widget = widget
+        lay.addWidget(widget, 0, Qt.AlignHCenter)
 
     def set_opacity(self, opacity: float):
         """
-        Set overlay opacity (0..1).
+        Set the overlay opacity. Only values between 0.0 and 1.0 are accepted. If a
+        value outside this range is provided, it will be clamped.
 
         Args:
             opacity(float): The opacity value between 0.0 (fully transparent) and 1.0 (fully opaque).
         """
         self._opacity = max(0.0, min(1.0, float(opacity)))
         # Re-apply alpha using the current theme color
-        if isinstance(self._scrim_color, QColor):
-            base = QColor(self._scrim_color)
-            base.setAlpha(int(255 * self._opacity))
-            self._scrim_color = base
+        base = self.scrim_color
+        base.setAlpha(int(255 * self._opacity))
+        self.scrim_color = base
         self.update()
 
-    def update_palette(self):
+    ##########################
+    ### Internal methods ###
+    ##########################
+
+    def _update_palette(self):
         """
         Update colors from the current application theme.
         """
-        app = QApplication.instance()
-        if hasattr(app, "theme"):
-            theme = app.theme  # type: ignore[attr-defined]
-            self._bg = theme.color("BORDER")
-            self._fg = theme.color("FG")
-            self._primary = theme.color("PRIMARY")
+        _app = QApplication.instance()
+        if hasattr(_app, "theme"):
+            theme = _app.theme  # type: ignore[attr-defined]
+            _bg = theme.color("BORDER")
+            _fg = theme.color("FG")
         else:
             # Fallback neutrals
-            self._bg = QColor(30, 30, 30)
-            self._fg = QColor(230, 230, 230)
+            _bg = QColor(30, 30, 30)
+            _fg = QColor(230, 230, 230)
+
         # Semi-transparent scrim derived from bg
-        self._scrim_color = QColor(self._bg)
-        self._scrim_color.setAlpha(int(255 * max(0.0, min(1.0, getattr(self, "_opacity", 0.35)))))
-        self._spinner.update()
-        fg_hex = self._fg.name() if isinstance(self._fg, QColor) else str(self._fg)
-        self._label.setStyleSheet(f"color: {fg_hex};")
+        base = _bg if isinstance(_bg, QColor) else QColor(str(_bg))
+        base.setAlpha(int(255 * max(0.0, min(1.0, getattr(self, "_opacity", 0.35)))))
+        self.scrim_color = base
+        fg = _fg if isinstance(_fg, QColor) else QColor(str(_fg))
+        self.foreground_color = fg
+
+        # Set the frame style with updated foreground colors
         self._frame.setStyleSheet(
-            f"#busyFrame {{ border: 2px dashed {fg_hex}; border-radius: 9px; background-color: rgba(128, 128, 128, 110); }}"
+            f"#busyFrame {{ border: 2px dashed {self.foreground_color.name()}; border-radius: 9px; background-color: rgba(128, 128, 128, 110); }}"
         )
         self.update()
 
-    # --- QWidget overrides ---
+    #############################
+    ### Custom Event Handlers ###
+    #############################
+
     def showEvent(self, e):
-        self._spinner.start()
+        # Call showEvent on custom widget if present
+        if self._custom_widget is not None:
+            self._custom_widget.showEvent(e)
         super().showEvent(e)
 
     def hideEvent(self, e):
-        self._spinner.stop()
+        # Call hideEvent on custom widget if present
+        if self._custom_widget is not None:
+            self._custom_widget.hideEvent(e)
         super().hideEvent(e)
 
     def resizeEvent(self, e):
+        # Call resizeEvent on custom widget if present
+        if self._custom_widget is not None:
+            self._custom_widget.resizeEvent(e)
         super().resizeEvent(e)
         r = self.rect().adjusted(10, 10, -10, -10)
         self._frame.setGeometry(r)
 
-    def paintEvent(self, e):
-        super().paintEvent(e)
+    # TODO should we have this cleanup here?
+    def cleanup(self):
+        """Cleanup resources used by the overlay."""
+        if self._custom_widget is not None:
+            if hasattr(self._custom_widget, "cleanup"):
+                self._custom_widget.cleanup()
 
 
 def install_busy_loader(
-    target: QWidget, text: str = "Loading…", start_loading: bool = False, opacity: float = 0.35
+    target: QWidget, start_loading: bool = False, opacity: float = 0.35
 ) -> BusyLoaderOverlay:
     """
     Attach a BusyLoaderOverlay to `target` and keep it sized and stacked.
 
     Args:
         target(QWidget): The widget to overlay.
-        text(str): Initial text to display.
         start_loading(bool): If True, show the overlay immediately.
         opacity(float): Overlay opacity (0..1).
 
     Returns:
         BusyLoaderOverlay: The overlay instance.
     """
-    overlay = BusyLoaderOverlay(target, text=text, opacity=opacity)
+    overlay = BusyLoaderOverlay(parent=target, opacity=opacity)
     overlay.setGeometry(target.rect())
-    filt = _OverlayEventFilter(target, overlay)
-    overlay._filter = filt  # type: ignore[attr-defined]
-    target.installEventFilter(filt)
+    overlay.set_filter(_OverlayEventFilter(target, overlay))
     if start_loading:
         overlay.show()
     return overlay
@@ -188,10 +256,8 @@ def install_busy_loader(
 # Launchable demo
 # --------------------------
 class DemoWidget(BECWidget, QWidget):  # pragma: no cover
-    def __init__(self, parent=None):
-        super().__init__(
-            parent=parent, theme_update=True, start_busy=True, busy_text="Demo: Initializing…"
-        )
+    def __init__(self, parent=None, start_busy: bool = False):
+        super().__init__(parent=parent, theme_update=True, start_busy=start_busy)
 
         self._title = QLabel("Demo Content", self)
         self._title.setAlignment(Qt.AlignCenter)
@@ -214,15 +280,14 @@ class DemoWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Busy Loader — BECWidget demo")
 
-        left = DemoWidget()
+        left = DemoWidget(start_busy=True)
         right = DemoWidget()
 
         btn_on = QPushButton("Right → Loading")
         btn_off = QPushButton("Right → Ready")
         btn_text = QPushButton("Set custom text")
-        btn_on.clicked.connect(lambda: right.set_busy(True, "Fetching data…"))
+        btn_on.clicked.connect(lambda: right.set_busy(True))
         btn_off.clicked.connect(lambda: right.set_busy(False))
-        btn_text.clicked.connect(lambda: right.set_busy_text("Almost there…"))
 
         panel = QWidget()
         prow = QVBoxLayout(panel)
