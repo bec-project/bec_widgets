@@ -12,9 +12,8 @@ class DeviceInitializationProgressBar(BECProgressBar):
     # Signal emitted for failed device initializations
     failed_devices_changed = Signal(list)
 
-    def __init__(self, parent=None, client=None):
-        super().__init__(parent=parent, client=client)
-        self._latest_device_config_msg: dict | None = None
+    def __init__(self, parent=None, client=None, **kwargs):
+        super().__init__(parent=parent, client=client, **kwargs)
         self._failed_devices: list[str] = []
         self.bec_dispatcher.connect_slot(
             slot=self._update_device_initialization_progress,

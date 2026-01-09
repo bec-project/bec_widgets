@@ -548,9 +548,10 @@ class OphydValidation(BECWidget, QtWidgets.QWidget):
             if device_name is None:  # Config missing name, will be skipped..
                 logger.error(f"Device config missing 'name': {cfg}. Config will be skipped.")
                 continue
-            if not added or skip_validation is True:  # Remove requested
+            if not added:  # Remove requested, holds priority over skip_validation
                 self._remove_device_config(cfg)
                 continue
+            # Check if device is already in running session with the same config
             if self._is_device_in_redis_session(cfg.get("name"), cfg):
                 logger.debug(
                     f"Device {device_name} already in running session with same config. Skipping."
@@ -563,29 +564,39 @@ class OphydValidation(BECWidget, QtWidgets.QWidget):
                         "Device already in session.",
                     )
                 )
+                # If in addition, the device is to be kept visible after validation, we ensure it is added
+                # and potentially update it's config & validation icons
                 if device_name in self._keep_visible_after_validation:
-                    self._add_device_config(
-                        cfg,
-                        connect=connect,
-                        force_connect=force_connect,
-                        timeout=timeout,
-                        skip_validation=True,
-                    )
-                    self._on_device_test_completed(
-                        cfg,
-                        ConfigStatus.VALID.value,
-                        ConnectionStatus.CONNECTED.value,
-                        "Device already in session.",
-                    )
-                self._remove_device_config(cfg)
+                    if not self._device_already_exists(device_name):
+                        self._add_device_config(
+                            cfg,
+                            connect=connect,
+                            force_connect=force_connect,
+                            timeout=timeout,
+                            skip_validation=True,
+                        )
+                    # Now make sure that the existing widget is updated to reflect the CONNECTED & VALID status
+                    widget: ValidationListItem = self.list_widget.get_widget(device_name)
+                    if widget:
+                        self._on_device_test_completed(
+                            cfg,
+                            ConfigStatus.VALID.value,
+                            ConnectionStatus.CONNECTED.value,
+                            "Device already in session.",
+                        )
+                else:  # If not to be kept visible, we ensure it is removed from the list
+                    self._remove_device_config(cfg)
+                continue  # Now we continue to the next device config
+            if skip_validation is True:  # Skip validation requested, so we skip this
                 continue
-            if not self._device_already_exists(cfg.get("name")):  # New device case
+            # New device case, that is not in BEC session
+            if not self._device_already_exists(cfg.get("name")):
                 self._add_device_config(
                     cfg, connect=connect, force_connect=force_connect, timeout=timeout
                 )
             else:  # Update existing, but removing first
                 logger.info(f"Device {cfg.get('name')} already exists, re-adding it.")
-                self._remove_device_config(cfg)
+                self._remove_device_config(cfg, force_remove=True)
                 self._add_device_config(
                     cfg, connect=connect, force_connect=force_connect, timeout=timeout
                 )
@@ -661,13 +672,13 @@ class OphydValidation(BECWidget, QtWidgets.QWidget):
         if not skip_validation:
             self.__delayed_submit_test(widget, connect, force_connect, timeout)
 
-    def _remove_device(self, device_name: str) -> None:
+    def _remove_device(self, device_name: str, force_remove: bool = False) -> None:
         if not self._device_already_exists(device_name):
             logger.debug(
                 f"Device with name {device_name} not found in OphydValidation, can't remove it."
             )
             return
-        if device_name in self._keep_visible_after_validation:
+        if device_name in self._keep_visible_after_validation and not force_remove:
             logger.debug(
                 f"Device with name {device_name} is set to be kept visible after validation, not removing it."
             )
@@ -676,9 +687,11 @@ class OphydValidation(BECWidget, QtWidgets.QWidget):
             self.thread_pool_manager.clear_device_in_queue(device_name)
         self.list_widget.remove_widget_item(device_name)
 
-    def _remove_device_config(self, device_config: dict[str, Any]) -> None:
+    def _remove_device_config(
+        self, device_config: dict[str, Any], force_remove: bool = False
+    ) -> None:
         device_name = device_config.get("name")
-        self._remove_device(device_name)
+        self._remove_device(device_name, force_remove=force_remove)
 
     @SafeSlot(str, dict, bool, bool, float)
     def _on_request_rerun_validation(

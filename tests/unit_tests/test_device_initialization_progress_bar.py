@@ -1,4 +1,4 @@
-# pylint skip
+# pylint skip-file
 import pytest
 from bec_lib.messages import DeviceInitializationProgressMessage
 
@@ -6,10 +6,12 @@ from bec_widgets.widgets.progress.device_initialization_progress_bar.device_init
     DeviceInitializationProgressBar,
 )
 
+from .client_mocks import mocked_client
+
 
 @pytest.fixture
-def progress_bar(qtbot):
-    widget = DeviceInitializationProgressBar()
+def progress_bar(qtbot, mocked_client):
+    widget = DeviceInitializationProgressBar(client=mocked_client)
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget

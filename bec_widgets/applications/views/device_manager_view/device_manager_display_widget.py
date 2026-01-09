@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from functools import partial
-from typing import List, Literal, get_args
+from typing import TYPE_CHECKING, List, Literal, get_args
 
 import yaml
 from bec_lib import config_helper
@@ -11,9 +11,17 @@ from bec_lib.file_utils import DeviceConfigWriter
 from bec_lib.logger import bec_logger
 from bec_lib.messages import ConfigAction
 from bec_lib.plugin_helper import plugin_package_name, plugin_repo_path
-from bec_qthemes import apply_theme
-from qtpy.QtCore import QMetaObject, QThreadPool, Signal
-from qtpy.QtWidgets import QFileDialog, QMessageBox, QTextEdit, QVBoxLayout, QWidget
+from bec_qthemes import apply_theme, material_icon
+from qtpy.QtCore import QMetaObject, Qt, QThreadPool, Signal
+from qtpy.QtWidgets import (
+    QApplication,
+    QFileDialog,
+    QMessageBox,
+    QPushButton,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
 from bec_widgets.applications.views.device_manager_view.device_manager_dialogs import (
     ConfigChoiceDialog,
@@ -22,6 +30,7 @@ from bec_widgets.applications.views.device_manager_view.device_manager_dialogs i
 from bec_widgets.applications.views.device_manager_view.device_manager_dialogs.upload_redis_dialog import (
     UploadRedisDialog,
 )
+from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.toolbars.actions import MaterialIconAction
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
@@ -38,9 +47,16 @@ from bec_widgets.widgets.control.device_manager.components.ophyd_validation.ophy
     ConfigStatus,
     ConnectionStatus,
 )
+from bec_widgets.widgets.progress.device_initialization_progress_bar.device_initialization_progress_bar import (
+    DeviceInitializationProgressBar,
+)
 from bec_widgets.widgets.services.device_browser.device_item.config_communicator import (
     CommunicateConfigAction,
 )
+from bec_widgets.widgets.utility.spinner.spinner import SpinnerWidget
+
+if TYPE_CHECKING:  # pragma: no cover
+    from bec_lib.client import BECClient
 
 logger = bec_logger.logger
 
@@ -49,6 +65,74 @@ _yes_no_question = partial(
     buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
     defaultButton=QMessageBox.StandardButton.No,
 )
+
+
+class CustomBusyWidget(QWidget):
+    """Custom busy widget to show during device config upload."""
+
+    cancel_requested = Signal()
+
+    def __init__(self, parent=None, client: BECClient | None = None):
+        super().__init__(parent=parent)
+
+        # Widgets
+        progress = DeviceInitializationProgressBar(parent=self, client=client)
+
+        # Spinner
+        spinner = SpinnerWidget(parent=self)
+        scale = self._ui_scale()
+        spinner_size = int(scale * 0.12) if scale else 1
+        spinner_size = max(32, min(spinner_size, 64))
+        spinner.setFixedSize(spinner_size, spinner_size)
+
+        # Cancel button
+        cancel_button = QPushButton("Cancel Upload", parent=self)
+        cancel_button.setIcon(material_icon("cancel"))
+        cancel_button.clicked.connect(self.cancel_requested.emit)
+        button_height = int(spinner_size * 0.9)
+        button_height = max(36, min(button_height, 72))
+        aspect_ratio = 3.8  # width / height, visually stable for text buttons
+        button_width = int(button_height * aspect_ratio)
+        cancel_button.setFixedSize(button_width, button_height)
+        color = get_accent_colors()
+        cancel_button.setStyleSheet(
+            f"""
+            QPushButton {{
+                background-color: {color.emergency.name()};
+                color: white;
+                font-weight: 600;
+                border-radius: 6px;
+            }}
+            """
+        )
+
+        # Layout
+        content_layout = QVBoxLayout(self)
+        content_layout.setContentsMargins(24, 24, 24, 24)
+        content_layout.setSpacing(16)
+        content_layout.addStretch()
+        content_layout.addWidget(spinner, 0, Qt.AlignmentFlag.AlignHCenter)
+        content_layout.addWidget(progress, 0, Qt.AlignmentFlag.AlignHCenter)
+        content_layout.addStretch()
+        content_layout.addWidget(cancel_button, 0, Qt.AlignmentFlag.AlignHCenter)
+
+    def _ui_scale(self) -> int:
+        parent = self.parent()
+        if not parent:
+            return 0
+        return min(parent.width(), parent.height())
+
+    def showEvent(self, event):
+        """Show event to start the spinner."""
+        super().showEvent(event)
+        for child in self.findChildren(SpinnerWidget):
+            child.start()
+
+    def hideEvent(self, event):
+        """Hide event to stop the spinner."""
+        super().hideEvent(event)
+        for child in self.findChildren(SpinnerWidget):
+            child.stop()
 
 
 class DeviceManagerDisplayWidget(DockAreaWidget):
@@ -61,12 +145,21 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
     def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent=parent, variant="compact", *args, **kwargs)
 
+        # State variable for config upload
+        self._config_upload_active: bool = False
+
         # Push to Redis dialog
         self._upload_redis_dialog: UploadRedisDialog | None = None
         self._dialog_validation_connection: QMetaObject.Connection | None = None
 
+        # NOTE: We need here a seperate config helper instance to avoid conflicts with
+        # other communications to REDIS as uploading a config through a CommunicationConfigAction
+        # will block if we use the config_helper from self.client.config._config_helper
         self._config_helper = config_helper.ConfigHelper(self.client.connector)
         self._shared_selection = SharedSelectionSignal()
+
+        # Custom upload widget for busy overlay
+        self._custom_overlay_widget: QWidget | None = None
 
         # Device Table View widget
         self.device_table_view = DeviceTable(self)
@@ -124,6 +217,43 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
 
         # Build dock layout using shared helpers
         self._build_docks()
+
+        logger.info("Connecting application about to quit signal to device manager view...")
+        QApplication.instance().aboutToQuit.connect(self._about_to_quit_handler)
+
+    ##############################
+    ### Custom set busy widget ###
+    ##############################
+
+    def create_busy_state_widget(self) -> QWidget:
+        """Create a custom busy state widget for uploading device configurations."""
+        widget = CustomBusyWidget(parent=self, client=self.client)
+        widget.cancel_requested.connect(self._cancel_device_config_upload)
+        return widget
+
+    ################################
+    ### Application quit handler ###
+    ################################
+
+    @SafeSlot()
+    def _about_to_quit_handler(self):
+        """Handle application about to quit event. If config upload is active, cancel it."""
+        logger.info("Application is quitting, checking for active config upload...")
+        if self._config_upload_active:
+            logger.info("Application is quitting, cancelling active config upload...")
+            self._config_helper.send_config_request(
+                action="cancel", config=None, wait_for_response=True, timeout_s=10
+            )
+            logger.info("Config upload cancelled.")
+
+    def _set_busy_wrapper(self, enabled: bool):
+        """Thin wrapper around set_busy to flip the state variable."""
+        self._config_upload_active = enabled
+        self.set_busy(enabled=enabled)
+
+    ##############################
+    ### Toolbar and Dock setup ###
+    ##############################
 
     def _add_toolbar(self):
         self.toolbar = ModularToolBar(self)
@@ -306,6 +436,10 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
         # Add load config from plugin dir
         self.toolbar.add_bundle(table_bundle)
 
+    #######################
+    ### Action Handlers ###
+    #######################
+
     @SafeSlot()
     @SafeSlot(bool)
     def _run_validate_connection(self, connect: bool = True):
@@ -432,10 +566,8 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
             "Do you really want to flush the current config in BEC Server?",
         )
         if reply == QMessageBox.StandardButton.Yes:
-            self.set_busy(enabled=True, text="Flushing configuration in BEC Server...")
             self.client.config.reset_config()
             logger.info("Successfully flushed configuration in BEC Server.")
-            self.set_busy(enabled=False)
             # Check if config is in sync, enable load redis button
             self.device_table_view.device_config_in_sync_with_redis.emit(
                 self.device_table_view._is_config_in_sync_with_redis()
@@ -511,12 +643,49 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
         comm.signals.done.connect(self._handle_push_complete_to_communicator)
         comm.signals.error.connect(self._handle_exception_from_communicator)
         threadpool.start(comm)
-        self.set_busy(enabled=True, text="Uploading configuration to BEC Server...")
+        self._set_busy_wrapper(enabled=True)
+
+    def _cancel_device_config_upload(self):
+        """Cancel the device configuration upload process."""
+        threadpool = QThreadPool.globalInstance()
+        comm = CommunicateConfigAction(self._config_helper, None, {}, "cancel")
+        # Cancelling will raise an exception in the communicator, so we connect to the failure handler
+        comm.signals.error.connect(self._handle_cancel_config_upload_failed)
+        threadpool.start(comm)
+
+    def _handle_cancel_config_upload_failed(self, exception: Exception):
+        """Handle failure to cancel the config upload."""
+        QMessageBox.critical(self, "Error Cancelling Upload", f"{str(exception)}")
+        self._set_busy_wrapper(enabled=False)
+
+        validation_results = self.device_table_view.get_validation_results()
+        devices_to_update = []
+        for config, config_status, connection_status in validation_results.values():
+            devices_to_update.append(
+                (config, config_status, ConnectionStatus.UNKNOWN.value, "Upload Cancelled")
+            )
+        # Rerun validation of all devices after cancellation
+        self.device_table_view.update_multiple_device_validations(devices_to_update)
+        self.ophyd_test_view.change_device_configs(
+            [cfg for cfg, _, _, _ in devices_to_update], added=True, skip_validation=False
+        )
+        # Config is in sync with BEC, so we update the state
+        self.device_table_view.device_config_in_sync_with_redis.emit(False)
+
+        # Cleanup custom overlay widget
+        if self._custom_overlay_widget is not None:
+            self._custom_overlay_widget.close()
+            self._custom_overlay_widget.deleteLater()
+            self._custom_overlay_widget = None
 
     def _handle_push_complete_to_communicator(self):
         """Handle completion of the config push to Redis."""
-        self.set_busy(enabled=False)
-        self._update_validation_icons_after_upload()
+        self._set_busy_wrapper(enabled=False)
+        # Cleanup custom overlay widget
+        if self._custom_overlay_widget is not None:
+            self._custom_overlay_widget.close()
+            self._custom_overlay_widget.deleteLater()
+            self._custom_overlay_widget = None
 
     def _handle_exception_from_communicator(self, exception: Exception):
         """Handle exceptions from the config communicator."""
@@ -525,29 +694,11 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
             "Error Uploading Config",
             f"An error occurred while uploading the configuration to BEC Server:\n{str(exception)}",
         )
-        self.set_busy(enabled=False)
-        self._update_validation_icons_after_upload()
-
-    def _update_validation_icons_after_upload(self):
-        """Update validation icons after uploading config to Redis."""
-        if self.client.device_manager is None:
-            return
-        device_names_in_session = list(self.client.device_manager.devices.keys())
-        validation_results = self.device_table_view.get_validation_results()
-        devices_to_update = []
-        for config, config_status, connection_status in validation_results.values():
-            if config["name"] in device_names_in_session:
-                devices_to_update.append(
-                    (config, config_status, ConnectionStatus.CONNECTED.value, "")
-                )
-        # Update validation status in device table view
-        self.device_table_view.update_multiple_device_validations(devices_to_update)
-        # Remove devices from ophyd validation view
-        self.ophyd_test_view.change_device_configs(
-            [cfg for cfg, _, _, _ in devices_to_update], added=False, skip_validation=True
-        )
-        # Config is in sync with BEC, so we update the state
-        self.device_table_view.device_config_in_sync_with_redis.emit(True)
+        self._set_busy_wrapper(enabled=False)
+        if self._custom_overlay_widget is not None:
+            self._custom_overlay_widget.close()
+            self._custom_overlay_widget.deleteLater()
+            self._custom_overlay_widget = None
 
     @SafeSlot()
     def _save_to_disk_action(self):
@@ -613,8 +764,7 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
     ):
         if old_device_name and old_device_name != data.get("name", ""):
             self.device_table_view.remove_device(old_device_name)
-        self.device_table_view.update_device_configs([data], skip_validation=True)
-        self.device_table_view.update_device_validation(data, config_status, connection_status, msg)
+        self._add_to_table_from_dialog(data, config_status, connection_status, msg, old_device_name)
 
     @SafeSlot(dict, int, int, str, str)
     def _add_to_table_from_dialog(
@@ -625,8 +775,15 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
         msg: str,
         old_device_name: str = "",
     ):
-        self.device_table_view.add_device_configs([data], skip_validation=True)
-        self.device_table_view.update_device_validation(data, config_status, connection_status, msg)
+        if connection_status == ConnectionStatus.UNKNOWN.value:
+            self.device_table_view.update_device_configs([data], skip_validation=False)
+        else:  # Connection status was tested in dialog
+            # If device is connected, we remove it from the ophyd validation view
+            self.device_table_view.update_device_configs([data], skip_validation=True)
+            # Update validation status in device table view and ophyd validation view
+            self.ophyd_test_view._on_device_test_completed(
+                data, config_status, connection_status, msg
+            )
 
     @SafeSlot()
     def _remove_device_action(self):

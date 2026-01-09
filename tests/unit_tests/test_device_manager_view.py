@@ -305,7 +305,7 @@ class TestDeviceManagerViewDialogs:
                 qtbot.mouseClick(dialog.add_btn, QtCore.Qt.LeftButton)
                 mock_warning_box.assert_called_once_with(
                     "Invalid Device Name",
-                    f"Device is invalid, can not be empty with spaces. Please provide a valid name. {dialog._device_config_template.get_config_fields().get('name', '')!r} ",
+                    f"Device is invalid, cannot be empty or contain spaces. Please provide a valid name. {dialog._device_config_template.get_config_fields().get('name', '')!r}",
                 )
                 mock_create_dialog.assert_not_called()
                 mock_create_validation.assert_not_called()
@@ -741,35 +741,3 @@ class TestDeviceManagerView:
                 "rerun_validation"
             ].action.action.triggered.emit()
             assert len(mock_change_configs.call_args[0][0]) == 1
-
-    def test_update_validation_icons_after_upload(
-        self,
-        device_manager_display_widget: DeviceManagerDisplayWidget,
-        device_configs: list[dict[str, Any]],
-    ):
-        """Test that validation icons are updated after uploading to Redis."""
-        dm_view = device_manager_display_widget
-
-        # Add device configs to the table
-        dm_view.device_table_view.add_device_configs(device_configs)
-        # Update the device manager devices to match what's in the table
-        dm_view.client.device_manager.devices = {cfg["name"]: cfg for cfg in device_configs}
-
-        # Simulate callback
-        dm_view._update_validation_icons_after_upload()
-
-        # Get validation results from the table
-        validation_results = dm_view.device_table_view.get_validation_results()
-        # Check that all devices are connected and status is updated
-        for dev_name, (cfg, _, connection_status) in validation_results.items():
-            assert cfg in device_configs
-            assert connection_status == ConnectionStatus.CONNECTED.value
-
-        # Check that no devices are in ophyd_validation widget
-        # Those should be all cleared after upload
-        cfgs = dm_view.ophyd_test_view.get_device_configs()
-        assert len(cfgs) == 0
-
-        # Check that upload config button is disabled
-        action = dm_view.toolbar.components.get_action("update_config_redis")
-        assert action.action.isEnabled() is False

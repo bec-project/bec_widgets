@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 import shiboken6
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import QBuffer, QByteArray, QIODevice, QObject, Qt
-from qtpy.QtGui import QPixmap
-from qtpy.QtWidgets import QApplication, QFileDialog, QWidget
+from qtpy.QtGui import QFont, QPixmap
+from qtpy.QtWidgets import QApplication, QFileDialog, QLabel, QVBoxLayout, QWidget
 
 import bec_widgets.widgets.containers.qt_ads as QtAds
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
@@ -15,8 +15,10 @@ from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
 from bec_widgets.utils.error_popups import SafeConnect, SafeSlot
 from bec_widgets.utils.rpc_decorator import rpc_timeout
 from bec_widgets.utils.widget_io import WidgetHierarchy
+from bec_widgets.widgets.utility.spinner.spinner import SpinnerWidget
 
 if TYPE_CHECKING:  # pragma: no cover
+    from bec_widgets.utils.busy_loader import BusyLoaderOverlay
     from bec_widgets.widgets.containers.dock import BECDock
 
 logger = bec_logger.logger
@@ -38,7 +40,6 @@ class BECWidget(BECConnector):
         gui_id: str | None = None,
         theme_update: bool = False,
         start_busy: bool = False,
-        busy_text: str = "Loading…",
         **kwargs,
     ):
         """
@@ -65,18 +66,14 @@ class BECWidget(BECConnector):
             self._connect_to_theme_change()
 
         # Initialize optional busy loader overlay utility (lazy by default)
-        self._busy_overlay = None
+        self._busy_overlay: "BusyLoaderOverlay" | None = None
+        self._busy_state_widget: QWidget | None = None
+
         self._loading = False
         if start_busy and isinstance(self, QWidget):
-            try:
-                overlay = self._ensure_busy_overlay(busy_text=busy_text)
-                if overlay is not None:
-                    overlay.setGeometry(self.rect())
-                    overlay.raise_()
-                    overlay.show()
-                    self._loading = True
-            except Exception as exc:
-                logger.debug(f"Busy loader init skipped: {exc}")
+            self._busy_overlay = self._install_busy_loader()
+            self._adjust_busy_overlay()
+            self._loading = True
 
     def _connect_to_theme_change(self):
         """Connect to the theme change signal."""
@@ -97,8 +94,70 @@ class BECWidget(BECConnector):
         self._update_overlay_theme(theme)
         self.apply_theme(theme)
 
-    def _ensure_busy_overlay(self, *, busy_text: str = "Loading…"):
-        """Create the busy overlay on demand and cache it in _busy_overlay.
+    def create_busy_state_widget(self) -> QWidget:
+        """
+        Method to create a custom busy state widget to be shown in the busy overlay.
+        Child classes should overrid this method to provide a custom widget if desired.
+
+        Returns:
+            QWidget: The custom busy state widget.
+
+        NOTE:
+            The implementation here is a SpinnerWidget with a "Loading..." label. This is the default
+            busy state widget for all BECWidgets. However, child classes with specific needs for the
+            busy state can easily overrite this method to provide a custom widget. The signature of
+            the method must be preserved to ensure compatibility with the busy overlay system. If
+            the widget provides a 'cleanup' method, it will be called when the overlay is cleaned up.
+
+            The widget may connect to the _busy_overlay signals foreground_color_changed and
+            scrim_color_changed to update its colors when the theme changes.
+        """
+
+        # Widget
+        class BusyStateWidget(QWidget):
+            def __init__(self, parent=None):
+                super().__init__(parent)
+                # label
+                label = QLabel("Loading...", self)
+                label.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+                f = QFont(label.font())
+                f.setBold(True)
+                f.setPointSize(f.pointSize() + 1)
+                label.setFont(f)
+
+                # spinner
+                spinner = SpinnerWidget(self)
+                spinner.setFixedSize(42, 42)
+
+                # Layout
+                lay = QVBoxLayout(self)
+                lay.setContentsMargins(24, 24, 24, 24)
+                lay.setSpacing(10)
+                lay.addStretch(1)
+                lay.addWidget(spinner, 0, Qt.AlignHCenter)
+                lay.addWidget(label, 0, Qt.AlignHCenter)
+                lay.addStretch(1)
+                self.setLayout(lay)
+
+            def showEvent(self, event):
+                """Show event to start the spinner."""
+                super().showEvent(event)
+                for child in self.findChildren(SpinnerWidget):
+                    child.start()
+
+            def hideEvent(self, event):
+                """Hide event to stop the spinner."""
+                super().hideEvent(event)
+                for child in self.findChildren(SpinnerWidget):
+                    child.stop()
+
+        widget = BusyStateWidget(self)
+
+        return widget
+
+    def _install_busy_loader(self) -> "BusyLoaderOverlay" | None:
+        """
+        Create the busy overlay on demand and cache it in _busy_overlay.
         Returns the overlay instance or None if not a QWidget.
         """
         if not isinstance(self, QWidget):
@@ -107,38 +166,39 @@ class BECWidget(BECConnector):
         if overlay is None:
             from bec_widgets.utils.busy_loader import install_busy_loader
 
-            overlay = install_busy_loader(self, text=busy_text, start_loading=False)
+            overlay = install_busy_loader(self, start_loading=False)
             self._busy_overlay = overlay
+
+        # Create and set the busy state widget
+        self._busy_state_widget = self.create_busy_state_widget()
+        self._busy_overlay.set_widget(self._busy_state_widget)
         return overlay
 
-    def _init_busy_loader(self, *, start_busy: bool = False, busy_text: str = "Loading…") -> None:
+    def _adjust_busy_overlay(self) -> None:
         """Create and attach the loading overlay to this widget if QWidget is present."""
         if not isinstance(self, QWidget):
             return
-        self._ensure_busy_overlay(busy_text=busy_text)
-        if start_busy and self._busy_overlay is not None:
-            self._busy_overlay.setGeometry(self.rect())
+        if self._busy_overlay is not None:
+            self._busy_overlay.setGeometry(self.rect())  # pylint: disable=no-member
             self._busy_overlay.raise_()
             self._busy_overlay.show()
 
-    def set_busy(self, enabled: bool, text: str | None = None) -> None:
+    def set_busy(self, enabled: bool) -> None:
         """
-        Enable/disable the loading overlay. Optionally update the text.
+        Set the busy state of the widget. This will show or hide the loading overlay, which will
+        block user interaction with the widget and show the busy_state_widget if provided. Per
+        default, the busy state widget is a spinner with "Loading..." text.
 
         Args:
-            enabled(bool): Whether to enable the loading overlay.
-            text(str, optional): The text to display on the overlay. If None, the text is not changed.
+            enabled(bool): Whether to enable the busy state.
         """
         if not isinstance(self, QWidget):
             return
-        if getattr(self, "_busy_overlay", None) is None:
-            self._ensure_busy_overlay(busy_text=text or "Loading…")
-        if text is not None:
-            self.set_busy_text(text)
+        # If not yet installed, install the busy overlay now together with the busy state widget
+        if self._busy_overlay is None:
+            self._busy_overlay = self._install_busy_loader()
         if enabled:
-            self._busy_overlay.setGeometry(self.rect())
-            self._busy_overlay.raise_()
-            self._busy_overlay.show()
+            self._adjust_busy_overlay()
         else:
             self._busy_overlay.hide()
         self._loading = bool(enabled)
@@ -152,19 +212,6 @@ class BECWidget(BECConnector):
         """
         return bool(getattr(self, "_loading", False))
 
-    def set_busy_text(self, text: str) -> None:
-        """
-        Update the text on the loading overlay.
-
-        Args:
-            text(str): The text to display on the overlay.
-        """
-        overlay = getattr(self, "_busy_overlay", None)
-        if overlay is None:
-            overlay = self._ensure_busy_overlay(busy_text=text)
-        if overlay is not None:
-            overlay.set_text(text)
-
     @SafeSlot(str)
     def apply_theme(self, theme: str):
         """
@@ -177,8 +224,8 @@ class BECWidget(BECConnector):
     def _update_overlay_theme(self, theme: str):
         try:
             overlay = getattr(self, "_busy_overlay", None)
-            if overlay is not None and hasattr(overlay, "update_palette"):
-                overlay.update_palette()
+            if overlay is not None:
+                overlay._update_palette()
         except Exception:
             logger.warning(f"Failed to apply theme {theme} to {self}")
 
@@ -304,10 +351,13 @@ class BECWidget(BECConnector):
                         self.removeEventFilter(filt)
                     except Exception as exc:
                         logger.warning(f"Failed to remove event filter from busy overlay: {exc}")
+
+                # Cleanup the overlay widget. This will call cleanup on the custom widget if present.
+
+                overlay.cleanup()
                 overlay.deleteLater()
             except Exception as exc:
                 logger.warning(f"Failed to delete busy overlay: {exc}")
-        self._busy_overlay = None
 
     def closeEvent(self, event):
         """Wrap the close even to ensure the rpc_register is cleaned up."""
