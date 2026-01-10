@@ -106,7 +106,9 @@ class TypedForm(BECWidget, QWidget):
 
     def _add_griditem(self, item: FormItemSpec, row: int):
         grid = self._form_grid.layout()
-        label = QLabel(parent=self._form_grid, text=item.name)
+        # Use title from FieldInfo if available, otherwise use the property name
+        label_text = item.info.title if item.info.title else item.name
+        label = QLabel(parent=self._form_grid, text=label_text)
         label.setProperty("_model_field_name", item.name)
         label.setToolTip(item.info.description or item.name)
         grid.addWidget(label, row, 0)
