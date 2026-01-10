@@ -231,6 +231,8 @@ class StrFormItem(DynamicFormItem):
     def __init__(self, parent: QWidget | None = None, *, spec: FormItemSpec) -> None:
         super().__init__(parent=parent, spec=spec)
         self._main_widget.textChanged.connect(self._value_changed)
+        if spec.info.description:
+            self._main_widget.setPlaceholderText(spec.info.description)
 
     def _add_main_widget(self) -> None:
         self._main_widget = QLineEdit()
