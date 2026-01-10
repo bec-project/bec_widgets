@@ -9,6 +9,7 @@ from qtpy.QtGui import QColor
 from qtpy.QtWidgets import (
     QApplication,
     QComboBox,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -171,7 +172,13 @@ class ScanControl(BECWidget, QWidget):
         self.layout.addStretch()
 
     def _add_metadata_form(self):
-        self.layout.addWidget(self._metadata_form)
+        # Wrap metadata form in a group box
+        self._metadata_group = QGroupBox("Scan Metadata", self)
+        self._metadata_group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        metadata_layout = QVBoxLayout(self._metadata_group)
+        metadata_layout.addWidget(self._metadata_form)
+
+        self.layout.addWidget(self._metadata_group)
         self._metadata_form.update_with_new_scan(self.comboBox_scan_selection.currentText())
         self.scan_selected.connect(self._metadata_form.update_with_new_scan)
         self._metadata_form.form_data_updated.connect(self.update_scan_metadata)

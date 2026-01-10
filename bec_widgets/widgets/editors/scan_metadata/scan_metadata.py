@@ -53,6 +53,8 @@ class ScanMetadata(PydanticModelForm):
 
         super().__init__(parent=parent, data_model=self._md_schema, client=client, **kwargs)
 
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._form_grid_container.layout().setContentsMargins(0, 0, 0, 0)
         self._layout.addWidget(self._additional_md_box)
         self._additional_md_box_layout.addWidget(self._additional_metadata)
 
