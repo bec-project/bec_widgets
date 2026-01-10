@@ -80,11 +80,26 @@ class ScanMetadata(PydanticModelForm):
 
     def get_form_data(self):
         """Get the entered metadata as a dict"""
-        return self._additional_metadata.dump_dict() | self._dict_from_grid()
+        form_data = self._additional_metadata.dump_dict() | self._dict_from_grid()
+
+        # If scan_name is empty, set it to the current scan
+        if "scan_name" in form_data and not form_data["scan_name"]:
+            form_data["scan_name"] = self._scan_name
+
+        return form_data
 
     def populate(self):
         self._additional_metadata.update_disallowed_keys(list(self._md_schema.model_fields.keys()))
         super().populate()
+
+        # Set scan_name field to current scan if it exists and is empty
+        if "scan_name" not in self.widget_dict:
+            return
+        scan_name_widget = self.widget_dict["scan_name"]
+        if not hasattr(scan_name_widget, "getValue") or scan_name_widget.getValue():
+            return
+        if hasattr(scan_name_widget, "setValue"):
+            scan_name_widget.setValue(self._scan_name)
 
     def set_schema_from_scan(self, scan_name: str | None):
         self._scan_name = scan_name or ""
