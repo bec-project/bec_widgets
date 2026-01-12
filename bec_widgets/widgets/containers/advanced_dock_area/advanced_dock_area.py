@@ -201,18 +201,7 @@ class AdvancedDockArea(DockAreaWidget):
             f"No profiles found for namespace '{namespace}'. Bootstrapping '{name}' workspace."
         )
 
-        default_settings = open_default_settings(name, namespace=namespace)
-        self._write_snapshot_to_settings(default_settings, save_preview=False)
-        if not default_settings.value(SETTINGS_KEYS["created_at"], ""):
-            default_settings.setValue(SETTINGS_KEYS["created_at"], now_iso_utc())
-        default_settings.setValue(SETTINGS_KEYS["is_quick_select"], True)
-
-        user_settings = open_user_settings(name, namespace=namespace)
-        self._write_snapshot_to_settings(user_settings, save_preview=False)
-        if not user_settings.value(SETTINGS_KEYS["created_at"], ""):
-            user_settings.setValue(SETTINGS_KEYS["created_at"], now_iso_utc())
-        user_settings.setValue(SETTINGS_KEYS["is_quick_select"], True)
-
+        self._write_profile_settings(name, namespace, save_preview=False)
         set_quick_select(name, True, namespace=namespace)
         set_last_profile(name, namespace=namespace, instance=self._last_profile_instance_id())
         return True
@@ -608,8 +597,63 @@ class AdvancedDockArea(DockAreaWidget):
 
         logger.info(f"Workspace snapshot written to settings: {settings.fileName()}")
 
+    def _write_profile_settings(
+        self,
+        name: str,
+        namespace: str | None,
+        *,
+        write_default: bool = True,
+        write_user: bool = True,
+        save_preview: bool = True,
+    ) -> None:
+        """
+        Write profile settings to default and/or user settings files.
+
+        Args:
+            name: The profile name.
+            namespace: The profile namespace.
+            write_default: Whether to write to the default settings file.
+            write_user: Whether to write to the user settings file.
+            save_preview: Whether to save a screenshot preview.
+        """
+        if write_default:
+            ds = open_default_settings(name, namespace=namespace)
+            self._write_snapshot_to_settings(ds, save_preview=save_preview)
+            if not ds.value(SETTINGS_KEYS["created_at"], ""):
+                ds.setValue(SETTINGS_KEYS["created_at"], now_iso_utc())
+            if not ds.value(SETTINGS_KEYS["is_quick_select"], None):
+                ds.setValue(SETTINGS_KEYS["is_quick_select"], True)
+
+        if write_user:
+            us = open_user_settings(name, namespace=namespace)
+            self._write_snapshot_to_settings(us, save_preview=save_preview)
+            if not us.value(SETTINGS_KEYS["created_at"], ""):
+                us.setValue(SETTINGS_KEYS["created_at"], now_iso_utc())
+            if not us.value(SETTINGS_KEYS["is_quick_select"], None):
+                us.setValue(SETTINGS_KEYS["is_quick_select"], True)
+
+    def _finalize_profile_change(self, name: str, namespace: str | None) -> None:
+        """
+        Finalize a profile change by updating state and refreshing the UI.
+
+        Args:
+            name: The profile name.
+            namespace: The profile namespace.
+        """
+        self._current_profile_name = name
+        self.profile_changed.emit(name)
+        set_last_profile(name, namespace=namespace, instance=self._last_profile_instance_id())
+        combo = self.toolbar.components.get_action("workspace_combo").widget
+        combo.refresh_profiles(active_profile=name)
+
     @SafeSlot(str)
-    def save_profile(self, name: str | None = None):
+    def save_profile(
+        self,
+        name: str | None = None,
+        *,
+        show_dialog: bool = False,
+        quick_select: bool | None = None,
+    ):
         """
         Save the current workspace profile.
 
@@ -621,76 +665,106 @@ class AdvancedDockArea(DockAreaWidget):
         Read-only bundled profiles cannot be overwritten.
 
         Args:
-            name (str | None): The name of the profile to save. If None, prompts the user.
+            name (str | None): The name of the profile to save. If None and show_dialog is True,
+                prompts the user.
+            show_dialog (bool): If True, shows the SaveProfileDialog for user interaction.
+                If False (default), saves directly without user interaction (useful for CLI usage).
+            quick_select (bool | None): Whether to include the profile in quick selection.
+                If None (default), uses the existing value or True for new profiles.
+                Only used when show_dialog is False; otherwise the dialog provides the value.
         """
 
         namespace = self.profile_namespace
+        current_profile = getattr(self, "_current_profile_name", "") or ""
 
         def _profile_exists(profile_name: str) -> bool:
             return profile_origin(profile_name, namespace=namespace) != "unknown"
 
-        initial_name = name or ""
-        quickselect_default = is_quick_select(name, namespace=namespace) if name else True
+        # Determine final values either from dialog or directly
+        if show_dialog:
+            initial_name = name or ""
+            quickselect_default = is_quick_select(name, namespace=namespace) if name else True
 
-        current_profile = getattr(self, "_current_profile_name", "") or ""
-        dialog = SaveProfileDialog(
-            self,
-            current_name=initial_name,
-            current_profile_name=current_profile,
-            name_exists=_profile_exists,
-            profile_origin=lambda n: profile_origin(n, namespace=namespace),
-            origin_label=lambda n: profile_origin_display(n, namespace=namespace),
-            quick_select_checked=quickselect_default,
-        )
-        if dialog.exec() != QDialog.DialogCode.Accepted:
-            return
+            dialog = SaveProfileDialog(
+                self,
+                current_name=initial_name,
+                current_profile_name=current_profile,
+                name_exists=_profile_exists,
+                profile_origin=lambda n: profile_origin(n, namespace=namespace),
+                origin_label=lambda n: profile_origin_display(n, namespace=namespace),
+                quick_select_checked=quickselect_default,
+            )
+            if dialog.exec() != QDialog.DialogCode.Accepted:
+                return
 
-        name = dialog.get_profile_name()
-        quickselect = dialog.is_quick_select()
+            name = dialog.get_profile_name()
+            quickselect = dialog.is_quick_select()
+            overwrite_existing = dialog.overwrite_existing
+        else:
+            # CLI / programmatic usage - no dialog
+            if not name:
+                logger.warning("save_profile called without name and show_dialog=False")
+                return
+
+            # Determine quick_select value
+            if quick_select is None:
+                # Use existing value if profile exists, otherwise default to True
+                quickselect = (
+                    is_quick_select(name, namespace=namespace) if _profile_exists(name) else True
+                )
+            else:
+                quickselect = quick_select
+
+            # For programmatic saves, check if profile is read-only
+            origin = profile_origin(name, namespace=namespace)
+            if origin in {"module", "plugin"}:
+                logger.warning(f"Cannot save to read-only profile '{name}' (origin: {origin})")
+                return
+
+            # Overwrite existing settings profile when saving programmatically
+            overwrite_existing = origin == "settings"
+
         origin_before_save = profile_origin(name, namespace=namespace)
-        overwrite_default = dialog.overwrite_existing and origin_before_save == "settings"
-        # Display saving placeholder
+        overwrite_default = overwrite_existing and origin_before_save == "settings"
+
+        # Display saving placeholder in toolbar
         workspace_combo = self.toolbar.components.get_action("workspace_combo").widget
         workspace_combo.blockSignals(True)
         workspace_combo.insertItem(0, f"{name}-saving")
         workspace_combo.setCurrentIndex(0)
         workspace_combo.blockSignals(False)
 
-        # Create or update default copy controlled by overwrite flag
+        # Write to default and/or user settings
         should_write_default = overwrite_default or not any(
             os.path.exists(path) for path in default_profile_candidates(name, namespace)
         )
-        if should_write_default:
-            ds = open_default_settings(name, namespace=namespace)
-            self._write_snapshot_to_settings(ds)
-            if not ds.value(SETTINGS_KEYS["created_at"], ""):
-                ds.setValue(SETTINGS_KEYS["created_at"], now_iso_utc())
-            # Ensure new profiles are quick-select by default
-            if not ds.value(SETTINGS_KEYS["is_quick_select"], None):
-                ds.setValue(SETTINGS_KEYS["is_quick_select"], True)
-
-        # Always (over)write the user copy
-        us = open_user_settings(name, namespace=namespace)
-        self._write_snapshot_to_settings(us)
-        if not us.value(SETTINGS_KEYS["created_at"], ""):
-            us.setValue(SETTINGS_KEYS["created_at"], now_iso_utc())
-        # Ensure new profiles are quick-select by default (only if missing)
-        if not us.value(SETTINGS_KEYS["is_quick_select"], None):
-            us.setValue(SETTINGS_KEYS["is_quick_select"], True)
+        self._write_profile_settings(
+            name, namespace, write_default=should_write_default, write_user=True
+        )
 
         set_quick_select(name, quickselect, namespace=namespace)
 
         self._refresh_workspace_list()
-        if current_profile and current_profile != name and not dialog.overwrite_existing:
+        if current_profile and current_profile != name and not overwrite_existing:
             self._pending_autosave_skip = (current_profile, name)
         else:
             self._pending_autosave_skip = None
         workspace_combo.setCurrentText(name)
-        self._current_profile_name = name
-        self.profile_changed.emit(name)
-        set_last_profile(name, namespace=namespace, instance=self._last_profile_instance_id())
-        combo = self.toolbar.components.get_action("workspace_combo").widget
-        combo.refresh_profiles(active_profile=name)
+        self._finalize_profile_change(name, namespace)
+
+    @SafeSlot()
+    def save_profile_dialog(self, name: str | None = None):
+        """
+        Save the current workspace profile with a dialog prompt.
+
+        This is a convenience method for UI usage (toolbar, dialogs) that
+        always shows the SaveProfileDialog. For programmatic/CLI usage,
+        use save_profile() directly.
+
+        Args:
+            name (str | None): Optional initial name to populate in the dialog.
+        """
+        self.save_profile(name, show_dialog=True)
 
     def load_profile(self, name: str | None = None):
         """
@@ -725,7 +799,9 @@ class AdvancedDockArea(DockAreaWidget):
         elif any(os.path.exists(path) for path in default_profile_candidates(name, namespace)):
             settings = open_default_settings(name, namespace=namespace)
         if settings is None:
-            QMessageBox.warning(self, "Profile not found", f"Profile '{name}' not found.")
+            logger.warning(f"Profile '{name}' not found in namespace '{namespace}'. Creating new.")
+            self.delete_all()
+            self.save_profile(name, show_dialog=False, quick_select=True)
             return
 
         # Clear existing docks and remove all widgets
@@ -759,11 +835,7 @@ class AdvancedDockArea(DockAreaWidget):
         self.state_manager.load_state(settings=settings)
         self._set_editable(self._editable)
 
-        self._current_profile_name = name
-        self.profile_changed.emit(name)
-        set_last_profile(name, namespace=namespace, instance=self._last_profile_instance_id())
-        combo = self.toolbar.components.get_action("workspace_combo").widget
-        combo.refresh_profiles(active_profile=name)
+        self._finalize_profile_change(name, namespace)
 
     @SafeSlot()
     @SafeSlot(str)

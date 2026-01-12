@@ -20,7 +20,7 @@ from bec_lib import bec_logger
 from bec_lib.client import BECClient
 from bec_lib.plugin_helper import plugin_package_name, plugin_repo_path
 from pydantic import BaseModel, Field
-from qtpy.QtCore import QByteArray, QDateTime, QSettings, Qt
+from qtpy.QtCore import QByteArray, QDateTime, QSettings, QTimeZone
 from qtpy.QtGui import QPixmap
 from qtpy.QtWidgets import QApplication
 
@@ -627,7 +627,7 @@ def now_iso_utc() -> str:
     Returns:
         str: UTC timestamp string (e.g., ``"2024-06-05T12:34:56Z"``).
     """
-    return QDateTime.currentDateTimeUtc().toString(Qt.ISODate)
+    return QDateTime.currentDateTimeUtc().toString("yyyy-MM-ddTHH:mm:ssZ")
 
 
 def write_manifest(settings: QSettings, docks: list[CDockWidget]) -> None:
@@ -843,7 +843,9 @@ def _file_modified_iso(path: str) -> str:
     """
     try:
         mtime = os.path.getmtime(path)
-        return QDateTime.fromSecsSinceEpoch(int(mtime), Qt.UTC).toString(Qt.ISODate)
+        return QDateTime.fromSecsSinceEpoch(int(mtime), QTimeZone.utc()).toString(
+            "yyyy-MM-ddTHH:mm:ssZ"
+        )
     except Exception:
         return now_iso_utc()
 
