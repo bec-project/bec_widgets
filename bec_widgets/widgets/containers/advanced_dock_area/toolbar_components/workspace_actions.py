@@ -156,7 +156,7 @@ class WorkspaceConnection(BundleConnection):
         # Connect the action to the target widget's method
         save_action = self.components.get_action("save_workspace").action
         if save_action.isVisible():
-            save_action.triggered.connect(self.target_widget.save_profile)
+            save_action.triggered.connect(self.target_widget.save_profile_dialog)
 
         self.components.get_action("workspace_combo").widget.currentTextChanged.connect(
             self.target_widget.load_profile
@@ -176,7 +176,7 @@ class WorkspaceConnection(BundleConnection):
         # Disconnect the action from the target widget's method
         save_action = self.components.get_action("save_workspace").action
         if save_action.isVisible():
-            save_action.triggered.disconnect(self.target_widget.save_profile)
+            save_action.triggered.disconnect(self.target_widget.save_profile_dialog)
         self.components.get_action("workspace_combo").widget.currentTextChanged.disconnect(
             self.target_widget.load_profile
         )
