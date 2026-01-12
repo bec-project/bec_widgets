@@ -214,6 +214,46 @@ class AdvancedDockArea(RPCBase):
         None
         """
 
+    @rpc_call
+    def save_profile(
+        self,
+        name: "str | None" = None,
+        *,
+        show_dialog: "bool" = False,
+        quick_select: "bool | None" = None,
+    ):
+        """
+        Save the current workspace profile.
+
+        On first save of a given name:
+          - writes a default copy to states/default/<name>.ini with tag=default and created_at
+          - writes a user copy   to states/user/<name>.ini    with tag=user    and created_at
+        On subsequent saves of user-owned profiles:
+          - updates both the default and user copies so restore uses the latest snapshot.
+        Read-only bundled profiles cannot be overwritten.
+
+        Args:
+            name (str | None): The name of the profile to save. If None and show_dialog is True,
+                prompts the user.
+            show_dialog (bool): If True, shows the SaveProfileDialog for user interaction.
+                If False (default), saves directly without user interaction (useful for CLI usage).
+            quick_select (bool | None): Whether to include the profile in quick selection.
+                If None (default), uses the existing value or True for new profiles.
+                Only used when show_dialog is False; otherwise the dialog provides the value.
+        """
+
+    @rpc_call
+    def load_profile(self, name: "str | None" = None):
+        """
+        Load a workspace profile.
+
+        Before switching, persist the current profile to the user copy.
+        Prefer loading the user copy; fall back to the default copy.
+
+        Args:
+            name (str | None): The name of the profile to load. If None, prompts the user.
+        """
+
 
 class AutoUpdates(RPCBase):
     @property
