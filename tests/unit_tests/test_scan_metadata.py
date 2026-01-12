@@ -41,6 +41,8 @@ class ExampleSchema(BasicScanMetadata):
 
 
 TEST_DICT = {
+    "scan_name": "",
+    "comment": "",
     "sample_name": "test name",
     "str_optional": None,
     "str_required": "something",
@@ -75,22 +77,26 @@ def metadata_widget(empty_metadata_widget: ScanMetadata):
     widget._md_schema = ExampleSchema
     widget.populate()
 
-    sample_name = widget._form_grid.layout().itemAtPosition(0, 1).widget()
-    str_optional = widget._form_grid.layout().itemAtPosition(1, 1).widget()
-    str_required = widget._form_grid.layout().itemAtPosition(2, 1).widget()
-    bool_optional = widget._form_grid.layout().itemAtPosition(3, 1).widget()
-    bool_required_default = widget._form_grid.layout().itemAtPosition(4, 1).widget()
-    bool_required_nodefault = widget._form_grid.layout().itemAtPosition(5, 1).widget()
-    int_default = widget._form_grid.layout().itemAtPosition(6, 1).widget()
-    int_nodefault_optional = widget._form_grid.layout().itemAtPosition(7, 1).widget()
-    float_nodefault = widget._form_grid.layout().itemAtPosition(8, 1).widget()
-    decimal_dp_limits_nodefault = widget._form_grid.layout().itemAtPosition(9, 1).widget()
-    dict_default = widget._form_grid.layout().itemAtPosition(10, 1).widget()
-    unsupported_class = widget._form_grid.layout().itemAtPosition(11, 1).widget()
+    scan_name = widget._form_grid.layout().itemAtPosition(0, 1).widget()
+    comment = widget._form_grid.layout().itemAtPosition(1, 1).widget()
+    sample_name = widget._form_grid.layout().itemAtPosition(2, 1).widget()
+    str_optional = widget._form_grid.layout().itemAtPosition(3, 1).widget()
+    str_required = widget._form_grid.layout().itemAtPosition(4, 1).widget()
+    bool_optional = widget._form_grid.layout().itemAtPosition(5, 1).widget()
+    bool_required_default = widget._form_grid.layout().itemAtPosition(6, 1).widget()
+    bool_required_nodefault = widget._form_grid.layout().itemAtPosition(7, 1).widget()
+    int_default = widget._form_grid.layout().itemAtPosition(8, 1).widget()
+    int_nodefault_optional = widget._form_grid.layout().itemAtPosition(9, 1).widget()
+    float_nodefault = widget._form_grid.layout().itemAtPosition(10, 1).widget()
+    decimal_dp_limits_nodefault = widget._form_grid.layout().itemAtPosition(11, 1).widget()
+    dict_default = widget._form_grid.layout().itemAtPosition(12, 1).widget()
+    unsupported_class = widget._form_grid.layout().itemAtPosition(13, 1).widget()
 
     yield (
         widget,
         {
+            "scan_name": scan_name,
+            "comment": comment,
             "sample_name": sample_name,
             "str_optional": str_optional,
             "str_required": str_required,
