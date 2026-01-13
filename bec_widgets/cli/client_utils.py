@@ -356,7 +356,7 @@ class BECGuiClient(RPCBase):
         return widget
 
     def delete(self, name: str) -> None:
-        """Delete a dock area.
+        """Delete a dock area and its parent window.
 
         Args:
             name(str): The name of the dock area.
@@ -364,7 +364,19 @@ class BECGuiClient(RPCBase):
         widget = self.windows.get(name)
         if widget is None:
             raise ValueError(f"Dock area {name} not found.")
-        widget._run_rpc("close")  # pylint: disable=protected-access
+
+        # Get the container_proxy (parent window) gui_id from the server registry
+        obj = self._server_registry.get(widget._gui_id)
+        if obj is None:
+            raise ValueError(f"Widget {name} not found in registry.")
+
+        container_gui_id = obj.get("container_proxy")
+        if container_gui_id:
+            # Close the container window which will also clean up the dock area
+            widget._run_rpc("close", gui_id=container_gui_id)  # pylint: disable=protected-access
+        else:
+            # Fallback: just close the dock area directly
+            widget._run_rpc("close")  # pylint: disable=protected-access
 
     def delete_all(self) -> None:
         """Delete all dock areas."""
