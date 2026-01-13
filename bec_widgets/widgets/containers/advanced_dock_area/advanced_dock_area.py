@@ -21,6 +21,7 @@ from bec_widgets import BECWidget, SafeProperty, SafeSlot
 from bec_widgets.cli.rpc.rpc_widget_handler import widget_handler
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.colors import apply_theme
+from bec_widgets.utils.name_utils import sanitize_namespace
 from bec_widgets.utils.toolbars.actions import (
     ExpandableMenuAction,
     MaterialIconAction,
@@ -48,7 +49,6 @@ from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import (
     profile_origin_display,
     read_manifest,
     restore_user_from_default,
-    sanitize_namespace,
     set_last_profile,
     set_quick_select,
     user_profile_candidates,
@@ -277,6 +277,7 @@ class AdvancedDockArea(DockAreaWidget):
         title_buttons: Mapping[str, bool] | Sequence[str] | str | None = None,
         show_settings_action: bool | None = None,
         promote_central: bool = False,
+        object_name: str | None = None,
         **widget_kwargs,
     ) -> QWidget | CDockWidget | BECWidget:
         """
@@ -301,6 +302,7 @@ class AdvancedDockArea(DockAreaWidget):
             title_buttons=title_buttons,
             show_settings_action=show_settings_action,
             promote_central=promote_central,
+            object_name=object_name,
             **widget_kwargs,
         )
 

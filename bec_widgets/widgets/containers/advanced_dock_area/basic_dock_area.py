@@ -1227,6 +1227,7 @@ class DockAreaWidget(BECWidget, QWidget):
         promote_central: bool = False,
         dock_icon: QIcon | None = None,
         apply_widget_icon: bool = True,
+        object_name: str | None = None,
         **widget_kwargs,
     ) -> QWidget | CDockWidget | BECWidget:
         """
@@ -1262,6 +1263,9 @@ class DockAreaWidget(BECWidget, QWidget):
                 the widget's ``ICON_NAME`` attribute is used when available.
             apply_widget_icon(bool): When False, skip automatically resolving the icon from
                 the widget's ``ICON_NAME`` (useful for callers who want no icon and do not pass one explicitly).
+            object_name(str | None): Optional object name to assign to the created widget.
+            **widget_kwargs: Additional keyword arguments passed to the widget constructor
+                when creating by type name.
 
         Returns:
             The widget instance by default, or the created `CDockWidget` when `return_dock` is True.
@@ -1273,7 +1277,9 @@ class DockAreaWidget(BECWidget, QWidget):
                 )
             widget = cast(
                 BECWidget,
-                widget_handler.create_widget(widget_type=widget, parent=self, **widget_kwargs),
+                widget_handler.create_widget(
+                    widget_type=widget, parent=self, object_name=object_name, **widget_kwargs
+                ),
             )
 
             spec = self._build_creation_spec(

@@ -24,6 +24,7 @@ from qtpy.QtCore import QByteArray, QDateTime, QSettings, Qt
 from qtpy.QtGui import QPixmap
 from qtpy.QtWidgets import QApplication
 
+from bec_widgets.utils.name_utils import sanitize_namespace
 from bec_widgets.widgets.containers.qt_ads import CDockWidget
 
 logger = bec_logger.logger
@@ -122,25 +123,6 @@ def _settings_profiles_root() -> str:
     root = os.environ.get("BECWIDGETS_PROFILE_DIR", default_path)
     os.makedirs(root, exist_ok=True)
     return root
-
-
-def sanitize_namespace(namespace: str | None) -> str | None:
-    """
-    Clean user-provided namespace labels for filesystem compatibility.
-
-    Args:
-        namespace (str | None): Arbitrary namespace identifier supplied by the caller.
-
-    Returns:
-        str | None: Sanitized namespace containing only safe characters, or ``None``
-            when the input is empty.
-    """
-    if not namespace:
-        return None
-    ns = namespace.strip()
-    if not ns:
-        return None
-    return re.sub(r"[^0-9A-Za-z._-]+", "_", ns)
 
 
 def _profiles_dir(segment: str, namespace: str | None) -> str:
