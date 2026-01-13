@@ -16,6 +16,7 @@ from qtpy.QtWidgets import QApplication
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils.error_popups import ErrorPopupUtility, SafeSlot
+from bec_widgets.utils.name_utils import sanitize_namespace
 from bec_widgets.utils.widget_io import WidgetHierarchy
 from bec_widgets.utils.yaml_dialog import load_yaml, load_yaml_gui, save_yaml, save_yaml_gui
 
@@ -102,6 +103,8 @@ class BECConnector:
         """
         # Extract object_name from kwargs to not pass it to Qt class
         object_name = object_name or kwargs.pop("objectName", None)
+        if object_name is not None:
+            object_name = sanitize_namespace(object_name)
         # Ensure the parent is always the first argument for QObject
         parent = kwargs.pop("parent", None)
         # This initializes the QObject or any qt related class BECConnector has to be used from this line down with QObject, otherwise hierarchy logic will not work
