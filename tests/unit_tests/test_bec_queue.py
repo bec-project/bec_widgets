@@ -100,7 +100,8 @@ def test_bec_queue(bec_queue, bec_queue_msg_full):
     assert bec_queue.table.rowCount() == 1
     assert bec_queue.table.item(0, 0).text() == "1289"
     assert bec_queue.table.item(0, 1).text() == "line_scan"
-    assert bec_queue.table.item(0, 2).text() == "COMPLETED"
+    assert bec_queue.table.item(0, 2).text() == "line_scan"
+    assert bec_queue.table.item(0, 3).text() == "COMPLETED"
 
 
 def test_bec_queue_empty(bec_queue):
@@ -109,6 +110,7 @@ def test_bec_queue_empty(bec_queue):
     assert bec_queue.table.item(0, 0).text() == ""
     assert bec_queue.table.item(0, 1).text() == ""
     assert bec_queue.table.item(0, 2).text() == ""
+    assert bec_queue.table.item(0, 3).text() == ""
 
 
 def test_queue_abort(bec_queue, bec_queue_msg_full):
@@ -118,9 +120,10 @@ def test_queue_abort(bec_queue, bec_queue_msg_full):
     assert bec_queue.table.rowCount() == 1
     assert bec_queue.table.item(0, 0).text() == "1289"
     assert bec_queue.table.item(0, 1).text() == "line_scan"
-    assert bec_queue.table.item(0, 2).text() == "COMPLETED"
+    assert bec_queue.table.item(0, 2).text() == "line_scan"
+    assert bec_queue.table.item(0, 3).text() == "COMPLETED"
 
-    abort_button = bec_queue.table.cellWidget(0, 3)
+    abort_button = bec_queue.table.cellWidget(0, 4)
     abort_button.button.click()
 
     bec_queue.update_queue(bec_queue_msg_full.content, {})
@@ -128,9 +131,10 @@ def test_queue_abort(bec_queue, bec_queue_msg_full):
     assert bec_queue.table.rowCount() == 1
     assert bec_queue.table.item(0, 0).text() == "1289"
     assert bec_queue.table.item(0, 1).text() == "line_scan"
-    assert bec_queue.table.item(0, 2).text() == "COMPLETED"
+    assert bec_queue.table.item(0, 2).text() == "line_scan"
+    assert bec_queue.table.item(0, 3).text() == "COMPLETED"
 
-    abort_button = bec_queue.table.cellWidget(0, 3)
+    abort_button = bec_queue.table.cellWidget(0, 4)
     abort_button.button.click()
 
     bec_queue.update_queue(bec_queue_msg_full.content, {})
@@ -138,7 +142,8 @@ def test_queue_abort(bec_queue, bec_queue_msg_full):
     assert bec_queue.table.rowCount() == 1
     assert bec_queue.table.item(0, 0).text() == "1289"
     assert bec_queue.table.item(0, 1).text() == "line_scan"
-    assert bec_queue.table.item(0, 2).text() == "COMPLETED"
+    assert bec_queue.table.item(0, 2).text() == "line_scan"
+    assert bec_queue.table.item(0, 3).text() == "COMPLETED"
 
-    abort_button = bec_queue.table.cellWidget(0, 3)
+    abort_button = bec_queue.table.cellWidget(0, 4)
     abort_button.button.click()
