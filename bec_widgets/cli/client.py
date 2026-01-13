@@ -113,6 +113,7 @@ class AdvancedDockArea(RPCBase):
         title_buttons: "Mapping[str, bool] | Sequence[str] | str | None" = None,
         show_settings_action: "bool | None" = None,
         promote_central: "bool" = False,
+        object_name: "str | None" = None,
         **widget_kwargs,
     ) -> "QWidget | CDockWidget | BECWidget":
         """
@@ -153,6 +154,25 @@ class AdvancedDockArea(RPCBase):
     def delete_all(self):
         """
         Delete all docks and their associated widgets.
+        """
+
+    @rpc_call
+    def remove_widget(self, object_name: "str") -> "bool":
+        """
+        Remove a widget from the dock area by its object name.
+
+        Args:
+            object_name: The object name of the widget to remove.
+
+        Returns:
+            bool: True if the widget was found and removed, False otherwise.
+
+        Raises:
+            ValueError: If no widget with the given object name is found.
+
+        Example:
+            >>> dock_area.remove_widget("my_widget")
+            True
         """
 
     @rpc_call
@@ -1058,6 +1078,7 @@ class DockAreaWidget(RPCBase):
         promote_central: "bool" = False,
         dock_icon: "QIcon | None" = None,
         apply_widget_icon: "bool" = True,
+        object_name: "str | None" = None,
         **widget_kwargs,
     ) -> "QWidget | CDockWidget | BECWidget":
         """
@@ -1093,6 +1114,9 @@ class DockAreaWidget(RPCBase):
                 the widget's ``ICON_NAME`` attribute is used when available.
             apply_widget_icon(bool): When False, skip automatically resolving the icon from
                 the widget's ``ICON_NAME`` (useful for callers who want no icon and do not pass one explicitly).
+            object_name(str | None): Optional object name to assign to the created widget.
+            **widget_kwargs: Additional keyword arguments passed to the widget constructor
+                when creating by type name.
 
         Returns:
             The widget instance by default, or the created `CDockWidget` when `return_dock` is True.
@@ -1132,6 +1156,25 @@ class DockAreaWidget(RPCBase):
     def delete_all(self):
         """
         Delete all docks and their associated widgets.
+        """
+
+    @rpc_call
+    def remove_widget(self, object_name: "str") -> "bool":
+        """
+        Remove a widget from the dock area by its object name.
+
+        Args:
+            object_name: The object name of the widget to remove.
+
+        Returns:
+            bool: True if the widget was found and removed, False otherwise.
+
+        Raises:
+            ValueError: If no widget with the given object name is found.
+
+        Example:
+            >>> dock_area.remove_widget("my_widget")
+            True
         """
 
     @rpc_call
@@ -2723,6 +2766,7 @@ class MonacoDock(RPCBase):
         promote_central: "bool" = False,
         dock_icon: "QIcon | None" = None,
         apply_widget_icon: "bool" = True,
+        object_name: "str | None" = None,
         **widget_kwargs,
     ) -> "QWidget | CDockWidget | BECWidget":
         """
@@ -2758,6 +2802,9 @@ class MonacoDock(RPCBase):
                 the widget's ``ICON_NAME`` attribute is used when available.
             apply_widget_icon(bool): When False, skip automatically resolving the icon from
                 the widget's ``ICON_NAME`` (useful for callers who want no icon and do not pass one explicitly).
+            object_name(str | None): Optional object name to assign to the created widget.
+            **widget_kwargs: Additional keyword arguments passed to the widget constructor
+                when creating by type name.
 
         Returns:
             The widget instance by default, or the created `CDockWidget` when `return_dock` is True.
@@ -2797,6 +2844,25 @@ class MonacoDock(RPCBase):
     def delete_all(self):
         """
         Delete all docks and their associated widgets.
+        """
+
+    @rpc_call
+    def remove_widget(self, object_name: "str") -> "bool":
+        """
+        Remove a widget from the dock area by its object name.
+
+        Args:
+            object_name: The object name of the widget to remove.
+
+        Returns:
+            bool: True if the widget was found and removed, False otherwise.
+
+        Raises:
+            ValueError: If no widget with the given object name is found.
+
+        Example:
+            >>> dock_area.remove_widget("my_widget")
+            True
         """
 
     @rpc_call
