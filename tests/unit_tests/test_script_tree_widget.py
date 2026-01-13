@@ -55,20 +55,16 @@ def test_script_tree_hover_events(script_tree, qtbot):
     # Send the event to the viewport (the event filter is installed on the viewport)
     script_tree.eventFilter(viewport, mouse_event)
 
-    qtbot.wait(100)  # Allow time for the hover to be processed
-
     # Now, the hover index should be set to the first item
-    assert script_tree.delegate.hovered_index.isValid() == True
+    qtbot.waitUntil(lambda: script_tree.delegate.hovered_index.isValid(), timeout=5000)
     assert script_tree.delegate.hovered_index.row() == index.row()
 
     # Simulate mouse leaving the viewport
     leave_event = QEvent(QEvent.Type.Leave)
     script_tree.eventFilter(viewport, leave_event)
 
-    qtbot.wait(100)  # Allow time for the leave event to be processed
-
     # After leaving, no item should be hovered
-    assert script_tree.delegate.hovered_index.isValid() == False
+    qtbot.waitUntil(lambda: not script_tree.delegate.hovered_index.isValid(), timeout=5000)
 
 
 @pytest.mark.timeout(10)
