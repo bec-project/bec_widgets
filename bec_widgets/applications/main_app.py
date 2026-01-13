@@ -193,7 +193,12 @@ class BECMainApp(BECMainWindow):
             new_view.on_enter()
 
 
-if __name__ == "__main__":  # pragma: no cover
+def main():  # pragma: no cover
+    """
+    Main function to run the BEC main application, exposed as a script entry point through
+    pyproject.toml.
+    """
+    # pylint: disable=import-outside-toplevel
     import argparse
     import sys
 
@@ -225,3 +230,7 @@ if __name__ == "__main__":  # pragma: no cover
     w.show()
 
     sys.exit(app.exec())
+
+
+if __name__ == "__main__":  # pragma: no cover
+    main()
