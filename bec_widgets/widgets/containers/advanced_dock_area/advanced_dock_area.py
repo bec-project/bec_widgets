@@ -107,6 +107,7 @@ class AdvancedDockArea(DockAreaWidget):
         "mode.setter",
         "save_profile",
         "load_profile",
+        "delete_profile",
     ]
 
     # Define a signal for mode changes
@@ -183,6 +184,7 @@ class AdvancedDockArea(DockAreaWidget):
     def _ensure_initial_profile(self) -> bool:
         """
         Ensure at least one workspace profile exists for the current namespace.
+        If list_profile fails due to file permission or corrupted profiles, no action taken.
 
         Returns:
             bool: True if a profile was created, False otherwise.
@@ -870,37 +872,82 @@ class AdvancedDockArea(DockAreaWidget):
         self.load_profile(target)
 
     @SafeSlot()
-    def delete_profile(self):
+    def delete_profile(self, name: str | None = None, show_dialog: bool = False) -> bool:
         """
-        Delete the currently selected workspace profile file and refresh the combo list.
+        Delete a workspace profile.
+
+        Args:
+            name: The name of the profile to delete. If None, uses the currently
+                selected profile from the toolbar combo box (for UI usage).
+            show_dialog: If True, show confirmation dialog before deletion.
+                Defaults to False for CLI/programmatic usage.
+
+        Returns:
+            bool: True if the profile was deleted, False otherwise.
+
+        Raises:
+            ValueError: If the profile is read-only or doesn't exist (when show_dialog=False).
+
         """
-        combo = self.toolbar.components.get_action("workspace_combo").widget
-        name = combo.currentText()
+        # Resolve profile name
+        if name is None:
+            combo = self.toolbar.components.get_action("workspace_combo").widget
+            name = combo.currentText()
         if not name:
-            return
-
-        # Protect bundled/module/plugin profiles from deletion
-        if is_profile_read_only(name, namespace=self.profile_namespace):
-            QMessageBox.information(
-                self, "Delete Profile", f"Profile '{name}' is read-only and cannot be deleted."
-            )
-            return
-
-        # Confirm deletion for regular profiles
-        reply = QMessageBox.question(
-            self,
-            "Delete Profile",
-            f"Are you sure you want to delete the profile '{name}'?\n\n"
-            f"This action cannot be undone.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        if reply != QMessageBox.StandardButton.Yes:
-            return
+            if show_dialog:
+                return False
+            raise ValueError("No profile name provided.")
 
         namespace = self.profile_namespace
-        delete_profile_files(name, namespace=namespace)
+
+        # Check if profile is read-only
+        if is_profile_read_only(name, namespace=namespace):
+            if show_dialog:
+                QMessageBox.information(
+                    self, "Delete Profile", f"Profile '{name}' is read-only and cannot be deleted."
+                )
+                return False
+            raise ValueError(f"Profile '{name}' is read-only and cannot be deleted.")
+
+        # Confirm deletion if dialog is enabled
+        if show_dialog:
+            reply = QMessageBox.question(
+                self,
+                "Delete Profile",
+                f"Are you sure you want to delete the profile '{name}'?\n\n"
+                f"This action cannot be undone.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return False
+
+        # Perform deletion
+        try:
+            removed = delete_profile_files(name, namespace=namespace)
+        except OSError as exc:
+            if show_dialog:
+                QMessageBox.warning(
+                    self, "Delete Profile", f"Failed to delete profile '{name}': {exc}"
+                )
+                return False
+            raise ValueError(f"Failed to delete profile '{name}': {exc}") from exc
+
+        if not removed:
+            if show_dialog:
+                QMessageBox.information(
+                    self, "Delete Profile", "No writable profile files were found to delete."
+                )
+                return False
+            raise ValueError(f"No writable profile files found for '{name}'.")
+
+        # Clear current profile if it was deleted
+        if getattr(self, "_current_profile_name", None) == name:
+            self._current_profile_name = None
+
+        # Refresh the workspace list
         self._refresh_workspace_list()
+        return True
 
     def _refresh_workspace_list(self):
         """

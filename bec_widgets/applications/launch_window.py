@@ -397,12 +397,10 @@ class LaunchWindow(BECMainWindow):
         with RPCRegister.delayed_broadcast() as rpc_register:
             existing_dock_areas = rpc_register.get_names_of_rpc_by_class_type(AdvancedDockArea)
             if name is not None:
-                if name in existing_dock_areas:
-                    raise ValueError(
-                        f"Name {name} must be unique for dock areas, but already exists: {existing_dock_areas}."
-                    )
                 WidgetContainerUtils.raise_for_invalid_name(name)
-
+                # If name already exists, generate a unique one with counter suffix
+                if name in existing_dock_areas:
+                    name = WidgetContainerUtils.generate_unique_name(name, existing_dock_areas)
             else:
                 name = "dock_area"
                 name = WidgetContainerUtils.generate_unique_name(name, existing_dock_areas)

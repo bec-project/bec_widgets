@@ -274,6 +274,24 @@ class AdvancedDockArea(RPCBase):
             name (str | None): The name of the profile to load. If None, prompts the user.
         """
 
+    @rpc_call
+    def delete_profile(self, name: "str | None" = None, show_dialog: "bool" = False) -> "bool":
+        """
+        Delete a workspace profile.
+
+        Args:
+            name: The name of the profile to delete. If None, uses the currently
+                selected profile from the toolbar combo box (for UI usage).
+            show_dialog: If True, show confirmation dialog before deletion.
+                Defaults to False for CLI/programmatic usage.
+
+        Returns:
+            bool: True if the profile was deleted, False otherwise.
+
+        Raises:
+            ValueError: If the profile is read-only or doesn't exist (when show_dialog=False).
+        """
+
 
 class AutoUpdates(RPCBase):
     @property
