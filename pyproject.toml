@@ -13,16 +13,16 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    "bec_ipython_client~=3.70", # needed for jupyter console
+    "bec_ipython_client~=3.70",      # needed for jupyter console
     "bec_lib~=3.70",
     "bec_qthemes~=1.0, >=1.1.2",
-    "black~=25.0",               # needed for bw-generate-cli
-    "isort~=5.13, >=5.13.2",     # needed for bw-generate-cli
+    "black~=25.0",                   # needed for bw-generate-cli
+    "isort~=5.13, >=5.13.2",         # needed for bw-generate-cli
     "ophyd_devices~=1.29, >=1.29.1",
     "pydantic~=2.0",
     "pyqtgraph==0.13.7",
     "PySide6==6.9.0",
-    "qtconsole~=5.5, >=5.5.1",   # needed for jupyter console
+    "qtconsole~=5.5, >=5.5.1",       # needed for jupyter console
     "qtpy~=2.4",
     "thefuzz~=0.22",
     "qtmonaco~=0.8, >=0.8.1",
@@ -58,7 +58,7 @@ Homepage = "https://gitlab.psi.ch/bec/bec_widgets"
 bw-generate-cli = "bec_widgets.cli.generate_cli:main"
 bec-gui-server = "bec_widgets.cli.server:main"
 bec-designer = "bec_widgets.utils.bec_designer:main"
-bec-app = "bec_widgets.applications.bec_app:main"
+bec-app = "bec_widgets.applications.main_app:main"
 
 [tool.hatch.build.targets.wheel]
 include = ["*"]
