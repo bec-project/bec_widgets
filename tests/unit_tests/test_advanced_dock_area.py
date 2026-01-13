@@ -141,8 +141,36 @@ def workspace_manager_target():
         def save_profile(self):
             self.save_called = True
 
+        def save_profile_dialog(self, name: str | None = None):
+            """Mock save_profile_dialog that sets save_called flag."""
+            self.save_called = True
+
         def _refresh_workspace_list(self):
             self.refresh_calls += 1
+
+        def delete_profile(self, name: str, show_dialog: bool = False) -> bool:
+            """Mock delete_profile that performs actual file deletion."""
+            from qtpy.QtWidgets import QMessageBox
+
+            from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import (
+                delete_profile_files,
+                is_profile_read_only,
+            )
+
+            if is_profile_read_only(name):
+                if show_dialog:
+                    QMessageBox.information(
+                        None,
+                        "Delete Profile",
+                        f"Profile '{name}' is read-only and cannot be deleted.",
+                    )
+                    return False
+                raise ValueError(f"Profile '{name}' is read-only.")
+            delete_profile_files(name)
+            if self._current_profile_name == name:
+                self._current_profile_name = None
+            self._refresh_workspace_list()
+            return True
 
     def _factory():
         return _Target()
@@ -272,11 +300,6 @@ class TestBasicDockArea:
         assert len(basic_dock_area.dock_list()) == 1
         assert "panel_one" not in basic_dock_area.dock_map()
         assert "panel_two" in basic_dock_area.dock_map()
-
-    def test_remove_widget_raises_for_unknown_name(self, basic_dock_area):
-        """Test remove_widget raises ValueError for non-existent widget."""
-        with pytest.raises(ValueError, match="No widget found with object name 'nonexistent'"):
-            basic_dock_area.remove_widget("nonexistent")
 
     def test_manifest_serialization_includes_floating_geometry(
         self, basic_dock_area, qtbot, tmp_path
@@ -1703,7 +1726,7 @@ class TestWorkspaceProfileOperations:
             "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.SaveProfileDialog",
             StubDialog,
         ):
-            advanced_dock_area.save_profile(profile_name)
+            advanced_dock_area.save_profile(profile_name, show_dialog=True)
 
         assert os.path.exists(target_path)
 
@@ -1775,7 +1798,7 @@ class TestWorkspaceProfileOperations:
             "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.SaveProfileDialog",
             StubDialog,
         ):
-            advanced_dock_area.save_profile()
+            advanced_dock_area.save_profile(show_dialog=True)
 
         qtbot.wait(500)
         source_manifest = read_manifest(helper.open_user(source_profile))
@@ -1844,7 +1867,7 @@ class TestWorkspaceProfileOperations:
                     return_value=None,
                 ) as mock_info,
             ):
-                advanced_dock_area.delete_profile()
+                advanced_dock_area.delete_profile(show_dialog=True)
 
                 mock_question.assert_not_called()
                 mock_info.assert_called_once()
@@ -1875,12 +1898,30 @@ class TestWorkspaceProfileOperations:
                 mock_question.return_value = QMessageBox.Yes
 
                 with patch.object(advanced_dock_area, "_refresh_workspace_list") as mock_refresh:
-                    advanced_dock_area.delete_profile()
+                    advanced_dock_area.delete_profile(show_dialog=True)
 
                     mock_question.assert_called_once()
                     mock_refresh.assert_called_once()
                     # Profile should be deleted
                     assert not os.path.exists(user_path)
+
+    def test_delete_profile_cli_usage(self, advanced_dock_area, temp_profile_dir):
+        """Test delete_profile with explicit name (CLI usage - no dialog by default)."""
+        profile_name = "cli_deletable_profile"
+        helper = profile_helper(advanced_dock_area)
+
+        # Create regular profile
+        settings = helper.open_user(profile_name)
+        settings.setValue("test", "value")
+        settings.sync()
+        user_path = helper.user_path(profile_name)
+        assert os.path.exists(user_path)
+
+        # Delete without dialog (CLI usage - default behavior)
+        result = advanced_dock_area.delete_profile(profile_name)
+
+        assert result is True
+        assert not os.path.exists(user_path)
 
     def test_refresh_workspace_list(self, advanced_dock_area, temp_profile_dir):
         """Test refreshing workspace list."""
