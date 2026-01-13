@@ -29,7 +29,6 @@ from qtpy.QtWidgets import (
 from bec_widgets import BECWidget, SafeSlot
 from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import (
-    delete_profile_files,
     get_profile_info,
     is_quick_select,
     list_profiles,
@@ -341,55 +340,35 @@ class WorkSpaceManager(BECWidget, QWidget):
 
     @SafeSlot(str)
     def delete_profile(self, profile_name: str):
-        info = get_profile_info(profile_name, namespace=self.profile_namespace)
-        if info.is_read_only:
-            QMessageBox.information(
-                self, "Delete Profile", "This profile is read-only and cannot be deleted."
-            )
-            return
+        """
+        Delete a profile by delegating to the target widget's delete_profile method.
 
-        reply = QMessageBox.question(
-            self,
-            "Delete Profile",
-            (
-                f"Delete the profile '{profile_name}'?\n\n"
-                "This will remove both the user and default copies."
-            ),
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No,
-        )
-        if reply != QMessageBox.Yes:
+        Args:
+            profile_name: The name of the profile to delete.
+        """
+        if self.target_widget is None or not hasattr(self.target_widget, "delete_profile"):
+            QMessageBox.warning(
+                self, "Delete Profile", "No target widget available for profile deletion."
+            )
             return
 
         try:
-            removed = delete_profile_files(profile_name, namespace=self.profile_namespace)
-        except OSError as exc:
-            QMessageBox.warning(
-                self, "Delete Profile", f"Failed to delete profile '{profile_name}': {exc}"
-            )
-            return
+            result = self.target_widget.delete_profile(profile_name, show_dialog=True)
+        except ValueError:
+            # Error was already handled by target widget's dialog
+            result = False
 
-        if not removed:
-            QMessageBox.information(
-                self, "Delete Profile", "No writable profile files were found to delete."
-            )
-            return
-
-        if self.target_widget is not None:
-            if getattr(self.target_widget, "_current_profile_name", None) == profile_name:
-                self.target_widget._current_profile_name = None
-            if hasattr(self.target_widget, "_refresh_workspace_list"):
-                self.target_widget._refresh_workspace_list()
-
-        self.render_table()
-        remaining_profiles = list_profiles(namespace=self.profile_namespace)
-        if remaining_profiles:
-            next_profile = remaining_profiles[0]
-            self._select_by_name(next_profile)
-            self._show_profile_details(next_profile)
-        else:
-            self.profile_details_tree.clear()
-            self.screenshot_label.setPixmap(QPixmap())
+        if result:
+            # Refresh our table and select next profile
+            self.render_table()
+            remaining_profiles = list_profiles(namespace=self.profile_namespace)
+            if remaining_profiles:
+                next_profile = remaining_profiles[0]
+                self._select_by_name(next_profile)
+                self._show_profile_details(next_profile)
+            else:
+                self.profile_details_tree.clear()
+                self.screenshot_label.setPixmap(QPixmap())
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

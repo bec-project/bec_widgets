@@ -39,7 +39,7 @@ def auto_update_dock_area(object_name: str | None = None) -> AutoUpdates:
         object_name(str): The name of the dock area.
 
     Returns:
-        BECDockArea: The created dock area.
+        AdvancedDockArea: The created dock area.
     """
     _auto_update = AutoUpdates(object_name=object_name)
     return _auto_update

@@ -303,27 +303,55 @@ class BECGuiClient(RPCBase):
         wait: bool = True,
         geometry: tuple[int, int, int, int] | None = None,
         launch_script: str = "dock_area",
+        profile: str | None = None,
+        empty: bool = False,
         **kwargs,
-    ) -> client.BECDockArea:
+    ) -> client.AdvancedDockArea:
         """Create a new top-level dock area.
 
         Args:
             name(str, optional): The name of the dock area. Defaults to None.
             wait(bool, optional): Whether to wait for the server to start. Defaults to True.
-            geometry(tuple[int, int, int, int] | None): The geometry of the dock area (pos_x, pos_y, w, h)
+            geometry(tuple[int, int, int, int] | None): The geometry of the dock area (pos_x, pos_y, w, h).
+            launch_script(str): The launch script to use. Defaults to "dock_area".
+            profile(str | None): The profile name to load. If None, restores the last used profile.
+                Use a profile name to load a specific saved profile.
+            empty(bool): If True, start with an empty dock area without loading any profile.
+                This takes precedence over the profile argument. Defaults to False.
+            **kwargs: Additional keyword arguments passed to the dock area.
+
         Returns:
-            client.BECDockArea: The new dock area.
+            client.AdvancedDockArea: The new dock area.
+
+        Examples:
+            >>> gui.new()  # Restore last used profile
+            >>> gui.new(profile="my_profile")  # Load specific profile, if profile do not exist, the new profile is created empty with specified name
+            >>> gui.new(empty=True)  # Start with empty dock area
+            >>> gui.new(name="custom_dock", empty=True)  # Named empty dock area
         """
+        if empty:
+            # Use a unique non-existent profile name to ensure empty start
+            profile = "__empty__"
         if not self._check_if_server_is_alive():
             self.start(wait=True)
         if wait:
             with wait_for_server(self):
                 widget = self.launcher._run_rpc(
-                    "launch", launch_script=launch_script, name=name, geometry=geometry, **kwargs
+                    "launch",
+                    launch_script=launch_script,
+                    name=name,
+                    geometry=geometry,
+                    profile=profile,
+                    **kwargs,
                 )  # pylint: disable=protected-access
                 return widget
         widget = self.launcher._run_rpc(
-            "launch", launch_script=launch_script, name=name, geometry=geometry, **kwargs
+            "launch",
+            launch_script=launch_script,
+            name=name,
+            geometry=geometry,
+            profile=profile,
+            **kwargs,
         )  # pylint: disable=protected-access
         return widget
 
