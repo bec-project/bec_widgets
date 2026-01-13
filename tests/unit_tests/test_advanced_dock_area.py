@@ -250,6 +250,34 @@ class TestBasicDockArea:
         basic_dock_area.delete_all()
         assert basic_dock_area.dock_list() == []
 
+    def test_remove_widget_by_object_name(self, basic_dock_area, qtbot):
+        """Test remove_widget removes widget by object name."""
+        panel_one = QWidget(parent=basic_dock_area)
+        panel_one.setObjectName("panel_one")
+        panel_two = QWidget(parent=basic_dock_area)
+        panel_two.setObjectName("panel_two")
+
+        basic_dock_area.new(panel_one, return_dock=True)
+        basic_dock_area.new(panel_two, return_dock=True)
+
+        assert len(basic_dock_area.dock_list()) == 2
+        assert "panel_one" in basic_dock_area.dock_map()
+        assert "panel_two" in basic_dock_area.dock_map()
+
+        # Remove panel_one
+        result = basic_dock_area.remove_widget("panel_one")
+        qtbot.wait(100)
+
+        assert result is True
+        assert len(basic_dock_area.dock_list()) == 1
+        assert "panel_one" not in basic_dock_area.dock_map()
+        assert "panel_two" in basic_dock_area.dock_map()
+
+    def test_remove_widget_raises_for_unknown_name(self, basic_dock_area):
+        """Test remove_widget raises ValueError for non-existent widget."""
+        with pytest.raises(ValueError, match="No widget found with object name 'nonexistent'"):
+            basic_dock_area.remove_widget("nonexistent")
+
     def test_manifest_serialization_includes_floating_geometry(
         self, basic_dock_area, qtbot, tmp_path
     ):

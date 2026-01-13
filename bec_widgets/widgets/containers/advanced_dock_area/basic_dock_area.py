@@ -54,6 +54,7 @@ class DockAreaWidget(BECWidget, QWidget):
         "widget_list",
         "attach_all",
         "delete_all",
+        "remove_widget",
         "set_layout_ratios",
         "describe_layout",
         "print_layout_structure",
@@ -1374,6 +1375,31 @@ class DockAreaWidget(BECWidget, QWidget):
                 self.dock_manager.addDockWidgetTab(
                     QtAds.DockWidgetArea.RightDockWidgetArea, dock, target
                 )
+
+    @SafeSlot(str)
+    def remove_widget(self, object_name: str) -> bool:
+        """
+        Remove a widget from the dock area by its object name.
+
+        Args:
+            object_name: The object name of the widget to remove.
+
+        Returns:
+            bool: True if the widget was found and removed, False otherwise.
+
+        Raises:
+            ValueError: If no widget with the given object name is found.
+
+        Example:
+            >>> dock_area.remove_widget("my_widget")
+            True
+        """
+        dock_map = self.dock_map()
+        dock = dock_map.get(object_name)
+        if dock is None:
+            raise ValueError(f"No widget found with object name '{object_name}'.")
+        self._delete_dock(dock)
+        return True
 
     @SafeSlot()
     def delete_all(self):
