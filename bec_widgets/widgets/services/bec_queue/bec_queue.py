@@ -59,8 +59,10 @@ class BECQueue(BECWidget, CompactPopupWidget):
         # Set up the table
         self.table = QTableWidget(self)
         # self.layout.addWidget(self.table)
-        self.table.setColumnCount(4)
-        self.table.setHorizontalHeaderLabels(["Scan Number", "Type", "Status", "Cancel"])
+        self.table.setColumnCount(5)
+        self.table.setHorizontalHeaderLabels(
+            ["Scan Number", "Scan Name", "Type", "Status", "Cancel"]
+        )
 
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Stretch)
@@ -169,15 +171,20 @@ class BECQueue(BECWidget, CompactPopupWidget):
             blocks = item.request_blocks
             scan_types = []
             scan_numbers = []
+            scan_names = []
             scan_ids = []
             status = item.status
             for request_block in blocks:
                 scan_type = request_block.msg.scan_type
+                user_metadata = request_block.msg.metadata.get("user_metadata", {})
+                scan_name = user_metadata.get("scan_name", scan_type)
                 if scan_type:
                     scan_types.append(scan_type)
                 scan_number = request_block.scan_number
                 if scan_number:
                     scan_numbers.append(str(scan_number))
+                if scan_name:
+                    scan_names.append(scan_name)
                 scan_id = request_block.scan_id
                 if scan_id:
                     scan_ids.append(scan_id)
@@ -185,9 +192,11 @@ class BECQueue(BECWidget, CompactPopupWidget):
                 scan_types = ", ".join(scan_types)
             if scan_numbers:
                 scan_numbers = ", ".join(scan_numbers)
+            if scan_names:
+                scan_names = ", ".join(scan_names)
             if scan_ids:
                 scan_ids = ", ".join(scan_ids)
-            self.set_row(index, scan_numbers, scan_types, status, scan_ids)
+            self.set_row(index, scan_numbers, scan_names, scan_types, status, scan_ids)
         busy = (
             False
             if all(item.status in ("STOPPED", "COMPLETED", "IDLE") for item in queue_info)
@@ -220,23 +229,34 @@ class BECQueue(BECWidget, CompactPopupWidget):
                 return item
         return item
 
-    def set_row(self, index: int, scan_number: str, scan_type: str, status: str, scan_id: str):
+    def set_row(
+        self,
+        index: int,
+        scan_number: str,
+        scan_name: str,
+        scan_type: str,
+        status: str,
+        scan_id: str,
+    ):
         """
         Set the row of the table.
 
         Args:
             index (int): The index of the row.
             scan_number (str): The scan number.
+            scan_name (str): The scan name.
             scan_type (str): The scan type.
             status (str): The status.
+            scan_id (str): The scan id.
         """
         abort_button = self._create_abort_button(scan_id)
         abort_button.button.clicked.connect(self.delete_selected_row)
 
         self.table.setItem(index, 0, self.format_item(scan_number))
-        self.table.setItem(index, 1, self.format_item(scan_type))
-        self.table.setItem(index, 2, self.format_item(status, status=True))
-        self.table.setCellWidget(index, 3, abort_button)
+        self.table.setItem(index, 1, self.format_item(scan_name))
+        self.table.setItem(index, 2, self.format_item(scan_type))
+        self.table.setItem(index, 3, self.format_item(status, status=True))
+        self.table.setCellWidget(index, 4, abort_button)
 
     def _create_abort_button(self, scan_id: str) -> AbortButton:
         """
@@ -279,7 +299,7 @@ class BECQueue(BECWidget, CompactPopupWidget):
         """
 
         self.table.setRowCount(1)
-        self.set_row(0, "", "", "", "")
+        self.set_row(0, "", "", "", "", "")
 
 
 if __name__ == "__main__":  # pragma: no cover
