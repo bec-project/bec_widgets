@@ -227,6 +227,12 @@ def main():  # pragma: no cover
         height = int(width / (16 / 9))
 
     w.resize(width, height)
+
+    # Center the window on the screen
+    x = screen_geometry.x() + (screen_geometry.width() - width) // 2
+    y = screen_geometry.y() + (screen_geometry.height() - height) // 2
+    w.move(x, y)
+
     w.show()
 
     sys.exit(app.exec())
