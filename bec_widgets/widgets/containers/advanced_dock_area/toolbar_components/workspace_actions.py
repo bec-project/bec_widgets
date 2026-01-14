@@ -147,8 +147,8 @@ class WorkspaceConnection(BundleConnection):
         self.bundle_name = "workspace"
         self.components = components
         self.target_widget = target_widget
-        if not hasattr(self.target_widget, "lock_workspace"):
-            raise AttributeError("Target widget must implement 'lock_workspace'.")
+        if not hasattr(self.target_widget, "workspace_is_locked"):
+            raise AttributeError("Target widget must implement 'workspace_is_locked'.")
         self._connected = False
 
     def connect(self):
