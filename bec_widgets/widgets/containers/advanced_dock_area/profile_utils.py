@@ -10,12 +10,12 @@ Policy:
 from __future__ import annotations
 
 import os
-import re
 import shutil
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
+import slugify
 from bec_lib import bec_logger
 from bec_lib.client import BECClient
 from bec_lib.plugin_helper import plugin_package_name, plugin_repo_path
@@ -137,7 +137,7 @@ def _profiles_dir(segment: str, namespace: str | None) -> str:
         str: Absolute directory path for the requested segment/namespace pair.
     """
     base = os.path.join(_settings_profiles_root(), segment)
-    ns = sanitize_namespace(namespace)
+    ns = slugify.slugify(namespace, separator="_") if namespace else None
     path = os.path.join(base, ns) if ns else base
     os.makedirs(path, exist_ok=True)
     return path
@@ -154,7 +154,7 @@ def _user_path_candidates(name: str, namespace: str | None) -> list[str]:
     Returns:
         list[str]: Ordered list of candidate user profile paths (.ini files).
     """
-    ns = sanitize_namespace(namespace)
+    ns = slugify.slugify(namespace, separator="_") if namespace else None
     primary = os.path.join(_profiles_dir("user", ns), f"{name}.ini")
     if not ns:
         return [primary]
@@ -173,7 +173,7 @@ def _default_path_candidates(name: str, namespace: str | None) -> list[str]:
     Returns:
         list[str]: Ordered list of candidate default profile paths (.ini files).
     """
-    ns = sanitize_namespace(namespace)
+    ns = slugify.slugify(namespace, separator="_") if namespace else None
     primary = os.path.join(_profiles_dir("default", ns), f"{name}.ini")
     if not ns:
         return [primary]
@@ -452,7 +452,7 @@ def list_profiles(namespace: str | None = None) -> list[str]:
     Returns:
         list[str]: Sorted unique profile names.
     """
-    ns = sanitize_namespace(namespace)
+    ns = slugify.slugify(namespace, separator="_") if namespace else None
 
     def _collect_from(directory: str) -> set[str]:
         if not os.path.isdir(directory):
@@ -553,11 +553,11 @@ def _last_profile_key(namespace: str | None, instance: str | None = None) -> str
     Returns:
         str: Scoped key string.
     """
-    ns = sanitize_namespace(namespace)
+    ns = slugify.slugify(namespace, separator="_") if namespace else None
     key = SETTINGS_KEYS["last_profile"]
     if ns:
         key = f"{key}/{ns}"
-    inst = sanitize_namespace(instance) if instance else ""
+    inst = slugify.slugify(instance, separator="_") if instance else ""
     if inst:
         key = f"{key}@{inst}"
     return key

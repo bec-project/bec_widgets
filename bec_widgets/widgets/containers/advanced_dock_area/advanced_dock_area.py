@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import os
-from typing import Callable, Literal, Mapping, Sequence
+from typing import Literal, Mapping, Sequence
+
+import slugify
 
 from bec_lib import bec_logger
 from qtpy.QtCore import QTimer, Signal
@@ -21,7 +23,6 @@ from bec_widgets import BECWidget, SafeProperty, SafeSlot
 from bec_widgets.cli.rpc.rpc_widget_handler import widget_handler
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.colors import apply_theme
-from bec_widgets.utils.name_utils import sanitize_namespace
 from bec_widgets.utils.toolbars.actions import (
     ExpandableMenuAction,
     MaterialIconAction,
@@ -81,6 +82,7 @@ from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
 from bec_widgets.widgets.services.bec_status_box.bec_status_box import BECStatusBox
 from bec_widgets.widgets.utility.logpanel import LogPanel
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
+from tests.unit_tests.test_modular_toolbar import separator_action
 
 logger = bec_logger.logger
 
@@ -130,7 +132,7 @@ class AdvancedDockArea(DockAreaWidget):
         self._profile_namespace_hint = profile_namespace
         self._profile_namespace_auto = auto_profile_namespace
         self._profile_namespace_resolved: str | None | object = _PROFILE_NAMESPACE_UNSET
-        self._instance_id = sanitize_namespace(instance_id) if instance_id else None
+        self._instance_id = slugify.slugify(instance_id, separator="_") if instance_id else None
         self._auto_save_upon_exit = auto_save_upon_exit
         self._profile_management_enabled = enable_profile_management
         self._restore_initial_profile = restore_initial_profile
@@ -558,7 +560,7 @@ class AdvancedDockArea(DockAreaWidget):
             if not candidate:
                 candidate = self.__class__.__name__
 
-        resolved = sanitize_namespace(candidate) if candidate else None
+        resolved = slugify.slugify(candidate, separator="_") if candidate else None
         if not resolved:
             resolved = "general"
         self._profile_namespace_resolved = resolved  # type: ignore[assignment]
