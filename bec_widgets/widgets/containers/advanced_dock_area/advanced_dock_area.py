@@ -100,7 +100,7 @@ class AdvancedDockArea(DockAreaWidget):
         "workspace_is_locked",
         "attach_all",
         "delete_all",
-        "remove_widget",
+        "delete",
         "set_layout_ratios",
         "describe_layout",
         "mode",

@@ -182,7 +182,7 @@ class AdvancedDockArea(RPCBase):
         """
 
     @rpc_call
-    def remove_widget(self, object_name: "str") -> "bool":
+    def delete(self, object_name: "str") -> "bool":
         """
         Remove a widget from the dock area by its object name.
 
@@ -196,7 +196,7 @@ class AdvancedDockArea(RPCBase):
             ValueError: If no widget with the given object name is found.
 
         Example:
-            >>> dock_area.remove_widget("my_widget")
+            >>> dock_area.delete("my_widget")
             True
         """
 
@@ -1207,7 +1207,7 @@ class DockAreaWidget(RPCBase):
         """
 
     @rpc_call
-    def remove_widget(self, object_name: "str") -> "bool":
+    def delete(self, object_name: "str") -> "bool":
         """
         Remove a widget from the dock area by its object name.
 
@@ -1221,7 +1221,7 @@ class DockAreaWidget(RPCBase):
             ValueError: If no widget with the given object name is found.
 
         Example:
-            >>> dock_area.remove_widget("my_widget")
+            >>> dock_area.delete("my_widget")
             True
         """
 
@@ -2895,7 +2895,7 @@ class MonacoDock(RPCBase):
         """
 
     @rpc_call
-    def remove_widget(self, object_name: "str") -> "bool":
+    def delete(self, object_name: "str") -> "bool":
         """
         Remove a widget from the dock area by its object name.
 
@@ -2909,7 +2909,7 @@ class MonacoDock(RPCBase):
             ValueError: If no widget with the given object name is found.
 
         Example:
-            >>> dock_area.remove_widget("my_widget")
+            >>> dock_area.delete("my_widget")
             True
         """
 
