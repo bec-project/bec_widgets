@@ -606,7 +606,7 @@ class TestAdvancedDockAreaInit:
             "new",
             "widget_map",
             "widget_list",
-            "lock_workspace",
+            "workspace_is_locked",
             "attach_all",
             "delete_all",
         ]
@@ -760,32 +760,32 @@ class TestWorkspaceLocking:
     """Test workspace locking functionality."""
 
     def test_lock_workspace_property_getter(self, advanced_dock_area):
-        """Test lock_workspace property getter."""
+        """Test workspace_is_locked property getter."""
         # Initially unlocked
-        assert advanced_dock_area.lock_workspace is False
+        assert advanced_dock_area.workspace_is_locked is False
 
         # Set locked state directly
         advanced_dock_area._locked = True
-        assert advanced_dock_area.lock_workspace is True
+        assert advanced_dock_area.workspace_is_locked is True
 
     def test_lock_workspace_property_setter(self, advanced_dock_area, qtbot):
-        """Test lock_workspace property setter."""
+        """Test workspace_is_locked property setter."""
         # Create a dock first
         advanced_dock_area.new("DarkModeButton")
         qtbot.wait(200)
 
         # Initially unlocked
-        assert advanced_dock_area.lock_workspace is False
+        assert advanced_dock_area.workspace_is_locked is False
 
         # Lock workspace
-        advanced_dock_area.lock_workspace = True
+        advanced_dock_area.workspace_is_locked = True
         assert advanced_dock_area._locked is True
-        assert advanced_dock_area.lock_workspace is True
+        assert advanced_dock_area.workspace_is_locked is True
 
         # Unlock workspace
-        advanced_dock_area.lock_workspace = False
+        advanced_dock_area.workspace_is_locked = False
         assert advanced_dock_area._locked is False
-        assert advanced_dock_area.lock_workspace is False
+        assert advanced_dock_area.workspace_is_locked is False
 
 
 class TestDeveloperMode:
@@ -799,22 +799,22 @@ class TestDeveloperMode:
         # Toggle developer mode
         advanced_dock_area._on_developer_mode_toggled(True)
         assert advanced_dock_area._editable is True
-        assert advanced_dock_area.lock_workspace is False
+        assert advanced_dock_area.workspace_is_locked is False
 
         advanced_dock_area._on_developer_mode_toggled(False)
         assert advanced_dock_area._editable is False
-        assert advanced_dock_area.lock_workspace is True
+        assert advanced_dock_area.workspace_is_locked is True
 
     def test_set_editable(self, advanced_dock_area):
         """Test _set_editable functionality."""
         # Test setting editable to True
         advanced_dock_area._set_editable(True)
-        assert advanced_dock_area.lock_workspace is False
+        assert advanced_dock_area.workspace_is_locked is False
         assert advanced_dock_area._editable is True
 
         # Test setting editable to False
         advanced_dock_area._set_editable(False)
-        assert advanced_dock_area.lock_workspace is True
+        assert advanced_dock_area.workspace_is_locked is True
         assert advanced_dock_area._editable is False
 
 

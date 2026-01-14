@@ -105,21 +105,46 @@ class AdvancedDockArea(RPCBase):
         movable: "bool" = True,
         start_floating: "bool" = False,
         where: "Literal['left', 'right', 'top', 'bottom'] | None" = None,
-        on_close: "Callable[[CDockWidget, QWidget], None] | None" = None,
         tab_with: "CDockWidget | QWidget | str | None" = None,
         relative_to: "CDockWidget | QWidget | str | None" = None,
-        return_dock: "bool" = False,
         show_title_bar: "bool | None" = None,
         title_buttons: "Mapping[str, bool] | Sequence[str] | str | None" = None,
         show_settings_action: "bool | None" = None,
         promote_central: "bool" = False,
         object_name: "str | None" = None,
         **widget_kwargs,
-    ) -> "QWidget | CDockWidget | BECWidget":
+    ) -> "QWidget | BECWidget":
         """
-        Override the base helper so dock settings are available by default.
+        Create a new widget (or reuse an instance) and add it as a dock.
 
-        The flag remains user-configurable (pass ``False`` to hide the action).
+        Args:
+            widget(QWidget | str): Instance or registered widget type string.
+            closable(bool): Whether the dock is closable.
+            floatable(bool): Whether the dock is floatable.
+            movable(bool): Whether the dock is movable.
+            start_floating(bool): Whether to start the dock floating.
+            where(Literal["left", "right", "top", "bottom"] | None): Dock placement hint relative to the dock area (ignored when
+                ``relative_to`` is provided without an explicit value).
+            tab_with(CDockWidget | QWidget | str | None): Existing dock (or widget/name) to tab the new dock alongside.
+            relative_to(CDockWidget | QWidget | str | None): Existing dock (or widget/name) used as the positional anchor.
+                When supplied and ``where`` is ``None``, the new dock inherits the
+                anchor's current dock area.
+            show_title_bar(bool | None): Explicitly show or hide the dock area's title bar.
+            title_buttons(Mapping[str, bool] | Sequence[str] | str | None): Mapping or iterable describing which title bar buttons should
+                remain visible. Provide a mapping of button names (``"float"``,
+                ``"close"``, ``"menu"``, ``"auto_hide"``, ``"minimize"``) to booleans,
+                or a sequence of button names to hide.
+            show_settings_action(bool | None): Control whether a dock settings/property action should
+                be installed. Defaults to ``False`` for the basic dock area; subclasses
+                such as `AdvancedDockArea` override the default to ``True``.
+            promote_central(bool): When True, promote the created dock to be the dock manager's
+                central widget (useful for editor stacks or other root content).
+            object_name(str | None): Optional object name to assign to the created widget.
+            **widget_kwargs: Additional keyword arguments passed to the widget constructor
+                when creating by type name.
+
+        Returns:
+            BECWidget: The created or reused widget instance.
         """
 
     @rpc_call
@@ -136,7 +161,7 @@ class AdvancedDockArea(RPCBase):
 
     @property
     @rpc_call
-    def lock_workspace(self) -> "bool":
+    def workspace_is_locked(self) -> "bool":
         """
         Get or set the lock state of the workspace.
 
@@ -212,12 +237,6 @@ class AdvancedDockArea(RPCBase):
         Return metadata describing splitter paths, orientations, and contained docks.
 
         Useful for determining the keys to use in `set_layout_ratios(splitter_overrides=...)`.
-        """
-
-    @rpc_call
-    def print_layout_structure(self) -> "None":
-        """
-        Pretty-print the current splitter paths to stdout.
         """
 
     @property
