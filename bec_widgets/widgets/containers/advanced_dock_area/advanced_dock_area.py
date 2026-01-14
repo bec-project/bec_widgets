@@ -4,7 +4,6 @@ import os
 from typing import Literal, Mapping, Sequence
 
 import slugify
-
 from bec_lib import bec_logger
 from qtpy.QtCore import QTimer, Signal
 from qtpy.QtGui import QPixmap
@@ -23,6 +22,7 @@ from bec_widgets import BECWidget, SafeProperty, SafeSlot
 from bec_widgets.cli.rpc.rpc_widget_handler import widget_handler
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.colors import apply_theme
+from bec_widgets.utils.rpc_decorator import rpc_timeout
 from bec_widgets.utils.toolbars.actions import (
     ExpandableMenuAction,
     MaterialIconAction,
@@ -82,7 +82,6 @@ from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
 from bec_widgets.widgets.services.bec_status_box.bec_status_box import BECStatusBox
 from bec_widgets.widgets.utility.logpanel import LogPanel
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
-from tests.unit_tests.test_modular_toolbar import separator_action
 
 logger = bec_logger.logger
 
@@ -106,6 +105,7 @@ class AdvancedDockArea(DockAreaWidget):
         "describe_layout",
         "mode",
         "mode.setter",
+        "list_profiles",
         "save_profile",
         "load_profile",
         "delete_profile",
@@ -673,7 +673,19 @@ class AdvancedDockArea(DockAreaWidget):
         combo = self.toolbar.components.get_action("workspace_combo").widget
         combo.refresh_profiles(active_profile=name)
 
+    @SafeSlot()
+    def list_profiles(self) -> list[str]:
+        """
+        List available workspace profiles in the current namespace.
+
+        Returns:
+            list[str]: List of profile names.
+        """
+        namespace = self.profile_namespace
+        return list_profiles(namespace)
+
     @SafeSlot(str)
+    @rpc_timeout(None)
     def save_profile(
         self,
         name: str | None = None,
@@ -780,6 +792,7 @@ class AdvancedDockArea(DockAreaWidget):
         self._finalize_profile_change(name, namespace)
 
     @SafeSlot()
+    @SafeSlot(str)
     def save_profile_dialog(self, name: str | None = None):
         """
         Save the current workspace profile with a dialog prompt.
@@ -793,6 +806,8 @@ class AdvancedDockArea(DockAreaWidget):
         """
         self.save_profile(name, show_dialog=True)
 
+    @SafeSlot(str)
+    @rpc_timeout(None)
     def load_profile(self, name: str | None = None):
         """
         Load a workspace profile.
@@ -833,6 +848,10 @@ class AdvancedDockArea(DockAreaWidget):
 
         # Clear existing docks and remove all widgets
         self.delete_all()
+
+        if name == "__empty__":
+            self._finalize_profile_change(name, namespace)
+            return
 
         # Rebuild widgets and restore states
         for item in read_manifest(settings):
