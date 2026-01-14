@@ -254,6 +254,16 @@ class AdvancedDockArea(RPCBase):
         """
 
     @rpc_call
+    def list_profiles(self) -> "list[str]":
+        """
+        List available workspace profiles in the current namespace.
+
+        Returns:
+            list[str]: List of profile names.
+        """
+
+    @rpc_timeout(None)
+    @rpc_call
     def save_profile(
         self,
         name: "str | None" = None,
@@ -281,6 +291,7 @@ class AdvancedDockArea(RPCBase):
                 Only used when show_dialog is False; otherwise the dialog provides the value.
         """
 
+    @rpc_timeout(None)
     @rpc_call
     def load_profile(self, name: "str | None" = None):
         """
