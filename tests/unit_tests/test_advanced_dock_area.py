@@ -293,7 +293,7 @@ class TestBasicDockArea:
         assert "panel_two" in basic_dock_area.dock_map()
 
         # Remove panel_one
-        result = basic_dock_area.remove_widget("panel_one")
+        result = basic_dock_area.delete("panel_one")
         qtbot.wait(100)
 
         assert result is True
