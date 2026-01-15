@@ -304,7 +304,7 @@ class BECGuiClient(RPCBase):
         geometry: tuple[int, int, int, int] | None = None,
         launch_script: str = "dock_area",
         profile: str | None = None,
-        empty: bool = False,
+        start_empty: bool = False,
         **kwargs,
     ) -> client.AdvancedDockArea:
         """Create a new top-level dock area.
@@ -314,24 +314,24 @@ class BECGuiClient(RPCBase):
             wait(bool, optional): Whether to wait for the server to start. Defaults to True.
             geometry(tuple[int, int, int, int] | None): The geometry of the dock area (pos_x, pos_y, w, h).
             launch_script(str): The launch script to use. Defaults to "dock_area".
-            profile(str | None): The profile name to load. If None, restores the last used profile.
+            profile(str | None): The profile name to load. If None, loads the "general" profile.
                 Use a profile name to load a specific saved profile.
-            empty(bool): If True, start with an empty dock area without loading any profile.
-                This takes precedence over the profile argument. Defaults to False.
+            start_empty(bool): If True, start with an empty dock area when loading specified profile.
             **kwargs: Additional keyword arguments passed to the dock area.
 
         Returns:
             client.AdvancedDockArea: The new dock area.
 
+        Note:
+            The "general" profile is mandatory and will always exist. If manually deleted,
+            it will be automatically recreated.
+
         Examples:
-            >>> gui.new()  # Restore last used profile
-            >>> gui.new(profile="my_profile")  # Load specific profile, if profile do not exist, the new profile is created empty with specified name
-            >>> gui.new(empty=True)  # Start with empty dock area
-            >>> gui.new(name="custom_dock", empty=True)  # Named empty dock area
+            >>> gui.new()  # Start with the "general" profile
+            >>> gui.new(profile="my_profile")  # Load specific profile, if profile does not exist, the new profile is created empty with specified name
+            >>> gui.new(start_empty=True)  # Start with "general" profile but empty dock area
+            >>> gui.new(profile="my_profile", start_empty=True)  # Start with "my_profile" profile but empty dock area
         """
-        if empty:
-            # Use a unique non-existent profile name to ensure empty start
-            profile = "__empty__"
         if not self._check_if_server_is_alive():
             self.start(wait=True)
         if wait:
@@ -342,6 +342,7 @@ class BECGuiClient(RPCBase):
                     name=name,
                     geometry=geometry,
                     profile=profile,
+                    start_empty=start_empty,
                     **kwargs,
                 )  # pylint: disable=protected-access
                 return widget
@@ -351,6 +352,7 @@ class BECGuiClient(RPCBase):
             name=name,
             geometry=geometry,
             profile=profile,
+            start_empty=start_empty,
             **kwargs,
         )  # pylint: disable=protected-access
         return widget

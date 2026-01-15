@@ -30,7 +30,10 @@ from bec_widgets.utils.round_frame import RoundedFrame
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.utils.ui_loader import UILoader
 from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import AdvancedDockArea
-from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import list_profiles
+from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import (
+    get_last_profile,
+    list_profiles,
+)
 from bec_widgets.widgets.containers.auto_update.auto_updates import AutoUpdates
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow, BECMainWindowNoRPC
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
@@ -182,7 +185,6 @@ class LaunchTile(RoundedFrame):
 class LaunchWindow(BECMainWindow):
     RPC = True
     TILE_SIZE = (250, 300)
-    DEFAULT_WORKSPACE_OPTION = "Last used workspace"
     USER_ACCESS = ["show_launcher", "hide_launcher"]
 
     def __init__(
@@ -345,6 +347,7 @@ class LaunchWindow(BECMainWindow):
     def _refresh_dock_area_profiles(self, preserve_selection: bool = True) -> None:
         """
         Refresh the dock-area profile selector, optionally preserving the selection.
+        Sets the combobox to the last used profile or "general" if no selection preserved.
 
         Args:
             preserve_selection(bool): Whether to preserve the current selection or not.
@@ -361,18 +364,48 @@ class LaunchWindow(BECMainWindow):
         profiles = list_profiles("bec")
         selector.blockSignals(True)
         selector.clear()
-        selector.addItem(self.DEFAULT_WORKSPACE_OPTION)
         for profile in profiles:
             selector.addItem(profile)
 
-        if not selected_text or selected_text == self.DEFAULT_WORKSPACE_OPTION:
-            idx = 0
-        else:
+        if selected_text:
+            # Try to preserve the current selection
             idx = selector.findText(selected_text, Qt.MatchFlag.MatchExactly)
-            if idx < 0:
-                idx = 0
-        selector.setCurrentIndex(idx)
+            if idx >= 0:
+                selector.setCurrentIndex(idx)
+            else:
+                # Selection no longer exists, fall back to last profile or "general"
+                self._set_selector_to_default_profile(selector, profiles)
+        else:
+            # No selection to preserve, use last profile or "general"
+            self._set_selector_to_default_profile(selector, profiles)
         selector.blockSignals(False)
+
+    def _set_selector_to_default_profile(self, selector: QComboBox, profiles: list[str]) -> None:
+        """
+        Set the selector to the last used profile or "general" as fallback.
+
+        Args:
+            selector(QComboBox): The combobox to set.
+            profiles(list[str]): List of available profiles.
+        """
+        # Try to get last used profile
+        last_profile = get_last_profile(namespace="bec")
+        if last_profile and last_profile in profiles:
+            idx = selector.findText(last_profile, Qt.MatchFlag.MatchExactly)
+            if idx >= 0:
+                selector.setCurrentIndex(idx)
+                return
+
+        # Fall back to "general" profile
+        if "general" in profiles:
+            idx = selector.findText("general", Qt.MatchFlag.MatchExactly)
+            if idx >= 0:
+                selector.setCurrentIndex(idx)
+                return
+
+        # If nothing else, select first item
+        if selector.count() > 0:
+            selector.setCurrentIndex(0)
 
     def launch(
         self,
@@ -541,17 +574,14 @@ class LaunchWindow(BECMainWindow):
 
     def _open_dock_area(self):
         """
-        Open Advanced Dock Area using the selected profile (if any).
+        Open Advanced Dock Area using the selected profile.
         """
         tile = self.tiles.get("dock_area")
         if tile is None or tile.selector is None:
             profile = None
         else:
             selection = tile.selector.currentText().strip()
-            if not selection or selection == self.DEFAULT_WORKSPACE_OPTION:
-                profile = None
-            else:
-                profile = selection
+            profile = selection if selection else None
         return self.launch("dock_area", profile=profile)
 
     def _open_widget(self):
