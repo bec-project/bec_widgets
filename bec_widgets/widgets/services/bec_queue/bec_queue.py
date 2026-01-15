@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from bec_lib import messages
 from bec_lib.endpoints import MessageEndpoints
 from bec_qthemes import material_icon
@@ -173,6 +175,7 @@ class BECQueue(BECWidget, CompactPopupWidget):
             scan_numbers = []
             scan_names = []
             scan_ids = []
+            user_metadatas = []
             status = item.status
             for request_block in blocks:
                 scan_type = request_block.msg.scan_type
@@ -185,6 +188,8 @@ class BECQueue(BECWidget, CompactPopupWidget):
                     scan_numbers.append(str(scan_number))
                 if scan_name:
                     scan_names.append(scan_name)
+                if user_metadata:
+                    user_metadatas.append(user_metadata)
                 scan_id = request_block.scan_id
                 if scan_id:
                     scan_ids.append(scan_id)
@@ -194,9 +199,16 @@ class BECQueue(BECWidget, CompactPopupWidget):
                 scan_numbers = ", ".join(scan_numbers)
             if scan_names:
                 scan_names = ", ".join(scan_names)
+            # Pretty print user metadata as tooltip
+            tooltip = ""
+            if user_metadatas:
+                if len(user_metadatas) == 1:
+                    tooltip = json.dumps(user_metadatas[0], indent=2)
+                else:
+                    tooltip = json.dumps(user_metadatas, indent=2)
             if scan_ids:
                 scan_ids = ", ".join(scan_ids)
-            self.set_row(index, scan_numbers, scan_names, scan_types, status, scan_ids)
+            self.set_row(index, scan_numbers, scan_names, scan_types, status, scan_ids, tooltip)
         busy = (
             False
             if all(item.status in ("STOPPED", "COMPLETED", "IDLE") for item in queue_info)
@@ -205,13 +217,13 @@ class BECQueue(BECWidget, CompactPopupWidget):
         self.set_global_state("warning" if busy else "default")
         self.queue_busy.emit(busy)
 
-    def format_item(self, content: str, status=False) -> QTableWidgetItem:
+    def format_item(self, content: str, status=False, tooltip: str = "") -> QTableWidgetItem:
         """
         Format the content of the table item.
 
         Args:
             content (str): The content to be formatted.
-
+            tooltip (str): Optional tooltip to display.
         Returns:
             QTableWidgetItem: The formatted item.
         """
@@ -219,7 +231,8 @@ class BECQueue(BECWidget, CompactPopupWidget):
             content = ""
         item = QTableWidgetItem(content)
         item.setTextAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
-        # item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        if tooltip:
+            item.setToolTip(tooltip)
 
         if status:
             try:
@@ -237,6 +250,7 @@ class BECQueue(BECWidget, CompactPopupWidget):
         scan_type: str,
         status: str,
         scan_id: str,
+        tooltip: str = "",
     ):
         """
         Set the row of the table.
@@ -248,14 +262,15 @@ class BECQueue(BECWidget, CompactPopupWidget):
             scan_type (str): The scan type.
             status (str): The status.
             scan_id (str): The scan id.
+            tooltip (str): Optional tooltip to display (pretty-printed user metadata).
         """
         abort_button = self._create_abort_button(scan_id)
         abort_button.button.clicked.connect(self.delete_selected_row)
 
-        self.table.setItem(index, 0, self.format_item(scan_number))
-        self.table.setItem(index, 1, self.format_item(scan_name))
-        self.table.setItem(index, 2, self.format_item(scan_type))
-        self.table.setItem(index, 3, self.format_item(status, status=True))
+        self.table.setItem(index, 0, self.format_item(scan_number, tooltip=tooltip))
+        self.table.setItem(index, 1, self.format_item(scan_name, tooltip=tooltip))
+        self.table.setItem(index, 2, self.format_item(scan_type, tooltip=tooltip))
+        self.table.setItem(index, 3, self.format_item(status, status=True, tooltip=tooltip))
         self.table.setCellWidget(index, 4, abort_button)
 
     def _create_abort_button(self, scan_id: str) -> AbortButton:
