@@ -126,6 +126,8 @@ class AdvancedDockArea(DockAreaWidget):
         auto_save_upon_exit: bool = True,
         enable_profile_management: bool = True,
         restore_initial_profile: bool = True,
+        init_profile: str | None = None,
+        start_empty: bool = False,
         **kwargs,
     ):
         self._profile_namespace_hint = profile_namespace
@@ -135,6 +137,8 @@ class AdvancedDockArea(DockAreaWidget):
         self._auto_save_upon_exit = auto_save_upon_exit
         self._profile_management_enabled = enable_profile_management
         self._restore_initial_profile = restore_initial_profile
+        self._init_profile = init_profile
+        self._start_empty = start_empty
         super().__init__(
             parent,
             default_add_direction=default_add_direction,
@@ -184,7 +188,8 @@ class AdvancedDockArea(DockAreaWidget):
 
     def _ensure_initial_profile(self) -> bool:
         """
-        Ensure at least one workspace profile exists for the current namespace.
+        Ensure the "general" workspace profile always exists for the current namespace.
+        The "general" profile is mandatory and will be recreated if deleted.
         If list_profile fails due to file permission or corrupted profiles, no action taken.
 
         Returns:
@@ -197,12 +202,13 @@ class AdvancedDockArea(DockAreaWidget):
             logger.warning(f"Unable to enumerate profiles for namespace '{namespace}': {exc}")
             return False
 
-        if existing_profiles:
+        # Always ensure "general" profile exists
+        name = "general"
+        if name in existing_profiles:
             return False
 
-        name = "general"
         logger.info(
-            f"No profiles found for namespace '{namespace}'. Bootstrapping '{name}' workspace."
+            f"Profile '{name}' not found in namespace '{namespace}'. Creating mandatory '{name}' workspace."
         )
 
         self._write_profile_settings(name, namespace, save_preview=False)
@@ -215,30 +221,37 @@ class AdvancedDockArea(DockAreaWidget):
         combo = self.toolbar.components.get_action("workspace_combo").widget
         namespace = self.profile_namespace
         init_profile = None
-        instance_id = self._last_profile_instance_id()
-        if instance_id:
-            inst_profile = get_last_profile(
-                namespace=namespace, instance=instance_id, allow_namespace_fallback=False
-            )
-            if inst_profile and self._profile_exists(inst_profile, namespace):
-                init_profile = inst_profile
-        if not init_profile:
-            last = get_last_profile(namespace=namespace)
-            if last and self._profile_exists(last, namespace):
-                init_profile = last
-            else:
-                text = combo.currentText()
-                init_profile = text if text else None
-        if not init_profile:
-            if self._profile_exists("general", namespace):
-                init_profile = "general"
+
+        # First priority: use init_profile if explicitly provided
+        if self._init_profile:
+            init_profile = self._init_profile
+        else:
+            # Try to restore from last used profile
+            instance_id = self._last_profile_instance_id()
+            if instance_id:
+                inst_profile = get_last_profile(
+                    namespace=namespace, instance=instance_id, allow_namespace_fallback=False
+                )
+                if inst_profile and self._profile_exists(inst_profile, namespace):
+                    init_profile = inst_profile
+            if not init_profile:
+                last = get_last_profile(namespace=namespace)
+                if last and self._profile_exists(last, namespace):
+                    init_profile = last
+                else:
+                    text = combo.currentText()
+                    init_profile = text if text else None
+            if not init_profile:
+                # Fall back to "general" profile which is guaranteed to exist
+                if self._profile_exists("general", namespace):
+                    init_profile = "general"
         if init_profile:
             # Defer initial load to the event loop so child widgets exist before state restore.
             QTimer.singleShot(0, lambda: self._load_initial_profile(init_profile))
 
     def _load_initial_profile(self, name: str) -> None:
         """Load the initial profile after construction when the event loop is running."""
-        self.load_profile(name)
+        self.load_profile(name, start_empty=self._start_empty)
         combo = self.toolbar.components.get_action("workspace_combo").widget
         combo.blockSignals(True)
         combo.setCurrentText(name)
@@ -807,8 +820,9 @@ class AdvancedDockArea(DockAreaWidget):
         self.save_profile(name, show_dialog=True)
 
     @SafeSlot(str)
+    @SafeSlot(str, bool)
     @rpc_timeout(None)
-    def load_profile(self, name: str | None = None):
+    def load_profile(self, name: str | None = None, start_empty: bool = False):
         """
         Load a workspace profile.
 
@@ -817,6 +831,7 @@ class AdvancedDockArea(DockAreaWidget):
 
         Args:
             name (str | None): The name of the profile to load. If None, prompts the user.
+            start_empty (bool): If True, load a profile without any widgets. Danger of overwriting the dynamic state of that profile.
         """
         if not name:  # Gui fallback if the name is not provided
             name, ok = QInputDialog.getText(
@@ -849,7 +864,7 @@ class AdvancedDockArea(DockAreaWidget):
         # Clear existing docks and remove all widgets
         self.delete_all()
 
-        if name == "__empty__":
+        if start_empty:
             self._finalize_profile_change(name, namespace)
             return
 
