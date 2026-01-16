@@ -231,8 +231,9 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
         # Build dock layout using shared helpers
         self._build_docks()
 
-        logger.info("Connecting application about to quit signal to device manager view...")
-        QApplication.instance().aboutToQuit.connect(self._about_to_quit_handler)
+        # TODO Implement once issue #1012 is solved
+        # logger.info("Connecting application about to quit signal to device manager view...")
+        # QApplication.instance().aboutToQuit.connect(self._about_to_quit_handler)
 
     ##############################
     ### Custom set busy widget ###
@@ -248,16 +249,17 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
     ### Application quit handler ###
     ################################
 
-    @SafeSlot()
-    def _about_to_quit_handler(self):
-        """Handle application about to quit event. If config upload is active, cancel it."""
-        logger.info("Application is quitting, checking for active config upload...")
-        if self._config_upload_active:
-            logger.info("Application is quitting, cancelling active config upload...")
-            self._config_helper.send_config_request(
-                action="cancel", config=None, wait_for_response=True, timeout_s=10
-            )
-            logger.info("Config upload cancelled.")
+    # TODO Implement once issue #1012 is solved
+    # @SafeSlot()
+    # def _about_to_quit_handler(self):
+    #     """Handle application about to quit event. If config upload is active, cancel it."""
+    #     logger.info("Application is quitting, checking for active config upload...")
+    #     if self._config_upload_active:
+    #         logger.info("Application is quitting, cancelling active config upload...")
+    #         self._config_helper.send_config_request(
+    #             action="cancel", config=None, wait_for_response=True, timeout_s=10
+    #         )
+    #         logger.info("Config upload cancelled.")
 
     def _set_busy_wrapper(self, enabled: bool):
         """Thin wrapper around set_busy to flip the state variable."""
@@ -669,7 +671,6 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
 
     def _handle_cancel_config_upload_failed(self, exception: Exception):
         """Handle failure to cancel the config upload."""
-        QMessageBox.critical(self, "Error Cancelling Upload", f"{str(exception)}")
         self._set_busy_wrapper(enabled=False)
 
         validation_results = self.device_table_view.get_validation_results()
