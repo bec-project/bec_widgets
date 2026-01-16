@@ -248,6 +248,7 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
 
     def _set_busy_wrapper(self, enabled: bool):
         """Thin wrapper around set_busy to flip the state variable."""
+        self._busy_overlay.set_opacity(0.8)
         self._config_upload_active = enabled
         self.set_busy(enabled=enabled)
 

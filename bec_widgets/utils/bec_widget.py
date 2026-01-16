@@ -12,6 +12,7 @@ from qtpy.QtWidgets import QApplication, QFileDialog, QLabel, QVBoxLayout, QWidg
 import bec_widgets.widgets.containers.qt_ads as QtAds
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
+from bec_widgets.utils.busy_loader import install_busy_loader
 from bec_widgets.utils.error_popups import SafeConnect, SafeSlot
 from bec_widgets.utils.rpc_decorator import rpc_timeout
 from bec_widgets.utils.widget_io import WidgetHierarchy
@@ -70,9 +71,9 @@ class BECWidget(BECConnector):
         self._busy_state_widget: QWidget | None = None
 
         self._loading = False
+        self._busy_overlay = self._install_busy_loader()
         if start_busy and isinstance(self, QWidget):
-            self._busy_overlay = self._install_busy_loader()
-            self._adjust_busy_overlay()
+            self._show_busy_overlay()
             self._loading = True
 
     def _connect_to_theme_change(self):
@@ -152,7 +153,6 @@ class BECWidget(BECConnector):
                     child.stop()
 
         widget = BusyStateWidget(self)
-
         return widget
 
     def _install_busy_loader(self) -> "BusyLoaderOverlay" | None:
@@ -164,7 +164,6 @@ class BECWidget(BECConnector):
             return None
         overlay = getattr(self, "_busy_overlay", None)
         if overlay is None:
-            from bec_widgets.utils.busy_loader import install_busy_loader
 
             overlay = install_busy_loader(self, start_loading=False)
             self._busy_overlay = overlay
@@ -174,7 +173,7 @@ class BECWidget(BECConnector):
         self._busy_overlay.set_widget(self._busy_state_widget)
         return overlay
 
-    def _adjust_busy_overlay(self) -> None:
+    def _show_busy_overlay(self) -> None:
         """Create and attach the loading overlay to this widget if QWidget is present."""
         if not isinstance(self, QWidget):
             return
@@ -198,7 +197,7 @@ class BECWidget(BECConnector):
         if self._busy_overlay is None:
             self._busy_overlay = self._install_busy_loader()
         if enabled:
-            self._adjust_busy_overlay()
+            self._show_busy_overlay()
         else:
             self._busy_overlay.hide()
         self._loading = bool(enabled)

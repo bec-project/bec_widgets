@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 from qtpy.QtWidgets import QLabel, QVBoxLayout, QWidget
 
@@ -66,6 +67,24 @@ def test_becwidget_set_busy_toggle_and_text(qtbot, widget_idle):
 
     widget_idle.set_busy(False)
     qtbot.waitUntil(lambda: overlay.isHidden())
+
+
+def test_becwidget_busy_overlay_set_opacity(qtbot, widget_busy):
+    overlay = getattr(widget_busy, "_busy_overlay")
+    qtbot.waitUntil(lambda: overlay.isVisible())
+
+    # Default opacity is 0.7
+    frame = getattr(overlay, "_frame", None)
+    assert frame is not None
+    sheet = frame.styleSheet()
+    _, _, _, a = overlay.scrim_color.getRgb()
+    assert np.isclose(a / 255, 0.35, atol=0.02)
+
+    # Change opacity
+    overlay.set_opacity(0.7)
+    qtbot.waitUntil(lambda: overlay.isVisible())
+    _, _, _, a = overlay.scrim_color.getRgb()
+    assert np.isclose(a / 255, 0.7, atol=0.02)
 
 
 def test_becwidget_overlay_tracks_resize(qtbot, widget_busy):
