@@ -59,3 +59,13 @@ def test_remove_readd_with_device_config(qtbot):
             call(action="add", config=ANY, wait_for_response=False),
         ]
     )
+
+
+def test_cancel_config_action(qtbot):
+    ch = MagicMock(spec=ConfigHelper)
+    ch.send_config_request.return_value = "abcde"
+    cca = CommunicateConfigAction(config_helper=ch, device=None, config=None, action="cancel")
+    cca.run()
+    ch.send_config_request.assert_called_once_with(
+        action="cancel", config=None, wait_for_response=True, timeout_s=10
+    )
