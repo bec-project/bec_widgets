@@ -29,7 +29,7 @@ class _OverlayEventFilter(QObject):
         self._overlay = overlay
 
     def eventFilter(self, obj, event):
-        if not hasattr(self, " _target") or self._target is None:
+        if not hasattr(self, "_target") or self._target is None:
             return False
         if not hasattr(self, "_overlay") or self._overlay is None:
             return False
@@ -252,7 +252,7 @@ def install_busy_loader(
     """
     overlay = BusyLoaderOverlay(parent=target, opacity=opacity)
     overlay.setGeometry(target.rect())
-    overlay.set_filter(_OverlayEventFilter(target, overlay))
+    overlay.set_filter(_OverlayEventFilter(target=target, overlay=overlay))
     if start_loading:
         overlay.show()
     return overlay
