@@ -13,6 +13,7 @@ from bec_lib.messages import ConfigAction
 from bec_lib.plugin_helper import plugin_package_name, plugin_repo_path
 from bec_qthemes import apply_theme, material_icon
 from qtpy.QtCore import QMetaObject, Qt, QThreadPool, Signal
+from qtpy.QtGui import QColor
 from qtpy.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -77,12 +78,13 @@ class CustomBusyWidget(QWidget):
 
         # Widgets
         progress = DeviceInitializationProgressBar(parent=self, client=client)
+        progress.setMinimumWidth(320)
 
         # Spinner
         spinner = SpinnerWidget(parent=self)
         scale = self._ui_scale()
         spinner_size = int(scale * 0.12) if scale else 1
-        spinner_size = max(32, min(spinner_size, 64))
+        spinner_size = max(32, min(spinner_size, 96))
         spinner.setFixedSize(spinner_size, spinner_size)
 
         # Cancel button
@@ -115,6 +117,17 @@ class CustomBusyWidget(QWidget):
         content_layout.addWidget(progress, 0, Qt.AlignmentFlag.AlignHCenter)
         content_layout.addStretch()
         content_layout.addWidget(cancel_button, 0, Qt.AlignmentFlag.AlignHCenter)
+
+        if hasattr(color, "_colors"):
+            bg_color = color._colors.get("BG", None)
+        if bg_color is None:  # Fallback if missing
+            bg_color = QColor(50, 50, 50, 255)
+        self.setStyleSheet(
+            f"""
+            background-color: {bg_color.name()};
+            border-radius: 12px;
+            """
+        )
 
     def _ui_scale(self) -> int:
         parent = self.parent()
@@ -248,7 +261,7 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
 
     def _set_busy_wrapper(self, enabled: bool):
         """Thin wrapper around set_busy to flip the state variable."""
-        self._busy_overlay.set_opacity(0.8)
+        self._busy_overlay.set_opacity(0.92)
         self._config_upload_active = enabled
         self.set_busy(enabled=enabled)
 
