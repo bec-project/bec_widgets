@@ -30,6 +30,7 @@ from bec_widgets.applications.views.device_manager_view.device_manager_view impo
     DeviceManagerView,
     DeviceManagerWidget,
 )
+from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.widgets.control.device_manager.components import (
     DeviceTable,
     DMConfigView,
@@ -612,6 +613,34 @@ class TestDeviceManagerView:
             cfg_iter.append(dev_config_copy)
         return cfg_iter
 
+    def test_custom_busy_widget(self, custom_busy: CustomBusyWidget, qtbot):
+        """Test the CustomBusyWidget functionality."""
+
+        # Check layout
+        assert custom_busy.progress is not None
+        assert custom_busy.spinner is not None
+        assert custom_busy.spinner._started is False
+
+        # Check background
+        color = get_accent_colors()
+        bg = color._colors["BG"]
+        sheet = custom_busy.styleSheet()
+        assert bg.name() in sheet
+        assert "border-radius: 12px" in sheet
+
+        # Show event should start spinner
+        custom_busy.showEvent(None)
+        assert custom_busy.spinner._started is True
+
+        with qtbot.waitSignal(custom_busy.cancel_requested) as sig_blocker:
+            qtbot.mouseClick(custom_busy.cancel_button, QtCore.Qt.LeftButton)
+            # Check that the signal was emitted
+            assert sig_blocker.signal_triggered is True
+
+        # Hide should
+        custom_busy.hideEvent(None)
+        assert custom_busy.spinner._started is False
+
     def test_device_manager_view_add_remove_device(
         self, device_manager_display_widget: DeviceManagerDisplayWidget, device_config
     ):
@@ -750,3 +779,60 @@ class TestDeviceManagerView:
                 "rerun_validation"
             ].action.action.triggered.emit()
             assert len(mock_change_configs.call_args[0][0]) == 1
+
+    def test_handle_cancel_config_upload_failed(
+        self, device_manager_display_widget: DeviceManagerDisplayWidget, qtbot
+    ):
+        """Test handling cancel during config upload failure."""
+        dm_view = device_manager_display_widget
+        validation_results = {
+            "Device_1": (
+                {"name": "Device_1"},
+                ConfigStatus.VALID.value,
+                ConnectionStatus.CANNOT_CONNECT.value,
+            ),
+            "Device_2": (
+                {"name": "Device_2"},
+                ConfigStatus.INVALID.value,
+                ConnectionStatus.UNKNOWN.value,
+            ),
+        }
+        with mock.patch.object(
+            dm_view.device_table_view, "get_validation_results", return_value=validation_results
+        ):
+            with (
+                mock.patch.object(
+                    dm_view.device_table_view, "update_multiple_device_validations"
+                ) as mock_update,
+                mock.patch.object(
+                    dm_view.ophyd_test_view, "change_device_configs"
+                ) as mock_change_configs,
+            ):
+                with qtbot.waitSignal(
+                    dm_view.device_table_view.device_config_in_sync_with_redis
+                ) as sig_blocker:
+                    dm_view._handle_cancel_config_upload_failed(
+                        exception=Exception("Test Exception")
+                    )
+                    assert sig_blocker.signal_triggered is True
+                    mock_change_configs.assert_called_once_with(
+                        [validation_results["Device_1"][0], validation_results["Device_2"][0]],
+                        added=True,
+                        skip_validation=False,
+                    )
+                    mock_update.assert_called_once_with(
+                        [
+                            (
+                                validation_results["Device_1"][0],
+                                validation_results["Device_1"][1],
+                                ConnectionStatus.UNKNOWN.value,
+                                "Upload Cancelled",
+                            ),
+                            (
+                                validation_results["Device_2"][0],
+                                validation_results["Device_2"][1],
+                                ConnectionStatus.UNKNOWN.value,
+                                "Upload Cancelled",
+                            ),
+                        ]
+                    )
