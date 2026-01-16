@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from bec_lib.logger import bec_logger
 from qtpy.QtCore import QEvent, QObject, Qt, QTimer, Signal
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import (
@@ -16,6 +17,8 @@ from qtpy.QtWidgets import (
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.error_popups import SafeProperty
 
+logger = bec_logger.logger
+
 
 class _OverlayEventFilter(QObject):
     """Keeps the overlay sized and stacked over its target widget."""
@@ -26,6 +29,10 @@ class _OverlayEventFilter(QObject):
         self._overlay = overlay
 
     def eventFilter(self, obj, event):
+        if not hasattr(self, " _target") or self._target is None:
+            return False
+        if not hasattr(self, "_overlay") or self._overlay is None:
+            return False
         if obj is self._target and event.type() in (
             QEvent.Resize,
             QEvent.Show,
