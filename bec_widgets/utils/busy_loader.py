@@ -13,10 +13,8 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets import BECWidget
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.error_popups import SafeProperty
-from bec_widgets.widgets.plots.waveform.waveform import Waveform
 
 
 class _OverlayEventFilter(QObject):
@@ -56,14 +54,14 @@ class BusyLoaderOverlay(QWidget):
     foreground_color_changed = Signal(QColor)
     scrim_color_changed = Signal(QColor)
 
-    def __init__(self, parent: QWidget, opacity: float = 0.85, **kwargs):
+    def __init__(self, parent: QWidget, opacity: float = 0.35, **kwargs):
         super().__init__(parent=parent, **kwargs)
 
         self.setAttribute(Qt.WA_StyledBackground, True)
         self.setAutoFillBackground(False)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self._opacity = opacity
-        self._scrim_color = QColor(0, 0, 0, 110)
+        self._scrim_color = QColor(128, 128, 128, 110)
         self._label_color = QColor(240, 240, 240)
         self._filter: QObject | None = None
 
@@ -165,7 +163,7 @@ class BusyLoaderOverlay(QWidget):
         base = self.scrim_color
         base.setAlpha(int(255 * self._opacity))
         self.scrim_color = base
-        self.update()
+        self._update_palette()
 
     ##########################
     ### Internal methods ###
@@ -193,8 +191,9 @@ class BusyLoaderOverlay(QWidget):
         self.foreground_color = fg
 
         # Set the frame style with updated foreground colors
+        r, g, b, a = base.getRgb()
         self._frame.setStyleSheet(
-            f"#busyFrame {{ border: 2px dashed {self.foreground_color.name()}; border-radius: 9px; background-color: rgba(128, 128, 128, 110); }}"
+            f"#busyFrame {{ border: 2px dashed {self.foreground_color.name()}; border-radius: 9px; background-color: rgba({r}, {g}, {b}, {a}); }}"
         )
         self.update()
 
@@ -255,61 +254,62 @@ def install_busy_loader(
 # --------------------------
 # Launchable demo
 # --------------------------
-class DemoWidget(BECWidget, QWidget):  # pragma: no cover
-    def __init__(self, parent=None, start_busy: bool = False):
-        super().__init__(parent=parent, theme_update=True, start_busy=start_busy)
-
-        self._title = QLabel("Demo Content", self)
-        self._title.setAlignment(Qt.AlignCenter)
-        self._title.setFrameStyle(QFrame.Panel | QFrame.Sunken)
-        lay = QVBoxLayout(self)
-        lay.addWidget(self._title)
-        waveform = Waveform(self)
-        waveform.plot([1, 2, 3, 4, 5])
-        lay.addWidget(waveform, 1)
-
-        QTimer.singleShot(5000, self._ready)
-
-    def _ready(self):
-        self._title.setText("Ready ✓")
-        self.set_busy(False)
-
-
-class DemoWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Busy Loader — BECWidget demo")
-
-        left = DemoWidget(start_busy=True)
-        right = DemoWidget()
-
-        btn_on = QPushButton("Right → Loading")
-        btn_off = QPushButton("Right → Ready")
-        btn_text = QPushButton("Set custom text")
-        btn_on.clicked.connect(lambda: right.set_busy(True))
-        btn_off.clicked.connect(lambda: right.set_busy(False))
-
-        panel = QWidget()
-        prow = QVBoxLayout(panel)
-        prow.addWidget(btn_on)
-        prow.addWidget(btn_off)
-        prow.addWidget(btn_text)
-        prow.addStretch(1)
-
-        central = QWidget()
-        row = QHBoxLayout(central)
-        row.setContentsMargins(12, 12, 12, 12)
-        row.setSpacing(12)
-        row.addWidget(left, 1)
-        row.addWidget(right, 1)
-        row.addWidget(panel, 0)
-
-        self.setCentralWidget(central)
-        self.resize(900, 420)
-
-
 if __name__ == "__main__":  # pragma: no cover
     import sys
+
+    from bec_widgets.utils.bec_widget import BECWidget
+    from bec_widgets.widgets.plots.waveform.waveform import Waveform
+
+    class DemoWidget(BECWidget, QWidget):  # pragma: no cover
+        def __init__(self, parent=None, start_busy: bool = False):
+            super().__init__(parent=parent, theme_update=True, start_busy=start_busy)
+
+            self._title = QLabel("Demo Content", self)
+            self._title.setAlignment(Qt.AlignCenter)
+            self._title.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+            lay = QVBoxLayout(self)
+            lay.addWidget(self._title)
+            waveform = Waveform(self)
+            waveform.plot([1, 2, 3, 4, 5])
+            lay.addWidget(waveform, 1)
+
+            QTimer.singleShot(5000, self._ready)
+
+        def _ready(self):
+            self._title.setText("Ready ✓")
+            self.set_busy(False)
+
+    class DemoWindow(QMainWindow):  # pragma: no cover
+        def __init__(self):
+            super().__init__()
+            self.setWindowTitle("Busy Loader — BECWidget demo")
+
+            left = DemoWidget(start_busy=True)
+            right = DemoWidget()
+
+            btn_on = QPushButton("Right → Loading")
+            btn_off = QPushButton("Right → Ready")
+            btn_text = QPushButton("Set custom text")
+            btn_on.clicked.connect(lambda: right.set_busy(True))
+            btn_off.clicked.connect(lambda: right.set_busy(False))
+
+            panel = QWidget()
+            prow = QVBoxLayout(panel)
+            prow.addWidget(btn_on)
+            prow.addWidget(btn_off)
+            prow.addWidget(btn_text)
+            prow.addStretch(1)
+
+            central = QWidget()
+            row = QHBoxLayout(central)
+            row.setContentsMargins(12, 12, 12, 12)
+            row.setSpacing(12)
+            row.addWidget(left, 1)
+            row.addWidget(right, 1)
+            row.addWidget(panel, 0)
+
+            self.setCentralWidget(central)
+            self.resize(900, 420)
 
     app = QApplication(sys.argv)
     apply_theme("light")
