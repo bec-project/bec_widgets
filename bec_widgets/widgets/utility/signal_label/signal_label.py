@@ -494,6 +494,7 @@ if __name__ == "__main__":
     w.setLayout(QVBoxLayout())
     w.layout().addWidget(
         SignalLabel(
+            parent=w,
             device="samx",
             signal="readback",
             custom_label="custom label:",
@@ -501,7 +502,9 @@ if __name__ == "__main__":
             show_select_button=False,
         )
     )
-    w.layout().addWidget(SignalLabel(device="samy", signal="readback", show_default_units=True))
+    w.layout().addWidget(
+        SignalLabel(parent=w, device="samy", signal="readback", show_default_units=True)
+    )
     l = SignalLabel()
     l.device = "bpm4i"
     l.signal = "bpm4i"
