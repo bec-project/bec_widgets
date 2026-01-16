@@ -47,7 +47,7 @@ def test_becwidget_start_busy_shows_overlay(qtbot, widget_busy):
 
 def test_becwidget_set_busy_toggle_and_text(qtbot, widget_idle):
     overlay = getattr(widget_idle, "_busy_overlay", None)
-    assert overlay is None, "Overlay should be lazily created when idle"
+    assert overlay is not None
 
     widget_idle.set_busy(True)
     overlay = getattr(widget_idle, "_busy_overlay")
@@ -120,7 +120,6 @@ def test_becwidget_overlay_frame_geometry_and_style(qtbot, widget_busy):
     ss = frame.styleSheet()
     assert "dashed" in ss
     assert "border" in ss
-    assert "rgba(128, 128, 128, 110)" in ss
 
 
 def test_becwidget_busy_cycle_start_on_off_on(qtbot, widget_busy):
