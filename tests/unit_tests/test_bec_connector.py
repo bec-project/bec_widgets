@@ -1,5 +1,6 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
 import time
+from unittest.mock import MagicMock
 
 import pytest
 from qtpy.QtCore import QObject
@@ -131,3 +132,20 @@ def test_bec_connector_change_object_name(bec_connector):
     # Verify that the object with the previous name is no longer registered
     all_objects = bec_connector.rpc_register.list_all_connections().values()
     assert not any(obj.objectName() == previous_name for obj in all_objects)
+
+
+def test_bec_connector_terminate_run_on_about_to_quit(bec_connector):
+    assert BECConnector.EXIT_HANDLERS.get(0) is not None
+    terminate_mock = MagicMock()
+    bec_connector.__class__.EXIT_HANDLERS[0] = terminate_mock
+    QApplication.instance().aboutToQuit.emit()
+    terminate_mock.assert_called_once()
+
+
+def test_bec_connector_terminate_run_once_and_only_once(bec_connector):
+    terminate_mock = MagicMock()
+    bec_connector.__class__.EXIT_HANDLERS[0] = terminate_mock
+    conn_2 = BECConnectorQObject(client=mocked_client)
+    conn_3 = BECConnectorQObject(client=mocked_client)
+    QApplication.instance().aboutToQuit.emit()
+    terminate_mock.assert_called_once()

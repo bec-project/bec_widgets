@@ -6,7 +6,8 @@ import time
 import traceback
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Callable, Final, Optional
+from weakref import WeakValueDictionary
 
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import_from
@@ -27,6 +28,12 @@ else:
     BECDispatcher = lazy_import_from("bec_widgets.utils.bec_dispatcher", ("BECDispatcher",))
 
 logger = bec_logger.logger
+
+
+class _NextSentinel(object): ...
+
+
+NEXT_SENTINEL: Final[_NextSentinel] = _NextSentinel()
 
 
 class ConnectionConfig(BaseModel):
@@ -77,7 +84,8 @@ class BECConnector:
     """Connection mixin class to handle BEC client and device manager"""
 
     USER_ACCESS = ["_config_dict", "_get_all_rpc", "_rpc_id"]
-    EXIT_HANDLERS = {}
+    EXIT_HANDLERS: WeakValueDictionary[int, Callable[[],]] = WeakValueDictionary()
+    _exit_handler: Callable[[],] | None = None
     widget_removed = Signal()
     name_established = Signal(str)
 
@@ -122,7 +130,7 @@ class BECConnector:
         self.client = self.bec_dispatcher.client if client is None else client
         self.rpc_register = RPCRegister()
 
-        if not self.client in BECConnector.EXIT_HANDLERS:
+        if not 0 in BECConnector.EXIT_HANDLERS.keys():
             # register function to clean connections at exit;
             # the function depends on BECClient, and BECDispatcher
             @SafeSlot()
@@ -143,8 +151,9 @@ class BECConnector:
                 logger.info("Shutting down BEC Client", repr(client))
                 client.shutdown()
 
-            BECConnector.EXIT_HANDLERS[self.client] = terminate
-            QApplication.instance().aboutToQuit.connect(terminate)
+            BECConnector._exit_handler = terminate  # type: ignore # keep a strong reference to the final cleanup
+            BECConnector._add_exit_handler(terminate, 0)
+            QApplication.instance().aboutToQuit.connect(self._run_exit_handlers)
 
         if config:
             self.config = config
@@ -186,6 +195,42 @@ class BECConnector:
         self.root_widget = root_widget
 
         QTimer.singleShot(0, self._update_object_name)
+
+    @classmethod
+    def _add_exit_handler(cls, handler: Callable, priority: int):
+        """Private to allow use of priority 0"""
+        cls.EXIT_HANDLERS[priority] = handler
+
+    @classmethod
+    def add_exit_handler(cls, handler: Callable, priority: int | _NextSentinel = NEXT_SENTINEL):
+        """Add a handler to be called on the cleanup of the BEC Connector. Handlers are called in reverse order of their
+        priority - i.e. a higher number is higher priority. The BEC Connector's own cleanup will always be run last.
+        """
+        existing_priorities = set(cls.EXIT_HANDLERS.keys())
+        priority_modified = False
+        if isinstance(priority, _NextSentinel):
+            priority = max(existing_priorities) + 1
+        if priority < 1:
+            raise ValueError(
+                "Please use a priority greater than 1! Priority 0 is reserved for system cleanup."
+            )
+        if priority in cls.EXIT_HANDLERS.keys():
+            priority_modified = True
+            logger.warning(f"Priority {priority} already in use - using the next available:")
+        while priority in cls.EXIT_HANDLERS.keys():
+            priority += 1
+        if priority_modified:
+            logger.warning(f"Assigned priority {priority} for {handler}.")
+        cls._add_exit_handler(handler, priority)
+
+    @SafeSlot()
+    def _run_exit_handlers(self):
+        """Run all exit handlers from highest to lowest priority. Should be connected to AboutToQuit once and only once."""
+        handlers = reversed(
+            list(handler for _, handler in sorted(BECConnector.EXIT_HANDLERS.items()))
+        )
+        for handler in handlers:
+            handler()
 
     @property
     def parent_id(self) -> str | None:
