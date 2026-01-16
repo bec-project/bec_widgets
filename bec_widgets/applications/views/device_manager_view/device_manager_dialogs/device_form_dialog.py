@@ -177,12 +177,17 @@ class DeviceFormDialog(QtWidgets.QDialog):
         self.cancel_btn = QtWidgets.QPushButton("Cancel")
         self.reset_btn = QtWidgets.QPushButton("Reset Form")
 
-        btn_layout = QtWidgets.QHBoxLayout()
-        for btn in (self.cancel_btn, self.reset_btn, self.test_connection_btn, self.add_btn):
+        btn_box = QtWidgets.QDialogButtonBox(self)
+        btn_box.addButton(self.cancel_btn, QtWidgets.QDialogButtonBox.ButtonRole.RejectRole)
+        btn_box.addButton(self.reset_btn, QtWidgets.QDialogButtonBox.ButtonRole.ActionRole)
+        btn_box.addButton(
+            self.test_connection_btn, QtWidgets.QDialogButtonBox.ButtonRole.ActionRole
+        )
+        btn_box.addButton(self.add_btn, QtWidgets.QDialogButtonBox.ButtonRole.AcceptRole)
+        for btn in btn_box.buttons():
             btn.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
-            btn_layout.addWidget(btn)
-        btn_box = QtWidgets.QGroupBox("Actions")
-        btn_box.setLayout(btn_layout)
+        layout.addWidget(btn_box)
+
         frame_layout.addWidget(btn_box)
 
         # Connect signals to explicit slots
