@@ -23,6 +23,7 @@ from bec_widgets.applications.views.device_manager_view.device_manager_dialogs.u
     ValidationSection,
 )
 from bec_widgets.applications.views.device_manager_view.device_manager_display_widget import (
+    CustomBusyWidget,
     DeviceManagerDisplayWidget,
 )
 from bec_widgets.applications.views.device_manager_view.device_manager_view import (
@@ -591,6 +592,14 @@ class TestDeviceManagerView:
             qtbot.addWidget(widget)
             qtbot.waitExposed(widget)
             yield widget
+
+    @pytest.fixture
+    def custom_busy(self, qtbot, mocked_client):
+        """Fixture for the custom busy widget of the DeviceManagerDisplayWidget."""
+        widget = CustomBusyWidget(client=mocked_client)
+        qtbot.addWidget(widget)
+        qtbot.waitExposed(widget)
+        yield widget
 
     @pytest.fixture
     def device_configs(self, device_config: dict):
