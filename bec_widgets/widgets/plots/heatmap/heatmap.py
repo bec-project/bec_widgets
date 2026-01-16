@@ -203,6 +203,19 @@ class Heatmap(ImageBase):
         "remove_roi",
         "rois",
         "plot",
+        # Device properties
+        "x_device_name",
+        "x_device_name.setter",
+        "x_device_entry",
+        "x_device_entry.setter",
+        "y_device_name",
+        "y_device_name.setter",
+        "y_device_entry",
+        "y_device_entry.setter",
+        "z_device_name",
+        "z_device_name.setter",
+        "z_device_entry",
+        "z_device_entry.setter",
     ]
 
     PLUGIN = True
@@ -413,9 +426,15 @@ class Heatmap(ImageBase):
         """
         if self._image_config is None:
             return
-        x_name = self._image_config.x_device.name
-        y_name = self._image_config.y_device.name
-        z_name = self._image_config.z_device.name
+
+        # Safely get device names (might be None if not yet configured)
+        x_device = self._image_config.x_device
+        y_device = self._image_config.y_device
+        z_device = self._image_config.z_device
+
+        x_name = x_device.name if x_device else None
+        y_name = y_device.name if y_device else None
+        z_name = z_device.name if z_device else None
 
         if x_name is not None:
             self.x_label = x_name  # type: ignore
@@ -1135,6 +1154,244 @@ class Heatmap(ImageBase):
         if self.crosshair is not None:
             self.crosshair.reset()
         super().reset()
+
+    ################################################################################
+    # Widget Specific Properties
+    ################################################################################
+
+    @SafeProperty(str)
+    def x_device_name(self) -> str:
+        """Device name for the X axis."""
+        if self._image_config.x_device is None:
+            return ""
+        return self._image_config.x_device.name or ""
+
+    @x_device_name.setter
+    def x_device_name(self, device_name: str) -> None:
+        """
+        Set the X device name.
+
+        Args:
+            device_name(str): Device name for the X axis
+        """
+        device_name = device_name or ""
+
+        # Get current entry or validate
+        if device_name:
+            try:
+                entry = self.entry_validator.validate_signal(device_name, None)
+                self._image_config.x_device = HeatmapDeviceSignal(name=device_name, entry=entry)
+                self.property_changed.emit("x_device_name", device_name)
+                self.update_labels()  # Update axis labels
+                self._try_auto_plot()
+            except Exception:
+                pass  # Silently fail if device is not available yet
+        else:
+            self._image_config.x_device = None
+            self.property_changed.emit("x_device_name", "")
+            self.update_labels()  # Clear axis labels
+
+    @SafeProperty(str)
+    def x_device_entry(self) -> str:
+        """Signal entry for the X axis device."""
+        if self._image_config.x_device is None:
+            return ""
+        return self._image_config.x_device.entry or ""
+
+    @x_device_entry.setter
+    def x_device_entry(self, entry: str) -> None:
+        """
+        Set the X device entry.
+
+        Args:
+            entry(str): Signal entry for the X axis device
+        """
+        if not entry:
+            return
+
+        if self._image_config.x_device is None:
+            logger.warning("Cannot set x_device_entry without x_device_name set first.")
+            return
+
+        device_name = self._image_config.x_device.name
+        try:
+            # Validate the entry for this device
+            validated_entry = self.entry_validator.validate_signal(device_name, entry)
+            self._image_config.x_device = HeatmapDeviceSignal(
+                name=device_name, entry=validated_entry
+            )
+            self.property_changed.emit("x_device_entry", validated_entry)
+            self.update_labels()  # Update axis labels
+            self._try_auto_plot()
+        except Exception:
+            pass  # Silently fail if validation fails
+
+    @SafeProperty(str)
+    def y_device_name(self) -> str:
+        """Device name for the Y axis."""
+        if self._image_config.y_device is None:
+            return ""
+        return self._image_config.y_device.name or ""
+
+    @y_device_name.setter
+    def y_device_name(self, device_name: str) -> None:
+        """
+        Set the Y device name.
+
+        Args:
+            device_name(str): Device name for the Y axis
+        """
+        device_name = device_name or ""
+
+        # Get current entry or validate
+        if device_name:
+            try:
+                entry = self.entry_validator.validate_signal(device_name, None)
+                self._image_config.y_device = HeatmapDeviceSignal(name=device_name, entry=entry)
+                self.property_changed.emit("y_device_name", device_name)
+                self.update_labels()  # Update axis labels
+                self._try_auto_plot()
+            except Exception:
+                pass  # Silently fail if device is not available yet
+        else:
+            self._image_config.y_device = None
+            self.property_changed.emit("y_device_name", "")
+            self.update_labels()  # Clear axis labels
+
+    @SafeProperty(str)
+    def y_device_entry(self) -> str:
+        """Signal entry for the Y axis device."""
+        if self._image_config.y_device is None:
+            return ""
+        return self._image_config.y_device.entry or ""
+
+    @y_device_entry.setter
+    def y_device_entry(self, entry: str) -> None:
+        """
+        Set the Y device entry.
+
+        Args:
+            entry(str): Signal entry for the Y axis device
+        """
+        if not entry:
+            return
+
+        if self._image_config.y_device is None:
+            logger.warning("Cannot set y_device_entry without y_device_name set first.")
+            return
+
+        device_name = self._image_config.y_device.name
+        try:
+            # Validate the entry for this device
+            validated_entry = self.entry_validator.validate_signal(device_name, entry)
+            self._image_config.y_device = HeatmapDeviceSignal(
+                name=device_name, entry=validated_entry
+            )
+            self.property_changed.emit("y_device_entry", validated_entry)
+            self.update_labels()  # Update axis labels
+            self._try_auto_plot()
+        except Exception as e:
+            logger.debug(f"Y device entry validation failed: {e}")
+            pass  # Silently fail if validation fails
+
+    @SafeProperty(str)
+    def z_device_name(self) -> str:
+        """Device name for the Z (color) axis."""
+        if self._image_config.z_device is None:
+            return ""
+        return self._image_config.z_device.name or ""
+
+    @z_device_name.setter
+    def z_device_name(self, device_name: str) -> None:
+        """
+        Set the Z device name.
+
+        Args:
+            device_name(str): Device name for the Z axis
+        """
+        device_name = device_name or ""
+
+        # Get current entry or validate
+        if device_name:
+            try:
+                entry = self.entry_validator.validate_signal(device_name, None)
+                self._image_config.z_device = HeatmapDeviceSignal(name=device_name, entry=entry)
+                self.property_changed.emit("z_device_name", device_name)
+                self.update_labels()  # Update axis labels (title)
+                self._try_auto_plot()
+            except Exception as e:
+                logger.debug(f"Z device name validation failed: {e}")
+                pass  # Silently fail if device is not available yet
+        else:
+            self._image_config.z_device = None
+            self.property_changed.emit("z_device_name", "")
+            self.update_labels()  # Clear axis labels
+
+    @SafeProperty(str)
+    def z_device_entry(self) -> str:
+        """Signal entry for the Z (color) axis device."""
+        if self._image_config.z_device is None:
+            return ""
+        return self._image_config.z_device.entry or ""
+
+    @z_device_entry.setter
+    def z_device_entry(self, entry: str) -> None:
+        """
+        Set the Z device entry.
+
+        Args:
+            entry(str): Signal entry for the Z axis device
+        """
+        if not entry:
+            return
+
+        if self._image_config.z_device is None:
+            logger.warning("Cannot set z_device_entry without z_device_name set first.")
+            return
+
+        device_name = self._image_config.z_device.name
+        try:
+            # Validate the entry for this device
+            validated_entry = self.entry_validator.validate_signal(device_name, entry)
+            self._image_config.z_device = HeatmapDeviceSignal(
+                name=device_name, entry=validated_entry
+            )
+            self.property_changed.emit("z_device_entry", validated_entry)
+            self.update_labels()  # Update axis labels (title)
+            self._try_auto_plot()
+        except Exception as e:
+            logger.debug(f"Z device entry validation failed: {e}")
+            pass  # Silently fail if validation fails
+
+    def _try_auto_plot(self) -> None:
+        """
+        Attempt to automatically call plot() if all three devices are set.
+        Similar to waveform's approach but requires all three devices.
+        """
+        has_x = self._image_config.x_device is not None
+        has_y = self._image_config.y_device is not None
+        has_z = self._image_config.z_device is not None
+
+        if has_x and has_y and has_z:
+            x_name = self._image_config.x_device.name
+            x_entry = self._image_config.x_device.entry
+            y_name = self._image_config.y_device.name
+            y_entry = self._image_config.y_device.entry
+            z_name = self._image_config.z_device.name
+            z_entry = self._image_config.z_device.entry
+            try:
+                self.plot(
+                    x_name=x_name,
+                    y_name=y_name,
+                    z_name=z_name,
+                    x_entry=x_entry,
+                    y_entry=y_entry,
+                    z_entry=z_entry,
+                    validate_bec=False,  # Don't validate - entries already validated
+                )
+            except Exception as e:
+                logger.debug(f"Auto-plot failed: {e}")
+                pass  # Silently fail if plot cannot be called yet
 
     @SafeProperty(str)
     def interpolation_method(self) -> str:
