@@ -57,9 +57,9 @@ class TestDeviceManagerViewDialogs:
     """Test class for DeviceManagerView dialog interactions."""
 
     @pytest.fixture
-    def mock_dm_view(self, qtbot):
+    def mock_dm_view(self, qtbot, mocked_client):
         """Fixture for DeviceManagerView."""
-        widget = DeviceManagerDisplayWidget()
+        widget = DeviceManagerDisplayWidget(client=mocked_client)
         qtbot.addWidget(widget)
         qtbot.waitExposed(widget)
         yield widget
