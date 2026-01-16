@@ -51,6 +51,19 @@ class ScatterWaveform(PlotBase):
         "plot",
         "update_with_scan_history",
         "clear_all",
+        # Device properties
+        "x_device_name",
+        "x_device_name.setter",
+        "x_device_entry",
+        "x_device_entry.setter",
+        "y_device_name",
+        "y_device_name.setter",
+        "y_device_entry",
+        "y_device_entry.setter",
+        "z_device_name",
+        "z_device_name.setter",
+        "z_device_entry",
+        "z_device_entry.setter",
     ]
 
     sync_signal_update = Signal()
@@ -285,10 +298,6 @@ class ScatterWaveform(PlotBase):
         Args:
             config(ScatterCurveConfig): The configuration of the scatter curve.
         """
-        # Apply suffix for axes
-        self.set_x_label_suffix(f"[{config.x_device.name}-{config.x_device.name}]")
-        self.set_y_label_suffix(f"[{config.y_device.name}-{config.y_device.name}]")
-
         # To have only one main curve
         if self._main_curve is not None:
             self.rpc_register.remove_rpc(self._main_curve)
@@ -298,6 +307,9 @@ class ScatterWaveform(PlotBase):
             self._main_curve = None
 
         self._main_curve = ScatterCurve(parent_item=self, config=config, name=config.label)
+
+        # Update axis labels (matching Heatmap's label policy)
+        self.update_labels()
         self.plot_item.addItem(self._main_curve)
 
         self.sync_signal_update.emit()
@@ -404,6 +416,284 @@ class ScatterWaveform(PlotBase):
             # Historical
             scan_devices = self.scan_item.devices
             return scan_devices, "value"
+
+    ################################################################################
+    # Widget Specific Properties
+    ################################################################################
+
+    @SafeProperty(str)
+    def x_device_name(self) -> str:
+        """Device name for the X axis."""
+        if self._main_curve is None or self._main_curve.config.x_device is None:
+            return ""
+        return self._main_curve.config.x_device.name or ""
+
+    @x_device_name.setter
+    def x_device_name(self, device_name: str) -> None:
+        """
+        Set the X device name.
+
+        Args:
+            device_name(str): Device name for the X axis
+        """
+        device_name = device_name or ""
+
+        if device_name:
+            try:
+                entry = self.entry_validator.validate_signal(device_name, None)
+                # Update or create config
+                if self._main_curve.config.x_device is None:
+                    self._main_curve.config.x_device = ScatterDeviceSignal(
+                        name=device_name, entry=entry
+                    )
+                else:
+                    self._main_curve.config.x_device.name = device_name
+                    self._main_curve.config.x_device.entry = entry
+                self.property_changed.emit("x_device_name", device_name)
+                self.update_labels()
+                self._try_auto_plot()
+            except Exception:
+                pass  # Silently fail if device is not available yet
+        else:
+            if self._main_curve.config.x_device is not None:
+                self._main_curve.config.x_device = None
+            self.property_changed.emit("x_device_name", "")
+            self.update_labels()
+
+    @SafeProperty(str)
+    def x_device_entry(self) -> str:
+        """Signal entry for the X axis device."""
+        if self._main_curve is None or self._main_curve.config.x_device is None:
+            return ""
+        return self._main_curve.config.x_device.entry or ""
+
+    @x_device_entry.setter
+    def x_device_entry(self, entry: str) -> None:
+        """
+        Set the X device entry.
+
+        Args:
+            entry(str): Signal entry for the X axis device
+        """
+        if not entry:
+            return
+
+        if self._main_curve.config.x_device is None:
+            logger.warning("Cannot set x_device_entry without x_device_name set first.")
+            return
+
+        device_name = self._main_curve.config.x_device.name
+        try:
+            validated_entry = self.entry_validator.validate_signal(device_name, entry)
+            self._main_curve.config.x_device.entry = validated_entry
+            self.property_changed.emit("x_device_entry", validated_entry)
+            self.update_labels()
+            self._try_auto_plot()
+        except Exception:
+            pass  # Silently fail if validation fails
+
+    @SafeProperty(str)
+    def y_device_name(self) -> str:
+        """Device name for the Y axis."""
+        if self._main_curve is None or self._main_curve.config.y_device is None:
+            return ""
+        return self._main_curve.config.y_device.name or ""
+
+    @y_device_name.setter
+    def y_device_name(self, device_name: str) -> None:
+        """
+        Set the Y device name.
+
+        Args:
+            device_name(str): Device name for the Y axis
+        """
+        device_name = device_name or ""
+
+        if device_name:
+            try:
+                entry = self.entry_validator.validate_signal(device_name, None)
+                # Update or create config
+                if self._main_curve.config.y_device is None:
+                    self._main_curve.config.y_device = ScatterDeviceSignal(
+                        name=device_name, entry=entry
+                    )
+                else:
+                    self._main_curve.config.y_device.name = device_name
+                    self._main_curve.config.y_device.entry = entry
+                self.property_changed.emit("y_device_name", device_name)
+                self.update_labels()
+                self._try_auto_plot()
+            except Exception:
+                pass  # Silently fail if device is not available yet
+        else:
+            if self._main_curve.config.y_device is not None:
+                self._main_curve.config.y_device = None
+            self.property_changed.emit("y_device_name", "")
+            self.update_labels()
+
+    @SafeProperty(str)
+    def y_device_entry(self) -> str:
+        """Signal entry for the Y axis device."""
+        if self._main_curve is None or self._main_curve.config.y_device is None:
+            return ""
+        return self._main_curve.config.y_device.entry or ""
+
+    @y_device_entry.setter
+    def y_device_entry(self, entry: str) -> None:
+        """
+        Set the Y device entry.
+
+        Args:
+            entry(str): Signal entry for the Y axis device
+        """
+        if not entry:
+            return
+
+        if self._main_curve.config.y_device is None:
+            logger.warning("Cannot set y_device_entry without y_device_name set first.")
+            return
+
+        device_name = self._main_curve.config.y_device.name
+        try:
+            validated_entry = self.entry_validator.validate_signal(device_name, entry)
+            self._main_curve.config.y_device.entry = validated_entry
+            self.property_changed.emit("y_device_entry", validated_entry)
+            self.update_labels()
+            self._try_auto_plot()
+        except Exception:
+            pass  # Silently fail if validation fails
+
+    @SafeProperty(str)
+    def z_device_name(self) -> str:
+        """Device name for the Z (color) axis."""
+        if self._main_curve is None or self._main_curve.config.z_device is None:
+            return ""
+        return self._main_curve.config.z_device.name or ""
+
+    @z_device_name.setter
+    def z_device_name(self, device_name: str) -> None:
+        """
+        Set the Z device name.
+
+        Args:
+            device_name(str): Device name for the Z axis
+        """
+        device_name = device_name or ""
+
+        if device_name:
+            try:
+                entry = self.entry_validator.validate_signal(device_name, None)
+                # Update or create config
+                if self._main_curve.config.z_device is None:
+                    self._main_curve.config.z_device = ScatterDeviceSignal(
+                        name=device_name, entry=entry
+                    )
+                else:
+                    self._main_curve.config.z_device.name = device_name
+                    self._main_curve.config.z_device.entry = entry
+                self.property_changed.emit("z_device_name", device_name)
+                self.update_labels()
+                self._try_auto_plot()
+            except Exception:
+                pass  # Silently fail if device is not available yet
+        else:
+            if self._main_curve.config.z_device is not None:
+                self._main_curve.config.z_device = None
+            self.property_changed.emit("z_device_name", "")
+            self.update_labels()
+
+    @SafeProperty(str)
+    def z_device_entry(self) -> str:
+        """Signal entry for the Z (color) axis device."""
+        if self._main_curve is None or self._main_curve.config.z_device is None:
+            return ""
+        return self._main_curve.config.z_device.entry or ""
+
+    @z_device_entry.setter
+    def z_device_entry(self, entry: str) -> None:
+        """
+        Set the Z device entry.
+
+        Args:
+            entry(str): Signal entry for the Z axis device
+        """
+        if not entry:
+            return
+
+        if self._main_curve.config.z_device is None:
+            logger.warning("Cannot set z_device_entry without z_device_name set first.")
+            return
+
+        device_name = self._main_curve.config.z_device.name
+        try:
+            validated_entry = self.entry_validator.validate_signal(device_name, entry)
+            self._main_curve.config.z_device.entry = validated_entry
+            self.property_changed.emit("z_device_entry", validated_entry)
+            self.update_labels()
+            self._try_auto_plot()
+        except Exception:
+            pass  # Silently fail if validation fails
+
+    def _try_auto_plot(self) -> None:
+        """
+        Attempt to automatically call plot() if all three devices are set.
+        """
+        has_x = self._main_curve.config.x_device is not None
+        has_y = self._main_curve.config.y_device is not None
+        has_z = self._main_curve.config.z_device is not None
+
+        if has_x and has_y and has_z:
+            x_name = self._main_curve.config.x_device.name
+            x_entry = self._main_curve.config.x_device.entry
+            y_name = self._main_curve.config.y_device.name
+            y_entry = self._main_curve.config.y_device.entry
+            z_name = self._main_curve.config.z_device.name
+            z_entry = self._main_curve.config.z_device.entry
+            try:
+                self.plot(
+                    x_name=x_name,
+                    y_name=y_name,
+                    z_name=z_name,
+                    x_entry=x_entry,
+                    y_entry=y_entry,
+                    z_entry=z_entry,
+                    validate_bec=False,  # Don't validate - entries already validated
+                )
+            except Exception as e:
+                logger.debug(f"Auto-plot failed: {e}")
+                pass  # Silently fail if plot cannot be called yet
+
+    def update_labels(self):
+        """
+        Update the labels of the x and y axes based on current device configuration.
+        """
+        if self._main_curve is None:
+            return
+
+        config = self._main_curve.config
+
+        # Safely get device names
+        x_device = config.x_device
+        y_device = config.y_device
+
+        x_name = x_device.name if x_device else None
+        y_name = y_device.name if y_device else None
+
+        if x_name is not None:
+            self.x_label = x_name  # type: ignore
+            x_dev = self.dev.get(x_name)
+            if x_dev and hasattr(x_dev, "egu"):
+                self.x_label_units = x_dev.egu()
+
+        if y_name is not None:
+            self.y_label = y_name  # type: ignore
+            y_dev = self.dev.get(y_name)
+            if y_dev and hasattr(y_dev, "egu"):
+                self.y_label_units = y_dev.egu()
+
+    ################################################################################
+    # Scan History
+    ################################################################################
 
     @SafeSlot(int)
     @SafeSlot(str)

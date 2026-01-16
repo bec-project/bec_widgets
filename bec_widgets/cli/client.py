@@ -5441,6 +5441,90 @@ class ScatterWaveform(RPCBase):
         Clear all the curves from the plot.
         """
 
+    @property
+    @rpc_call
+    def x_device_name(self) -> "str":
+        """
+        Device name for the X axis.
+        """
+
+    @x_device_name.setter
+    @rpc_call
+    def x_device_name(self) -> "str":
+        """
+        Device name for the X axis.
+        """
+
+    @property
+    @rpc_call
+    def x_device_entry(self) -> "str":
+        """
+        Signal entry for the X axis device.
+        """
+
+    @x_device_entry.setter
+    @rpc_call
+    def x_device_entry(self) -> "str":
+        """
+        Signal entry for the X axis device.
+        """
+
+    @property
+    @rpc_call
+    def y_device_name(self) -> "str":
+        """
+        Device name for the Y axis.
+        """
+
+    @y_device_name.setter
+    @rpc_call
+    def y_device_name(self) -> "str":
+        """
+        Device name for the Y axis.
+        """
+
+    @property
+    @rpc_call
+    def y_device_entry(self) -> "str":
+        """
+        Signal entry for the Y axis device.
+        """
+
+    @y_device_entry.setter
+    @rpc_call
+    def y_device_entry(self) -> "str":
+        """
+        Signal entry for the Y axis device.
+        """
+
+    @property
+    @rpc_call
+    def z_device_name(self) -> "str":
+        """
+        Device name for the Z (color) axis.
+        """
+
+    @z_device_name.setter
+    @rpc_call
+    def z_device_name(self) -> "str":
+        """
+        Device name for the Z (color) axis.
+        """
+
+    @property
+    @rpc_call
+    def z_device_entry(self) -> "str":
+        """
+        Signal entry for the Z (color) axis device.
+        """
+
+    @z_device_entry.setter
+    @rpc_call
+    def z_device_entry(self) -> "str":
+        """
+        Signal entry for the Z (color) axis device.
+        """
+
 
 class SignalComboBox(RPCBase):
     """Line edit widget for device input with autocomplete for device names."""
