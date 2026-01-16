@@ -77,27 +77,27 @@ class CustomBusyWidget(QWidget):
         super().__init__(parent=parent)
 
         # Widgets
-        progress = DeviceInitializationProgressBar(parent=self, client=client)
-        progress.setMinimumWidth(320)
+        self.progress = DeviceInitializationProgressBar(parent=self, client=client)
+        self.progress.setMinimumWidth(320)
 
         # Spinner
-        spinner = SpinnerWidget(parent=self)
+        self.spinner = SpinnerWidget(parent=self)
         scale = self._ui_scale()
         spinner_size = int(scale * 0.12) if scale else 1
         spinner_size = max(32, min(spinner_size, 96))
-        spinner.setFixedSize(spinner_size, spinner_size)
+        self.spinner.setFixedSize(spinner_size, spinner_size)
 
         # Cancel button
-        cancel_button = QPushButton("Cancel Upload", parent=self)
-        cancel_button.setIcon(material_icon("cancel"))
-        cancel_button.clicked.connect(self.cancel_requested.emit)
+        self.cancel_button = QPushButton("Cancel Upload", parent=self)
+        self.cancel_button.setIcon(material_icon("cancel"))
+        self.cancel_button.clicked.connect(self.cancel_requested.emit)
         button_height = int(spinner_size * 0.9)
         button_height = max(36, min(button_height, 72))
         aspect_ratio = 3.8  # width / height, visually stable for text buttons
         button_width = int(button_height * aspect_ratio)
-        cancel_button.setFixedSize(button_width, button_height)
+        self.cancel_button.setFixedSize(button_width, button_height)
         color = get_accent_colors()
-        cancel_button.setStyleSheet(
+        self.cancel_button.setStyleSheet(
             f"""
             QPushButton {{
                 background-color: {color.emergency.name()};
@@ -113,10 +113,10 @@ class CustomBusyWidget(QWidget):
         content_layout.setContentsMargins(24, 24, 24, 24)
         content_layout.setSpacing(16)
         content_layout.addStretch()
-        content_layout.addWidget(spinner, 0, Qt.AlignmentFlag.AlignHCenter)
-        content_layout.addWidget(progress, 0, Qt.AlignmentFlag.AlignHCenter)
+        content_layout.addWidget(self.spinner, 0, Qt.AlignmentFlag.AlignHCenter)
+        content_layout.addWidget(self.progress, 0, Qt.AlignmentFlag.AlignHCenter)
         content_layout.addStretch()
-        content_layout.addWidget(cancel_button, 0, Qt.AlignmentFlag.AlignHCenter)
+        content_layout.addWidget(self.cancel_button, 0, Qt.AlignmentFlag.AlignHCenter)
 
         if hasattr(color, "_colors"):
             bg_color = color._colors.get("BG", None)
@@ -138,14 +138,12 @@ class CustomBusyWidget(QWidget):
     def showEvent(self, event):
         """Show event to start the spinner."""
         super().showEvent(event)
-        for child in self.findChildren(SpinnerWidget):
-            child.start()
+        self.spinner.start()
 
     def hideEvent(self, event):
         """Hide event to stop the spinner."""
         super().hideEvent(event)
-        for child in self.findChildren(SpinnerWidget):
-            child.stop()
+        self.spinner.stop()
 
 
 class DeviceManagerDisplayWidget(DockAreaWidget):
@@ -170,9 +168,6 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
         # will block if we use the config_helper from self.client.config._config_helper
         self._config_helper = config_helper.ConfigHelper(self.client.connector)
         self._shared_selection = SharedSelectionSignal()
-
-        # Custom upload widget for busy overlay
-        self._custom_overlay_widget: QWidget | None = None
 
         # Device Table View widget
         self.device_table_view = DeviceTable(self)
@@ -687,20 +682,9 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
         # Config is in sync with BEC, so we update the state
         self.device_table_view.device_config_in_sync_with_redis.emit(False)
 
-        # Cleanup custom overlay widget
-        if self._custom_overlay_widget is not None:
-            self._custom_overlay_widget.close()
-            self._custom_overlay_widget.deleteLater()
-            self._custom_overlay_widget = None
-
     def _handle_push_complete_to_communicator(self):
         """Handle completion of the config push to Redis."""
         self._set_busy_wrapper(enabled=False)
-        # Cleanup custom overlay widget
-        if self._custom_overlay_widget is not None:
-            self._custom_overlay_widget.close()
-            self._custom_overlay_widget.deleteLater()
-            self._custom_overlay_widget = None
 
     def _handle_exception_from_communicator(self, exception: Exception):
         """Handle exceptions from the config communicator."""
@@ -710,10 +694,6 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
             f"An error occurred while uploading the configuration to BEC Server:\n{str(exception)}",
         )
         self._set_busy_wrapper(enabled=False)
-        if self._custom_overlay_widget is not None:
-            self._custom_overlay_widget.close()
-            self._custom_overlay_widget.deleteLater()
-            self._custom_overlay_widget = None
 
     @SafeSlot()
     def _save_to_disk_action(self):
