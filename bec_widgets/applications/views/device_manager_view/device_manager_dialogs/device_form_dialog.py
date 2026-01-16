@@ -6,7 +6,6 @@ from bec_lib.atlas_models import Device as DeviceModel
 from bec_lib.logger import bec_logger
 from ophyd_devices.interfaces.device_config_templates.ophyd_templates import OPHYD_DEVICE_TEMPLATES
 from qtpy import QtCore, QtWidgets
-from zmq.devices import Device
 
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.widgets.control.device_manager.components import OphydValidation

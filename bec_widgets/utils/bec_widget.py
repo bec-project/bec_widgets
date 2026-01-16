@@ -165,7 +165,7 @@ class BECWidget(BECConnector):
         overlay = getattr(self, "_busy_overlay", None)
         if overlay is None:
 
-            overlay = install_busy_loader(self, start_loading=False)
+            overlay = install_busy_loader(target=self, start_loading=False)
             self._busy_overlay = overlay
 
         # Create and set the busy state widget
