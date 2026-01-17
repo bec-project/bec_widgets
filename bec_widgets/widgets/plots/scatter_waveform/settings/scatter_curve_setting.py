@@ -86,17 +86,17 @@ class ScatterCurveSettings(SettingWidget):
         if hasattr(self.ui, "x_name"):
             self.ui.x_name.set_device(x_name)
         if hasattr(self.ui, "x_entry") and x_entry is not None:
-            self.ui.x_entry.setText(x_entry)
+            self.ui.x_entry.set_to_obj_name(x_entry)
 
         if hasattr(self.ui, "y_name"):
             self.ui.y_name.set_device(y_name)
         if hasattr(self.ui, "y_entry") and y_entry is not None:
-            self.ui.y_entry.setText(y_entry)
+            self.ui.y_entry.set_to_obj_name(y_entry)
 
         if hasattr(self.ui, "z_name"):
             self.ui.z_name.set_device(z_name)
         if hasattr(self.ui, "z_entry") and z_entry is not None:
-            self.ui.z_entry.setText(z_entry)
+            self.ui.z_entry.set_to_obj_name(z_entry)
 
     @SafeSlot()
     def accept_changes(self):
