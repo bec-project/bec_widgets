@@ -106,6 +106,13 @@ class ScatterWaveform(PlotBase):
         )
 
         self._init_scatter_curve_settings()
+
+        # Show toolbar bundles - only include scatter_waveform_settings if not in SIDE mode
+        shown_bundles = ["plot_export", "mouse_interaction", "roi", "axis_popup"]
+        if self.ui_mode != UIMode.SIDE:
+            shown_bundles.insert(0, "scatter_waveform_settings")
+        self.toolbar.show_bundles(shown_bundles)
+
         self.update_with_scan_history(-1)
 
     ################################################################################
@@ -134,14 +141,8 @@ class ScatterWaveform(PlotBase):
                 checkable=True,
                 parent=self,
             )
-            self.toolbar.components.add_safe("scatter_waveform_settings", scatter_curve_action)
-            self.toolbar.get_bundle("axis_popup").add_action("scatter_waveform_settings")
+            self.toolbar.add_action("scatter_waveform_settings", scatter_curve_action)
             scatter_curve_action.action.triggered.connect(self.show_scatter_curve_settings)
-
-        shown_bundles = self.toolbar.shown_bundles
-        if "performance" in shown_bundles:
-            shown_bundles.remove("performance")
-        self.toolbar.show_bundles(shown_bundles)
 
     def show_scatter_curve_settings(self):
         """
@@ -158,7 +159,7 @@ class ScatterWaveform(PlotBase):
                 window_title="Scatter Curve Settings",
                 modal=False,
             )
-            self.scatter_dialog.resize(620, 200)
+            self.scatter_dialog.resize(700, 240)
             # When the dialog is closed, update the toolbar icon and clear the reference
             self.scatter_dialog.finished.connect(self._scatter_dialog_closed)
             self.scatter_dialog.show()
