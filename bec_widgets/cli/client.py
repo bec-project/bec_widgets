@@ -5374,13 +5374,6 @@ class ScatterWaveform(RPCBase):
 
     @property
     @rpc_call
-    def main_curve(self) -> "ScatterCurve":
-        """
-        The main scatter curve item.
-        """
-
-    @property
-    @rpc_call
     def color_map(self) -> "str":
         """
         The color map of the scatter waveform.

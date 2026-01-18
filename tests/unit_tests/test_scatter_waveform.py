@@ -49,28 +49,6 @@ def test_scatter_waveform_color_map(qtbot, mocked_client):
     assert swf.color_map == "plasma"
 
 
-def test_scatter_waveform_curve_json(qtbot, mocked_client):
-    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
-
-    # Add a device-based scatter curve
-    swf.plot(x_name="samx", y_name="samy", z_name="bpm4i", label="test_curve")
-
-    json_str = swf.curve_json
-    data = json.loads(json_str)
-    assert isinstance(data, dict)
-    assert data["label"] == "test_curve"
-    assert data["x_device"]["name"] == "samx"
-    assert data["y_device"]["name"] == "samy"
-    assert data["z_device"]["name"] == "bpm4i"
-
-    # Clear and reload from JSON
-    swf.clear_all()
-    assert swf.main_curve.getData() == (None, None)
-
-    swf.curve_json = json_str
-    assert swf.main_curve.config.label == "test_curve"
-
-
 def test_scatter_waveform_update_with_scan_history(qtbot, mocked_client, monkeypatch):
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
 
