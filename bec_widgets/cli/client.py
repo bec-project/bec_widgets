@@ -5557,6 +5557,15 @@ class SignalComboBox(RPCBase):
             list[str]: List of device signals.
         """
 
+    @rpc_call
+    def get_signal_name(self) -> "str":
+        """
+        Get the signal name from the combobox.
+
+        Returns:
+            str: The signal name.
+        """
+
 
 class SignalLabel(RPCBase):
     @property

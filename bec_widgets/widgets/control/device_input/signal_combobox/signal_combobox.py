@@ -27,7 +27,7 @@ class SignalComboBox(DeviceSignalInputBase, QComboBox):
         arg_name: Argument name, can be used for the other widgets which has to call some other function in bec using correct argument names.
     """
 
-    USER_ACCESS = ["set_signal", "set_device", "signals"]
+    USER_ACCESS = ["set_signal", "set_device", "signals", "get_signal_name"]
 
     ICON_NAME = "list_alt"
     PLUGIN = True
@@ -147,6 +147,24 @@ class SignalComboBox(DeviceSignalInputBase, QComboBox):
                 self.setCurrentIndex(i)
                 return True
         return False
+
+    def get_signal_name(self) -> str:
+        """
+        Get the signal name from the combobox.
+
+        Returns:
+            str: The signal name.
+        """
+        signal_name = self.currentText()
+        index = self.findText(signal_name)
+        if index == -1:
+            return signal_name
+
+        signal_info = self.itemData(index)
+        if signal_info:
+            signal_name = signal_info.get("obj_name", signal_name)
+
+        return signal_name if signal_name else ""
 
     @SafeSlot()
     def reset_selection(self):

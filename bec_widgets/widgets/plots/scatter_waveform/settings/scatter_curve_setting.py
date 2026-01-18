@@ -103,12 +103,12 @@ class ScatterCurveSettings(SettingWidget):
         """
         Apply all properties from the settings widget to the target widget.
         """
-        x_name = self.ui.x_name.text()
-        x_entry = self.ui.x_entry.text()
-        y_name = self.ui.y_name.text()
-        y_entry = self.ui.y_entry.text()
-        z_name = self.ui.z_name.text()
-        z_entry = self.ui.z_entry.text()
+        x_name = self.ui.x_name.currentText()
+        x_entry = self.ui.x_entry.get_signal_name()
+        y_name = self.ui.y_name.currentText()
+        y_entry = self.ui.y_entry.get_signal_name()
+        z_name = self.ui.z_name.currentText()
+        z_entry = self.ui.z_entry.get_signal_name()
         validate_bec = self.ui.validate_bec.checked
         color_map = self.ui.color_map.colormap
 

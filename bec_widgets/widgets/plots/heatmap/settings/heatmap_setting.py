@@ -1,18 +1,12 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING
 
 from qtpy.QtWidgets import QFrame, QScrollArea, QVBoxLayout
 
 from bec_widgets.utils import UILoader
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.settings_dialog import SettingWidget
-
-if TYPE_CHECKING:
-    from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import (
-        SignalComboBox,
-    )
 
 
 class HeatmapSettings(SettingWidget):
@@ -120,36 +114,17 @@ class HeatmapSettings(SettingWidget):
                 getattr(self.target_widget._image_config, "enforce_interpolation", False)
             )
 
-    def _get_signal_name(self, signal: SignalComboBox) -> str:
-        """
-        Get the signal name from the signal combobox.
-        Args:
-            signal (SignalComboBox): The signal combobox to get the name from.
-        Returns:
-            str: The signal name.
-        """
-        device_entry = signal.currentText()
-        index = signal.findText(device_entry)
-        if index == -1:
-            return device_entry
-
-        device_entry_info = signal.itemData(index)
-        if device_entry_info:
-            device_entry = device_entry_info.get("obj_name", device_entry)
-
-        return device_entry if device_entry else ""
-
     @SafeSlot()
     def accept_changes(self):
         """
         Apply all properties from the settings widget to the target widget.
         """
         x_name = self.ui.x_name.currentText()
-        x_entry = self._get_signal_name(self.ui.x_entry)
+        x_entry = self.ui.x_entry.get_signal_name()
         y_name = self.ui.y_name.currentText()
-        y_entry = self._get_signal_name(self.ui.y_entry)
+        y_entry = self.ui.y_entry.get_signal_name()
         z_name = self.ui.z_name.currentText()
-        z_entry = self._get_signal_name(self.ui.z_entry)
+        z_entry = self.ui.z_entry.get_signal_name()
         validate_bec = self.ui.validate_bec.checked
         color_map = self.ui.color_map.colormap
         interpolation = self.ui.interpolation.currentText()
