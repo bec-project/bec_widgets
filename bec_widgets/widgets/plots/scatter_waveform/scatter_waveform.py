@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import json
-
 import pyqtgraph as pg
 from bec_lib import bec_logger
 from bec_lib.endpoints import MessageEndpoints
@@ -45,7 +43,6 @@ class ScatterWaveform(PlotBase):
     USER_ACCESS = [
         *PlotBase.USER_ACCESS,
         # Scatter Waveform Specific RPC Access
-        "main_curve",
         "color_map",
         "color_map.setter",
         "plot",
@@ -204,27 +201,6 @@ class ScatterWaveform(PlotBase):
             self.scatter_waveform_property_changed.emit()
         except ValidationError:
             return
-
-    @SafeProperty(str, designable=False, popup_error=True)
-    def curve_json(self) -> str:
-        """
-        Get the curve configuration as a JSON string.
-        """
-        return json.dumps(self.main_curve.config.model_dump(), indent=2)
-
-    @curve_json.setter
-    def curve_json(self, value: str):
-        """
-        Set the curve configuration from a JSON string.
-
-        Args:
-            value(str): The JSON string to set the curve configuration from.
-        """
-        try:
-            config = ScatterCurveConfig(**json.loads(value))
-            self._add_main_scatter_curve(config)
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to decode JSON: {e}")
 
     ################################################################################
     # High Level methods for API

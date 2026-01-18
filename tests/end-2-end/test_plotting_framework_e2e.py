@@ -44,11 +44,7 @@ def test_rpc_plotting_shortcuts_init_configs(qtbot, connected_client_gui_obj):
 
     im.image(monitor="eiger")
     mm.map(x_name="samx", y_name="samy")
-    sw.plot(x_name="samx", y_name="samy", z_name="bpm4i")
-    assert sw.main_curve.object_name == "bpm4i_bpm4i"
-    # Create a new curve on the scatter waveform should replace the old one
     sw.plot(x_name="samx", y_name="samy", z_name="bpm4a")
-    assert sw.main_curve.object_name == "bpm4a_bpm4a"
     mw.plot(monitor="waveform")
     # Adding multiple custom curves sho
 
