@@ -166,16 +166,6 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>DeviceComboBox</class>
-   <extends></extends>
-   <header>device_combo_box</header>
-  </customwidget>
-  <customwidget>
-   <class>SignalComboBox</class>
-   <extends></extends>
-   <header>signal_combo_box</header>
-  </customwidget>
-  <customwidget>
    <class>ToggleSwitch</class>
    <extends></extends>
    <header>toggle_switch</header>
@@ -185,7 +175,25 @@
    <extends></extends>
    <header>bec_color_map_widget</header>
   </customwidget>
+  <customwidget>
+   <class>DeviceComboBox</class>
+   <extends></extends>
+   <header>device_combo_box</header>
+  </customwidget>
+  <customwidget>
+   <class>SignalComboBox</class>
+   <extends></extends>
+   <header>signal_combo_box</header>
+  </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>x_name</tabstop>
+  <tabstop>y_name</tabstop>
+  <tabstop>z_name</tabstop>
+  <tabstop>x_entry</tabstop>
+  <tabstop>y_entry</tabstop>
+  <tabstop>z_entry</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>
