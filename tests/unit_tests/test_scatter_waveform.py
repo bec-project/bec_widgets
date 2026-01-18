@@ -1,4 +1,4 @@
-import json
+from unittest.mock import patch
 
 import numpy as np
 
@@ -7,6 +7,9 @@ from bec_widgets.widgets.plots.scatter_waveform.scatter_curve import (
     ScatterDeviceSignal,
 )
 from bec_widgets.widgets.plots.scatter_waveform.scatter_waveform import ScatterWaveform
+from bec_widgets.widgets.plots.scatter_waveform.settings.scatter_curve_setting import (
+    ScatterCurveSettings,
+)
 from tests.unit_tests.client_mocks import create_dummy_scan_item, mocked_client
 
 from .conftest import create_widget
@@ -460,3 +463,104 @@ def test_device_properties_with_none_values(qtbot, mocked_client):
     # Entry None should not change anything
     swf.y_device_entry = None
     assert swf.y_device_entry  # Should still have validated entry
+
+
+################################################################################
+# ScatterCurveSettings Tests
+################################################################################
+
+
+def test_scatter_curve_settings_accept_changes(qtbot, mocked_client):
+    """Test that accept_changes correctly extracts data from widgets and calls plot()."""
+    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+
+    # Create the settings widget
+    settings = ScatterCurveSettings(parent=None, target_widget=swf, popup=True)
+    qtbot.addWidget(settings)
+
+    # Set up the widgets with test values
+    settings.ui.x_name.set_device("samx")
+    settings.ui.y_name.set_device("samy")
+    settings.ui.z_name.set_device("bpm4i")
+
+    # Mock the plot method to verify it gets called with correct arguments
+    with patch.object(swf, "plot") as mock_plot:
+        settings.accept_changes()
+
+        # Verify plot was called
+        mock_plot.assert_called_once()
+
+        # Get the call arguments
+        call_kwargs = mock_plot.call_args[1]
+
+        # Verify device names were extracted correctly
+        assert call_kwargs["x_name"] == "samx"
+        assert call_kwargs["y_name"] == "samy"
+        assert call_kwargs["z_name"] == "bpm4i"
+
+
+def test_scatter_curve_settings_accept_changes_with_entries(qtbot, mocked_client):
+    """Test that accept_changes correctly extracts signal entries from SignalComboBox."""
+    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+
+    # Create the settings widget
+    settings = ScatterCurveSettings(parent=None, target_widget=swf, popup=True)
+    qtbot.addWidget(settings)
+
+    # Set devices first to populate signal comboboxes
+    settings.ui.x_name.set_device("samx")
+    settings.ui.y_name.set_device("samy")
+    settings.ui.z_name.set_device("bpm4i")
+    qtbot.wait(100)  # Allow time for signals to populate
+
+    # Mock the plot method
+    with patch.object(swf, "plot") as mock_plot:
+        settings.accept_changes()
+
+        mock_plot.assert_called_once()
+        call_kwargs = mock_plot.call_args[1]
+
+        # Verify entries are extracted (will use get_signal_name())
+        assert "x_entry" in call_kwargs
+        assert "y_entry" in call_kwargs
+        assert "z_entry" in call_kwargs
+
+
+def test_scatter_curve_settings_accept_changes_color_map(qtbot, mocked_client):
+    """Test that accept_changes correctly extracts color_map from widget."""
+
+    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+
+    # Create the settings widget
+    settings = ScatterCurveSettings(parent=None, target_widget=swf, popup=True)
+    qtbot.addWidget(settings)
+
+    # Set devices
+    settings.ui.x_name.set_device("samx")
+    settings.ui.y_name.set_device("samy")
+    settings.ui.z_name.set_device("bpm4i")
+
+    # Get the current colormap
+    color_map = settings.ui.color_map.colormap
+
+    with patch.object(swf, "plot") as mock_plot:
+        settings.accept_changes()
+        call_kwargs = mock_plot.call_args[1]
+        assert call_kwargs["color_map"] == color_map
+
+
+def test_scatter_curve_settings_fetch_all_properties(qtbot, mocked_client):
+    """Test that fetch_all_properties correctly populates the settings from target widget."""
+    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+
+    # First set up the scatter waveform with some data
+    swf.plot(x_name="samx", y_name="samy", z_name="bpm4i")
+
+    # Create the settings widget - it should fetch properties automatically
+    settings = ScatterCurveSettings(parent=None, target_widget=swf, popup=True)
+    qtbot.addWidget(settings)
+
+    # Verify the settings widget has fetched the values
+    assert settings.ui.x_name.currentText() == "samx"
+    assert settings.ui.y_name.currentText() == "samy"
+    assert settings.ui.z_name.currentText() == "bpm4i"

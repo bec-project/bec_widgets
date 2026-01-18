@@ -4,7 +4,6 @@ import pytest
 from bec_lib.device import Signal
 from qtpy.QtWidgets import QWidget
 
-from bec_widgets.tests.utils import FakeDevice
 from bec_widgets.utils.ophyd_kind_util import Kind
 from bec_widgets.widgets.control.device_input.base_classes.device_input_base import BECDeviceFilter
 from bec_widgets.widgets.control.device_input.base_classes.device_signal_input_base import (
@@ -153,3 +152,61 @@ def test_device_signal_input_base_cleanup(qtbot, mocked_client):
     widget.deleteLater()
 
     mocked_client.callbacks.remove.assert_called_once_with(widget._device_update_register)
+
+
+def test_signal_combobox_get_signal_name_with_item_data(qtbot, device_signal_combobox):
+    """Test get_signal_name returns obj_name from item data when available."""
+    device_signal_combobox.include_normal_signals = True
+    device_signal_combobox.include_hinted_signals = True
+    device_signal_combobox.set_device("samx")
+
+    # Select a signal that has item data with obj_name
+    device_signal_combobox.setCurrentText("samx (readback)")
+
+    # get_signal_name should return the obj_name from item data
+    signal_name = device_signal_combobox.get_signal_name()
+    assert signal_name == "samx"
+
+
+def test_signal_combobox_get_signal_name_without_item_data(qtbot, device_signal_combobox):
+    """Test get_signal_name returns currentText when no item data available."""
+    # Add a custom item without item data
+    device_signal_combobox.addItem("custom_signal")
+    device_signal_combobox.setCurrentText("custom_signal")
+
+    signal_name = device_signal_combobox.get_signal_name()
+    assert signal_name == "custom_signal"
+
+
+def test_signal_combobox_get_signal_name_not_found(qtbot, device_signal_combobox):
+    """Test get_signal_name when text is not found in combobox (index == -1)."""
+    # Set editable to allow text that's not in items
+    device_signal_combobox.setEditable(True)
+    device_signal_combobox.setCurrentText("nonexistent_signal")
+
+    signal_name = device_signal_combobox.get_signal_name()
+    assert signal_name == "nonexistent_signal"
+
+
+def test_signal_combobox_get_signal_name_empty(qtbot, device_signal_combobox):
+    """Test get_signal_name when combobox is empty."""
+    device_signal_combobox.clear()
+    device_signal_combobox.setEditable(True)
+    device_signal_combobox.setCurrentText("")
+
+    signal_name = device_signal_combobox.get_signal_name()
+    assert signal_name == ""
+
+
+def test_signal_combobox_get_signal_name_with_velocity(qtbot, device_signal_combobox):
+    """Test get_signal_name with velocity signal."""
+    device_signal_combobox.include_normal_signals = True
+    device_signal_combobox.include_hinted_signals = True
+    device_signal_combobox.include_config_signals = True
+    device_signal_combobox.set_device("samx")
+
+    # Select velocity signal
+    device_signal_combobox.setCurrentText("velocity")
+
+    signal_name = device_signal_combobox.get_signal_name()
+    assert signal_name == "samx_velocity"
