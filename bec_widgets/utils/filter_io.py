@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import QStringListModel
 from qtpy.QtWidgets import QComboBox, QCompleter, QLineEdit
+from typeguard import TypeCheckError
 
 from bec_widgets.utils.ophyd_kind_util import Kind
 
@@ -54,6 +55,49 @@ class WidgetFilterHandler(ABC):
             list[str | tuple]: A list of filtered signals based on the kind.
         """
         # This method should be implemented in subclasses or extended as needed
+
+    def update_with_bec_signal_class(
+        self,
+        signal_class_filter: str | list[str],
+        client,
+        ndim_filter: int | list[int] | None = None,
+    ) -> list[tuple[str, str, dict]]:
+        """Update the selection based on signal classes using device_manager.get_bec_signals.
+
+        Args:
+            signal_class_filter (str|list[str]): List of signal class names to filter.
+            client: BEC client instance.
+            ndim_filter (int | list[int] | None): Filter signals by dimensionality.
+                If provided, only signals with matching ndim will be included.
+
+        Returns:
+            list[tuple[str, str, dict]]: A list of (device_name, signal_name, signal_config) tuples.
+        """
+        if not client or not hasattr(client, "device_manager"):
+            return []
+
+        try:
+            signals = client.device_manager.get_bec_signals(signal_class_filter)
+        except TypeCheckError as e:
+            logger.warning(f"Error retrieving signals: {e}")
+            return []
+
+        if ndim_filter is None:
+            return signals
+
+        if isinstance(ndim_filter, int):
+            ndim_filter = [ndim_filter]
+
+        filtered_signals = []
+        for device_name, signal_name, signal_config in signals:
+            ndim = None
+            if isinstance(signal_config, dict):
+                ndim = signal_config.get("describe", {}).get("signal_info", {}).get("ndim")
+
+            if ndim in ndim_filter:
+                filtered_signals.append((device_name, signal_name, signal_config))
+
+        return filtered_signals
 
 
 class LineEditFilterHandler(WidgetFilterHandler):
@@ -250,6 +294,32 @@ class FilterIO:
                 signal_filter=signal_filter,
                 device_info=device_info,
                 device_name=device_name,
+            )
+        raise ValueError(
+            f"No matching handler for widget type: {type(widget)} in handler list {FilterIO._handlers}"
+        )
+
+    @staticmethod
+    def update_with_signal_class(
+        widget, signal_class_filter: list[str], client, ndim_filter: int | list[int] | None = None
+    ) -> list[tuple[str, str, dict]]:
+        """
+        Update the selection based on signal classes using device_manager.get_bec_signals.
+
+        Args:
+            widget: Widget instance.
+            signal_class_filter (list[str]): List of signal class names to filter.
+            client: BEC client instance.
+            ndim_filter (int | list[int] | None): Filter signals by dimensionality.
+                If provided, only signals with matching ndim will be included.
+
+        Returns:
+            list[tuple[str, str, dict]]: A list of (device_name, signal_name, signal_config) tuples.
+        """
+        handler_class = FilterIO._find_handler(widget)
+        if handler_class:
+            return handler_class().update_with_bec_signal_class(
+                signal_class_filter=signal_class_filter, client=client, ndim_filter=ndim_filter
             )
         raise ValueError(
             f"No matching handler for widget type: {type(widget)} in handler list {FilterIO._handlers}"
