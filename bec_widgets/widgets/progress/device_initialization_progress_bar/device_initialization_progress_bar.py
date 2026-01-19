@@ -3,7 +3,6 @@
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.messages import DeviceInitializationProgressMessage
 from qtpy.QtCore import Signal
-from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QApplication, QGroupBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
@@ -37,7 +36,6 @@ class DeviceInitializationProgressBar(BECWidget, QWidget):
         self.progress_bar.label_template = "$value / $maximum - $percentage %"
         self.progress_label = QLabel("Initializing devices...", self)
 
-        self.progress_label.setStyleSheet("font-size: 12px; font-weight: cursive;")
         content_layout = QVBoxLayout()
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(0)
@@ -59,18 +57,6 @@ class DeviceInitializationProgressBar(BECWidget, QWidget):
             topics=MessageEndpoints.device_initialization_progress(),
         )
         self._reset_progress_bar()
-
-    def _update_palette(self) -> None:
-        """Update theme palette for the widget."""
-        _app = QApplication.instance()
-        if hasattr(_app, "theme"):
-            theme = _app.theme  # type: ignore[attr-defined]
-            text_color = theme.color("FG")
-        else:
-            text_color = QColor(230, 230, 230)
-        self.progress_label.setStyleSheet(
-            f"color: {text_color.name()}; font-size: 12px; font-weight: cursive;"
-        )
 
     @SafeProperty(list)
     def failed_devices(self) -> list[str]:

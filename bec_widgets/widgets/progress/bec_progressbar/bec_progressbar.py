@@ -82,7 +82,7 @@ class BECProgressBar(BECWidget, QWidget):
 
         # Color settings
         self._background_color = QColor(30, 30, 30)
-        self._progress_color = accent_colors.highlight  # QColor(210, 55, 130)
+        self._progress_color = accent_colors.highlight
 
         self._completed_color = accent_colors.success
         self._border_color = QColor(50, 50, 50)
@@ -91,7 +91,6 @@ class BECProgressBar(BECWidget, QWidget):
 
         # Progress‑bar state handling
         self._state = ProgressState.NORMAL
-        # self._state_colors = dict(PROGRESS_STATE_COLORS)
 
         self._state_colors = {
             ProgressState.NORMAL: accent_colors.default,
@@ -109,7 +108,6 @@ class BECProgressBar(BECWidget, QWidget):
         # label on top of the progress bar
         self.center_label = QLabel(self)
         self.center_label.setAlignment(Qt.AlignHCenter)
-        self.center_label.setStyleSheet("color: white;")
         self.center_label.setMinimumSize(0, 0)
 
         layout = QVBoxLayout(self)

@@ -264,7 +264,6 @@ class LegendLabel(QtWidgets.QWidget):
             icon = self._icons["config_status"][status]
             icon_widget = ValidationButton(parent=self, icon=icon)
             icon_widget.setEnabled(False)
-            icon_widget.set_enabled_style(False)
             icon_widget.setToolTip(f"Device Configuration: {status.description()}")
             layout.addWidget(icon_widget, 0, ii + 1)
 
@@ -282,7 +281,6 @@ class LegendLabel(QtWidgets.QWidget):
             icon = self._icons["connection_status"][status]
             icon_widget = ValidationButton(parent=self, icon=icon)
             icon_widget.setEnabled(False)
-            icon_widget.set_enabled_style(False)
             icon_widget.setToolTip(f"Connection Status: {status.description()}")
             layout.addWidget(icon_widget, 1, ii + 1)
         layout.setColumnStretch(layout.columnCount(), 1)  # Counts as a column
