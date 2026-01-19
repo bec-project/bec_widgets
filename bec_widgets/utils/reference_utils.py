@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Any
 
 from PIL import Image, ImageChops
 from qtpy.QtGui import QPixmap
@@ -40,7 +41,7 @@ def compare_images(image1_path: str, reference_image_path: str):
         raise ValueError("Images are different")
 
 
-def snap_and_compare(widget: any, output_directory: str, suffix: str = ""):
+def snap_and_compare(widget: Any, output_directory: str, suffix: str = ""):
     """
     Save a rendering of a widget and compare it to a reference image
 
