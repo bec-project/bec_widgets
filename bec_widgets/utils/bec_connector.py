@@ -1,17 +1,20 @@
 # pylint: disable = no-name-in-module,missing-module-docstring
 from __future__ import annotations
 
+import inspect
 import os
 import time
 import traceback
 import uuid
+import weakref
 from datetime import datetime
 from typing import TYPE_CHECKING, Callable, Final, Optional
-from weakref import WeakValueDictionary
+from weakref import WeakMethod, WeakValueDictionary
 
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import_from
-from pydantic import BaseModel, Field, field_validator
+from louie import saferef
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from qtpy.QtCore import QObject, QRunnable, QThreadPool, QTimer, Signal
 from qtpy.QtWidgets import QApplication
 
@@ -43,7 +46,7 @@ class ConnectionConfig(BaseModel):
     gui_id: Optional[str] = Field(
         default=None, validate_default=True, description="The GUI ID of the widget."
     )
-    model_config: dict = {"validate_assignment": True}
+    model_config: ConfigDict = {"validate_assignment": True}
 
     @field_validator("gui_id")
     @classmethod
@@ -86,6 +89,7 @@ class BECConnector:
     USER_ACCESS = ["_config_dict", "_get_all_rpc", "_rpc_id"]
     EXIT_HANDLERS: WeakValueDictionary[int, Callable[[],]] = WeakValueDictionary()
     _exit_handler: Callable[[],] | None = None
+    _method_handlers: set[Callable[[],]] = set()
     widget_removed = Signal()
     name_established = Signal(str)
 
@@ -199,6 +203,15 @@ class BECConnector:
     @classmethod
     def _add_exit_handler(cls, handler: Callable, priority: int):
         """Private to allow use of priority 0"""
+        if inspect.ismethod(handler):
+            _h = saferef.safe_ref(handler)
+
+            def handler():
+                if h := _h():
+                    h()
+
+            # cls._method_handlers.add(handler)  # hold any instance methods in safe refs
+
         cls.EXIT_HANDLERS[priority] = handler
 
     @classmethod
@@ -226,8 +239,8 @@ class BECConnector:
     @SafeSlot()
     def _run_exit_handlers(self):
         """Run all exit handlers from highest to lowest priority. Should be connected to AboutToQuit once and only once."""
-        handlers = reversed(
-            list(handler for _, handler in sorted(BECConnector.EXIT_HANDLERS.items()))
+        handlers = list(
+            reversed(list(handler for _, handler in sorted(BECConnector.EXIT_HANDLERS.items())))
         )
         for handler in handlers:
             handler()

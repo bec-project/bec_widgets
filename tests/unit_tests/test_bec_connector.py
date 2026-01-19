@@ -1,12 +1,18 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
+import gc
 import time
-from unittest.mock import MagicMock
+from functools import partial
+from multiprocessing import Process
+from unittest.mock import MagicMock, call, patch
 
 import pytest
+from PySide6.QtWidgets import QWidget
 from qtpy.QtCore import QObject
 from qtpy.QtWidgets import QApplication
 
 from bec_widgets.utils import BECConnector
+from bec_widgets.utils.bec_connector import ConnectionConfig
+from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot as Slot
 
 from .client_mocks import mocked_client
@@ -138,7 +144,7 @@ def test_bec_connector_terminate_run_on_about_to_quit(qtbot, bec_connector):
     assert BECConnector.EXIT_HANDLERS.get(0) is not None
     terminate_mock = MagicMock()
     bec_connector.__class__.EXIT_HANDLERS[0] = terminate_mock
-    QApplication.instance().aboutToQuit.emit()
+    bec_connector._run_exit_handlers()
     qtbot.waitUntil(lambda: terminate_mock.call_count == 1)
 
 
@@ -147,5 +153,112 @@ def test_bec_connector_terminate_run_once_and_only_once(qtbot, bec_connector):
     bec_connector.__class__.EXIT_HANDLERS[0] = terminate_mock
     _conn_2 = BECConnectorQObject(client=mocked_client)
     _conn_3 = BECConnectorQObject(client=mocked_client)
-    QApplication.instance().aboutToQuit.emit()
+    bec_connector._run_exit_handlers()
     qtbot.waitUntil(lambda: terminate_mock.call_count == 1)
+
+
+def test_bec_connector_exit_handlers_run_in_order(qtbot, bec_connector):
+    handler = MagicMock()
+    bec_connector.__class__.EXIT_HANDLERS[0] = handler
+
+    def h1():
+        handler(prio=1)
+
+    def h2():
+        handler(prio=2)
+
+    def h3():
+        handler(prio=3)
+
+    bec_connector._add_exit_handler(h3, 5)
+    bec_connector._add_exit_handler(h2, 10)
+    bec_connector._add_exit_handler(h1, 15)
+    bec_connector._run_exit_handlers()
+    qtbot.waitUntil(lambda: handler.call_count == 4)
+    handler.assert_has_calls([call(prio=1), call(prio=2), call(prio=3), call()])
+
+
+@pytest.fixture
+def mock_widget_with_exit_handlers(bec_connector, mocked_client):
+    with patch.object(mocked_client, "connector", bec_connector):
+        handler = MagicMock()
+        bec_connector.__class__.EXIT_HANDLERS[0] = handler
+
+        class DropWeakrefWidget(BECWidget, QWidget):
+            def __init__(
+                self,
+                client=None,
+                config: ConnectionConfig = None,
+                gui_id: str | None = None,
+                theme_update: bool = False,
+                start_busy: bool = False,
+                busy_text: str = "Loading…",
+                **kwargs,
+            ):
+                super().__init__(
+                    client, config, gui_id, theme_update, start_busy, busy_text, **kwargs
+                )
+                self.setup_on_exit()
+                self.client.connector.add_exit_handler(self._on_exit_stored_ref, 5)
+                self.client.connector.add_exit_handler(self.instance_on_exit, 7)
+
+            def setup_on_exit(self):
+                def _on_exit():
+                    self.backgroundRole()  # access some Qt thing just to fail test if c++ object is deleted
+                    handler("called by DropWeakrefWidget in stored reference to function")
+
+                self._on_exit_stored_ref = _on_exit
+
+            def instance_on_exit(self):
+                self.backgroundRole()  # access some Qt thing just to fail test if c++ object is deleted
+                handler("called by DropWeakrefWidget in instance method")
+
+        widget = DropWeakrefWidget(client=mocked_client)
+        return widget, handler
+
+
+def test_connector_exit_handlers_doesnt_drop_when_widget_lives(
+    qtbot, bec_connector, mock_widget_with_exit_handlers
+):
+    widget, handler = mock_widget_with_exit_handlers
+    qtbot.addWidget(widget)
+
+    def h1():
+        handler(prio=1)
+
+    bec_connector._add_exit_handler(h1, 15)
+
+    bec_connector._run_exit_handlers()
+    qtbot.waitUntil(lambda: handler.call_count == 4)
+    handler.assert_has_calls(
+        [
+            call(prio=1),
+            call("called by DropWeakrefWidget in instance method"),
+            call("called by DropWeakrefWidget in stored reference to function"),
+            call(),  # from root cleanup
+        ]
+    )
+
+
+def test_connector_exit_handlers_drops_when_widget_dies(
+    qtbot, bec_connector, mock_widget_with_exit_handlers
+):
+    widget, handler = mock_widget_with_exit_handlers
+    qtbot.addWidget(widget)
+
+    def h1():
+        handler(prio=1)
+
+    bec_connector._add_exit_handler(h1, 15)
+
+    widget.deleteLater()
+    qtbot.wait(100)
+    QApplication.processEvents()
+    del widget
+    qtbot.wait(100)
+    gc.collect()
+    qtbot.wait(100)
+
+    bec_connector._run_exit_handlers()
+    qtbot.waitUntil(lambda: handler.call_count == 2)
+    handler.assert_has_calls([call(prio=1), call()])
