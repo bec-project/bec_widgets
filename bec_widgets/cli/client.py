@@ -5424,9 +5424,11 @@ class SignalComboBox(RPCBase):
         """
 
     @rpc_call
-    def set_device(self, device: str | None):
+    def set_device(self, device: "str | None"):
         """
-        Set the device. If device is not valid, device will be set to None which happens
+        Set the device. When signal_class_filter is active, ensures base-class
+        logic runs and then refreshes the signal list to show only signals from
+        that device matching the signal class filter.
 
         Args:
             device(str): device name.

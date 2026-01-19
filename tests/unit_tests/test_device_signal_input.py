@@ -210,3 +210,193 @@ def test_signal_combobox_get_signal_name_with_velocity(qtbot, device_signal_comb
 
     signal_name = device_signal_combobox.get_signal_name()
     assert signal_name == "samx_velocity"
+
+
+def test_signal_combobox_get_signal_config(device_signal_combobox):
+    device_signal_combobox.include_normal_signals = True
+    device_signal_combobox.include_hinted_signals = True
+    device_signal_combobox.set_device("samx")
+
+    index = device_signal_combobox.currentIndex()
+    assert index != -1
+
+    expected_config = device_signal_combobox.itemData(index)
+    assert expected_config is not None
+    assert device_signal_combobox.get_signal_config() == expected_config
+
+
+def test_signal_combobox_get_signal_config_disabled(qtbot, mocked_client):
+    combobox = create_widget(
+        qtbot=qtbot, widget=SignalComboBox, client=mocked_client, store_signal_config=False
+    )
+    combobox.include_normal_signals = True
+    combobox.include_hinted_signals = True
+    combobox.set_device("samx")
+    assert combobox.get_signal_config() is None
+
+
+def test_signal_combobox_signal_class_filter_by_device(qtbot, mocked_client):
+    """Test signal_class_filter restricts signals to the selected device."""
+    mocked_client.device_manager.get_bec_signals = mock.MagicMock(
+        return_value=[
+            ("samx", "samx_readback_async", {"obj_name": "samx_readback_async"}),
+            ("samy", "samy_readback_async", {"obj_name": "samy_readback_async"}),
+            ("bpm4i", "bpm4i_value_async", {"obj_name": "bpm4i_value_async"}),
+        ]
+    )
+    widget = create_widget(
+        qtbot=qtbot,
+        widget=SignalComboBox,
+        client=mocked_client,
+        signal_class_filter=["AsyncSignal"],
+        device="samx",
+    )
+
+    assert widget.signals == ["samx_readback_async"]
+    assert widget.signal_class_filter == ["AsyncSignal"]
+
+    widget.set_device("samy")
+    assert widget.signals == ["samy_readback_async"]
+
+
+def test_signal_class_filter_setter_clears_to_kind_filters(qtbot, mocked_client):
+    """Clearing signal_class_filter should rebuild list using Kind filters."""
+    mocked_client.device_manager.get_bec_signals = mock.MagicMock(
+        return_value=[("samx", "samx_readback_async", {"obj_name": "samx_readback_async"})]
+    )
+    widget = create_widget(
+        qtbot=qtbot,
+        widget=SignalComboBox,
+        client=mocked_client,
+        signal_class_filter=["AsyncSignal"],
+        device="samx",
+    )
+    assert widget.signals == ["samx_readback_async"]
+
+    widget.signal_class_filter = []
+    samx = widget.dev.samx
+    assert widget.signals == [
+        ("samx (readback)", samx._info["signals"].get("readback")),
+        ("setpoint", samx._info["signals"].get("setpoint")),
+        ("velocity", samx._info["signals"].get("velocity")),
+    ]
+
+
+def test_signal_class_filter_setter_none_reverts_to_kind_filters(qtbot, mocked_client):
+    """Setting signal_class_filter to None should revert to Kind-based filtering."""
+    mocked_client.device_manager.get_bec_signals = mock.MagicMock(
+        return_value=[("samx", "samx_readback_async", {"obj_name": "samx_readback_async"})]
+    )
+    widget = create_widget(
+        qtbot=qtbot,
+        widget=SignalComboBox,
+        client=mocked_client,
+        signal_class_filter=["AsyncSignal"],
+        device="samx",
+    )
+    assert widget.signals == ["samx_readback_async"]
+
+    widget.signal_class_filter = None
+    samx = widget.dev.samx
+    assert widget.signals == [
+        ("samx (readback)", samx._info["signals"].get("readback")),
+        ("setpoint", samx._info["signals"].get("setpoint")),
+        ("velocity", samx._info["signals"].get("velocity")),
+    ]
+
+
+def test_signal_combobox_set_first_element_as_empty(qtbot, mocked_client):
+    """set_first_element_as_empty should insert/remove the empty option."""
+    widget = create_widget(qtbot=qtbot, widget=SignalComboBox, client=mocked_client)
+    widget.addItem("item1")
+    widget.addItem("item2")
+
+    widget.set_first_element_as_empty = True
+    assert widget.itemText(0) == ""
+
+    widget.set_first_element_as_empty = False
+    assert widget.itemText(0) == "item1"
+
+
+def test_signal_combobox_class_kind_ndim_filters(qtbot, mocked_client):
+    """Test class + kind + ndim filters are all applied together."""
+    mocked_client.device_manager.get_bec_signals = mock.MagicMock(
+        return_value=[
+            (
+                "samx",
+                "sig1",
+                {
+                    "obj_name": "samx_sig1",
+                    "kind_str": "hinted",
+                    "describe": {"signal_info": {"ndim": 1}},
+                },
+            ),
+            (
+                "samx",
+                "sig2",
+                {
+                    "obj_name": "samx_sig2",
+                    "kind_str": "config",
+                    "describe": {"signal_info": {"ndim": 2}},
+                },
+            ),
+            (
+                "samy",
+                "sig3",
+                {
+                    "obj_name": "samy_sig3",
+                    "kind_str": "normal",
+                    "describe": {"signal_info": {"ndim": 1}},
+                },
+            ),
+        ]
+    )
+    widget = create_widget(
+        qtbot=qtbot,
+        widget=SignalComboBox,
+        client=mocked_client,
+        signal_class_filter=["AsyncSignal"],
+        ndim_filter=1,
+        device="samx",
+    )
+
+    # Default kinds are hinted + normal, ndim=1, device=samx
+    assert widget.signals == ["sig1"]
+
+    # Enable config kinds and widen ndim to include sig2
+    widget.include_config_signals = True
+    widget.ndim_filter = 2
+    assert widget.signals == ["sig2"]
+
+
+def test_signal_combobox_require_device_validation(qtbot, mocked_client):
+    """Require device should block validation and list updates without a device."""
+    mocked_client.device_manager.get_bec_signals = mock.MagicMock(
+        return_value=[
+            (
+                "samx",
+                "sig1",
+                {
+                    "obj_name": "samx_sig1",
+                    "kind_str": "hinted",
+                    "describe": {"signal_info": {"ndim": 1}},
+                },
+            )
+        ]
+    )
+    widget = create_widget(
+        qtbot=qtbot,
+        widget=SignalComboBox,
+        client=mocked_client,
+        signal_class_filter=["AsyncSignal"],
+        require_device=True,
+    )
+
+    assert widget.signals == []
+    widget.set_device("samx")
+    assert widget.signals == ["sig1"]
+
+    resets: list[str] = []
+    widget.signal_reset.connect(lambda: resets.append("reset"))
+    widget.check_validity("")
+    assert resets == ["reset"]
