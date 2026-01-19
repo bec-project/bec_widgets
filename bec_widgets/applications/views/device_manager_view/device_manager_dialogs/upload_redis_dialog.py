@@ -513,7 +513,8 @@ class UploadRedisDialog(QtWidgets.QDialog):
                 [
                     detailed_text,
                     "These devices may not be reachable and disabled BEC upon loading the config.",
-                    "Consider validating these connections before.",
+                    "Consider validating these connections before proceeding.\n\n",
+                    "Continue anyway?",
                 ]
             )
             reply = QtWidgets.QMessageBox.critical(

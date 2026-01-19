@@ -38,19 +38,7 @@ class ValidationButton(QtWidgets.QPushButton):
         self.setEnabled(True)
 
     def setEnabled(self, enabled: bool) -> None:
-        self.set_enabled_style(enabled)
         return super().setEnabled(enabled)
-
-    def set_enabled_style(self, enabled: bool) -> None:
-        """Set the enabled state of the button with style update.
-
-        Args:
-            enabled (bool): Whether the button should be enabled.
-        """
-        if enabled:
-            self.setStyleSheet("")
-        else:
-            self.setStyleSheet(self.transparent_style)
 
 
 class ValidationDialog(QtWidgets.QDialog):
@@ -308,13 +296,11 @@ class ValidationListItem(QtWidgets.QWidget):
         # Enable/disable buttons based on status
         config_but_en = config_status in [ConfigStatus.UNKNOWN, ConfigStatus.INVALID]
         self.status_button.setEnabled(config_but_en)
-        self.status_button.set_enabled_style(config_but_en)
         connect_but_en = connection_status in [
             ConnectionStatus.UNKNOWN,
             ConnectionStatus.CANNOT_CONNECT,
         ]
         self.connection_button.setEnabled(connect_but_en)
-        self.connection_button.set_enabled_style(connect_but_en)
 
     @SafeSlot()
     def validation_scheduled(self):
@@ -323,9 +309,7 @@ class ValidationListItem(QtWidgets.QWidget):
             "Validation scheduled...", ConfigStatus.UNKNOWN, ConnectionStatus.UNKNOWN
         )
         self.status_button.setEnabled(False)
-        self.status_button.set_enabled_style(False)
         self.connection_button.setEnabled(False)
-        self.connection_button.set_enabled_style(False)
         self._spinner.setVisible(True)
 
     @SafeSlot()
