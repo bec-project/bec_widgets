@@ -1,7 +1,7 @@
 """Module for the device configuration form widget for EpicsMotor, EpicsSignal, EpicsSignalRO, EpicsSignalWithRBV"""
 
 from copy import deepcopy
-from typing import Type
+from typing import Any, Type
 
 from bec_lib.atlas_models import Device as DeviceModel
 from bec_lib.logger import bec_logger
@@ -191,7 +191,7 @@ class DeviceConfigTemplate(QtWidgets.QWidget):
                 if widget is not None:
                     self._set_value_for_widget(widget, value)
 
-    def _set_value_for_widget(self, widget: QtWidgets.QWidget, value: any) -> None:
+    def _set_value_for_widget(self, widget: QtWidgets.QWidget, value: Any) -> None:
         """
         Set the value for a widget based on its type.
 

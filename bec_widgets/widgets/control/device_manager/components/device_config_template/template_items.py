@@ -1,7 +1,7 @@
 """Module for custom input widgets used in device configuration templates."""
 
 from ast import literal_eval
-from typing import Callable
+from typing import Any, Callable
 
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
@@ -15,7 +15,7 @@ from bec_widgets.widgets.utility.toggle.toggle import ToggleSwitch
 logger = bec_logger.logger
 
 
-def _try_literal_eval(value: any) -> any:
+def _try_literal_eval(value: str) -> Any:
     """Consolidated function for literal evaluation of a value."""
     if value in ["true", "True"]:
         return True
@@ -407,7 +407,7 @@ class DeviceConfigField(BaseModel):
     static: bool = False
     placeholder_text: str | None = None
     validation_callback: list[Callable[[str], bool]] | None = None
-    default: any = None
+    default: Any = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
