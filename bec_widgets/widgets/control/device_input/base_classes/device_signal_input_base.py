@@ -6,7 +6,7 @@ from qtpy.QtCore import Property
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
-from bec_widgets.utils.filter_io import FilterIO, LineEditFilterHandler
+from bec_widgets.utils.filter_io import FilterIO
 from bec_widgets.utils.ophyd_kind_util import Kind
 from bec_widgets.utils.widget_io import WidgetIO
 
@@ -17,6 +17,8 @@ class DeviceSignalInputBaseConfig(ConnectionConfig):
     """Configuration class for DeviceSignalInputBase."""
 
     signal_filter: str | list[str] | None = None
+    signal_class_filter: list[str] | None = None
+    ndim_filter: int | list[int] | None = None
     default: str | None = None
     arg_name: str | None = None
     device: str | None = None

@@ -45,3 +45,30 @@ def test_set_selection_line_edit(line_edit_mock):
     FilterIO.set_selection(line_edit_mock, selection=["testC"])
     assert FilterIO.check_input(widget=line_edit_mock, text="testA") is False
     assert FilterIO.check_input(widget=line_edit_mock, text="testC") is True
+
+
+def test_update_with_signal_class_combo_box_ndim_filter(dap_mock, mocked_client):
+    signals = [
+        ("dev1", "sig1", {"describe": {"signal_info": {"ndim": 1}}}),
+        ("dev1", "sig2", {"describe": {"signal_info": {"ndim": 2}}}),
+    ]
+    mocked_client.device_manager.get_bec_signals = lambda _filters: signals
+    out = FilterIO.update_with_signal_class(
+        widget=dap_mock.fit_model_combobox,
+        signal_class_filter=["AsyncSignal"],
+        client=mocked_client,
+        ndim_filter=1,
+    )
+    assert out == [("dev1", "sig1", {"describe": {"signal_info": {"ndim": 1}}})]
+
+
+def test_update_with_signal_class_line_edit_passthrough(line_edit_mock, mocked_client):
+    signals = [("dev1", "sig1", {"describe": {"signal_info": {"ndim": 1}}})]
+    mocked_client.device_manager.get_bec_signals = lambda _filters: signals
+    out = FilterIO.update_with_signal_class(
+        widget=line_edit_mock,
+        signal_class_filter=["AsyncSignal"],
+        client=mocked_client,
+        ndim_filter=1,
+    )
+    assert out == signals
