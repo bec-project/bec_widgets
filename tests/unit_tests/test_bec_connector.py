@@ -134,18 +134,18 @@ def test_bec_connector_change_object_name(bec_connector):
     assert not any(obj.objectName() == previous_name for obj in all_objects)
 
 
-def test_bec_connector_terminate_run_on_about_to_quit(bec_connector):
+def test_bec_connector_terminate_run_on_about_to_quit(qtbot, bec_connector):
     assert BECConnector.EXIT_HANDLERS.get(0) is not None
     terminate_mock = MagicMock()
     bec_connector.__class__.EXIT_HANDLERS[0] = terminate_mock
     QApplication.instance().aboutToQuit.emit()
-    terminate_mock.assert_called_once()
+    qtbot.waitUntil(lambda: terminate_mock.call_count == 1)
 
 
-def test_bec_connector_terminate_run_once_and_only_once(bec_connector):
+def test_bec_connector_terminate_run_once_and_only_once(qtbot, bec_connector):
     terminate_mock = MagicMock()
     bec_connector.__class__.EXIT_HANDLERS[0] = terminate_mock
-    conn_2 = BECConnectorQObject(client=mocked_client)
-    conn_3 = BECConnectorQObject(client=mocked_client)
+    _conn_2 = BECConnectorQObject(client=mocked_client)
+    _conn_3 = BECConnectorQObject(client=mocked_client)
     QApplication.instance().aboutToQuit.emit()
-    terminate_mock.assert_called_once()
+    qtbot.waitUntil(lambda: terminate_mock.call_count == 1)
