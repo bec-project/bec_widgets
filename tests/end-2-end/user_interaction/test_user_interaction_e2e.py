@@ -537,30 +537,32 @@ def test_widgets_e2e_positioner_control_line(
 
 
 # TODO passes locally, fails on CI for some reason... -> issue #1003
-# @pytest.mark.timeout(PYTEST_TIMEOUT)
-# def test_widgets_e2e_ring_progress_bar(qtbot, connected_client_gui_obj, random_generator_from_seed):
-#     """Test the RingProgressBar widget"""
-#     gui = connected_client_gui_obj
-#     bec = gui._client
-#     # Create dock_area and widget
-#     widget = create_widget(qtbot, gui, gui.available_widgets.RingProgressBar)
-#     widget: client.RingProgressBar
-#
-#     widget.set_number_of_bars(3)
-#     widget.rings[0].set_update("manual")
-#     widget.rings[0].set_value(30)
-#     widget.rings[0].set_min_max_values(0, 100)
-#     widget.rings[1].set_update("scan")
-#     widget.rings[2].set_update("device", device="samx")
-#
-#     # Test rpc calls
-#     dev = bec.device_manager.devices
-#     scans = bec.scans
-#     # Do a scan
-#     scans.line_scan(dev.samx, -3, 3, steps=50, exp_time=0.01, relative=False).wait()
-#
-#     # Test removing the widget, or leaving it open for the next test
-#     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
+@pytest.mark.timeout(PYTEST_TIMEOUT)
+def test_widgets_e2e_ring_progress_bar(qtbot, connected_client_gui_obj, random_generator_from_seed):
+    """Test the RingProgressBar widget"""
+    gui = connected_client_gui_obj
+    bec = gui._client
+    # Create dock_area and widget
+    widget = create_widget(qtbot, gui, gui.available_widgets.RingProgressBar)
+    widget: client.RingProgressBar
+
+    widget.add_ring()
+    widget.add_ring()
+    widget.add_ring()
+    widget.rings[0].set_update("manual")
+    widget.rings[0].set_value(30)
+    widget.rings[0].set_min_max_values(0, 100)
+    widget.rings[1].set_update("scan")
+    widget.rings[2].set_update("device", device="samx")
+
+    # Test rpc calls
+    dev = bec.device_manager.devices
+    scans = bec.scans
+    # Do a scan
+    scans.line_scan(dev.samx, -3, 3, steps=50, exp_time=0.01, relative=False).wait()
+
+    # Test removing the widget, or leaving it open for the next test
+    maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
 
 
 @pytest.mark.timeout(PYTEST_TIMEOUT)
