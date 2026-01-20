@@ -51,7 +51,7 @@ class RingProgressBarPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "RingProgressBar"
 
     def toolTip(self):
-        return ""
+        return "RingProgressBar"
 
     def whatsThis(self):
         return self.toolTip()

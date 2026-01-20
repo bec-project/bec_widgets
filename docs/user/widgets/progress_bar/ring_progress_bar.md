@@ -24,11 +24,13 @@ In this example, we demonstrate how to add a `RingProgressBar` widget to a `BECD
 
 ```python
 # Add a new dock with a RingProgressBar widget
-dock_area = gui.new('my_new_dock_area') # Create a new dock area
-progress = dock_area.new().new(gui.available_widgets.RingProgressBar)
+dock_area = gui.new() # Create a new dock area
+progress = dock_area.new(gui.available_widgets.RingProgressBar)
 
-# Customize the size of the progress ring
-progress.set_line_widths(20)
+# Add a ring to the RingProgressBar
+progress.add_ring()
+ring = progress.rings[0]
+ring.set_value(50)  # Set the progress value to 50
 ```
 
 ## Example 2 - Adding Multiple Rings to Track Parallel Tasks
@@ -40,8 +42,7 @@ By default, the `RingProgressBar` widget displays a single ring. You can add add
 progress.add_ring()
 
 # Customize the rings
-progress.rings[0].set_line_widths(20)  # Set the width of the first ring
-progress.rings[1].set_line_widths(10)  # Set the width of the second ring
+progress.rings[1].set_value(30)  # Set the second ring to 30
 ```
 
 ## Example 3 - Integrating with Device Readback and Scans
@@ -54,44 +55,6 @@ progress.rings[0].set_update("scan")
 
 # Set the second ring to update based on a device readback (e.g., samx)
 progress.rings[1].set_update("device", "samx")
-```
-
-## Example 4 - Customizing Visual Elements of the Rings
-
-The `RingProgressBar` widget offers various customization options, such as changing colors, line widths, and the gap between rings.
-
-```python
-# Set the color of the first ring to blue
-progress.rings[0].set_color("blue")
-
-# Set the background color of the second ring
-progress.rings[1].set_background("gray")
-
-# Adjust the gap between the rings
-progress.set_gap(5)
-
-# Set the diameter of the progress bar
-progress.set_diameter(150)
-```
-
-## Example 5 - Manual Updates and Precision Control
-
-While the `RingProgressBar` supports automatic updates, you can also manually control the progress and set the precision for each ring.
-
-```python
-# Disable automatic updates and manually set the progress value
-progress.enable_auto_updates(False)
-progress.rings[0].set_value(75)  # Set the first ring to 75%
-
-# Set precision for the progress display
-progress.set_precision(2)  # Display progress with two decimal places
-
-
-# Setting multiple rigns with different values
-progress.set_number_of_bars(3)
-
-# Set the values of the rings to 50, 75, and 25 from outer to inner ring
-progress.set_value([50, 75, 25])
 ```
 
 ````

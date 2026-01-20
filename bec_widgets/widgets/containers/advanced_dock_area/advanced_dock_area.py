@@ -77,7 +77,7 @@ from bec_widgets.widgets.plots.motor_map.motor_map import MotorMap
 from bec_widgets.widgets.plots.multi_waveform.multi_waveform import MultiWaveform
 from bec_widgets.widgets.plots.scatter_waveform.scatter_waveform import ScatterWaveform
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
-from bec_widgets.widgets.progress.ring_progress_bar import RingProgressBar
+from bec_widgets.widgets.progress.ring_progress_bar.ring_progress_bar import RingProgressBar
 from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
 from bec_widgets.widgets.services.bec_status_box.bec_status_box import BECStatusBox
 from bec_widgets.widgets.utility.logpanel import LogPanel

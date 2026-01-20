@@ -4714,29 +4714,6 @@ class ResumeButton(RPCBase):
 
 class Ring(RPCBase):
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
-        """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
-        """
-
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
-
-    @rpc_call
     def set_value(self, value: "int | float"):
         """
         Set the value for the ring widget
@@ -4755,12 +4732,22 @@ class Ring(RPCBase):
         """
 
     @rpc_call
-    def set_background(self, color: "str | tuple"):
+    def set_background(self, color: "str | tuple | QColor"):
         """
-        Set the background color for the ring widget
+        Set the background color for the ring widget. The background color is only used when colors are not linked.
 
         Args:
             color(str | tuple): Background color for the ring widget. Can be HEX code or tuple (R, G, B, A).
+        """
+
+    @rpc_call
+    def set_colors_linked(self, linked: "bool"):
+        """
+        Set whether the colors are linked for the ring widget.
+        If colors are linked, changing the main color will also change the background color.
+
+        Args:
+            linked(bool): Whether to link the colors for the ring widget
         """
 
     @rpc_call
@@ -4785,14 +4772,16 @@ class Ring(RPCBase):
     @rpc_call
     def set_start_angle(self, start_angle: "int"):
         """
-        Set the start angle for the ring widget
+        Set the start angle for the ring widget.
 
         Args:
             start_angle(int): Start angle for the ring widget in degrees
         """
 
     @rpc_call
-    def set_update(self, mode: "Literal['manual', 'scan', 'device']", device: "str" = None):
+    def set_update(
+        self, mode: "Literal['manual', 'scan', 'device']", device: "str" = "", signal: "str" = ""
+    ):
         """
         Set the update mode for the ring widget.
         Modes:
@@ -4803,193 +4792,24 @@ class Ring(RPCBase):
         Args:
             mode(str): Update mode for the ring widget. Can be "manual", "scan" or "device"
             device(str): Device name for the device readback mode, only used when mode is "device"
+            signal(str): Signal name for the device readback mode, only used when mode is "device"
         """
 
     @rpc_call
-    def reset_connection(self):
+    def set_precision(self, precision: "int"):
         """
-        Reset the connections for the ring widget. Disconnect the current slot and endpoint.
+        Set the precision for the ring widget.
+
+        Args:
+            precision(int): Precision for the ring widget
         """
 
 
 class RingProgressBar(RPCBase):
-    """Show the progress of devices, scans or custom values in the form of ring progress bars."""
-
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
-        """
-
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
-
-    @property
-    @rpc_call
-    def rings(self) -> "list[Ring]":
-        """
-        Returns a list of all rings in the progress bar.
-        """
-
-    @rpc_call
-    def update_config(self, config: "RingProgressBarConfig | dict"):
-        """
-        Update the configuration of the widget.
-
-        Args:
-            config(SpiralProgressBarConfig|dict): Configuration to update.
-        """
-
-    @rpc_call
-    def add_ring(self, **kwargs) -> "Ring":
-        """
-        Add a new progress bar.
-
-        Args:
-            **kwargs: Keyword arguments for the new progress bar.
-
-        Returns:
-            Ring: Ring object.
-        """
-
-    @rpc_call
-    def remove_ring(self, index: "int"):
-        """
-        Remove a progress bar by index.
-
-        Args:
-            index(int): Index of the progress bar to remove.
-        """
-
-    @rpc_call
-    def set_precision(self, precision: "int", bar_index: "int | None" = None):
-        """
-        Set the precision for the progress bars. If bar_index is not provide, the precision will be set for all progress bars.
-
-        Args:
-            precision(int): Precision for the progress bars.
-            bar_index(int): Index of the progress bar to set the precision for. If provided, only a single precision can be set.
-        """
-
-    @rpc_call
-    def set_min_max_values(
-        self,
-        min_values: "int | float | list[int | float]",
-        max_values: "int | float | list[int | float]",
-    ):
-        """
-        Set the minimum and maximum values for the progress bars.
-
-        Args:
-            min_values(int|float | list[float]): Minimum value(s) for the progress bars. If multiple progress bars are displayed, provide a list of minimum values for each progress bar.
-            max_values(int|float | list[float]): Maximum value(s) for the progress bars. If multiple progress bars are displayed, provide a list of maximum values for each progress bar.
-        """
-
-    @rpc_call
-    def set_number_of_bars(self, num_bars: "int"):
-        """
-        Set the number of progress bars to display.
-
-        Args:
-            num_bars(int): Number of progress bars to display.
-        """
-
-    @rpc_call
-    def set_value(self, values: "int | list", ring_index: "int" = None):
-        """
-        Set the values for the progress bars.
-
-        Args:
-            values(int | tuple): Value(s) for the progress bars. If multiple progress bars are displayed, provide a tuple of values for each progress bar.
-            ring_index(int): Index of the progress bar to set the value for. If provided, only a single value can be set.
-
-        Examples:
-            >>> SpiralProgressBar.set_value(50)
-            >>> SpiralProgressBar.set_value([30, 40, 50]) # (outer, middle, inner)
-            >>> SpiralProgressBar.set_value(60, bar_index=1) # Set the value for the middle progress bar.
-        """
-
-    @rpc_call
-    def set_colors_from_map(self, colormap, color_format: "Literal['RGB', 'HEX']" = "RGB"):
-        """
-        Set the colors for the progress bars from a colormap.
-
-        Args:
-            colormap(str): Name of the colormap.
-            color_format(Literal["RGB","HEX"]): Format of the returned colors ('RGB', 'HEX').
-        """
-
-    @rpc_call
-    def set_colors_directly(
-        self, colors: "list[str | tuple] | str | tuple", bar_index: "int" = None
-    ):
-        """
-        Set the colors for the progress bars directly.
-
-        Args:
-            colors(list[str | tuple] | str | tuple): Color(s) for the progress bars. If multiple progress bars are displayed, provide a list of colors for each progress bar.
-            bar_index(int): Index of the progress bar to set the color for. If provided, only a single color can be set.
-        """
-
-    @rpc_call
-    def set_line_widths(self, widths: "int | list[int]", bar_index: "int" = None):
-        """
-        Set the line widths for the progress bars.
-
-        Args:
-            widths(int | list[int]): Line width(s) for the progress bars. If multiple progress bars are displayed, provide a list of line widths for each progress bar.
-            bar_index(int): Index of the progress bar to set the line width for. If provided, only a single line width can be set.
-        """
-
-    @rpc_call
-    def set_gap(self, gap: "int"):
-        """
-        Set the gap between the progress bars.
-
-        Args:
-            gap(int): Gap between the progress bars.
-        """
-
-    @rpc_call
-    def set_diameter(self, diameter: "int"):
-        """
-        Set the diameter of the widget.
-
-        Args:
-            diameter(int): Diameter of the widget.
-        """
-
-    @rpc_call
-    def reset_diameter(self):
-        """
-        Reset the fixed size of the widget.
-        """
-
-    @rpc_call
-    def enable_auto_updates(self, enable: "bool" = True):
-        """
-        Enable or disable updates based on scan status. Overrides manual updates.
-        The behaviour of the whole progress bar widget will be driven by the scan queue status.
-
-        Args:
-            enable(bool): True or False.
-
-        Returns:
-            bool: True if scan segment updates are enabled.
+        Cleanup the BECConnector
         """
 
     @rpc_call
@@ -5009,6 +4829,56 @@ class RingProgressBar(RPCBase):
     def screenshot(self, file_name: "str | None" = None):
         """
         Take a screenshot of the dock area and save it to a file.
+        """
+
+    @property
+    @rpc_call
+    def rings(self) -> list[bec_widgets.widgets.progress.ring_progress_bar.ring.Ring]:
+        """
+        None
+        """
+
+    @rpc_call
+    def add_ring(
+        self, config: dict | None = None
+    ) -> bec_widgets.widgets.progress.ring_progress_bar.ring.Ring:
+        """
+        Add a new ring to the ring progress bar.
+        Optionally, a configuration dictionary can be provided but the ring
+        can also be configured later. The config dictionary must provide
+        the qproperties of the Qt Ring object.
+
+        Args:
+            config(dict | None): Optional configuration dictionary for the ring.
+
+        Returns:
+            Ring: The newly added ring object.
+        """
+
+    @rpc_call
+    def remove_ring(self, index: int | None = None):
+        """
+        Remove a ring from the ring progress bar.
+        Args:
+            index(int | None): Index of the ring to remove. If None, removes the last ring.
+        """
+
+    @rpc_call
+    def set_gap(self, value: int):
+        """
+        Set the gap between rings.
+
+        Args:
+            value(int): Gap value in pixels.
+        """
+
+    @rpc_call
+    def set_center_label(self, text: str):
+        """
+        Set the center label text.
+
+        Args:
+            text(str): Text for the center label.
         """
 
 
