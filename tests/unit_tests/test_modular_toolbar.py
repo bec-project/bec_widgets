@@ -16,6 +16,7 @@ from bec_widgets.utils.toolbars.actions import (
     WidgetAction,
 )
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
+from bec_widgets.utils.toolbars.splitter import ResizableSpacer
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 
 
@@ -612,3 +613,129 @@ def test_remove_nonexistent_bundle(toolbar_fixture):
     with pytest.raises(KeyError) as excinfo:
         toolbar.remove_bundle("nonexistent_bundle")
     excinfo.match("Bundle with name 'nonexistent_bundle' does not exist.")
+
+
+def _find_splitter_widget(toolbar: ModularToolBar) -> ResizableSpacer:
+    for action in toolbar.actions():
+        widget = toolbar.widgetForAction(action)
+        if isinstance(widget, ResizableSpacer):
+            return widget
+    raise AssertionError("ResizableSpacer not found in toolbar actions.")
+
+
+def test_add_splitter_auto_orientation(toolbar_fixture, qtbot):
+    toolbar = toolbar_fixture
+    combo = QComboBox()
+    combo.addItems(["One", "Two", "Three"])
+    combo_action = WidgetAction(label="Combo:", widget=combo)
+    toolbar.components.add_safe("combo_action", combo_action)
+
+    bundle = toolbar.new_bundle("splitter_bundle")
+    bundle.add_action("combo_action")
+    bundle.add_splitter(name="splitter", target_widget=combo, min_width=80)
+
+    toolbar.show_bundles(["splitter_bundle"])
+    qtbot.wait(50)
+
+    splitter_widget = _find_splitter_widget(toolbar)
+    if toolbar.orientation() == Qt.Horizontal:
+        assert splitter_widget.orientation == "horizontal"
+        assert splitter_widget.cursor().shape() == Qt.CursorShape.SplitHCursor
+    else:
+        assert splitter_widget.orientation == "vertical"
+        assert splitter_widget.cursor().shape() == Qt.CursorShape.SplitVCursor
+
+
+def test_separator_hidden_next_to_splitter(toolbar_fixture, material_icon_action):
+    toolbar = toolbar_fixture
+    combo = QComboBox()
+    combo.addItems(["One", "Two", "Three"])
+    combo_action = WidgetAction(label="Combo:", widget=combo)
+    toolbar.components.add_safe("combo_action", combo_action)
+
+    bundle_with_splitter = toolbar.new_bundle("bundle_with_splitter")
+    bundle_with_splitter.add_action("combo_action")
+    bundle_with_splitter.add_splitter(name="splitter", target_widget=combo, min_width=80)
+
+    toolbar.components.add_safe("icon_action", material_icon_action)
+    bundle_next = toolbar.new_bundle("bundle_next")
+    bundle_next.add_action("icon_action")
+
+    toolbar.show_bundles(["bundle_with_splitter", "bundle_next"])
+
+    actions = toolbar.actions()
+    splitter_index = None
+    for idx, action in enumerate(actions):
+        if isinstance(toolbar.widgetForAction(action), ResizableSpacer):
+            splitter_index = idx
+            break
+    assert splitter_index is not None
+
+    separator_action = actions[splitter_index + 1]
+    assert separator_action.isSeparator()
+    assert not separator_action.isVisible()
+
+
+def test_splitter_action_set_target_widget_after_show(toolbar_fixture, qtbot):
+    toolbar = toolbar_fixture
+    combo = QComboBox()
+    combo.addItems(["One", "Two", "Three"])
+    combo_action = WidgetAction(label="Combo:", widget=combo)
+    toolbar.components.add_safe("combo_action", combo_action)
+
+    bundle = toolbar.new_bundle("splitter_bundle")
+    bundle.add_action("combo_action")
+    bundle.add_splitter(name="splitter", min_width=80, max_width=160)
+
+    toolbar.show_bundles(["splitter_bundle"])
+    qtbot.wait(200)
+
+    splitter_action = toolbar.components.get_action("splitter")
+    splitter_action.set_target_widget(combo)
+
+    splitter_widget = _find_splitter_widget(toolbar)
+    if hasattr(splitter_widget, "get_target_widget"):
+        assert splitter_widget.get_target_widget() is combo
+    if splitter_widget.orientation == "horizontal":
+        assert 80 <= combo.width() <= 160
+    else:
+        assert 80 <= combo.height() <= 160
+
+
+@pytest.mark.parametrize(
+    "orientation, delta", [("horizontal", QPoint(40, 0)), ("vertical", QPoint(0, 40))]
+)
+def test_splitter_mouse_events_resize_target(qtbot, orientation, delta):
+    from qtpy.QtWidgets import QVBoxLayout
+
+    parent = QWidget()
+    layout = QVBoxLayout(parent)
+    layout.setContentsMargins(0, 0, 0, 0)
+
+    target = QComboBox()
+    target.addItems(["One", "Two", "Three"])
+    layout.addWidget(target)
+
+    splitter = ResizableSpacer(
+        parent=parent,
+        orientation=orientation,
+        initial_width=10,
+        min_target_size=60,
+        max_target_size=200,
+        target_widget=target,
+    )
+    layout.addWidget(splitter)
+
+    qtbot.addWidget(parent)
+    parent.show()
+    qtbot.waitExposed(parent)
+
+    start_size = target.width() if orientation == "horizontal" else target.height()
+
+    qtbot.mousePress(splitter, Qt.LeftButton, pos=splitter.rect().center())
+    qtbot.mouseMove(splitter, splitter.rect().center() + delta)
+    qtbot.mouseRelease(splitter, Qt.LeftButton, pos=splitter.rect().center() + delta)
+
+    end_size = target.width() if orientation == "horizontal" else target.height()
+    assert end_size != start_size
+    assert 60 <= end_size <= 200

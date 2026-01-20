@@ -7,10 +7,17 @@ from weakref import ReferenceType
 import louie
 from bec_lib.logger import bec_logger
 from pydantic import BaseModel
+from qtpy.QtCore import Qt
+from qtpy.QtWidgets import QSizePolicy
 
-from bec_widgets.utils.toolbars.actions import SeparatorAction, ToolBarAction
+from bec_widgets.utils.toolbars.actions import SeparatorAction, SplitterAction, ToolBarAction
+
+DEFAULT_SIZE = 400
+MAX_SIZE = 10_000_000
 
 if TYPE_CHECKING:
+    from qtpy.QtWidgets import QWidget
+
     from bec_widgets.utils.toolbars.connections import BundleConnection
     from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 
@@ -194,6 +201,84 @@ class ToolbarBundle:
         Adds a separator action to the bundle.
         """
         self.add_action("separator")
+
+    def add_splitter(
+        self,
+        name: str = "splitter",
+        target_widget: QWidget | None = None,
+        initial_width: int = 10,
+        min_width: int | None = None,
+        max_width: int | None = None,
+        size_policy_expanding: bool = True,
+    ):
+        """
+        Adds a resizable splitter action to the bundle.
+
+        Args:
+            name (str): Unique identifier for the splitter action.
+            target_widget (QWidget, optional): The widget whose size (width for horizontal,
+                height for vertical orientation) will be controlled by the splitter. If None,
+                the splitter will not control any widget.
+            initial_width (int): The initial size of the splitter (width for horizontal,
+                height for vertical orientation).
+            min_width (int, optional): The minimum size the target widget can be resized to
+                (width for horizontal, height for vertical orientation). If None, the target
+                widget's minimum size hint in that orientation will be used.
+            max_width (int, optional): The maximum size the target widget can be resized to
+                (width for horizontal, height for vertical orientation). If None, the target
+                widget's maximum size hint in that orientation will be used.
+            size_policy_expanding (bool): If True, the size policy of the target_widget will be
+                set to Expanding in the appropriate orientation if it is not already set.
+        """
+
+        # Resolve effective bounds
+        eff_min = min_width if min_width is not None else None
+        eff_max = max_width if max_width is not None else None
+
+        is_horizontal = self.components.toolbar.orientation() == Qt.Orientation.Horizontal
+
+        if target_widget is not None:
+            # Use widget hints if bounds not provided
+            if eff_min is None:
+                eff_min = (
+                    target_widget.minimumWidth() if is_horizontal else target_widget.minimumHeight()
+                ) or 6
+            if eff_max is None:
+                mw = (
+                    target_widget.maximumWidth() if is_horizontal else target_widget.maximumHeight()
+                )
+                eff_max = mw if mw and mw < MAX_SIZE else DEFAULT_SIZE  # avoid "no limit"
+
+            # Adjust size policy if needed
+            if size_policy_expanding:
+                size_policy = target_widget.sizePolicy()
+
+                if is_horizontal:
+                    if size_policy.horizontalPolicy() not in (
+                        QSizePolicy.Policy.Expanding,
+                        QSizePolicy.Policy.MinimumExpanding,
+                    ):
+                        size_policy.setHorizontalPolicy(QSizePolicy.Policy.Expanding)
+                        target_widget.setSizePolicy(size_policy)
+                else:
+                    if size_policy.verticalPolicy() not in (
+                        QSizePolicy.Policy.Expanding,
+                        QSizePolicy.Policy.MinimumExpanding,
+                    ):
+                        size_policy.setVerticalPolicy(QSizePolicy.Policy.Expanding)
+                        target_widget.setSizePolicy(size_policy)
+
+        splitter_action = SplitterAction(
+            orientation="auto",
+            parent=self.components.toolbar,
+            initial_width=initial_width,
+            min_width=eff_min,
+            max_width=eff_max,
+            target_widget=target_widget,
+        )
+
+        self.components.add_safe(name, splitter_action)
+        self.add_action(name)
 
     def add_connection(self, name: str, connection):
         """
