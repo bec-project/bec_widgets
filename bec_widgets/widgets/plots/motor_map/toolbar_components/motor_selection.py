@@ -1,4 +1,4 @@
-from qtpy.QtWidgets import QHBoxLayout, QWidget
+from qtpy.QtWidgets import QHBoxLayout, QSizePolicy, QWidget
 
 from bec_widgets.utils.toolbars.actions import NoCheckDelegate, WidgetAction
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle, ToolbarComponents
@@ -8,6 +8,8 @@ from bec_widgets.widgets.control.device_input.device_combobox.device_combobox im
 
 
 class MotorSelection(QWidget):
+    """Motor selection widget for MotorMap toolbar."""
+
     def __init__(self, parent=None):
         super().__init__(parent=parent)
 
@@ -17,18 +19,22 @@ class MotorSelection(QWidget):
         self.motor_x.setToolTip("Select Motor X")
         self.motor_x.setItemDelegate(NoCheckDelegate(self.motor_x))
         self.motor_x.setEditable(True)
+        self.motor_x.setMinimumWidth(60)
+
         self.motor_y = DeviceComboBox(parent=self, device_filter=[BECDeviceFilter.POSITIONER])
         self.motor_y.addItem("", None)
         self.motor_y.setCurrentText("")
         self.motor_y.setToolTip("Select Motor Y")
         self.motor_y.setItemDelegate(NoCheckDelegate(self.motor_y))
         self.motor_y.setEditable(True)
+        self.motor_y.setMinimumWidth(60)
 
+        # Simple horizontal layout with stretch to fill space
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        layout.addWidget(self.motor_x)
-        layout.addWidget(self.motor_y)
+        layout.setSpacing(2)
+        layout.addWidget(self.motor_x, stretch=1)  # Equal stretch
+        layout.addWidget(self.motor_y, stretch=1)  # Equal stretch
 
     def set_motors(self, motor_x: str | None, motor_y: str | None) -> None:
         """Set the displayed motors without emitting selection signals."""
@@ -65,6 +71,9 @@ def motor_selection_bundle(components: ToolbarComponents) -> ToolbarBundle:
     """
     Creates a workspace toolbar bundle for MotorMap.
 
+    Includes a resizable splitter after the motor selection. All subsequent bundles'
+    actions will appear compactly after the splitter with no gaps.
+
     Args:
         components (ToolbarComponents): The components to be added to the bundle.
 
@@ -79,6 +88,14 @@ def motor_selection_bundle(components: ToolbarComponents) -> ToolbarBundle:
 
     bundle = ToolbarBundle("motor_selection", components)
     bundle.add_action("motor_selection")
+
+    bundle.add_splitter(
+        name="motor_selection_splitter",
+        target_widget=motor_selection_widget,
+        min_width=170,
+        max_width=400,
+    )
+
     return bundle
 
 
