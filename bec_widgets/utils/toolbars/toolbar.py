@@ -8,10 +8,19 @@ from typing import DefaultDict, Literal
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import QSize, Qt, QTimer
 from qtpy.QtGui import QAction, QColor
-from qtpy.QtWidgets import QApplication, QLabel, QMainWindow, QMenu, QToolBar, QVBoxLayout, QWidget
+from qtpy.QtWidgets import (
+    QApplication,
+    QComboBox,
+    QLabel,
+    QMainWindow,
+    QMenu,
+    QToolBar,
+    QVBoxLayout,
+    QWidget,
+)
 
 from bec_widgets.utils.colors import apply_theme, get_theme_name
-from bec_widgets.utils.toolbars.actions import MaterialIconAction, ToolBarAction
+from bec_widgets.utils.toolbars.actions import MaterialIconAction, ToolBarAction, WidgetAction
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle, ToolbarComponents
 from bec_widgets.utils.toolbars.connections import BundleConnection
 
@@ -406,9 +415,18 @@ class ModularToolBar(QToolBar):
 
     def update_separators(self):
         """
-        Hide separators that are adjacent to another separator or have no non-separator actions between them.
+        Hide separators that are adjacent to another separator, splitters, or have no non-separator actions between them.
+        Splitters (ResizableSpacer) already provide visual separation, so we don't need separators next to them.
         """
+        from bec_widgets.utils.toolbars.splitter import ResizableSpacer
+
         toolbar_actions = self.actions()
+
+        # Helper function to check if a widget is a splitter
+        def is_splitter_widget(action):
+            widget = self.widgetForAction(action)
+            return widget is not None and isinstance(widget, ResizableSpacer)
+
         # First pass: set visibility based on surrounding non-separator actions.
         for i, action in enumerate(toolbar_actions):
             if not action.isSeparator():
@@ -423,22 +441,31 @@ class ModularToolBar(QToolBar):
                 if toolbar_actions[j].isVisible():
                     next_visible = toolbar_actions[j]
                     break
-            if (prev_visible is None or prev_visible.isSeparator()) and (
-                next_visible is None or next_visible.isSeparator()
+
+            # Hide separator if adjacent to another separator, splitter, or at edges
+            if (
+                prev_visible is None
+                or prev_visible.isSeparator()
+                or is_splitter_widget(prev_visible)
+            ) and (
+                next_visible is None
+                or next_visible.isSeparator()
+                or is_splitter_widget(next_visible)
             ):
                 action.setVisible(False)
             else:
                 action.setVisible(True)
-        # Second pass: ensure no two visible separators are adjacent.
+        # Second pass: ensure no two visible separators are adjacent, and no separators next to splitters.
         prev = None
         for action in toolbar_actions:
-            if action.isVisible() and action.isSeparator():
-                if prev and prev.isSeparator():
-                    action.setVisible(False)
+            if action.isVisible():
+                if action.isSeparator():
+                    # Hide separator if previous visible item was a separator or splitter
+                    if prev and (prev.isSeparator() or is_splitter_widget(prev)):
+                        action.setVisible(False)
+                    else:
+                        prev = action
                 else:
-                    prev = action
-            else:
-                if action.isVisible():
                     prev = action
 
         if not toolbar_actions:
@@ -481,12 +508,31 @@ if __name__ == "__main__":  # pragma: no cover
             self.setWindowTitle("Toolbar / ToolbarBundle Demo")
             self.central_widget = QWidget()
             self.setCentralWidget(self.central_widget)
-            self.test_label = QLabel(text="This is a test label.")
+            self.test_label = QLabel(text="Drag the splitter (⋮) to resize!")
             self.central_widget.layout = QVBoxLayout(self.central_widget)
             self.central_widget.layout.addWidget(self.test_label)
 
             self.toolbar = ModularToolBar(parent=self)
             self.addToolBar(self.toolbar)
+
+            # Example: Bare combobox (no container). Give it a stable starting width
+            self.example_combo = QComboBox(parent=self)
+            self.example_combo.addItems(["device_1", "device_2", "device_3"])
+
+            self.toolbar.components.add_safe(
+                "example_combo", WidgetAction(widget=self.example_combo)
+            )
+
+            # Create a bundle with the combobox and a splitter
+            self.bundle_combo_splitter = ToolbarBundle("example_combo", self.toolbar.components)
+            self.bundle_combo_splitter.add_action("example_combo")
+            # Add splitter; target the bare widget
+            self.bundle_combo_splitter.add_splitter(
+                name="splitter_example", target_widget=self.example_combo, min_width=100
+            )
+
+            # Add other bundles
+            self.toolbar.add_bundle(self.bundle_combo_splitter)
             self.toolbar.add_bundle(performance_bundle(self.toolbar.components))
             self.toolbar.add_bundle(plot_export_bundle(self.toolbar.components))
             self.toolbar.connect_bundle(
@@ -502,7 +548,9 @@ if __name__ == "__main__":  # pragma: no cover
                     text_position="under",
                 ),
             )
-            self.toolbar.show_bundles(["performance", "plot_export"])
+
+            # Show bundles - notice how performance and plot_export appear compactly after splitter!
+            self.toolbar.show_bundles(["example_combo", "performance", "plot_export"])
             self.toolbar.get_bundle("performance").add_action("save")
             self.toolbar.get_bundle("performance").add_action("text")
             self.toolbar.refresh()
