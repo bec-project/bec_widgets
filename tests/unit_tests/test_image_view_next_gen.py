@@ -249,6 +249,31 @@ def test_toolbar_actions_presence(qtbot, mocked_client):
     assert bec_image_view.toolbar.components.exists("image_dim_combo")
 
 
+def test_auto_emit_syncs_image_toolbar_actions(qtbot, mocked_client):
+    from unittest.mock import Mock
+
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    fft_action = bec_image_view.toolbar.components.get_action("image_processing_fft").action
+    log_action = bec_image_view.toolbar.components.get_action("image_processing_log").action
+    transpose_action = bec_image_view.toolbar.components.get_action(
+        "image_processing_transpose"
+    ).action
+
+    mock_handler = Mock()
+    bec_image_view.property_changed.connect(mock_handler)
+
+    bec_image_view.fft = True
+    bec_image_view.log = True
+    bec_image_view.transpose = True
+
+    assert fft_action.isChecked()
+    assert log_action.isChecked()
+    assert transpose_action.isChecked()
+    mock_handler.assert_any_call("fft", True)
+    mock_handler.assert_any_call("log", True)
+    mock_handler.assert_any_call("transpose", True)
+
+
 def test_image_processing_fft_toggle(qtbot, mocked_client):
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
     bec_image_view.fft = True
