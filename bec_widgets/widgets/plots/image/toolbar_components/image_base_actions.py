@@ -300,9 +300,14 @@ def image_processing(components: ToolbarComponents) -> ToolbarBundle:
 class ImageProcessingConnection(BundleConnection):
     """
     Connection class for the image processing toolbar bundle.
+
+    Provides bidirectional synchronization between toolbar actions and widget properties:
+    - Toolbar clicks → Update properties
+    - Property changes → Update toolbar (via property_changed signal)
     """
 
     def __init__(self, components: ToolbarComponents, target_widget=None):
+        super().__init__(parent=components.toolbar)
         self.bundle_name = "image_processing"
         self.components = components
         self.target_widget = target_widget
@@ -315,7 +320,6 @@ class ImageProcessingConnection(BundleConnection):
             raise AttributeError(
                 "Target widget must implement 'fft', 'log', 'transpose', and 'num_rotation_90' attributes."
             )
-        super().__init__()
         self.fft = components.get_action("image_processing_fft")
         self.log = components.get_action("image_processing_log")
         self.transpose = components.get_action("image_processing_transpose")
@@ -323,6 +327,11 @@ class ImageProcessingConnection(BundleConnection):
         self.left = components.get_action("image_processing_rotate_left")
         self.reset = components.get_action("image_processing_reset")
         self._connected = False
+
+        # Register property sync methods for bidirectional sync
+        self.register_checked_action_sync("fft", self.fft)
+        self.register_checked_action_sync("log", self.log)
+        self.register_checked_action_sync("transpose", self.transpose)
 
     @SafeSlot()
     def toggle_fft(self):
@@ -367,8 +376,11 @@ class ImageProcessingConnection(BundleConnection):
     def connect(self):
         """
         Connect the actions to the target widget's methods.
+        Enables bidirectional sync: toolbar ↔ properties.
         """
         self._connected = True
+
+        # Toolbar → Property connections
         self.fft.action.triggered.connect(self.toggle_fft)
         self.log.action.triggered.connect(self.toggle_log)
         self.transpose.action.triggered.connect(self.toggle_transpose)
@@ -376,15 +388,25 @@ class ImageProcessingConnection(BundleConnection):
         self.left.action.triggered.connect(self.rotate_left)
         self.reset.action.triggered.connect(self.reset_settings)
 
+        # Property → Toolbar connections
+        self.connect_property_sync(self.target_widget)
+
     def disconnect(self):
         """
         Disconnect the actions from the target widget's methods.
         """
         if not self._connected:
             return
+
+        # Disconnect toolbar → property
         self.fft.action.triggered.disconnect(self.toggle_fft)
         self.log.action.triggered.disconnect(self.toggle_log)
         self.transpose.action.triggered.disconnect(self.toggle_transpose)
         self.right.action.triggered.disconnect(self.rotate_right)
         self.left.action.triggered.disconnect(self.rotate_left)
         self.reset.action.triggered.disconnect(self.reset_settings)
+
+        # Disconnect property → toolbar
+        self.disconnect_property_sync(self.target_widget)
+
+        self._connected = False

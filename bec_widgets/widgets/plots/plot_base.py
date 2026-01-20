@@ -446,7 +446,7 @@ class PlotBase(BECWidget, QWidget):
             else:
                 logger.warning(f"Property {key} not found.")
 
-    @SafeProperty(str, doc="The title of the axes.")
+    @SafeProperty(str, auto_emit=True, doc="The title of the axes.")
     def title(self) -> str:
         """
         Set title of the plot.
@@ -462,9 +462,8 @@ class PlotBase(BECWidget, QWidget):
             value(str): The title to set.
         """
         self.plot_item.setTitle(value)
-        self.property_changed.emit("title", value)
 
-    @SafeProperty(str, doc="The text of the x label")
+    @SafeProperty(str, auto_emit=True, doc="The text of the x label")
     def x_label(self) -> str:
         """
         The set label for the x-axis.
@@ -481,7 +480,6 @@ class PlotBase(BECWidget, QWidget):
         """
         self._user_x_label = value
         self._apply_x_label()
-        self.property_changed.emit("x_label", self._user_x_label)
 
     @property
     def x_label_suffix(self) -> str:
@@ -535,7 +533,7 @@ class PlotBase(BECWidget, QWidget):
         if self.plot_item.getAxis("bottom").isVisible():
             self.plot_item.setLabel("bottom", text=final_label)
 
-    @SafeProperty(str, doc="The text of the y label")
+    @SafeProperty(str, auto_emit=True, doc="The text of the y label")
     def y_label(self) -> str:
         """
         The set label for the y-axis.
@@ -551,7 +549,6 @@ class PlotBase(BECWidget, QWidget):
         """
         self._user_y_label = value
         self._apply_y_label()
-        self.property_changed.emit("y_label", value)
 
     @property
     def y_label_suffix(self) -> str:
@@ -772,7 +769,7 @@ class PlotBase(BECWidget, QWidget):
         """
         self.y_limits = (self.y_lim[0], value)
 
-    @SafeProperty(bool, doc="Show grid on the x-axis.")
+    @SafeProperty(bool, auto_emit=True, doc="Show grid on the x-axis.")
     def x_grid(self) -> bool:
         """
         Show grid on the x-axis.
@@ -788,9 +785,8 @@ class PlotBase(BECWidget, QWidget):
             value(bool): The value to set.
         """
         self.plot_item.showGrid(x=value)
-        self.property_changed.emit("x_grid", value)
 
-    @SafeProperty(bool, doc="Show grid on the y-axis.")
+    @SafeProperty(bool, auto_emit=True, doc="Show grid on the y-axis.")
     def y_grid(self) -> bool:
         """
         Show grid on the y-axis.
@@ -806,9 +802,8 @@ class PlotBase(BECWidget, QWidget):
             value(bool): The value to set.
         """
         self.plot_item.showGrid(y=value)
-        self.property_changed.emit("y_grid", value)
 
-    @SafeProperty(bool, doc="Set X-axis to log scale if True, linear if False.")
+    @SafeProperty(bool, auto_emit=True, doc="Set X-axis to log scale if True, linear if False.")
     def x_log(self) -> bool:
         """
         Set X-axis to log scale if True, linear if False.
@@ -824,9 +819,8 @@ class PlotBase(BECWidget, QWidget):
             value(bool): The value to set.
         """
         self.plot_item.setLogMode(x=value)
-        self.property_changed.emit("x_log", value)
 
-    @SafeProperty(bool, doc="Set Y-axis to log scale if True, linear if False.")
+    @SafeProperty(bool, auto_emit=True, doc="Set Y-axis to log scale if True, linear if False.")
     def y_log(self) -> bool:
         """
         Set Y-axis to log scale if True, linear if False.
@@ -842,9 +836,8 @@ class PlotBase(BECWidget, QWidget):
             value(bool): The value to set.
         """
         self.plot_item.setLogMode(y=value)
-        self.property_changed.emit("y_log", value)
 
-    @SafeProperty(bool, doc="Show the outer axes of the plot widget.")
+    @SafeProperty(bool, auto_emit=True, doc="Show the outer axes of the plot widget.")
     def outer_axes(self) -> bool:
         """
         Show the outer axes of the plot widget.
@@ -863,9 +856,8 @@ class PlotBase(BECWidget, QWidget):
         self.plot_item.showAxis("right", value)
 
         self._outer_axes_visible = value
-        self.property_changed.emit("outer_axes", value)
 
-    @SafeProperty(bool, doc="Show inner axes of the plot widget.")
+    @SafeProperty(bool, auto_emit=True, doc="Show inner axes of the plot widget.")
     def inner_axes(self) -> bool:
         """
         Show inner axes of the plot widget.
@@ -886,7 +878,6 @@ class PlotBase(BECWidget, QWidget):
         self._inner_axes_visible = value
         self._apply_x_label()
         self._apply_y_label()
-        self.property_changed.emit("inner_axes", value)
 
     @SafeProperty(bool, doc="Invert X axis.")
     def invert_x(self) -> bool:
@@ -1110,7 +1101,9 @@ class PlotBase(BECWidget, QWidget):
         self.unhook_crosshair()
 
     @SafeProperty(
-        int, doc="Minimum decimal places for crosshair when dynamic precision is enabled."
+        int,
+        auto_emit=True,
+        doc="Minimum decimal places for crosshair when dynamic precision is enabled.",
     )
     def minimal_crosshair_precision(self) -> int:
         """
@@ -1130,7 +1123,6 @@ class PlotBase(BECWidget, QWidget):
         self._minimal_crosshair_precision = value_int
         if self.crosshair is not None:
             self.crosshair.min_precision = value_int
-        self.property_changed.emit("minimal_crosshair_precision", value_int)
 
     @SafeSlot()
     def reset(self) -> None:
