@@ -1,19 +1,38 @@
 import functools
 import sys
 import traceback
+from typing import Any, Callable, Literal
 
 import shiboken6
 from bec_lib.logger import bec_logger
 from louie.saferef import safe_ref
 from qtpy.QtCore import Property, QObject, Qt, Signal, Slot
-from qtpy.QtWidgets import QApplication, QMessageBox, QPushButton, QVBoxLayout, QWidget
+from qtpy.QtWidgets import (
+    QApplication,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QSpinBox,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
 
 logger = bec_logger.logger
 
 RAISE_ERROR_DEFAULT = False
 
 
-def SafeProperty(prop_type, *prop_args, popup_error: bool = False, default=None, **prop_kwargs):
+def SafeProperty(
+    prop_type,
+    *prop_args,
+    popup_error: bool = False,
+    default: Any = None,
+    auto_emit: bool = False,
+    emit_value: Literal["stored", "input"] | Callable[[object, object], object] = "stored",
+    emit_on_change: bool = True,
+    **prop_kwargs,
+):
     """
     Decorator to create a Qt Property with safe getter and setter so that
     Qt Designer won't crash if an exception occurs in either method.
@@ -22,7 +41,15 @@ def SafeProperty(prop_type, *prop_args, popup_error: bool = False, default=None,
         prop_type: The property type (e.g., str, bool, int, custom classes, etc.)
         popup_error (bool): If True, show a popup for any error; otherwise, ignore or log silently.
         default: Any default/fallback value to return if the getter raises an exception.
-        *prop_args, **prop_kwargs: Passed along to the underlying Qt Property constructor.
+        auto_emit (bool): If True, automatically emit property_changed signal when setter is called.
+                         Requires the widget to have a property_changed signal (str, object).
+                         Note: This is different from Qt's 'notify' parameter which expects a Signal.
+        emit_value: Controls which value is emitted when auto_emit=True.
+            - "stored" (default): emit the value from the getter after setter runs
+            - "input": emit the raw setter input
+            - callable: called as emit_value(self_, value) after setter and must return the value to emit
+        emit_on_change (bool): If True, emit only when the stored value changes.
+        *prop_args, **prop_kwargs: Passed along to the underlying Qt Property constructor (check https://doc.qt.io/qt-6/properties.html).
 
     Usage:
         @SafeProperty(int, default=-1)
@@ -34,6 +61,41 @@ def SafeProperty(prop_type, *prop_args, popup_error: bool = False, default=None,
         def some_value(self, val: int):
             # your setter logic
             ...
+
+        # With auto-emit for toolbar sync:
+        @SafeProperty(bool, auto_emit=True)
+        def fft(self) -> bool:
+            return self._fft
+
+        @fft.setter
+        def fft(self, value: bool):
+            self._fft = value
+            # property_changed.emit("fft", value) is called automatically
+
+        # With custom emit modes:
+        @SafeProperty(int, auto_emit=True, emit_value="stored")
+        def precision_stored(self) -> int:
+            return self._precision_stored
+
+        @precision_stored.setter
+        def precision_stored(self, value: int):
+            self._precision_stored = max(0, int(value))
+
+        @SafeProperty(int, auto_emit=True, emit_value="input")
+        def precision_input(self) -> int:
+            return self._precision_input
+
+        @precision_input.setter
+        def precision_input(self, value: int):
+            self._precision_input = max(0, int(value))
+
+    @SafeProperty(int, auto_emit=True, emit_value=lambda _self, v: int(v) * 10)
+    def precision_callable(self) -> int:
+        return self._precision_callable
+
+        @precision_callable.setter
+        def precision_callable(self, value: int):
+            self._precision_callable = max(0, int(value))
     """
 
     def decorator(py_getter):
@@ -70,8 +132,42 @@ def SafeProperty(prop_type, *prop_args, popup_error: bool = False, default=None,
                 @functools.wraps(setter_func)
                 def safe_setter(self_, value):
                     try:
-                        return setter_func(self_, value)
-                    except Exception:
+                        before_value = None
+                        if auto_emit and emit_on_change:
+                            try:
+                                before_value = self.getter_func(self_)
+                            except Exception as e:
+                                logger.warning(
+                                    f"SafeProperty could not get 'before' value for change detection: {e}"
+                                )
+                                before_value = None
+
+                        result = setter_func(self_, value)
+
+                        # Auto-emit property_changed if auto_emit=True and signal exists
+                        if auto_emit and hasattr(self_, "property_changed"):
+                            prop_name = py_getter.__name__
+                            try:
+                                if callable(emit_value):
+                                    emit_payload = emit_value(self_, value)
+                                elif emit_value == "input":
+                                    emit_payload = value
+                                else:
+                                    emit_payload = self.getter_func(self_)
+
+                                if emit_on_change and before_value == emit_payload:
+                                    return result
+
+                                self_.property_changed.emit(prop_name, emit_payload)
+                            except Exception as notify_error:
+                                # Don't fail the setter if notification fails
+                                logger.warning(
+                                    f"SafeProperty auto_emit failed for '{prop_name}': {notify_error}"
+                                )
+
+                        return result
+                    except Exception as e:
+                        logger.warning(f"SafeProperty setter caught exception: {e}")
                         prop_name = f"{setter_func.__module__}.{setter_func.__qualname__}"
                         error_msg = traceback.format_exc()
 
@@ -337,6 +433,100 @@ def ErrorPopupUtility():
     return _popup_utility_instance
 
 
+class SafePropertyExampleWidget(QWidget):  # pragma: no cover
+    """
+    Example widget showcasing SafeProperty auto_emit modes.
+    """
+
+    property_changed = Signal(str, object)
+
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("SafeProperty auto_emit example")
+        self._precision_stored = 0
+        self._precision_input = 0
+        self._precision_callable = 0
+
+        layout = QVBoxLayout(self)
+        self.status = QLabel("last emit: <none>", self)
+
+        self.spinbox_stored = QSpinBox(self)
+        self.spinbox_stored.setRange(-5, 10)
+        self.spinbox_stored.setValue(0)
+        self.label_stored = QLabel("stored emit: <none>", self)
+
+        self.spinbox_input = QSpinBox(self)
+        self.spinbox_input.setRange(-5, 10)
+        self.spinbox_input.setValue(0)
+        self.label_input = QLabel("input emit: <none>", self)
+
+        self.spinbox_callable = QSpinBox(self)
+        self.spinbox_callable.setRange(-5, 10)
+        self.spinbox_callable.setValue(0)
+        self.label_callable = QLabel("callable emit: <none>", self)
+
+        layout.addWidget(QLabel("stored emit (normalized value):", self))
+        layout.addWidget(self.spinbox_stored)
+        layout.addWidget(self.label_stored)
+
+        layout.addWidget(QLabel("input emit (raw setter input):", self))
+        layout.addWidget(self.spinbox_input)
+        layout.addWidget(self.label_input)
+
+        layout.addWidget(QLabel("callable emit (custom mapping):", self))
+        layout.addWidget(self.spinbox_callable)
+        layout.addWidget(self.label_callable)
+
+        layout.addWidget(self.status)
+
+        self.spinbox_stored.valueChanged.connect(self._on_spinbox_stored)
+        self.spinbox_input.valueChanged.connect(self._on_spinbox_input)
+        self.spinbox_callable.valueChanged.connect(self._on_spinbox_callable)
+        self.property_changed.connect(self._on_property_changed)
+
+    @SafeProperty(int, auto_emit=True, emit_value="stored", doc="Clamped precision value.")
+    def precision_stored(self) -> int:
+        return self._precision_stored
+
+    @precision_stored.setter
+    def precision_stored(self, value: int):
+        self._precision_stored = max(0, int(value))
+
+    @SafeProperty(int, auto_emit=True, emit_value="input", doc="Emit raw input value.")
+    def precision_input(self) -> int:
+        return self._precision_input
+
+    @precision_input.setter
+    def precision_input(self, value: int):
+        self._precision_input = max(0, int(value))
+
+    @SafeProperty(int, auto_emit=True, emit_value=lambda _self, v: int(v) * 10)
+    def precision_callable(self) -> int:
+        return self._precision_callable
+
+    @precision_callable.setter
+    def precision_callable(self, value: int):
+        self._precision_callable = max(0, int(value))
+
+    def _on_spinbox_stored(self, value: int):
+        self.precision_stored = value
+
+    def _on_spinbox_input(self, value: int):
+        self.precision_input = value
+
+    def _on_spinbox_callable(self, value: int):
+        self.precision_callable = value
+
+    def _on_property_changed(self, prop_name: str, value):
+        self.status.setText(f"last emit: {prop_name}={value}")
+        if prop_name == "precision_stored":
+            self.label_stored.setText(f"stored emit: {value}")
+        elif prop_name == "precision_input":
+            self.label_input.setText(f"input emit: {value}")
+        elif prop_name == "precision_callable":
+            self.label_callable.setText(f"callable emit: {value}")
+
+
 class ExampleWidget(QWidget):  # pragma: no cover
     """
     Example widget to demonstrate error handling with the ErrorPopupUtility.
@@ -391,6 +581,10 @@ class ExampleWidget(QWidget):  # pragma: no cover
 if __name__ == "__main__":  # pragma: no cover
 
     app = QApplication(sys.argv)
-    widget = ExampleWidget()
-    widget.show()
+    tabs = QTabWidget()
+    tabs.setWindowTitle("Error Popups & SafeProperty Examples")
+    tabs.addTab(ExampleWidget(), "Error Popups")
+    tabs.addTab(SafePropertyExampleWidget(), "SafeProperty auto_emit")
+    tabs.resize(420, 520)
+    tabs.show()
     sys.exit(app.exec_())
