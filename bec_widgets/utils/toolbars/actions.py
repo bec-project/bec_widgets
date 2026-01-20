@@ -26,6 +26,7 @@ from qtpy.QtWidgets import (
 )
 
 import bec_widgets
+from bec_widgets.utils.toolbars.splitter import ResizableSpacer
 from bec_widgets.widgets.control.device_input.base_classes.device_input_base import BECDeviceFilter
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 
@@ -496,6 +497,82 @@ class WidgetAction(ToolBarAction):
         font_metrics = combo_box.fontMetrics()
         max_width = max(font_metrics.width(combo_box.itemText(i)) for i in range(combo_box.count()))  # type: ignore
         return max_width + 60
+
+
+class SplitterAction(ToolBarAction):
+    """
+    Action for adding a draggable splitter/spacer to the toolbar.
+
+    This creates a resizable spacer that allows users to control how much space
+    is allocated to toolbar sections before and after it. When dragged, it expands/contracts,
+    pushing other toolbar elements left or right.
+
+    Args:
+        orientation (Literal["horizontal", "vertical", "auto"]): The orientation of the splitter.
+        parent (QWidget): The parent widget.
+        initial_width (int): Fixed size of the spacer in pixels along the toolbar's orientation (default: 20).
+        min_width (int | None): Minimum size of the target widget along the orientation axis (width for horizontal, height for vertical). If ``None``, no minimum constraint is applied.
+        max_width (int | None): Maximum size of the target widget along the orientation axis (width for horizontal, height for vertical). If ``None``, no maximum constraint is applied.
+        target_widget (QWidget | None): Widget whose size (width or height, depending on orientation) is controlled by the spacer within the given min/max bounds.
+    """
+
+    def __init__(
+        self,
+        orientation: Literal["horizontal", "vertical", "auto"] = "auto",
+        parent=None,
+        initial_width=20,
+        min_width: int | None = None,
+        max_width: int | None = None,
+        target_widget=None,
+    ):
+        super().__init__(icon_path=None, tooltip="Drag to resize toolbar sections", checkable=False)
+        self.orientation = orientation
+        self.initial_width = initial_width
+        self.min_width = min_width
+        self.max_width = max_width
+        self._splitter_widget = None
+        self._target_widget = target_widget
+
+    def _resolve_orientation(self, toolbar: QToolBar) -> Literal["horizontal", "vertical"]:
+        if self.orientation in (None, "auto"):
+            return (
+                "horizontal" if toolbar.orientation() == Qt.Orientation.Horizontal else "vertical"
+            )
+        return self.orientation
+
+    def set_target_widget(self, widget):
+        """Set the target widget after creation."""
+        self._target_widget = widget
+        if self._splitter_widget:
+            self._splitter_widget.set_target_widget(widget)
+
+    def add_to_toolbar(self, toolbar: QToolBar, target: QWidget):
+        """
+        Adds the splitter/spacer to the toolbar.
+
+        Args:
+            toolbar (QToolBar): The toolbar to add the splitter to.
+            target (QWidget): The target widget for the action.
+        """
+
+        effective_orientation = self._resolve_orientation(toolbar)
+        self._splitter_widget = ResizableSpacer(
+            parent=target,
+            orientation=effective_orientation,
+            initial_width=self.initial_width,
+            min_target_size=self.min_width,
+            max_target_size=self.max_width,
+            target_widget=self._target_widget,
+        )
+        toolbar.addWidget(self._splitter_widget)
+        self.action = self._splitter_widget  # type: ignore
+
+    def cleanup(self):
+        """Clean up the splitter widget."""
+        if self._splitter_widget is not None:
+            self._splitter_widget.close()
+            self._splitter_widget.deleteLater()
+        return super().cleanup()
 
 
 class ExpandableMenuAction(ToolBarAction):
