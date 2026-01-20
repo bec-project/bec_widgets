@@ -1453,7 +1453,7 @@ class Heatmap(ImageBase):
     # Post Processing
     ################################################################################
 
-    @SafeProperty(bool)
+    @SafeProperty(bool, auto_emit=True)
     def fft(self) -> bool:
         """
         Whether FFT postprocessing is enabled.
@@ -1470,7 +1470,7 @@ class Heatmap(ImageBase):
         """
         self.main_image.fft = enable
 
-    @SafeProperty(bool)
+    @SafeProperty(bool, auto_emit=True)
     def log(self) -> bool:
         """
         Whether logarithmic scaling is applied.
@@ -1504,7 +1504,7 @@ class Heatmap(ImageBase):
         """
         self.main_image.num_rotation_90 = value
 
-    @SafeProperty(bool)
+    @SafeProperty(bool, auto_emit=True)
     def transpose(self) -> bool:
         """
         Whether the image is transposed.

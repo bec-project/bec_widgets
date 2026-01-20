@@ -834,6 +834,24 @@ def test_device_properties_property_changed_signal(heatmap_widget):
     mock_handler.assert_any_call("x_device_name", "samx")
 
 
+def test_auto_emit_syncs_heatmap_toolbar_actions(heatmap_widget):
+    from unittest.mock import Mock
+
+    fft_action = heatmap_widget.toolbar.components.get_action("image_processing_fft").action
+    log_action = heatmap_widget.toolbar.components.get_action("image_processing_log").action
+
+    mock_handler = Mock()
+    heatmap_widget.property_changed.connect(mock_handler)
+
+    heatmap_widget.fft = True
+    heatmap_widget.log = True
+
+    assert fft_action.isChecked()
+    assert log_action.isChecked()
+    mock_handler.assert_any_call("fft", True)
+    mock_handler.assert_any_call("log", True)
+
+
 def test_device_entry_validation_with_invalid_device(heatmap_widget):
     """Test that invalid device names are handled gracefully."""
     # Try to set invalid device name
