@@ -53,6 +53,8 @@ def SafeProperty(prop_type, *prop_args, popup_error: bool = False, default=None,
                 logger.error(f"SafeProperty error in GETTER of '{prop_name}':\n{error_msg}")
                 return default
 
+        safe_getter.__is_safe_getter__ = True  # type: ignore[attr-defined]
+
         class PropertyWrapper:
             """
             Intermediate wrapper used so that the user can optionally chain .setter(...).

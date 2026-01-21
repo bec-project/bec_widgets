@@ -3,9 +3,10 @@ import time
 
 import pytest
 from qtpy.QtCore import QObject
-from qtpy.QtWidgets import QApplication
+from qtpy.QtWidgets import QApplication, QWidget
 
 from bec_widgets.utils import BECConnector
+from bec_widgets.utils.error_popups import SafeProperty
 from bec_widgets.utils.error_popups import SafeSlot as Slot
 
 from .client_mocks import mocked_client
@@ -131,3 +132,33 @@ def test_bec_connector_change_object_name(bec_connector):
     # Verify that the object with the previous name is no longer registered
     all_objects = bec_connector.rpc_register.list_all_connections().values()
     assert not any(obj.objectName() == previous_name for obj in all_objects)
+
+
+def test_bec_connector_export_settings():
+
+    class MyWidget(BECConnector, QWidget):
+        def __init__(self, parent=None, client=None, **kwargs):
+            super().__init__(parent=parent, client=client, **kwargs)
+            self.setWindowTitle("My Widget")
+            self._my_str_property = "default"
+
+        @SafeProperty(str)
+        def my_str_property(self) -> str:
+            return self._my_str_property
+
+        @my_str_property.setter
+        def my_str_property(self, value: str):
+            self._my_str_property = value
+
+        @property
+        def my_int_property(self) -> int:
+            return 42
+
+    widget = MyWidget(client=mocked_client)
+    out = widget.export_settings()
+    assert len(out) == 1
+    assert out["my_str_property"] == "default"
+
+    config = {"my_str_property": "new_value"}
+    widget.load_settings(config)
+    assert widget.my_str_property == "new_value"
