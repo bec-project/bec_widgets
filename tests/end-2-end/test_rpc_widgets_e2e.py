@@ -120,35 +120,38 @@ def test_available_widgets(qtbot, connected_client_gui_obj):
         #############################
         ####### Remove widget #######
         #############################
-
-        # Now we remove the widget again
-        widget_id = widget._gui_id
-        widget.remove()
-        # Wait for namespace to change
-        wait_for_namespace_change(
-            qtbot, gui, dock_area, widget.object_name, widget_id, exists=False
-        )
-        # Assert that widget is removed from the ipython registry and the namespace
-        assert hasattr(dock_area, widget.object_name) is False
-        # Client registry
-        assert gui._ipython_registry.get(widget_id, None) is None
-        # Server registry
-        assert gui._server_registry.get(widget_id, None) is None
-
-        # Check that the number of top level widgets is still the same. As the cleanup is done by the
-        # qt event loop, we need to wait for the qtbot to finish the cleanup
         try:
-            qtbot.waitUntil(lambda: len(gui._server_registry) == top_level_widgets_count)
-        except Exception as exc:
-            raise RuntimeError(
-                f"Widget {object_name} was not removed properly. The number of top level widgets "
-                f"is {len(gui._server_registry)} instead of {top_level_widgets_count}. The following "
-                f"widgets are not cleaned up: {set(gui._server_registry.keys()) - names}"
-            ) from exc
-        # Number of widgets with parent_id == None, should be 2
-        widgets = [
-            widget
-            for widget in gui._server_registry.values()
-            if widget["config"]["parent_id"] is None
-        ]
-        assert len(widgets) == 2
+            # Now we remove the widget again
+            widget_id = widget._gui_id
+            widget.remove()
+            # Wait for namespace to change
+            wait_for_namespace_change(
+                qtbot, gui, dock_area, widget.object_name, widget_id, exists=False
+            )
+            # Assert that widget is removed from the ipython registry and the namespace
+            assert hasattr(dock_area, widget.object_name) is False
+            # Client registry
+            assert gui._ipython_registry.get(widget_id, None) is None
+            # Server registry
+            assert gui._server_registry.get(widget_id, None) is None
+
+            # Check that the number of top level widgets is still the same. As the cleanup is done by the
+            # qt event loop, we need to wait for the qtbot to finish the cleanup
+            try:
+                qtbot.waitUntil(lambda: len(gui._server_registry) == top_level_widgets_count)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"Widget {object_name} was not removed properly. The number of top level widgets "
+                    f"is {len(gui._server_registry)} instead of {top_level_widgets_count}. The following "
+                    f"widgets are not cleaned up: {set(gui._server_registry.keys()) - names}"
+                ) from exc
+            # Number of widgets with parent_id == None, should be 2
+            widgets = [
+                widget
+                for widget in gui._server_registry.values()
+                if widget["config"]["parent_id"] is None
+            ]
+            assert len(widgets) == 2
+
+        except Exception as e:
+            raise RuntimeError(f"Failed to remove widget {object_name}") from e
