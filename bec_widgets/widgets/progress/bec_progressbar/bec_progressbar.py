@@ -109,6 +109,7 @@ class BECProgressBar(BECWidget, QWidget):
         self.center_label = QLabel(self)
         self.center_label.setAlignment(Qt.AlignHCenter)
         self.center_label.setMinimumSize(0, 0)
+        self.center_label.setStyleSheet("background: transparent; color: white;")
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 0, 10, 0)
