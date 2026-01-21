@@ -79,7 +79,11 @@ class CustomBusyWidget(QWidget):
         super().__init__(parent=parent)
 
         # Widgets
-        self.progress = DeviceInitializationProgressBar(parent=self, client=client)
+        self.progress = QWidget(parent=self)
+        self.progress_layout = QVBoxLayout(self.progress)
+        self.progress_layout.setContentsMargins(6, 6, 6, 6)
+        self.progress_inner = DeviceInitializationProgressBar(parent=self.progress, client=client)
+        self.progress_layout.addWidget(self.progress_inner)
         self.progress.setMinimumWidth(320)
 
         # Spinner
@@ -163,7 +167,7 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
         self._config_in_sync: bool = False
         scan_status = self.bec_dispatcher.client.connector.get(MessageEndpoints.scan_status())
         initial_status = scan_status.status if scan_status is not None else "closed"
-        self._scan_is_running: bool = initial_status not in ["open", "paused"]
+        self._scan_is_running: bool = initial_status in ["open", "paused"]
 
         # Push to Redis dialog
         self._upload_redis_dialog: UploadRedisDialog | None = None
