@@ -7,9 +7,11 @@ from typing import TYPE_CHECKING, List, Literal, get_args
 import yaml
 from bec_lib import config_helper
 from bec_lib.bec_yaml_loader import yaml_load
+from bec_lib.callback_handler import EventType
+from bec_lib.endpoints import MessageEndpoints
 from bec_lib.file_utils import DeviceConfigWriter
 from bec_lib.logger import bec_logger
-from bec_lib.messages import ConfigAction
+from bec_lib.messages import ConfigAction, ScanStatusMessage
 from bec_lib.plugin_helper import plugin_package_name, plugin_repo_path
 from bec_qthemes import apply_theme, material_icon
 from qtpy.QtCore import QMetaObject, Qt, QThreadPool, Signal
@@ -158,6 +160,10 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
 
         # State variable for config upload
         self._config_upload_active: bool = False
+        self._config_in_sync: bool = False
+        scan_status = self.bec_dispatcher.client.connector.get(MessageEndpoints.scan_status())
+        initial_status = scan_status.status if scan_status is not None else "closed"
+        self._scan_is_running: bool = initial_status not in ["open", "paused"]
 
         # Push to Redis dialog
         self._upload_redis_dialog: UploadRedisDialog | None = None
@@ -213,12 +219,16 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
             ),
             (
                 self.device_table_view.device_config_in_sync_with_redis,
-                (self._update_config_enabled_button,),
+                (self._update_config_in_sync,),
             ),
             (self.device_table_view.device_row_dbl_clicked, (self._edit_device_action,)),
         ]:
             for slot in slots:
                 signal.connect(slot)
+
+        self._scan_status_callback_id = self.bec_dispatcher.client.callbacks.register(
+            EventType.SCAN_STATUS, self._update_scan_running
+        )
 
         # Add toolbar
         self._add_toolbar()
@@ -226,9 +236,20 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
         # Build dock layout using shared helpers
         self._build_docks()
 
+    def cleanup(self):
+        self.bec_dispatcher.client.callbacks.remove(self._scan_status_callback_id)
+        super().cleanup()
+
     def closeEvent(self, event):
-        self._about_to_quit_handler()
-        return super().closeEvent(event)
+        """If config upload is active when application is exiting, cancel it."""
+        logger.info("Application is quitting, checking for active config upload...")
+        if self._config_upload_active:
+            logger.info("Application is quitting, cancelling active config upload...")
+            self._config_helper.send_config_request(
+                action="cancel", config=None, wait_for_response=True, timeout_s=10
+            )
+            logger.info("Config upload cancelled.")
+        super().closeEvent(event)
 
     ##############################
     ### Custom set busy widget ###
@@ -239,20 +260,6 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
         widget = CustomBusyWidget(parent=self, client=self.client)
         widget.cancel_requested.connect(self._cancel_device_config_upload)
         return widget
-
-    ################################
-    ### Application quit handler ###
-    ################################
-
-    def _about_to_quit_handler(self):
-        """Handle application about to quit event. If config upload is active, cancel it."""
-        logger.info("Application is quitting, checking for active config upload...")
-        if self._config_upload_active:
-            logger.info("Application is quitting, cancelling active config upload...")
-            self._config_helper.send_config_request(
-                action="cancel", config=None, wait_for_response=True, timeout_s=10
-            )
-            logger.info("Config upload cancelled.")
 
     def _set_busy_wrapper(self, enabled: bool):
         """Thin wrapper around set_busy to flip the state variable."""
@@ -445,6 +452,32 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
         # Add load config from plugin dir
         self.toolbar.add_bundle(table_bundle)
 
+    ######################################
+    ### Update button state management ###
+    ######################################
+
+    @SafeSlot(dict, dict)
+    def _update_scan_running(self, scan_info: dict, _: dict):
+        """disable editing when scans are running and enable editing when they are finished"""
+        msg = ScanStatusMessage.model_validate(scan_info)
+        self._scan_is_running = msg.status in ["open", "paused"]
+        self._update_config_enabled_button()
+
+    def _update_config_in_sync(self, in_sync: bool):
+        self._config_in_sync = in_sync
+        self._update_config_enabled_button()
+
+    def _update_config_enabled_button(self):
+        action = self.toolbar.components.get_action("update_config_redis")
+        enabled = not self._config_in_sync and not self._scan_is_running
+        action.action.setEnabled(enabled)
+        if enabled:  # button is enabled
+            action.action.setToolTip("Push current config to BEC Server")
+        elif self._scan_is_running:
+            action.action.setToolTip("Scan is currently running, config updates disabled.")
+        else:
+            action.action.setToolTip("Current config is in sync with BEC Server, updates disabled.")
+
     #######################
     ### Action Handlers ###
     #######################
@@ -464,14 +497,6 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
             ]
         )
         self.request_ophyd_validation.emit(configs, True, connect)
-
-    def _update_config_enabled_button(self, enabled: bool):
-        action = self.toolbar.components.get_action("update_config_redis")
-        action.action.setEnabled(not enabled)
-        if enabled:
-            action.action.setToolTip("Push current config to BEC Server")
-        else:
-            action.action.setToolTip("Current config is in sync with BEC Server, button disabled.")
 
     @SafeSlot()
     def _load_file_action(self):
