@@ -12,7 +12,7 @@ import shiboken6 as shb
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import_from
 from pydantic import BaseModel, Field, field_validator
-from qtpy.QtCore import QObject, QRunnable, QThreadPool, QTimer, Signal
+from qtpy.QtCore import Property, QObject, QRunnable, QThreadPool, QTimer, Signal
 from qtpy.QtWidgets import QApplication
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
@@ -479,6 +479,62 @@ class BECConnector:
             return self.config.model_dump()
         else:
             return self.config
+
+    def export_settings(self) -> dict:
+        """
+        Export the settings of the widget as dict.
+
+        Returns:
+            dict: The exported settings of the widget.
+        """
+
+        # We first get all qproperties that were defined in a bec_widgets class
+        objs = self._get_bec_meta_objects()
+        settings = {}
+        for prop_name in objs.keys():
+            try:
+                prop_value = getattr(self, prop_name)
+                settings[prop_name] = prop_value
+            except Exception as e:
+                logger.warning(
+                    f"Could not export property '{prop_name}' from '{self.__class__.__name__}': {e}"
+                )
+        return settings
+
+    def load_settings(self, settings: dict) -> None:
+        """
+        Load the settings of the widget from dict.
+
+        Args:
+            settings (dict): The settings to load into the widget.
+        """
+        objs = self._get_bec_meta_objects()
+        for prop_name, prop_value in settings.items():
+            if prop_name in objs:
+                try:
+                    setattr(self, prop_name, prop_value)
+                except Exception as e:
+                    logger.warning(
+                        f"Could not load property '{prop_name}' into '{self.__class__.__name__}': {e}"
+                    )
+
+    def _get_bec_meta_objects(self) -> dict:
+        """
+        Get BEC meta objects for the widget.
+
+        Returns:
+            dict: BEC meta objects.
+        """
+        if not isinstance(self, QObject):
+            return {}
+        objects = {}
+        for name, attr in vars(self.__class__).items():
+            if isinstance(attr, Property):
+                # Check if the property is a SafeProperty
+                is_safe_property = getattr(attr.fget, "__is_safe_getter__", False)
+                if is_safe_property:
+                    objects[name] = attr
+        return objects
 
 
 # --- Example usage of BECConnector: running a simple task ---
