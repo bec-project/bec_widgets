@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import functools
-import time
 import traceback
 import types
 from contextlib import contextmanager
@@ -12,7 +11,6 @@ from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import
 from qtpy.QtCore import Qt, QTimer
-from qtpy.QtWidgets import QApplication
 from redis.exceptions import RedisError
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
@@ -30,6 +28,10 @@ logger = bec_logger.logger
 
 
 T = TypeVar("T")
+
+
+class RegistryNotReadyError(Exception):
+    """Raised when trying to access an object from the RPC registry that is not yet registered."""
 
 
 @contextmanager
@@ -53,6 +55,19 @@ def rpc_exception_hook(err_func):
     finally:
         # restore state of error popup utility singleton
         popup.custom_exception_hook = old_exception_hook
+
+
+class SingleshotRPCRepeat:
+
+    def __init__(self, max_delay: int = 2000):
+        self.max_delay = max_delay
+        self.accumulated_delay = 0
+
+    def __iadd__(self, delay: int):
+        self.accumulated_delay += delay
+        if self.accumulated_delay > self.max_delay:
+            raise RegistryNotReadyError("Max delay exceeded for RPC singleshot repeat")
+        return self
 
 
 class RPCServer:
@@ -86,6 +101,7 @@ class RPCServer:
         self._heartbeat_timer.start(200)
         self._registry_update_callbacks = []
         self._broadcasted_data = {}
+        self._rpc_singleshot_repeats: dict[str, SingleshotRPCRepeat] = {}
 
         self.status = messages.BECStatus.RUNNING
         logger.success(f"Server started with gui_id: {self.gui_id}")
@@ -109,7 +125,8 @@ class RPCServer:
                 self.send_response(request_id, False, {"error": content})
             else:
                 logger.debug(f"RPC instruction executed successfully: {res}")
-                self.send_response(request_id, True, {"result": res})
+                self._rpc_singleshot_repeats[request_id] = SingleshotRPCRepeat()
+                QTimer.singleShot(0, lambda: self.serialize_result_and_send(request_id, res))
 
     def send_response(self, request_id: str, accepted: bool, msg: dict):
         self.client.connector.set_and_publish(
@@ -167,14 +184,61 @@ class RPCServer:
                         res = None
                 else:
                     res = method_obj(*args, **kwargs)
+        return res
 
+    def serialize_result_and_send(self, request_id: str, res: object):
+        """
+        Serialize the result of an RPC call and send it back to the client.
+
+        Note: If the object is not yet registered in the RPC registry, this method
+        will retry serialization after a short delay, up to a maximum delay. In order
+        to avoid processEvents calls in the middle of serialization, QTimer.singleShot is used.
+        This allows the target event to 'float' to the next event loop iteration until the
+        object is registered.
+        The 'jump' to the next event loop is indicated by raising a RegistryNotReadyError, see
+        _serialize_bec_connector.
+
+        Args:
+            request_id (str): The ID of the request.
+            res (object): The result of the RPC call.
+        """
+        retry_delay = 100
+        try:
             if isinstance(res, list):
                 res = [self.serialize_object(obj) for obj in res]
             elif isinstance(res, dict):
                 res = {key: self.serialize_object(val) for key, val in res.items()}
             else:
                 res = self.serialize_object(res)
-            return res
+        except RegistryNotReadyError:
+            try:
+                self._rpc_singleshot_repeats[request_id] += retry_delay
+                QTimer.singleShot(
+                    retry_delay, lambda: self.serialize_result_and_send(request_id, res)
+                )
+            except RegistryNotReadyError:
+                logger.error(
+                    f"Max delay exceeded for RPC request {request_id}, sending error response"
+                )
+                self.send_response(
+                    request_id,
+                    False,
+                    {
+                        "error": f"Max delay exceeded for RPC request {request_id}, object not registered in time."
+                    },
+                )
+                self._rpc_singleshot_repeats.pop(request_id, None)
+            return
+        except Exception as exc:
+            logger.error(f"Error while serializing RPC result: {exc}")
+            self.send_response(
+                request_id,
+                False,
+                {"error": f"Error while serializing RPC result: {exc}\n{traceback.format_exc()}"},
+            )
+        else:
+            self.send_response(request_id, True, {"result": res})
+        self._rpc_singleshot_repeats.pop(request_id, None)
 
     def serialize_object(self, obj: T) -> None | dict | T:
         """
@@ -256,11 +320,8 @@ class RPCServer:
         except Exception:
             container_proxy = None
 
-        if wait:
-            while not self.rpc_register.object_is_registered(connector):
-                QApplication.processEvents()
-                logger.info(f"Waiting for {connector} to be registered...")
-                time.sleep(0.1)
+        if wait and not self.rpc_register.object_is_registered(connector):
+            raise RegistryNotReadyError(f"Connector {connector} not registered yet")
 
         widget_class = getattr(connector, "rpc_widget_class", None)
         if not widget_class:
