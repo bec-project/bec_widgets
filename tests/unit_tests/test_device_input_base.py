@@ -9,6 +9,7 @@ from bec_widgets.widgets.control.device_input.base_classes.device_input_base imp
     DeviceInputBase,
     DeviceInputConfig,
 )
+from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 
 from .client_mocks import mocked_client
 from .conftest import create_widget
@@ -142,3 +143,24 @@ def test_device_input_base_properties(device_input_base):
         ReadoutPriority.MONITORED,
         ReadoutPriority.ON_REQUEST,
     ]
+
+
+def test_device_combobox_signal_class_filter(qtbot, mocked_client):
+    """Test device filtering via signal_class_filter on combobox."""
+    mocked_client.device_manager.get_bec_signals = mock.MagicMock(
+        return_value=[
+            ("samx", "async_signal", {"signal_class": "AsyncSignal"}),
+            ("samy", "async_signal", {"signal_class": "AsyncSignal"}),
+            ("bpm4i", "async_signal", {"signal_class": "AsyncSignal"}),
+        ]
+    )
+    widget = create_widget(
+        qtbot=qtbot,
+        widget=DeviceComboBox,
+        client=mocked_client,
+        signal_class_filter=["AsyncSignal"],
+    )
+
+    devices = [widget.itemText(i) for i in range(widget.count())]
+    assert set(devices) == {"samx", "samy", "bpm4i"}
+    assert widget.signal_class_filter == ["AsyncSignal"]

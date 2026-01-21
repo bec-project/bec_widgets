@@ -32,6 +32,7 @@ class DeviceInputConfig(ConnectionConfig):
     default: str | None = None
     arg_name: str | None = None
     apply_filter: bool = True
+    signal_class_filter: list[str] = []
 
     @field_validator("device_filter")
     @classmethod
@@ -125,11 +126,13 @@ class DeviceInputBase(BECWidget):
         current_device = WidgetIO.get_value(widget=self, as_string=True)
         self.config.device_filter = self.device_filter
         self.config.readout_filter = self.readout_filter
+        self.config.signal_class_filter = self.signal_class_filter
         if self.apply_filter is False:
             return
         all_dev = self.dev.enabled_devices
+        devs = self._filter_devices_by_signal_class(all_dev)
         # Filter based on device class
-        devs = [dev for dev in all_dev if self._check_device_filter(dev)]
+        devs = [dev for dev in devs if self._check_device_filter(dev)]
         # Filter based on readout priority
         devs = [dev for dev in devs if self._check_readout_filter(dev)]
         self.devices = [device.name for device in devs]
@@ -188,6 +191,27 @@ class DeviceInputBase(BECWidget):
     @apply_filter.setter
     def apply_filter(self, value: bool):
         self.config.apply_filter = value
+        self.update_devices_from_filters()
+
+    @SafeProperty("QStringList")
+    def signal_class_filter(self) -> list[str]:
+        """
+        Get the signal class filter for devices.
+
+        Returns:
+            list[str]: List of signal class names used for filtering devices.
+        """
+        return self.config.signal_class_filter
+
+    @signal_class_filter.setter
+    def signal_class_filter(self, value: list[str] | None):
+        """
+        Set the signal class filter and update the device list.
+
+        Args:
+            value (list[str] | None): List of signal class names to filter by.
+        """
+        self.config.signal_class_filter = value or []
         self.update_devices_from_filters()
 
     @SafeProperty(bool)
@@ -378,6 +402,20 @@ class DeviceInputBase(BECWidget):
             device(Device | Signal | ComputedSignal | Positioner): Device object.
         """
         return all(isinstance(device, self._device_handler[entry]) for entry in self.device_filter)
+
+    def _filter_devices_by_signal_class(
+        self, devices: list[Device | BECSignal | ComputedSignal | Positioner]
+    ) -> list[Device | BECSignal | ComputedSignal | Positioner]:
+        """Filter devices by signal class, if a signal class filter is set."""
+        if not self.config.signal_class_filter:
+            return devices
+        if not self.client or not hasattr(self.client, "device_manager"):
+            return []
+        signals = FilterIO.update_with_signal_class(
+            widget=self, signal_class_filter=self.config.signal_class_filter, client=self.client
+        )
+        allowed_devices = {device_name for device_name, _, _ in signals}
+        return [dev for dev in devices if dev.name in allowed_devices]
 
     def _check_readout_filter(
         self, device: Device | BECSignal | ComputedSignal | Positioner
