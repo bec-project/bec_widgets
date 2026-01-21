@@ -27,6 +27,7 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
         available_devices: List of available devices, if passed, it sets apply filters to false and device/readout priority filters will not be applied.
         default: Default device name.
         arg_name: Argument name, can be used for the other widgets which has to call some other function in bec using correct argument names.
+        signal_class_filter: List of signal classes to filter the devices by. Only devices with signals of these classes will be shown.
     """
 
     USER_ACCESS = ["set_device", "devices"]
@@ -51,6 +52,7 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
         available_devices: list[str] | None = None,
         default: str | None = None,
         arg_name: str | None = None,
+        signal_class_filter: list[str] | None = None,
         **kwargs,
     ):
         super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
@@ -63,6 +65,7 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
         self._is_valid_input = False
         self._accent_colors = get_accent_colors()
         self._set_first_element_as_empty = False
+
         # We do not consider the config that is passed here, this produced problems
         # with QtDesigner, since config and input arguments may differ and resolve properly
         # Implementing this logic and config recoverage is postponed.
@@ -85,6 +88,10 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
         # Device filter default is None
         if device_filter is not None:
             self.set_device_filter(device_filter)
+
+        if signal_class_filter is not None:
+            self.signal_class_filter = signal_class_filter
+
         # Set default device if passed
         if default is not None:
             self.set_device(default)
@@ -184,18 +191,62 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
 
 if __name__ == "__main__":  # pragma: no cover
     # pylint: disable=import-outside-toplevel
-    from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
+    from qtpy.QtWidgets import (
+        QApplication,
+        QCheckBox,
+        QHBoxLayout,
+        QLabel,
+        QLineEdit,
+        QVBoxLayout,
+        QWidget,
+    )
 
     from bec_widgets.utils.colors import apply_theme
 
     app = QApplication([])
     apply_theme("dark")
     widget = QWidget()
-    widget.setFixedSize(200, 200)
-    layout = QVBoxLayout()
-    widget.setLayout(layout)
+    widget.setWindowTitle("DeviceComboBox demo")
+    layout = QVBoxLayout(widget)
+
+    layout.addWidget(QLabel("Device filter controls"))
+    controls = QHBoxLayout()
+    layout.addLayout(controls)
+
+    class_input = QLineEdit()
+    class_input.setPlaceholderText("signal_class_filter (comma-separated), e.g. AsyncSignal")
+    controls.addWidget(class_input)
+
+    filter_device = QCheckBox("Device")
+    filter_positioner = QCheckBox("Positioner")
+    filter_signal = QCheckBox("Signal")
+    filter_computed = QCheckBox("ComputedSignal")
+    controls.addWidget(filter_device)
+    controls.addWidget(filter_positioner)
+    controls.addWidget(filter_signal)
+    controls.addWidget(filter_computed)
+
     combo = DeviceComboBox()
-    combo.devices = ["samx", "dev1", "dev2", "dev3", "dev4"]
+    combo.set_first_element_as_empty = True
     layout.addWidget(combo)
+
+    def _apply_filters():
+        raw = class_input.text().strip()
+        if raw:
+            combo.signal_class_filter = [entry.strip() for entry in raw.split(",") if entry.strip()]
+        else:
+            combo.signal_class_filter = []
+        combo.filter_to_device = filter_device.isChecked()
+        combo.filter_to_positioner = filter_positioner.isChecked()
+        combo.filter_to_signal = filter_signal.isChecked()
+        combo.filter_to_computed_signal = filter_computed.isChecked()
+
+    class_input.textChanged.connect(_apply_filters)
+    filter_device.toggled.connect(_apply_filters)
+    filter_positioner.toggled.connect(_apply_filters)
+    filter_signal.toggled.connect(_apply_filters)
+    filter_computed.toggled.connect(_apply_filters)
+    _apply_filters()
+
     widget.show()
     app.exec_()
