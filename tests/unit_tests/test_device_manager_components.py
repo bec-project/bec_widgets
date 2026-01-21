@@ -770,7 +770,7 @@ class TestOphydValidation:
         assert isinstance(validation_button.icon(), QtGui.QIcon)
         assert validation_button.styleSheet() == ""
         validation_button.setEnabled(False)
-        assert validation_button.styleSheet() == validation_button.transparent_style
+        assert validation_button.styleSheet() == ""
 
     @pytest.fixture
     def validation_dialog(self, qtbot):
