@@ -31,7 +31,6 @@ class ValidationButton(QtWidgets.QPushButton):
         self, parent: QtWidgets.QWidget | None = None, icon: QtGui.QIcon | None = None
     ) -> None:
         super().__init__(parent=parent)
-        self.transparent_style = "background-color: transparent; border: none;"
         if icon:
             self.setIcon(icon)
         self.setFlat(True)
