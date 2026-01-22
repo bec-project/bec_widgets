@@ -109,3 +109,77 @@ def test_on_exit_veto_prevents_switch_until_allowed(app_with_spies, qtbot):
     # Now the switch should have happened, and v1 received on_enter
     assert app.stack.currentIndex() == app._view_index["v1"]
     assert v1.enter_calls >= 1
+
+
+def test_guided_tour_is_initialized(app_with_spies):
+    """Test that the guided tour is initialized in the main app."""
+    app, _, _, _ = app_with_spies
+
+    # Check that guided_tour exists
+    assert hasattr(app, "guided_tour")
+    assert app.guided_tour is not None
+
+    # Check that start_guided_tour method exists
+    assert hasattr(app, "start_guided_tour")
+    assert callable(app.start_guided_tour)
+
+
+def test_guided_tour_has_registered_widgets(app_with_spies):
+    """Test that the guided tour has registered widgets."""
+    app, _, _, _ = app_with_spies
+
+    # Get registered widgets
+    registered = app.guided_tour.get_registered_widgets()
+
+    # Should have at least some registered widgets
+    assert len(registered) > 0
+
+    # Check that tour steps were created
+    assert len(app.guided_tour._tour_steps) > 0
+
+
+def test_views_can_extend_guided_tour(app_with_spies):
+    """Test that views can register their own tour steps."""
+    app, _, _, _ = app_with_spies
+
+    # Check that device manager has register_tour_steps method
+    assert hasattr(app.device_manager, "register_tour_steps")
+    assert callable(app.device_manager.register_tour_steps)
+
+    # Check that developer view has register_tour_steps method
+    assert hasattr(app.developer_view, "register_tour_steps")
+    assert callable(app.developer_view.register_tour_steps)
+
+    # Verify that calling register_tour_steps returns ViewTourSteps or None
+    dm_tour = app.device_manager.register_tour_steps(app.guided_tour, app)
+    if dm_tour is not None:
+        assert hasattr(dm_tour, "view_title")
+        assert hasattr(dm_tour, "step_ids")
+        assert isinstance(dm_tour.step_ids, list)
+
+    ide_tour = app.developer_view.register_tour_steps(app.guided_tour, app)
+    if ide_tour is not None:
+        assert hasattr(ide_tour, "view_title")
+        assert hasattr(ide_tour, "step_ids")
+        assert isinstance(ide_tour.step_ids, list)
+
+
+def test_guided_tour_can_start_and_stop(app_with_spies, qtbot):
+    """Test that the guided tour can be started and stopped."""
+    app, _, _, _ = app_with_spies
+
+    # Start the tour
+    app.start_guided_tour()
+    qtbot.wait(100)
+
+    # Check that tour is active
+    assert app.guided_tour._active
+    assert app.guided_tour.overlay is not None
+    assert app.guided_tour.overlay.isVisible()
+
+    # Stop the tour
+    app.guided_tour.stop_tour()
+    qtbot.wait(100)
+
+    # Check that tour is stopped
+    assert not app.guided_tour._active
