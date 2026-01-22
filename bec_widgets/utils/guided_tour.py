@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 import weakref
-from typing import Callable, Dict, List, TypedDict
+from typing import Callable, Dict, List, Literal, TypedDict
 from uuid import uuid4
 
 import louie
@@ -22,6 +22,7 @@ from qtpy.QtWidgets import (
     QMenu,
     QMenuBar,
     QPushButton,
+    QTableWidgetItem,
     QToolBar,
     QVBoxLayout,
     QWidget,
@@ -456,9 +457,9 @@ class GuidedTour(QObject):
 
         if self._current_index > 0:
             self._current_index -= 1
-            self._show_current_step()
+            self._show_current_step(direction="prev")
 
-    def _show_current_step(self):
+    def _show_current_step(self, direction: Literal["next"] | Literal["prev"] = "next"):
         """Display the current step."""
         if not self._active or not self.overlay:
             return
@@ -468,7 +469,9 @@ class GuidedTour(QObject):
 
         target, step_text = self._resolve_step_target(step)
         if target is None:
-            self._advance_past_invalid_step(step_title, reason="Step target no longer exists.")
+            self._advance_past_invalid_step(
+                step_title, reason="Step target no longer exists.", direction=direction
+            )
             return
 
         main_window = self.main_window
@@ -575,16 +578,25 @@ class GuidedTour(QObject):
         )
         return None
 
-    def _advance_past_invalid_step(self, step_title: str, *, reason: str):
+    def _advance_past_invalid_step(
+        self, step_title: str, *, reason: str, direction: Literal["next"] | Literal["prev"] = "next"
+    ):
         """
         Skip the current step (or stop the tour) when the target cannot be visualised.
         """
         logger.warning(f"{reason} Skipping step {step_title!r}.")
-        if self._current_index < len(self._tour_steps) - 1:
-            self._current_index += 1
-            self._show_current_step()
-        else:
-            self.stop_tour()
+        if direction == "next":
+            if self._current_index < len(self._tour_steps) - 1:
+                self._current_index += 1
+                self._show_current_step()
+            else:
+                self.stop_tour()
+        elif direction == "prev":
+            if self._current_index > 0:
+                self._current_index -= 1
+                self._show_current_step(direction="prev")
+            else:
+                self.stop_tour()
 
     def get_registered_widgets(self) -> Dict[str, TourStep]:
         """Get all registered widgets."""
