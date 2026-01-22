@@ -467,3 +467,85 @@ class Colors:
             else:
                 return False
         return color_map
+
+    @staticmethod
+    def relative_luminance(color: QColor) -> float:
+        """
+        Calculate the relative luminance of a QColor according to WCAG 2.0 standards.
+        See https://www.w3.org/TR/WCAG21/#dfn-relative-luminance.
+
+        Args:
+            color(QColor): The color to calculate the relative luminance for.
+
+        Returns:
+            float: The relative luminance of the color.
+        """
+        r = color.red() / 255.0
+        g = color.green() / 255.0
+        b = color.blue() / 255.0
+
+        def adjust(c):
+            if c <= 0.03928:
+                return c / 12.92
+            return ((c + 0.055) / 1.055) ** 2.4
+
+        r = adjust(r)
+        g = adjust(g)
+        b = adjust(b)
+
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+    @staticmethod
+    def _tint_strength(
+        accent: QColor, background: QColor, min_tint: float = 0.06, max_tint: float = 0.18
+    ) -> float:
+        """
+        Calculate the tint strength based on the contrast between the accent and background colors.
+        min_tint and max_tint define the range of tint strength and are empirically chosen.
+
+        Args:
+            accent(QColor): The accent color.
+            background(QColor): The background color.
+            min_tint(float): The minimum tint strength.
+            max_tint(float): The maximum tint strength.
+
+        Returns:
+            float: The tint strength between 0 and 1.
+        """
+        l_accent = Colors.relative_luminance(accent)
+        l_bg = Colors.relative_luminance(background)
+
+        contrast = abs(l_accent - l_bg)
+
+        # normalize contrast to a value between 0 and 1
+        t = min(contrast / 0.9, 1.0)
+        return min_tint + t * (max_tint - min_tint)
+
+    @staticmethod
+    def _blend(background: QColor, accent: QColor, t: float) -> QColor:
+        """
+        Blend two colors based on a tint strength t.
+        """
+        return QColor(
+            round(background.red() + (accent.red() - background.red()) * t),
+            round(background.green() + (accent.green() - background.green()) * t),
+            round(background.blue() + (accent.blue() - background.blue()) * t),
+            round(background.alpha() + (accent.alpha() - background.alpha()) * t),
+        )
+
+    @staticmethod
+    def subtle_background_color(accent: QColor, background: QColor) -> QColor:
+        """
+        Generate a subtle, contrast-safe background color derived from an accent color.
+
+        Args:
+            accent(QColor): The accent color.
+            background(QColor): The background color.
+        Returns:
+            QColor: The generated subtle background color.
+        """
+        if not accent.isValid() or not background.isValid():
+            return background
+
+        tint = Colors._tint_strength(accent, background)
+        return Colors._blend(background, accent, tint)
