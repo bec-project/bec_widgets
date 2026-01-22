@@ -19,6 +19,7 @@ from qtpy.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMainWindow,
+    QMenu,
     QMenuBar,
     QPushButton,
     QToolBar,
@@ -327,11 +328,14 @@ class GuidedTour(QObject):
             if mb and mb not in menubars:
                 menubars.append(mb)
         menubars += [mb for mb in mw.findChildren(QMenuBar) if mb not in menubars]
+        menubars += [mb for mb in mw.findChildren(QMenu) if mb not in menubars]
+
         for mb in menubars:
             if action in mb.actions():
                 ar = mb.actionGeometry(action)
                 top_left = mb.mapTo(mw, ar.topLeft())
                 return QRect(top_left, ar.size())
+
         return None
 
     def unregister_widget(self, step_id: str) -> bool:
@@ -575,7 +579,7 @@ class GuidedTour(QObject):
         """
         Skip the current step (or stop the tour) when the target cannot be visualised.
         """
-        logger.warning("%s Skipping step %r.", reason, step_title)
+        logger.warning(f"{reason} Skipping step {step_title!r}.")
         if self._current_index < len(self._tour_steps) - 1:
             self._current_index += 1
             self._show_current_step()
@@ -663,8 +667,33 @@ class MainWindow(QMainWindow):  # pragma: no cover
             title="Tools Menu",
         )
 
+        sub_menu_action = self.tools_menu_actions["notes"].action
+
+        def get_sub_menu_action():
+            # open the tools menu
+            menu_button = self.tools_menu_action._button_ref()
+            if menu_button:
+                menu_button.showMenu()
+
+            return (
+                self.tools_menu_action.actions["notes"].action,
+                "This action allows you to add notes.",
+            )
+
+        sub_menu = self.guided_help.register_widget(
+            widget=get_sub_menu_action,
+            text="This is a sub-action within the tools menu.",
+            title="Add Note Action",
+        )
+
         # Create tour from registered widgets
-        self.tour_step_ids = [primary_step, secondary_step, toolbar_action_step, tools_menu_step]
+        self.tour_step_ids = [
+            sub_menu,
+            primary_step,
+            secondary_step,
+            toolbar_action_step,
+            tools_menu_step,
+        ]
         widget_ids = self.tour_step_ids
         self.guided_help.create_tour(widget_ids)
 

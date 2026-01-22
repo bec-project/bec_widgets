@@ -1,3 +1,5 @@
+from bec_qthemes import material_icon
+from qtpy.QtGui import QAction  # type: ignore
 from qtpy.QtWidgets import QApplication, QHBoxLayout, QStackedWidget, QWidget
 
 from bec_widgets.applications.navigation_centre.reveal_animator import ANIMATION_DURATION
@@ -8,6 +10,7 @@ from bec_widgets.applications.views.device_manager_view.device_manager_view impo
 from bec_widgets.applications.views.dock_area_view.dock_area_view import DockAreaView
 from bec_widgets.applications.views.view import ViewBase, WaveformViewInline, WaveformViewPopup
 from bec_widgets.utils.colors import apply_theme
+from bec_widgets.utils.guided_tour import GuidedTour
 from bec_widgets.utils.screen_utils import (
     apply_centered_size,
     available_screen_geometry,
@@ -49,6 +52,10 @@ class BECMainApp(BECMainWindow):
         self.sidebar.view_selected.connect(self._on_view_selected)
 
         self._add_views()
+
+        # Initialize guided tour
+        self.guided_tour = GuidedTour(self)
+        self._setup_guided_tour()
 
     def _add_views(self):
         self.add_section("BEC Applications", "bec_apps")
@@ -104,6 +111,9 @@ class BECMainApp(BECMainWindow):
 
         self.set_current("dock_area")
         self.sidebar.add_dark_mode_item()
+
+        # Add guided tour to Help menu
+        self._add_guided_tour_to_menu()
 
     # --- Public API ------------------------------------------------------
     def add_section(self, title: str, id: str, position: int | None = None):
@@ -199,6 +209,125 @@ class BECMainApp(BECMainWindow):
         self._current_view_id = vid
         if hasattr(new_view, "on_enter"):
             new_view.on_enter()
+
+    def _setup_guided_tour(self):
+        """
+        Setup the guided tour for the main application.
+        Registers key UI components and delegates to views for their internal components.
+        """
+        tour_steps = []
+
+        # --- General Layout Components ---
+
+        # Register the sidebar toggle button
+        toggle_step = self.guided_tour.register_widget(
+            widget=self.sidebar.toggle,
+            title="Sidebar Toggle",
+            text="Click this button to expand or collapse the sidebar. When expanded, you can see full navigation item titles and section names.",
+        )
+        tour_steps.append(toggle_step)
+
+        # Register the dark mode toggle
+        dark_mode_item = self.sidebar.components.get("dark_mode")
+        if dark_mode_item:
+            dark_mode_step = self.guided_tour.register_widget(
+                widget=dark_mode_item,
+                title="Theme Toggle",
+                text="Switch between light and dark themes. The theme preference is saved and will be applied when you restart the application.",
+            )
+            tour_steps.append(dark_mode_step)
+
+        # Register the client info label
+        if hasattr(self, "_client_info_hover"):
+            client_info_step = self.guided_tour.register_widget(
+                widget=self._client_info_hover,
+                title="Client Status",
+                text="Displays status messages and information from the BEC Server.",
+            )
+            tour_steps.append(client_info_step)
+
+        # Register the scan progress bar if available
+        if hasattr(self, "_scan_progress_hover"):
+            progress_step = self.guided_tour.register_widget(
+                widget=self._scan_progress_hover,
+                title="Scan Progress",
+                text="Monitor the progress of ongoing scans. Hover over the progress bar to see detailed information including elapsed time and estimated completion.",
+            )
+            tour_steps.append(progress_step)
+
+        # Register the notification indicator in the status bar
+        if hasattr(self, "notification_indicator"):
+            notif_step = self.guided_tour.register_widget(
+                widget=self.notification_indicator,
+                title="Notification Center",
+                text="View system notifications, errors, and status updates. Click to filter notifications by type or expand to see all details.",
+            )
+            tour_steps.append(notif_step)
+
+        # --- View-Specific Components ---
+
+        # Register all views that can extend the tour
+        for view_id, view_index in self._view_index.items():
+            view_widget = self.stack.widget(view_index)
+            if not view_widget or not hasattr(view_widget, "register_tour_steps"):
+                continue
+
+            # Get the view's tour steps
+            view_tour = view_widget.register_tour_steps(self.guided_tour, self)
+            if view_tour is None:
+                if hasattr(view_widget.content, "register_tour_steps"):
+                    view_tour = view_widget.content.register_tour_steps(self.guided_tour, self)
+                if view_tour is None:
+                    continue
+
+            # Get the corresponding sidebar navigation item
+            nav_item = self.sidebar.components.get(view_id)
+            if not nav_item:
+                continue
+
+            # Use the view's title for the navigation button
+            nav_step = self.guided_tour.register_widget(
+                widget=nav_item,
+                title=view_tour.view_title,
+                text=f"Navigate to the {view_tour.view_title} to access its features and functionality.",
+            )
+            tour_steps.append(nav_step)
+            tour_steps.extend(view_tour.step_ids)
+
+        # Create the tour with all registered steps
+        if tour_steps:
+            self.guided_tour.create_tour(tour_steps)
+
+    def start_guided_tour(self):
+        """
+        Public method to start the guided tour.
+        This can be called programmatically or connected to a menu/button action.
+        """
+        self.guided_tour.start_tour()
+
+    def _add_guided_tour_to_menu(self):
+        """
+        Add a 'Guided Tour' action to the Help menu.
+        """
+
+        # Find the Help menu
+        menu_bar = self.menuBar()
+        help_menu = None
+        for action in menu_bar.actions():
+            if action.text() == "Help":
+                help_menu = action.menu()
+                break
+
+        if help_menu:
+            # Add separator before the tour action
+            help_menu.addSeparator()
+
+            # Create and add the guided tour action
+            tour_action = QAction("Start Guided Tour", self)
+            tour_action.setIcon(material_icon("help"))
+            tour_action.triggered.connect(self.start_guided_tour)
+            tour_action.setShortcut("F1")  # Add keyboard shortcut
+            help_menu.addAction(tour_action)
 
 
 def main():  # pragma: no cover
