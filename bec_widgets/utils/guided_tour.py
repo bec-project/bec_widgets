@@ -12,9 +12,11 @@ from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from louie import saferef
 from qtpy.QtCore import QEvent, QObject, QRect, Qt, Signal
-from qtpy.QtGui import QAction, QColor, QPainter, QPen
+from qtpy.QtGui import QAction, QColor, QKeySequence, QPainter, QPen, QShortcut
 from qtpy.QtWidgets import (
+    QAbstractItemView,
     QApplication,
+    QDialogButtonBox,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -22,6 +24,7 @@ from qtpy.QtWidgets import (
     QMenu,
     QMenuBar,
     QPushButton,
+    QSizePolicy,
     QTableWidgetItem,
     QToolBar,
     QVBoxLayout,
@@ -117,6 +120,10 @@ class TutorialOverlay(QWidget):
         layout.addLayout(top_layout)
         layout.addWidget(self.label)
         layout.addLayout(btn_layout)
+
+        # Escape closes the tour
+        QShortcut(QKeySequence(Qt.Key.Key_Escape), self, activated=self.close_btn.click)
+
         return box
 
     def paintEvent(self, event):  # pylint: disable=unused-argument
@@ -224,6 +231,9 @@ class TutorialOverlay(QWidget):
         )
         self.message_box.show()
         self.update()
+
+        # Update the focus policy of the buttons
+        self.back_btn.setEnabled(current_step > 1)
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Type.Resize:
@@ -480,7 +490,9 @@ class GuidedTour(QObject):
             self.stop_tour()
             return
 
-        highlight_rect = self._get_highlight_rect(main_window, target, step_title)
+        highlight_rect = self._get_highlight_rect(
+            main_window, target, step_title, direction=direction
+        )
         if highlight_rect is None:
             return
 
@@ -489,9 +501,6 @@ class GuidedTour(QObject):
         total_steps = len(self._tour_steps)
 
         self.overlay.show_step(highlight_rect, step_title, step_text, current_step, total_steps)
-
-        # Update button states
-        self.overlay.back_btn.setEnabled(self._current_index > 0)
 
         # Update next button text and state
         is_last_step = self._current_index >= len(self._tour_steps) - 1
@@ -539,7 +548,11 @@ class GuidedTour(QObject):
         return target, step_text
 
     def _get_highlight_rect(
-        self, main_window: QWidget, target: QWidget | QAction, step_title: str
+        self,
+        main_window: QWidget,
+        target: QWidget | QAction,
+        step_title: str,
+        direction: Literal["next"] | Literal["prev"] = "next",
     ) -> QRect | None:
         """
         Get the QRect in main_window coordinates to highlight for the given target.
@@ -558,6 +571,7 @@ class GuidedTour(QObject):
                 self._advance_past_invalid_step(
                     step_title,
                     reason=f"Could not find visible widget or menu for QAction {target.text()!r}.",
+                    direction=direction,
                 )
                 return None
             return rect
@@ -566,11 +580,26 @@ class GuidedTour(QObject):
             if self._visible_check:
                 if not target.isVisible():
                     self._advance_past_invalid_step(
-                        step_title, reason=f"Widget {target!r} is not visible."
+                        step_title, reason=f"Widget {target!r} is not visible.", direction=direction
                     )
                     return None
             rect = target.rect()
             top_left = target.mapTo(main_window, rect.topLeft())
+            return QRect(top_left, rect.size())
+
+        if isinstance(target, QTableWidgetItem):
+            table = target.tableWidget()
+            if self._visible_check:
+                if not table.isVisible():
+                    self._advance_past_invalid_step(
+                        step_title,
+                        reason=f"Table widget {table!r} is not visible.",
+                        direction=direction,
+                    )
+                    return None
+            table.scrollToItem(target, QAbstractItemView.ScrollHint.PositionAtCenter)
+            rect = table.visualItemRect(target)
+            top_left = table.viewport().mapTo(main_window, rect.topLeft())
             return QRect(top_left, rect.size())
 
         self._advance_past_invalid_step(
