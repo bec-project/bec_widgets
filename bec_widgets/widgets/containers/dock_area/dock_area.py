@@ -19,6 +19,7 @@ from qtpy.QtWidgets import (
 
 import bec_widgets.widgets.containers.qt_ads as QtAds
 from bec_widgets import BECWidget, SafeProperty, SafeSlot
+from bec_widgets.applications.views.view import ViewTourSteps
 from bec_widgets.cli.rpc.rpc_widget_handler import widget_handler
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.colors import apply_theme
@@ -1137,6 +1138,33 @@ class BECDockArea(DockAreaWidget):
         self._write_snapshot_to_settings(settings)
         set_last_profile(name, namespace=namespace, instance=self._last_profile_instance_id())
         self._exit_snapshot_written = True
+
+    def register_tour_steps(self, guided_tour, main_app):
+        """Register Dock Area components with the guided tour.
+
+        Args:
+            guided_tour: The GuidedTour instance to register with.
+            main_app: The main application instance (for accessing set_current).
+
+        Returns:
+            ViewTourSteps | None: Model containing view title and step IDs.
+        """
+
+        step_ids = []
+
+        # Register Dock Area toolbar
+        def get_dock_toolbar():
+            main_app.set_current("dock_area")
+            return (self.toolbar, None)
+
+        step_id = guided_tour.register_widget(
+            widget=get_dock_toolbar,
+            title="Dock Area Toolbar",
+            text="Use this toolbar to add widgets, manage workspaces, save and load profiles, and control the layout of your workspace.",
+        )
+        step_ids.append(step_id)
+
+        return ViewTourSteps(view_title="Dock Area Workspace", step_ids=step_ids)
 
     def cleanup(self):
         """
