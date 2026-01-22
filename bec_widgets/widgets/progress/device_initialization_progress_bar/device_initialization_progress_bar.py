@@ -47,7 +47,6 @@ class DeviceInitializationProgressBar(BECWidget, QWidget):
         hor_layout.setContentsMargins(12, 0, 0, 0)
         hor_layout.addWidget(self.progress_label)
         content_layout.addLayout(hor_layout)
-        content_layout.addStretch()
 
         # Add content layout to main layout
         lay.addLayout(content_layout)
