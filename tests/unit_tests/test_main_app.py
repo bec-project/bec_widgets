@@ -1,4 +1,5 @@
 import pytest
+from qtpy.QtCore import QRect
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.applications.main_app import BECMainApp
@@ -46,6 +47,9 @@ class SpyVetoView(SpyView):
 def app_with_spies(qtbot, mocked_client):
     app = BECMainApp(client=mocked_client, anim_duration=ANIM_TEST_DURATION, show_examples=False)
     qtbot.addWidget(app)
+    # App must be shown properly to ensure visibility checks work
+    # Call .show() and then waitExposed
+    app.show()
     qtbot.waitExposed(app)
 
     app.add_section("Tests", id="tests")
@@ -163,14 +167,54 @@ def test_views_can_extend_guided_tour(app_with_spies):
         assert hasattr(ide_tour, "step_ids")
         assert isinstance(ide_tour.step_ids, list)
 
+    # Get all registered widgets
+    widgets = app.guided_tour.get_registered_widgets()
+
+    # pylint: disable=protected-access
+    # Test that ide_tour has valid steps and targets
+    for step_id in ide_tour.step_ids:
+        assert step_id in widgets
+        tour_step = widgets.get(step_id)
+        target, text = app.guided_tour._resolve_step_target(tour_step)
+        assert isinstance(text, str)
+        assert text != ""
+        if target is not None:  # If step should be skipped
+            highlighted_rect = app.guided_tour._get_highlight_rect(app, target, tour_step["title"])
+            if (
+                highlighted_rect is not None
+            ):  # If widget is not visible, it will be skipped and return None
+                assert isinstance(highlighted_rect, QRect)
+
+    # Test that dm_tour has valid steps and targets, test it once
+    # with _initialized = True and False. This leads to different tour paths.
+    for init in [False, True]:
+        app.device_manager.device_manager_widget._initialized = init
+        for step_id in dm_tour.step_ids:
+            assert step_id in widgets
+            tour_step = widgets.get(step_id)
+            target, text = app.guided_tour._resolve_step_target(tour_step)
+            assert isinstance(text, str)
+            assert text != ""
+            if target is not None:  # If step should be skipped
+                highlighted_rect = app.guided_tour._get_highlight_rect(
+                    app, target, tour_step["title"]
+                )
+                if (
+                    highlighted_rect is not None
+                ):  # If widget is not visible, it will be skipped and return None
+                    assert isinstance(highlighted_rect, QRect)
+
 
 def test_guided_tour_can_start_and_stop(app_with_spies, qtbot):
     """Test that the guided tour can be started and stopped."""
     app, _, _, _ = app_with_spies
 
+    app: BECMainApp
+
     # Start the tour
-    app.start_guided_tour()
-    qtbot.wait(100)
+    with qtbot.waitSignal(app.guided_tour.tour_started, timeout=2000) as blocker:
+        app.start_guided_tour()
+    assert blocker.signal_triggered
 
     # Check that tour is active
     assert app.guided_tour._active
@@ -178,8 +222,10 @@ def test_guided_tour_can_start_and_stop(app_with_spies, qtbot):
     assert app.guided_tour.overlay.isVisible()
 
     # Stop the tour
-    app.guided_tour.stop_tour()
-    qtbot.wait(100)
+    with qtbot.waitSignal(app.guided_tour.tour_finished, timeout=2000) as blocker:
+        app.guided_tour.stop_tour()
+
+    assert blocker.signal_triggered
 
     # Check that tour is stopped
     assert not app.guided_tour._active
