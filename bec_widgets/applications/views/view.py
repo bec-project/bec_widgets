@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import List
 
 from pydantic import BaseModel
-from qtpy.QtCore import QEventLoop, Qt, QTimer
+from qtpy.QtCore import QEventLoop
 from qtpy.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -23,42 +23,6 @@ from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox im
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
 
 
-def set_splitter_weights(splitter: QSplitter, weights: List[float]) -> None:
-    """
-    Apply initial sizes to a splitter using weight ratios, e.g. [1,3,2,1].
-    Works for horizontal or vertical splitters and sets matching stretch factors.
-    """
-
-    def apply():
-        n = splitter.count()
-        if n == 0:
-            return
-        w = list(weights[:n]) + [1] * max(0, n - len(weights))
-        w = [max(0.0, float(x)) for x in w]
-        tot_w = sum(w)
-        if tot_w <= 0:
-            w = [1.0] * n
-            tot_w = float(n)
-        total_px = (
-            splitter.width()
-            if splitter.orientation() == Qt.Orientation.Horizontal
-            else splitter.height()
-        )
-        if total_px < 2:
-            QTimer.singleShot(0, apply)
-            return
-        sizes = [max(1, int(total_px * (wi / tot_w))) for wi in w]
-        diff = total_px - sum(sizes)
-        if diff != 0:
-            idx = max(range(n), key=lambda i: w[i])
-            sizes[idx] = max(1, sizes[idx] + diff)
-        splitter.setSizes(sizes)
-        for i, wi in enumerate(w):
-            splitter.setStretchFactor(i, max(1, int(round(wi * 100))))
-
-    QTimer.singleShot(0, apply)
-
-
 class ViewTourSteps(BaseModel):
     """Model representing tour steps for a view.
 
@@ -68,7 +32,7 @@ class ViewTourSteps(BaseModel):
     """
 
     view_title: str
-    step_ids: list[str]
+    step_ids: List[str]
 
 
 class ViewBase(QWidget):
@@ -141,68 +105,6 @@ class ViewBase(QWidget):
         Override this method in subclasses to register view-specific components.
         """
         return None
-
-    ####### Default view has to be done with setting up splitters ########
-    def set_default_view(self, horizontal_weights: list, vertical_weights: list):
-        """Apply initial weights to every horizontal and vertical splitter.
-
-        Examples:
-            horizontal_weights = [1, 3, 2, 1]
-            vertical_weights   = [3, 7]  # top:bottom = 30:70
-        """
-        splitters_h = []
-        splitters_v = []
-        for splitter in self.findChildren(QSplitter):
-            if splitter.orientation() == Qt.Orientation.Horizontal:
-                splitters_h.append(splitter)
-            elif splitter.orientation() == Qt.Orientation.Vertical:
-                splitters_v.append(splitter)
-
-        def apply_all():
-            for s in splitters_h:
-                set_splitter_weights(s, horizontal_weights)
-            for s in splitters_v:
-                set_splitter_weights(s, vertical_weights)
-
-        QTimer.singleShot(0, apply_all)
-
-    def set_stretch(self, *, horizontal=None, vertical=None):
-        """Update splitter weights and re-apply to all splitters.
-
-        Accepts either a list/tuple of weights (e.g., [1,3,2,1]) or a role dict
-        for convenience: horizontal roles = {"left","center","right"},
-        vertical roles = {"top","bottom"}.
-        """
-
-        def _coerce_h(x):
-            if x is None:
-                return None
-            if isinstance(x, (list, tuple)):
-                return list(map(float, x))
-            if isinstance(x, dict):
-                return [
-                    float(x.get("left", 1)),
-                    float(x.get("center", x.get("middle", 1))),
-                    float(x.get("right", 1)),
-                ]
-            return None
-
-        def _coerce_v(x):
-            if x is None:
-                return None
-            if isinstance(x, (list, tuple)):
-                return list(map(float, x))
-            if isinstance(x, dict):
-                return [float(x.get("top", 1)), float(x.get("bottom", 1))]
-            return None
-
-        h = _coerce_h(horizontal)
-        v = _coerce_v(vertical)
-        if h is None:
-            h = [1, 1, 1]
-        if v is None:
-            v = [1, 1]
-        self.set_default_view(h, v)
 
 
 ####################################################################################################

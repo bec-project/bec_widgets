@@ -45,9 +45,9 @@ class TourStep(TypedDict):
     widget_ref: (
         louie.saferef.BoundMethodWeakref
         | weakref.ReferenceType[
-            QWidget | QAction | Callable[[], tuple[QWidget | QAction, str | None]]
+            QWidget | QAction | QRect | Callable[[], tuple[QWidget | QAction | QRect, str | None]]
         ]
-        | Callable[[], tuple[QWidget | QAction, str | None]]
+        | Callable[[], tuple[QWidget | QAction | QRect, str | None]]
         | None
     )
     text: str
@@ -274,7 +274,9 @@ class GuidedTour(QObject):
     def register_widget(
         self,
         *,
-        widget: QWidget | QAction | Callable[[], tuple[QWidget | QAction, str | None]],
+        widget: (
+            QWidget | QAction | QRect | Callable[[], tuple[QWidget | QAction | QRect, str | None]]
+        ),
         text: str = "",
         title: str = "",
     ) -> str:
@@ -282,7 +284,7 @@ class GuidedTour(QObject):
         Register a widget with help text for tours.
 
         Args:
-            widget (QWidget | QAction | Callable[[], tuple[QWidget | QAction, str | None]]): The target widget or a callable that returns the widget and its help text.
+            widget (QWidget | QAction | QRect | Callable[[], tuple[QWidget | QAction | QRect, str | None]]): The target widget or a callable that returns the widget and its help text.
             text (str): The help text for the widget. This will be shown during the tour.
             title (str, optional): A title for the widget (defaults to its class name or action text).
 
@@ -305,6 +307,9 @@ class GuidedTour(QObject):
 
             widget_ref = _resolve_toolbar_button
             default_title = getattr(widget, "tooltip", "Toolbar Menu")
+        elif isinstance(widget, QRect):
+            widget_ref = saferef.safe_ref(widget)
+            default_title = "Area"
         else:
             widget_ref = saferef.safe_ref(widget)
             default_title = widget.__class__.__name__ if hasattr(widget, "__class__") else "Widget"
@@ -515,7 +520,7 @@ class GuidedTour(QObject):
 
         self.step_changed.emit(self._current_index + 1, len(self._tour_steps))
 
-    def _resolve_step_target(self, step: TourStep) -> tuple[QWidget | QAction | None, str]:
+    def _resolve_step_target(self, step: TourStep) -> tuple[QWidget | QAction | QRect | None, str]:
         """
         Resolve the target widget/action for the given step.
 
@@ -523,7 +528,7 @@ class GuidedTour(QObject):
             step(TourStep): The tour step to resolve.
 
         Returns:
-            tuple[QWidget | QAction | None, str]: The resolved target and the step text.
+            tuple[QWidget | QAction | QRect | None, str]: The resolved target, optional QRect, and the step text.
         """
         widget_ref = step.get("widget_ref")
         step_text = step.get("text", "")
@@ -536,7 +541,7 @@ class GuidedTour(QObject):
         if target is None:
             return None, step_text
 
-        if callable(target) and not isinstance(target, (QWidget, QAction)):
+        if callable(target) and not isinstance(target, (QWidget, QAction, QRect)):
             result = target()
             if isinstance(result, tuple):
                 target, alt_text = result
@@ -550,7 +555,7 @@ class GuidedTour(QObject):
     def _get_highlight_rect(
         self,
         main_window: QWidget,
-        target: QWidget | QAction,
+        target: QWidget | QAction | QRect,
         step_title: str,
         direction: Literal["next"] | Literal["prev"] = "next",
     ) -> QRect | None:
@@ -565,6 +570,8 @@ class GuidedTour(QObject):
         Returns:
             QRect | None: The rectangle to highlight, or None if not found/visible.
         """
+        if isinstance(target, QRect):
+            return target
         if isinstance(target, QAction):
             rect = self._action_highlight_rect(target)
             if rect is None:
@@ -588,7 +595,12 @@ class GuidedTour(QObject):
             return QRect(top_left, rect.size())
 
         if isinstance(target, QTableWidgetItem):
+            # NOTE: On header items (which are also QTableWidgetItems), this does not work,
+            # Header items are just used as data containers by Qt, thus, we have to directly
+            # pass the QRect through the method (+ make sure the appropriate header section
+            # is visible). This can be handled in the callable method.)
             table = target.tableWidget()
+
             if self._visible_check:
                 if not table.isVisible():
                     self._advance_past_invalid_step(
@@ -597,13 +609,16 @@ class GuidedTour(QObject):
                         direction=direction,
                     )
                     return None
-            table.scrollToItem(target, QAbstractItemView.ScrollHint.PositionAtCenter)
-            rect = table.visualItemRect(target)
-            top_left = table.viewport().mapTo(main_window, rect.topLeft())
-            return QRect(top_left, rect.size())
+
+            # Table item
+            if table.item(target.row(), target.column()) == target:
+                table.scrollToItem(target, QAbstractItemView.ScrollHint.PositionAtCenter)
+                rect = table.visualItemRect(target)
+                top_left = table.viewport().mapTo(main_window, rect.topLeft())
+                return QRect(top_left, rect.size())
 
         self._advance_past_invalid_step(
-            step_title, reason=f"Unsupported step target type: {type(target)}"
+            step_title, reason=f"Unsupported step target type: {type(target)}", direction=direction
         )
         return None
 
