@@ -1,7 +1,8 @@
 from unittest import mock
 
 import pytest
-from qtpy.QtWidgets import QVBoxLayout, QWidget
+from qtpy.QtCore import QRect
+from qtpy.QtWidgets import QAction, QVBoxLayout, QWidget
 
 from bec_widgets.utils.guided_tour import GuidedTour
 from bec_widgets.utils.toolbars.actions import ExpandableMenuAction, MaterialIconAction
@@ -38,6 +39,10 @@ class DummyWidget(QWidget):
     def isVisible(self) -> bool:
         """Override isVisible to always return True for testing."""
         return True
+
+
+class DummyAction(QAction):
+    """A dummy action for testing purposes."""
 
 
 class TestGuidedTour:
@@ -403,3 +408,73 @@ class TestGuidedTour:
             guided_help.start_tour()
             guided_help.overlay.paintEvent(None)  # Force paint event to render text
             qtbot.wait(300)  # Wait for rendering
+
+    def test_advanced_past_invalid_tour_step(
+        self, guided_help: GuidedTour, test_widget: QWidget, qtbot
+    ):
+        """Test that an invalid tour step is handled gracefully."""
+        widget_id_valid = guided_help.register_widget(
+            widget=test_widget, text="Test widget for overlay", title="OverlayWidget"
+        )
+        widget_id_invalid = guided_help.register_widget(
+            widget=lambda: None, text="Test2", title="something"
+        )
+        widget_id_valid2 = guided_help.register_widget(
+            widget=test_widget, text="Test3", title="something"
+        )
+
+        widget_valid = guided_help._registered_widgets[widget_id_valid]["widget_ref"]()
+        widget_valid2 = guided_help._registered_widgets[widget_id_valid2]["widget_ref"]()
+
+        with (
+            mock.patch.object(widget_valid, "isVisible", return_value=True),
+            mock.patch.object(widget_valid2, "isVisible", return_value=True),
+        ):
+            guided_help.create_tour(
+                [widget_id_valid, widget_id_invalid, widget_id_valid2, "nonexistent_id"]
+            )
+
+            with qtbot.waitSignal(guided_help.tour_started, timeout=2000) as blocker:
+                guided_help.start_tour()
+
+                assert blocker.signal_triggered
+                with qtbot.waitSignal(guided_help.step_changed) as step_blocker:
+                    guided_help.next_step()  # Move to step 2 (invalid, should skip)
+                assert step_blocker.signal_triggered
+                assert step_blocker.args == [3, 3]
+
+                with qtbot.waitSignal(guided_help.step_changed) as step_blocker:
+                    guided_help.prev_step()  # Move back to step 1
+                assert step_blocker.signal_triggered
+                assert step_blocker.args == [1, 3]
+
+    def test_get_highlight_rect(self, guided_help: GuidedTour, test_widget: QWidget, qtbot):
+        """Test that _get_highlight_rect returns a QRect for a valid widget."""
+        widget = DummyWidget(test_widget)  # Use a dummy widget that is always visible
+        action = DummyAction(test_widget)
+        test_rect = QRect(10, 10, 100, 50)
+
+        with mock.patch.object(widget, "isVisible", return_value=True):
+            rect = guided_help._get_highlight_rect(guided_help.main_window, widget, "Test step")
+
+        assert isinstance(rect, QRect)
+
+        rect = guided_help._get_highlight_rect(guided_help.main_window, test_rect, "Test step")
+
+        assert isinstance(rect, QRect)
+
+        # QAction should not be available, thus skipped
+
+        with mock.patch.object(guided_help, "_advance_past_invalid_step") as mock_advance:
+            rect = guided_help._get_highlight_rect(
+                guided_help.main_window, action, "Test step", direction="next"
+            )
+            assert rect is None
+            mock_advance.assert_called_once()
+
+            mock_advance.reset_mock()
+            rect = guided_help._get_highlight_rect(
+                guided_help.main_window, action, "Test step", direction="prev"
+            )
+            assert rect is None
+            mock_advance.assert_called_once()
