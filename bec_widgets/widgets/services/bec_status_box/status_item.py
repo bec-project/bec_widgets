@@ -141,7 +141,11 @@ class StatusItem(QWidget):
         metrics_text = (
             f"<b>SERVICE:</b> {self.config.service_name}<br><b>STATUS:</b> {self.config.status}<br>"
         )
-        metrics_text += f"<b>BEC_LIB VERSION:</b> {self.config.info['version']}<br>"
+        if "version" in self.config.info:
+            metrics_text += f"<b>BEC_LIB VERSION:</b> {self.config.info['version']}<br>"
+        if "versions" in self.config.info:
+            for component, version in self.config.info["versions"].items():
+                metrics_text += f"<b>{component.upper()} VERSION:</b> {version}<br>"
         if self.config.metrics:
             for key, value in self.config.metrics.items():
                 if key == "create_time":

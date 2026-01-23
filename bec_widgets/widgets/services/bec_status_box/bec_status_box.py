@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from bec_lib.utils.import_utils import lazy_import_from
+from pydantic import BaseModel
 from qtpy.QtCore import QObject, QTimer, Signal, Slot
 from qtpy.QtWidgets import QHBoxLayout, QTreeWidget, QTreeWidgetItem
 
@@ -18,9 +19,10 @@ from bec_widgets.widgets.services.bec_status_box.status_item import StatusItem
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.client import BECClient
-
-# TODO : Put normal imports back when Pydantic gets faster
-BECStatus = lazy_import_from("bec_lib.messages", ("BECStatus",))
+    from bec_lib.messages import BECStatus, ServiceMetricMessage, StatusMessage
+else:
+    # TODO : Put normal imports back when Pydantic gets faster
+    BECStatus = lazy_import_from("bec_lib.messages", ("BECStatus",))
 
 
 @dataclass
@@ -200,7 +202,11 @@ class BECStatusBox(BECWidget, CompactPopupWidget):
         self.status_container[service_name].update({"info": service_info_item})
 
     @Slot(dict, dict)
-    def update_service_status(self, services_info: dict, services_metric: dict) -> None:
+    def update_service_status(
+        self,
+        services_info: dict[str, StatusMessage],
+        services_metric: dict[str, ServiceMetricMessage],
+    ) -> None:
         """Callback function services_metric from BECServiceStatusMixin.
         It updates the status of all services.
 
@@ -209,6 +215,9 @@ class BECStatusBox(BECWidget, CompactPopupWidget):
             services_metric (dict): A dictionary containing the service metrics for all running BEC services.
         """
         checked = [self.box_name]
+        # FIXME: We simply replace the pydantic message with dict for now until we refactor the widget
+        for val in services_info.values():
+            val.info = val.info.model_dump() if isinstance(val.info, BaseModel) else val.info
         services_info = self.update_core_services(services_info, services_metric)
         checked.extend(self.CORE_SERVICES)
 

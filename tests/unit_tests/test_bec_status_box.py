@@ -2,7 +2,7 @@
 from unittest import mock
 
 import pytest
-from bec_lib.messages import BECStatus, ServiceMetricMessage, StatusMessage
+from bec_lib.messages import BECStatus, ServiceInfo, ServiceMetricMessage, StatusMessage
 
 from bec_widgets.widgets.services.bec_status_box.bec_status_box import (
     BECServiceInfoContainer,
@@ -75,13 +75,17 @@ def test_update_service_status(status_box):
     """Also checks check redundant tree items"""
     name = "test_service"
     status = BECStatus.IDLE
-    info = {"test": "test"}
+    info = StatusMessage(name=name, status=status, info=ServiceInfo(user="test", hostname="host"))
     metrics = {"metric": "test_metric"}
     status_box.add_tree_item(name, status, info, {})
     not_connected_name = "invalid_service"
     status_box.add_tree_item(not_connected_name, status, info, metrics)
 
-    services_status = {name: StatusMessage(name=name, status=status, info=info)}
+    services_status = {
+        name: StatusMessage(
+            name=name, status=status, info=ServiceInfo(user="test", hostname="host")
+        )
+    }
     services_metrics = {name: ServiceMetricMessage(name=name, metrics=metrics)}
 
     with mock.patch.object(status_box, "update_core_services", return_value=services_status):
@@ -95,7 +99,7 @@ def test_update_core_services(status_box):
     status_box.CORE_SERVICES = ["test_service"]
     name = "test_service"
     status = BECStatus.RUNNING
-    info = {"test": "test"}
+    info = ServiceInfo(user="test", hostname="host")
     metrics = {"metric": "test_metric"}
     services_status = {name: StatusMessage(name=name, status=status, info=info)}
     services_metrics = {name: ServiceMetricMessage(name=name, metrics=metrics)}
@@ -115,7 +119,7 @@ def test_update_core_services(status_box):
 def test_double_click_item(status_box):
     name = "test_service"
     status = BECStatus.IDLE
-    info = {"test": "test"}
+    info = ServiceInfo(user="test", hostname="host")
     metrics = {"MyData": "This should be shown nicely"}
     status_box.add_tree_item(name, status, info, metrics)
     container = status_box.status_container[name]
