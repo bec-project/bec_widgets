@@ -1,6 +1,27 @@
 # CHANGELOG
 
 
+## v2.45.14 (2026-01-23)
+
+### Bug Fixes
+
+- **bec_status**: Adjust bec status widget to info and version signature
+  ([`709ffd6`](https://github.com/bec-project/bec_widgets/commit/709ffd6927dceb903cbd0797fc162e56aef378c1))
+
+### Continuous Integration
+
+- Use auth.token instead of login_or_token
+  ([`0349c87`](https://github.com/bec-project/bec_widgets/commit/0349c872612ab0506e5662b813e78200a76d7590))
+
+### Testing
+
+- **device config**: Validate against pydantic
+  ([`de8fe3b`](https://github.com/bec-project/bec_widgets/commit/de8fe3b5f503ace17b0064d2ce9f54662b0fb77e))
+
+- **scan control**: Avoid strict length comparisons
+  ([`d577fac`](https://github.com/bec-project/bec_widgets/commit/d577fac02fed11b2b1c44704c04fd111c2fed1d3))
+
+
 ## v2.45.13 (2025-12-17)
 
 ### Bug Fixes
