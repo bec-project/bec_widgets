@@ -510,7 +510,6 @@ class LaunchWindow(BECMainWindow):
             window = BECMainWindow(object_name=filename)
             window.setCentralWidget(loaded)
 
-        QApplication.processEvents()
         window.setWindowTitle(f"BEC - {filename}")
         self._apply_window_geometry(window, None)
         window.show()
@@ -527,7 +526,6 @@ class LaunchWindow(BECMainWindow):
             window = AutoUpdates()
 
         window.resize(window.minimumSizeHint())
-        QApplication.processEvents()
         window.setWindowTitle(f"BEC - {window.objectName()}")
         self._apply_window_geometry(window, None)
         window.show()
@@ -542,7 +540,6 @@ class LaunchWindow(BECMainWindow):
 
         widget_instance = widget(root_widget=True, object_name=name)
         assert isinstance(widget_instance, QWidget)
-        QApplication.processEvents()
 
         window.setCentralWidget(widget_instance)
         window.resize(window.minimumSizeHint())
