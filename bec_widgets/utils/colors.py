@@ -5,12 +5,15 @@ from typing import Literal
 
 import numpy as np
 import pyqtgraph as pg
+from bec_lib import bec_logger
 from bec_qthemes import apply_theme as apply_theme_global
 from bec_qthemes._theme import AccentColors
 from pydantic_core import PydanticCustomError
 from qtpy.QtCore import QEvent, QEventLoop
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QApplication
+
+logger = bec_logger.logger
 
 
 def get_theme_name():
@@ -47,6 +50,7 @@ def apply_theme(theme: Literal["dark", "light"]):
     """
     Apply the theme via the global theming API. This updates QSS, QPalette, and pyqtgraph globally.
     """
+    logger.info(f"Applying theme: {theme}")
     process_all_deferred_deletes(QApplication.instance())
     apply_theme_global(theme)
     process_all_deferred_deletes(QApplication.instance())
