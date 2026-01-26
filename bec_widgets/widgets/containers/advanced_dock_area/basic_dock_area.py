@@ -6,7 +6,7 @@ from typing import Any, Callable, Literal, Mapping, Sequence, cast
 
 from bec_lib import bec_logger
 from bec_qthemes import material_icon
-from qtpy.QtCore import QByteArray, QSettings, Qt, QTimer
+from qtpy.QtCore import QByteArray, QSettings, QSize, Qt, QTimer
 from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QApplication, QDialog, QVBoxLayout, QWidget
 from shiboken6 import isValid
@@ -302,6 +302,13 @@ class DockAreaWidget(BECWidget, QWidget):
 
         dock = CDockWidget(self.dock_manager, widget.objectName(), self)
         dock.setWidget(widget)
+        widget_min_size = widget.minimumSize()
+        widget_min_hint = widget.minimumSizeHint()
+        dock_min_size = QSize(
+            max(widget_min_size.width(), widget_min_hint.width()),
+            max(widget_min_size.height(), widget_min_hint.height()),
+        )
+        dock.setMinimumSize(dock_min_size)
         dock._dock_preferences = dict(dock_preferences or {})
         dock.setFeature(CDockWidget.DockWidgetFeature.DockWidgetDeleteOnClose, True)
         dock.setFeature(CDockWidget.DockWidgetFeature.CustomCloseHandling, True)
@@ -324,7 +331,9 @@ class DockAreaWidget(BECWidget, QWidget):
         if hasattr(widget, "widget_removed"):
             widget.widget_removed.connect(on_widget_destroyed)
 
-        dock.setMinimumSizeHintMode(CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidget)
+        dock.setMinimumSizeHintMode(
+            CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidgetMinimumSize
+        )
         dock_area_widget = None
         if tab_with is not None:
             if not isValid(tab_with):
@@ -1302,11 +1311,13 @@ class DockAreaWidget(BECWidget, QWidget):
                 apply_widget_icon=apply_widget_icon,
             )
 
-            def _on_name_established(_name: str) -> None:
-                # Defer creation so BECConnector sibling name enforcement has completed.
-                QTimer.singleShot(0, lambda: self._create_dock_from_spec(spec))
-
-            widget.name_established.connect(_on_name_established)
+            # def _on_name_established(_name: str) -> None:
+            #     # Defer creation so BECConnector sibling name enforcement has completed.
+            #     QTimer.singleShot(0, lambda: self._create_dock_from_spec(spec))
+            #     print(f"[BasicDockArea] Deferred dock creation for '{_name}'")
+            #
+            # widget.name_established.connect(_on_name_established)
+            self._create_dock_from_spec(spec)
             return widget
 
         spec = self._build_creation_spec(
