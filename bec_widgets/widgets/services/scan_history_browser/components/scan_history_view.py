@@ -177,12 +177,10 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
     def _start_waiting_display(self):
         self._overlay_widget.setVisible(True)
         self._spinner.start()
-        QtWidgets.QApplication.processEvents()
 
     def _stop_waiting_display(self):
         self._overlay_widget.setVisible(False)
         self._spinner.stop()
-        QtWidgets.QApplication.processEvents()
 
     def _current_item_changed(
         self, current: QtWidgets.QTreeWidgetItem, previous: QtWidgets.QTreeWidgetItem
