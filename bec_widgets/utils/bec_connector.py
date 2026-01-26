@@ -186,7 +186,7 @@ class BECConnector:
         # If set to True, the parent_id will be always set to None, thus enforcing that the widget is accessible as a root widget of the BECGuiClient object.
         self.root_widget = root_widget
 
-        QTimer.singleShot(0, self._update_object_name)
+        self._update_object_name()
 
     @property
     def parent_id(self) -> str | None:
@@ -207,7 +207,7 @@ class BECConnector:
         """
         self.rpc_register.remove_rpc(self)
         self.setObjectName(name.replace("-", "_").replace(" ", "_"))
-        QTimer.singleShot(0, self._update_object_name)
+        self._update_object_name()
 
     def _update_object_name(self) -> None:
         """
@@ -220,7 +220,8 @@ class BECConnector:
         self.rpc_register.add_rpc(self)
         try:
             self.name_established.emit(self.object_name)
-        except RuntimeError:
+        except RuntimeError as e:
+            logger.warning(f"Error emitting name_established signal: {e}")
             return
 
     def _enforce_unique_sibling_name(self):
@@ -234,7 +235,6 @@ class BECConnector:
         if not shb.isValid(self):
             return
 
-        QApplication.sendPostedEvents()
         parent_bec = WidgetHierarchy._get_becwidget_ancestor(self)
 
         if parent_bec:
