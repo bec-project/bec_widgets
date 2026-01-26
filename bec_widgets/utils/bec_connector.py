@@ -238,15 +238,10 @@ class BECConnector:
             siblings = parent_bec.findChildren(BECConnector)
         else:
             # No parent => treat all top-level BECConnectors as siblings
-            # 1) Gather all BECConnectors from QApplication
-            all_widgets = QApplication.allWidgets()
-            all_bec = [w for w in all_widgets if isinstance(w, BECConnector)]
-            # 2) "Top-level" means closest BECConnector parent is None
-            top_level_bec = [
-                w for w in all_bec if WidgetHierarchy._get_becwidget_ancestor(w) is None
-            ]
-            # 3) We are among these top-level siblings
-            siblings = top_level_bec
+            # Use RPCRegister to avoid QApplication.allWidgets() during event processing.
+            connections = self.rpc_register.list_all_connections().values()
+            all_bec = [w for w in connections if isinstance(w, BECConnector)]
+            siblings = [w for w in all_bec if WidgetHierarchy._get_becwidget_ancestor(w) is None]
 
         # Collect used names among siblings
         used_names = {sib.objectName() for sib in siblings if sib is not self}
