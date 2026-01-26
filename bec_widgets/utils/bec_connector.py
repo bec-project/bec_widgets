@@ -8,6 +8,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
+import shiboken6 as shb
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import_from
 from pydantic import BaseModel, Field, field_validator
@@ -230,17 +231,20 @@ class BECConnector:
           - If there's a nearest BECConnector parent, only compare with children of that parent.
           - If parent is None (i.e., top-level object), compare with all other top-level BECConnectors.
         """
+        if not shb.isValid(self):
+            return
+
         QApplication.sendPostedEvents()
         parent_bec = WidgetHierarchy._get_becwidget_ancestor(self)
 
         if parent_bec:
             # We have a parent => only compare with siblings under that parent
-            siblings = parent_bec.findChildren(BECConnector)
+            siblings = [sib for sib in parent_bec.findChildren(BECConnector) if shb.isValid(sib)]
         else:
             # No parent => treat all top-level BECConnectors as siblings
             # Use RPCRegister to avoid QApplication.allWidgets() during event processing.
             connections = self.rpc_register.list_all_connections().values()
-            all_bec = [w for w in connections if isinstance(w, BECConnector)]
+            all_bec = [w for w in connections if isinstance(w, BECConnector) and shb.isValid(w)]
             siblings = [w for w in all_bec if WidgetHierarchy._get_becwidget_ancestor(w) is None]
 
         # Collect used names among siblings
