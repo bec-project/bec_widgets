@@ -246,11 +246,10 @@ class AdvancedDockArea(DockAreaWidget):
                 if self._profile_exists("general", namespace):
                     init_profile = "general"
         if init_profile:
-            # Defer initial load to the event loop so child widgets exist before state restore.
-            QTimer.singleShot(0, lambda: self._load_initial_profile(init_profile))
+            self._load_initial_profile(init_profile)
 
     def _load_initial_profile(self, name: str) -> None:
-        """Load the initial profile after construction when the event loop is running."""
+        """Load the initial profile."""
         self.load_profile(name, start_empty=self._start_empty)
         combo = self.toolbar.components.get_action("workspace_combo").widget
         combo.blockSignals(True)
