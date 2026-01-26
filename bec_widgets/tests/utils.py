@@ -25,6 +25,16 @@ class FakeDevice(BECDevice):
             "readOnly": False,
             "name": self.name,
         }
+        self._info = {
+            "signals": {
+                self.name: {
+                    "kind_str": "hinted",
+                    "component_name": self.name,
+                    "obj_name": self.name,
+                    "signal_class": "Signal",
+                }
+            }
+        }
 
     @property
     def readout_priority(self):
