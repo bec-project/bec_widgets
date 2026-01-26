@@ -7,7 +7,7 @@ import os
 from bec_lib.device import Positioner
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
-from qtpy.QtCore import Signal
+from qtpy.QtCore import Qt, Signal
 from qtpy.QtGui import QDoubleValidator
 from qtpy.QtWidgets import QDoubleSpinBox
 
@@ -66,6 +66,13 @@ class PositionerBox(PositionerBoxBase):
         self.addWidget(self.ui)
         self.layout.setSpacing(0)
         self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignHCenter)
+        ui_min_size = self.ui.minimumSize()
+        ui_min_hint = self.ui.minimumSizeHint()
+        self.setMinimumSize(
+            max(ui_min_size.width(), ui_min_hint.width()),
+            max(ui_min_size.height(), ui_min_hint.height()),
+        )
 
         # fix the size of the device box
         db = self.ui.device_box
