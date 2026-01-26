@@ -1198,8 +1198,7 @@ class DockAreaWidget(BECWidget, QWidget):
                     if button is not None:
                         button.setVisible(bool(visible))
 
-        # single shot to ensure dock is fully initialized, as widgets with their own dock manager can take a moment to initialize
-        QTimer.singleShot(0, apply)
+        apply()
 
     def set_central_dock(self, dock: CDockWidget | QWidget | str) -> None:
         """
@@ -1311,12 +1310,6 @@ class DockAreaWidget(BECWidget, QWidget):
                 apply_widget_icon=apply_widget_icon,
             )
 
-            # def _on_name_established(_name: str) -> None:
-            #     # Defer creation so BECConnector sibling name enforcement has completed.
-            #     QTimer.singleShot(0, lambda: self._create_dock_from_spec(spec))
-            #     print(f"[BasicDockArea] Deferred dock creation for '{_name}'")
-            #
-            # widget.name_established.connect(_on_name_established)
             self._create_dock_from_spec(spec)
             return widget
 
@@ -1422,7 +1415,7 @@ class DockAreaWidget(BECWidget, QWidget):
 if __name__ == "__main__":  # pragma: no cover
     import sys
 
-    from qtpy.QtWidgets import QApplication, QLabel, QMainWindow, QPushButton
+    from qtpy.QtWidgets import QLabel, QMainWindow, QPushButton
 
     from bec_widgets.utils.colors import apply_theme
 
