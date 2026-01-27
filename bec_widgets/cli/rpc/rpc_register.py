@@ -5,14 +5,13 @@ from threading import RLock
 from typing import TYPE_CHECKING, Callable
 from weakref import WeakValueDictionary
 
+import shiboken6 as shb
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import QObject
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_widgets.utils.bec_connector import BECConnector
     from bec_widgets.utils.bec_widget import BECWidget
-    from bec_widgets.widgets.containers.dock.dock import BECDock
-    from bec_widgets.widgets.containers.dock.dock_area import BECDockArea
 
 logger = bec_logger.logger
 
@@ -109,11 +108,19 @@ class RPCRegister:
             dict: A dictionary containing all the registered RPC objects.
         """
         with self._lock:
-            connections = dict(self._rpc_register)
+            connections = {}
+            for gui_id, obj in self._rpc_register.items():
+                try:
+                    if not shb.isValid(obj):
+                        continue
+                    connections[gui_id] = obj
+                except Exception as e:
+                    logger.warning(f"Error checking validity of object {gui_id}: {e}")
+                    continue
         return connections
 
     def get_names_of_rpc_by_class_type(
-        self, cls: type[BECWidget] | type[BECConnector] | type[BECDock] | type[BECDockArea]
+        self, cls: type[BECWidget] | type[BECConnector]
     ) -> list[str]:
         """Get all the names of the widgets.
 
