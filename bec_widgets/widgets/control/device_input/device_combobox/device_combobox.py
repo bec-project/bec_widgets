@@ -1,7 +1,6 @@
 from bec_lib.callback_handler import EventType
 from bec_lib.device import ReadoutPriority
 from qtpy.QtCore import QSize, Signal, Slot
-from qtpy.QtGui import QPainter, QPaintEvent, QPen
 from qtpy.QtWidgets import QComboBox, QSizePolicy
 
 from bec_widgets.utils.colors import get_accent_colors
@@ -30,10 +29,9 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
         signal_class_filter: List of signal classes to filter the devices by. Only devices with signals of these classes will be shown.
     """
 
-    USER_ACCESS = ["set_device", "devices"]
-
     ICON_NAME = "list_alt"
     PLUGIN = True
+    RPC = False
 
     device_selected = Signal(str)
     device_reset = Signal()

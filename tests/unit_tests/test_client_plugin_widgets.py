@@ -34,9 +34,9 @@ class _TestDuplicatePlugin(RPCBase): ...
 
 
 mock_client_module_duplicate = SimpleNamespace()
-_TestDuplicatePlugin.__name__ = "DeviceComboBox"
+_TestDuplicatePlugin.__name__ = "Waveform"
 
-mock_client_module_duplicate.DeviceComboBox = _TestDuplicatePlugin
+mock_client_module_duplicate.Waveform = _TestDuplicatePlugin
 
 
 @patch("bec_lib.logger.bec_logger")
@@ -47,14 +47,14 @@ mock_client_module_duplicate.DeviceComboBox = _TestDuplicatePlugin
 @patch(
     "bec_widgets.utils.bec_plugin_helper.get_all_plugin_widgets",
     return_value=BECClassContainer(
-        [BECClassInfo(name="DeviceComboBox", obj=_TestDuplicatePlugin, module="", file="")]
+        [BECClassInfo(name="Waveform", obj=_TestDuplicatePlugin, module="", file="")]
     ),
 )
 def test_duplicate_plugins_not_allowed(_, bec_logger: MagicMock):
     reload(client)
     assert (
         call(
-            f"Detected duplicate widget DeviceComboBox in plugin repo file: {inspect.getfile(_TestDuplicatePlugin)} !"
+            f"Detected duplicate widget Waveform in plugin repo file: {inspect.getfile(_TestDuplicatePlugin)} !"
         )
         in bec_logger.logger.warning.mock_calls
     )
