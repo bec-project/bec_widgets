@@ -35,8 +35,6 @@ _Widgets = {
     "DapComboBox": "DapComboBox",
     "DarkModeButton": "DarkModeButton",
     "DeviceBrowser": "DeviceBrowser",
-    "DeviceComboBox": "DeviceComboBox",
-    "DeviceLineEdit": "DeviceLineEdit",
     "Heatmap": "Heatmap",
     "Image": "Image",
     "LogPanel": "LogPanel",
@@ -56,9 +54,7 @@ _Widgets = {
     "ScanControl": "ScanControl",
     "ScanProgressBar": "ScanProgressBar",
     "ScatterWaveform": "ScatterWaveform",
-    "SignalComboBox": "SignalComboBox",
     "SignalLabel": "SignalLabel",
-    "SignalLineEdit": "SignalLineEdit",
     "TextBox": "TextBox",
     "VSCodeEditor": "VSCodeEditor",
     "Waveform": "Waveform",
@@ -1048,29 +1044,6 @@ class DeviceBrowser(RPCBase):
         """
 
 
-class DeviceComboBox(RPCBase):
-    """Combobox widget for device input with autocomplete for device names."""
-
-    @rpc_call
-    def set_device(self, device: "str"):
-        """
-        Set the device.
-
-        Args:
-            device (str): Default name.
-        """
-
-    @property
-    @rpc_call
-    def devices(self) -> "list[str]":
-        """
-        Get the list of devices for the applied filters.
-
-        Returns:
-            list[str]: List of devices.
-        """
-
-
 class DeviceInitializationProgressBar(RPCBase):
     """A progress bar that displays the progress of device initialization."""
 
@@ -1112,39 +1085,6 @@ class DeviceInputBase(RPCBase):
     def detach(self):
         """
         Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
-        """
-
-
-class DeviceLineEdit(RPCBase):
-    """Line edit widget for device input with autocomplete for device names."""
-
-    @rpc_call
-    def set_device(self, device: "str"):
-        """
-        Set the device.
-
-        Args:
-            device (str): Default name.
-        """
-
-    @property
-    @rpc_call
-    def devices(self) -> "list[str]":
-        """
-        Get the list of devices for the applied filters.
-
-        Returns:
-            list[str]: List of devices.
-        """
-
-    @property
-    @rpc_call
-    def _is_valid_input(self) -> bool:
-        """
-        Check if the current value is a valid device name.
-
-        Returns:
-            bool: True if the current value is a valid device name, False otherwise.
         """
 
 
@@ -5411,49 +5351,6 @@ class ScatterWaveform(RPCBase):
         """
 
 
-class SignalComboBox(RPCBase):
-    """Line edit widget for device input with autocomplete for device names."""
-
-    @rpc_call
-    def set_signal(self, signal: str):
-        """
-        Set the signal.
-
-        Args:
-            signal (str): signal name.
-        """
-
-    @rpc_call
-    def set_device(self, device: "str | None"):
-        """
-        Set the device. When signal_class_filter is active, ensures base-class
-        logic runs and then refreshes the signal list to show only signals from
-        that device matching the signal class filter.
-
-        Args:
-            device(str): device name.
-        """
-
-    @property
-    @rpc_call
-    def signals(self) -> list[str]:
-        """
-        Get the list of device signals for the applied filters.
-
-        Returns:
-            list[str]: List of device signals.
-        """
-
-    @rpc_call
-    def get_signal_name(self) -> "str":
-        """
-        Get the signal name from the combobox.
-
-        Returns:
-            str: The signal name.
-        """
-
-
 class SignalLabel(RPCBase):
     @property
     @rpc_call
@@ -5593,48 +5490,6 @@ class SignalLabel(RPCBase):
     def max_list_display_len(self) -> "int":
         """
         For small lists, the max length to display
-        """
-
-
-class SignalLineEdit(RPCBase):
-    """Line edit widget for device input with autocomplete for device names."""
-
-    @property
-    @rpc_call
-    def _is_valid_input(self) -> bool:
-        """
-        Check if the current value is a valid device name.
-
-        Returns:
-            bool: True if the current value is a valid device name, False otherwise.
-        """
-
-    @rpc_call
-    def set_signal(self, signal: str):
-        """
-        Set the signal.
-
-        Args:
-            signal (str): signal name.
-        """
-
-    @rpc_call
-    def set_device(self, device: str | None):
-        """
-        Set the device. If device is not valid, device will be set to None which happens
-
-        Args:
-            device(str): device name.
-        """
-
-    @property
-    @rpc_call
-    def signals(self) -> list[str]:
-        """
-        Get the list of device signals for the applied filters.
-
-        Returns:
-            list[str]: List of device signals.
         """
 
 

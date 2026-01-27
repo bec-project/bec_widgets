@@ -38,7 +38,7 @@ class SignalComboBox(DeviceSignalInputBase, QComboBox):
 
     ICON_NAME = "list_alt"
     PLUGIN = True
-    RPC = True
+    RPC = False
 
     device_signal_changed = Signal(str)
     signal_reset = Signal()

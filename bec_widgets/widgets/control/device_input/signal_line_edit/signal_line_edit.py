@@ -29,7 +29,7 @@ class SignalLineEdit(DeviceSignalInputBase, QLineEdit):
     device_signal_changed = Signal(str)
 
     PLUGIN = True
-    RPC = True
+    RPC = False
     ICON_NAME = "vital_signs"
 
     def __init__(

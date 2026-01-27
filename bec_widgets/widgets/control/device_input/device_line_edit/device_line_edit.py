@@ -31,12 +31,11 @@ class DeviceLineEdit(DeviceInputBase, QLineEdit):
         arg_name: Argument name, can be used for the other widgets which has to call some other function in bec using correct argument names.
     """
 
-    USER_ACCESS = ["set_device", "devices", "_is_valid_input"]
-
     device_selected = Signal(str)
     device_config_update = Signal()
 
     PLUGIN = True
+    RPC = False
     ICON_NAME = "edit_note"
 
     def __init__(
