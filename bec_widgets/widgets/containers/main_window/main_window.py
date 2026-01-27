@@ -54,7 +54,7 @@ class BECMainWindow(BECWidget, QMainWindow):
 
         # Notification Centre overlay
         self.notification_centre = NotificationCentre(parent=self)  # Notification layer
-        self.notification_broker = BECNotificationBroker()
+        self.notification_broker = BECNotificationBroker(parent=self)
         self._nc_margin = 16
         self._position_notification_centre()
 
