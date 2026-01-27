@@ -85,41 +85,30 @@ def test_launch_window_launch_plugin_auto_update(bec_launch_window):
 
 
 @pytest.mark.parametrize(
-    "connections, hide",
+    "connection_names, hide",
     [
-        ({}, False),
-        ({"launcher": mock.MagicMock()}, False),
-        ({"launcher": mock.MagicMock(), "dock_area": mock.MagicMock()}, False),
+        ([], False),
+        (["launcher"], False),
+        (["launcher", "dock_area"], False),
+        (["launcher", "dock_area", "scan_progress"], False),
+        (["launcher", "dock_area", "scan_progress_simple", "scan_progress_full"], False),
         (
-            {
-                "launcher": mock.MagicMock(),
-                "dock_area": mock.MagicMock(),
-                "scan_progress": mock.MagicMock(),
-            },
-            False,
-        ),
-        (
-            {
-                "launcher": mock.MagicMock(),
-                "dock_area": mock.MagicMock(),
-                "scan_progress_simple": mock.MagicMock(),
-                "scan_progress_full": mock.MagicMock(),
-            },
-            False,
-        ),
-        (
-            {
-                "launcher": mock.MagicMock(),
-                "dock_area": mock.MagicMock(),
-                "scan_progress_simple": mock.MagicMock(),
-                "scan_progress_full": mock.MagicMock(),
-                "hover_widget": mock.MagicMock(),
-            },
+            ["launcher", "dock_area", "scan_progress_simple", "scan_progress_full", "hover_widget"],
             True,
         ),
     ],
 )
-def test_gui_server_turns_off_the_lights(bec_launch_window, connections, hide):
+def test_gui_server_turns_off_the_lights(bec_launch_window, connection_names, hide):
+    connections = {}
+    for name in connection_names:
+        conn = mock.MagicMock()
+        if name == "hover_widget":
+            conn.parent.return_value = None
+            conn.objectName.return_value = "HoverWidget"
+        else:
+            conn.parent.return_value = mock.MagicMock()
+            conn.objectName.return_value = bec_launch_window.objectName()
+        connections[name] = conn
     with (
         mock.patch.object(bec_launch_window, "show") as mock_show,
         mock.patch.object(bec_launch_window, "activateWindow") as mock_activate_window,
@@ -142,46 +131,35 @@ def test_gui_server_turns_off_the_lights(bec_launch_window, connections, hide):
 
 
 @pytest.mark.parametrize(
-    "connections, close_called",
+    "connection_names, close_called",
     [
-        ({}, True),
-        ({"launcher": mock.MagicMock()}, True),
-        ({"launcher": mock.MagicMock(), "dock_area": mock.MagicMock()}, True),
+        ([], True),
+        (["launcher"], True),
+        (["launcher", "dock_area"], True),
+        (["launcher", "dock_area", "scan_progress"], True),
+        (["launcher", "dock_area", "scan_progress_simple", "scan_progress_full"], True),
         (
-            {
-                "launcher": mock.MagicMock(),
-                "dock_area": mock.MagicMock(),
-                "scan_progress": mock.MagicMock(),
-            },
-            True,
-        ),
-        (
-            {
-                "launcher": mock.MagicMock(),
-                "dock_area": mock.MagicMock(),
-                "scan_progress_simple": mock.MagicMock(),
-                "scan_progress_full": mock.MagicMock(),
-            },
-            True,
-        ),
-        (
-            {
-                "launcher": mock.MagicMock(),
-                "dock_area": mock.MagicMock(),
-                "scan_progress_simple": mock.MagicMock(),
-                "scan_progress_full": mock.MagicMock(),
-                "hover_widget": mock.MagicMock(),
-            },
+            ["launcher", "dock_area", "scan_progress_simple", "scan_progress_full", "hover_widget"],
             False,
         ),
     ],
 )
-def test_launch_window_closes(bec_launch_window, connections, close_called):
+def test_launch_window_closes(bec_launch_window, connection_names, close_called):
     """
     Test that the close event is handled correctly based on the connections.
     If there are no connections or only the launcher connection, the window should close.
     If there are other connections, the window should hide instead of closing.
     """
+    connections = {}
+    for name in connection_names:
+        conn = mock.MagicMock()
+        if name == "hover_widget":
+            conn.parent.return_value = None
+            conn.objectName.return_value = "HoverWidget"
+        else:
+            conn.parent.return_value = mock.MagicMock()
+            conn.objectName.return_value = bec_launch_window.objectName()
+        connections[name] = conn
     close_event = mock.MagicMock()
     with mock.patch.object(
         bec_launch_window.register, "list_all_connections", return_value=connections

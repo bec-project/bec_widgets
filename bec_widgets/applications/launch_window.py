@@ -662,10 +662,19 @@ class LaunchWindow(BECMainWindow):
         Check if the launcher is the last widget in the application.
         """
 
-        remaining_connections = [
-            connection for connection in connections.values() if connection.parent_id != self.gui_id
-        ]
-        return len(remaining_connections) <= 4
+        # get all parents of connections
+        for connection in connections.values():
+            try:
+                parent = connection.parent()
+                if parent is None and connection.objectName() != self.objectName():
+                    logger.info(
+                        f"Found non-launcher connection without parent: {connection.objectName()}"
+                    )
+                    return False
+            except Exception as e:
+                logger.error(f"Error getting parent of connection: {e}")
+                return False
+        return True
 
     def _turn_off_the_lights(self, connections: dict):
         """
