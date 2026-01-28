@@ -186,6 +186,11 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
             device = self.itemData(idx)[0]  # type: ignore[assignment]
         return super().validate_device(device)
 
+    @property
+    def is_valid_input(self) -> bool:
+        """Whether the current text represents a valid device selection."""
+        return self._is_valid_input
+
 
 if __name__ == "__main__":  # pragma: no cover
     # pylint: disable=import-outside-toplevel
