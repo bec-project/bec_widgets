@@ -3,7 +3,7 @@ from typing import Literal
 
 import pyqtgraph as pg
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import QSize, Qt
+from qtpy.QtCore import QPointF, QSize, Qt
 from qtpy.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from bec_widgets.utils import Colors
@@ -12,6 +12,7 @@ from bec_widgets.utils.error_popups import SafeProperty
 from bec_widgets.utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.toolbars.actions import MaterialIconAction
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
+from bec_widgets.widgets.containers.main_window.addons.hover_widget import WidgetTooltip
 from bec_widgets.widgets.progress.ring_progress_bar.ring import Ring
 from bec_widgets.widgets.progress.ring_progress_bar.ring_progress_settings_cards import RingSettings
 
@@ -29,7 +30,16 @@ class RingProgressContainerWidget(QWidget):
         self.rings: list[Ring] = []
         self.gap = 20  # Gap between rings
         self.color_map: str = "turbo"
+        self._hovered_ring: Ring | None = None
+        self._last_hover_global_pos = None
+        self._hover_tooltip_label = QLabel()
+        self._hover_tooltip_label.setWordWrap(True)
+        self._hover_tooltip_label.setTextFormat(Qt.TextFormat.PlainText)
+        self._hover_tooltip_label.setMaximumWidth(260)
+        self._hover_tooltip_label.setStyleSheet("font-size: 12px;")
+        self._hover_tooltip = WidgetTooltip(self._hover_tooltip_label)
         self.setLayout(QHBoxLayout())
+        self.setMouseTracking(True)
         self.initialize_bars()
         self.initialize_center_label()
 
@@ -59,6 +69,7 @@ class RingProgressContainerWidget(QWidget):
         """
         ring = Ring(parent=self)
         ring.setGeometry(self.rect())
+        ring.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         ring.gap = self.gap * len(self.rings)
         ring.set_value(0)
         self.rings.append(ring)
@@ -88,6 +99,10 @@ class RingProgressContainerWidget(QWidget):
             index = self.num_bars - 1
         index = self._validate_index(index)
         ring = self.rings[index]
+        if ring is self._hovered_ring:
+            self._hovered_ring = None
+            self._last_hover_global_pos = None
+            self._hover_tooltip.hide()
         ring.cleanup()
         ring.close()
         ring.deleteLater()
@@ -106,6 +121,7 @@ class RingProgressContainerWidget(QWidget):
 
         self.center_label = QLabel("", parent=self)
         self.center_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.center_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         layout.addWidget(self.center_label)
 
     def _calculate_minimum_size(self):
@@ -149,6 +165,130 @@ class RingProgressContainerWidget(QWidget):
         super().resizeEvent(event)
         for ring in self.rings:
             ring.setGeometry(self.rect())
+
+    def enterEvent(self, event):
+        self.setMouseTracking(True)
+        super().enterEvent(event)
+
+    def mouseMoveEvent(self, event):
+        pos = event.position() if hasattr(event, "position") else QPointF(event.pos())
+        self._last_hover_global_pos = (
+            event.globalPosition().toPoint()
+            if hasattr(event, "globalPosition")
+            else event.globalPos()
+        )
+        ring = self._ring_at_pos(pos)
+        self._set_hovered_ring(ring, event)
+        super().mouseMoveEvent(event)
+
+    def leaveEvent(self, event):
+        self._last_hover_global_pos = None
+        self._set_hovered_ring(None, event)
+        super().leaveEvent(event)
+
+    def _set_hovered_ring(self, ring: Ring | None, event=None):
+        if ring is self._hovered_ring:
+            if ring is not None:
+                self.refresh_hover_tooltip(ring, event)
+            return
+        if self._hovered_ring is not None:
+            self._hovered_ring.set_hovered(False)
+        self._hovered_ring = ring
+        if self._hovered_ring is not None:
+            self._hovered_ring.set_hovered(True)
+            self.refresh_hover_tooltip(self._hovered_ring, event)
+        else:
+            self._hover_tooltip.hide()
+
+    def _ring_at_pos(self, pos: QPointF) -> Ring | None:
+        if not self.rings:
+            return None
+        size = min(self.width(), self.height())
+        if size <= 0:
+            return None
+        x_offset = (self.width() - size) / 2
+        y_offset = (self.height() - size) / 2
+        center_x = x_offset + size / 2
+        center_y = y_offset + size / 2
+        dx = pos.x() - center_x
+        dy = pos.y() - center_y
+        distance = (dx * dx + dy * dy) ** 0.5
+
+        max_ring_size = self.get_max_ring_size()
+        base_radius = (size - 2 * max_ring_size) / 2
+        if base_radius <= 0:
+            return None
+
+        best_ring: Ring | None = None
+        best_delta: float | None = None
+        for ring in self.rings:
+            radius = base_radius - ring.gap
+            if radius <= 0:
+                continue
+            half_width = ring.config.line_width / 2
+            inner = radius - half_width
+            outer = radius + half_width
+            if inner <= distance <= outer:
+                delta = abs(distance - radius)
+                if best_delta is None or delta < best_delta:
+                    best_delta = delta
+                    best_ring = ring
+
+        return best_ring
+
+    def is_ring_hovered(self, ring: Ring) -> bool:
+        return ring is self._hovered_ring
+
+    def refresh_hover_tooltip(self, ring: Ring, event=None):
+        text = self._build_tooltip_text(ring)
+        if event is not None:
+            self._last_hover_global_pos = (
+                event.globalPosition().toPoint()
+                if hasattr(event, "globalPosition")
+                else event.globalPos()
+            )
+        if self._last_hover_global_pos is None:
+            return
+        self._hover_tooltip_label.setText(text)
+        self._hover_tooltip.apply_theme()
+        self._hover_tooltip.show_near(self._last_hover_global_pos)
+
+    @staticmethod
+    def _build_tooltip_text(ring: Ring) -> str:
+        mode = ring.config.mode
+        mode_label = {"manual": "Manual", "scan": "Scan progress", "device": "Device"}.get(
+            mode, mode
+        )
+
+        precision = int(ring.config.precision)
+        value = ring.config.value
+        min_value = ring.config.min_value
+        max_value = ring.config.max_value
+        range_span = max(max_value - min_value, 1e-9)
+        progress = max(0.0, min(100.0, ((value - min_value) / range_span) * 100))
+
+        lines = [
+            f"Mode: {mode_label}",
+            f"Progress: {value:.{precision}f} / {max_value:.{precision}f} ({progress:.1f}%)",
+        ]
+        if min_value != 0:
+            lines.append(f"Range: {min_value:.{precision}f} -> {max_value:.{precision}f}")
+        if mode == "device" and ring.config.device:
+            if ring.config.signal:
+                lines.append(f"Device: {ring.config.device}:{ring.config.signal}")
+            else:
+                lines.append(f"Device: {ring.config.device}")
+
+        return "\n".join(lines)
+
+    def closeEvent(self, event):
+        # Ensure the hover tooltip is properly cleaned up when this widget closes
+        tooltip = getattr(self, "_hover_tooltip", None)
+        if tooltip is not None:
+            tooltip.close()
+            tooltip.deleteLater()
+            self._hover_tooltip = None
+        super().closeEvent(event)
 
     def set_colors_from_map(self, colormap, color_format: Literal["RGB", "HEX"] = "RGB"):
         """
@@ -230,6 +370,9 @@ class RingProgressContainerWidget(QWidget):
         """
         Clear all rings from the widget.
         """
+        self._hovered_ring = None
+        self._last_hover_global_pos = None
+        self._hover_tooltip.hide()
         for ring in self.rings:
             ring.close()
             ring.deleteLater()
