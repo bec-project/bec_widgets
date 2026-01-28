@@ -537,6 +537,31 @@ def test_normalize_dap_parameters_invalid_type_raises():
         Waveform._normalize_dap_parameters(["amplitude", 1.0])  # type: ignore[arg-type]
 
 
+def test_normalize_dap_parameters_composite_list():
+    normalized = Waveform._normalize_dap_parameters(
+        [{"center": 1.0}, {"sigma": {"value": 0.5, "min": 0.0}}],
+        dap_name=["GaussianModel", "GaussianModel"],
+    )
+    assert normalized == [
+        {"center": {"name": "center", "value": 1.0, "vary": False}},
+        {"sigma": {"name": "sigma", "value": 0.5, "min": 0.0, "vary": False}},
+    ]
+
+
+def test_normalize_dap_parameters_composite_dict():
+    normalized = Waveform._normalize_dap_parameters(
+        {
+            "GaussianModel": {"center": {"value": 1.0, "vary": True}},
+            "LorentzModel": {"amplitude": 2.0},
+        },
+        dap_name=["GaussianModel", "LorentzModel"],
+    )
+    assert normalized["GaussianModel"]["center"]["value"] == 1.0
+    assert normalized["GaussianModel"]["center"]["vary"] is True
+    assert normalized["LorentzModel"]["amplitude"]["value"] == 2.0
+    assert normalized["LorentzModel"]["amplitude"]["vary"] is False
+
+
 def test_request_dap_includes_normalized_parameters(qtbot, mocked_client_with_dap, monkeypatch):
     wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
     curve = wf.plot(
@@ -565,6 +590,36 @@ def test_request_dap_includes_normalized_parameters(qtbot, mocked_client_with_da
     assert dap_kwargs["parameters"] == {
         "amplitude": {"name": "amplitude", "value": 1.0, "vary": False}
     }
+
+
+def test_request_dap_includes_composite_parameters_list(qtbot, mocked_client_with_dap, monkeypatch):
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    curve = wf.plot(
+        x=[0, 1, 2],
+        y=[1, 2, 3],
+        label="custom-composite",
+        dap=["GaussianModel", "GaussianModel"],
+        dap_parameters=[{"center": 0.0}, {"center": 1.0}],
+    )
+    dap_curve = wf.get_curve(f"{curve.name()}-GaussianModel+GaussianModel")
+    assert dap_curve is not None
+
+    captured = {}
+
+    def capture(topic, msg, *args, **kwargs):  # noqa: ARG001
+        captured["topic"] = topic
+        captured["msg"] = msg
+
+    monkeypatch.setattr(wf.client.connector, "set_and_publish", capture)
+    wf.request_dap()
+
+    msg = captured["msg"]
+    dap_kwargs = msg.content["config"]["kwargs"]
+    assert dap_kwargs["parameters"] == [
+        {"center": {"name": "center", "value": 0.0, "vary": False}},
+        {"center": {"name": "center", "value": 1.0, "vary": False}},
+    ]
+    assert msg.content["config"]["class_kwargs"]["model"] == ["GaussianModel", "GaussianModel"]
 
 
 def test_fetch_scan_data_and_access(qtbot, mocked_client, monkeypatch):

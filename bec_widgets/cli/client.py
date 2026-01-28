@@ -5959,8 +5959,8 @@ class Waveform(RPCBase):
         y_entry: "str | None" = None,
         color: "str | None" = None,
         label: "str | None" = None,
-        dap: "str | None" = None,
-        dap_parameters: "dict | lmfit.Parameters | None | object" = None,
+        dap: "str | list[str] | None" = None,
+        dap_parameters: "dict | list | lmfit.Parameters | None | object" = None,
         scan_id: "str | None" = None,
         scan_number: "int | None" = None,
         **kwargs,
@@ -5982,11 +5982,14 @@ class Waveform(RPCBase):
             y_entry(str): The name of the entry for the y-axis.
             color(str): The color of the curve.
             label(str): The label of the curve.
-            dap(str): The dap model to use for the curve. When provided, a DAP curve is
+            dap(str | list[str]): The dap model to use for the curve. When provided, a DAP curve is
                 attached automatically for device, history, or custom data sources. Use
-                the same string as the LMFit model name.
-            dap_parameters(dict | lmfit.Parameters | None): Optional lmfit parameter overrides sent to the DAP server.
-                Values can be numeric (interpreted as fixed parameters) or dicts like`{"value": 1.0, "vary": False}`.
+                the same string as the LMFit model name, or a list of model names to build a composite.
+            dap_parameters(dict | list | lmfit.Parameters | None): Optional lmfit parameter overrides sent to
+                the DAP server. For a single model: values can be numeric (interpreted as fixed parameters)
+                or dicts like `{"value": 1.0, "vary": False}`. For composite models (dap is list), use either
+                a list aligned to the model list (each item is a param dict), or a dict of
+                `{ "ModelName": { "param": {...} } }` when model names are unique.
             scan_id(str):  Optional scan ID. When provided, the curve is treated as a **history** curve and
                 the y‑data (and optional x‑data) are fetched from that historical scan. Such curves are
                 never cleared by live‑scan resets.
@@ -6000,10 +6003,10 @@ class Waveform(RPCBase):
     def add_dap_curve(
         self,
         device_label: "str",
-        dap_name: "str",
+        dap_name: "str | list[str]",
         color: "str | None" = None,
         dap_oversample: "int" = 1,
-        dap_parameters: "dict | lmfit.Parameters | None" = None,
+        dap_parameters: "dict | list | lmfit.Parameters | None" = None,
         **kwargs,
     ) -> "Curve":
         """
@@ -6013,10 +6016,11 @@ class Waveform(RPCBase):
 
         Args:
             device_label(str): The label of the source curve to add DAP to.
-            dap_name(str): The name of the DAP model to use.
+            dap_name(str | list[str]): The name of the DAP model to use, or a list of model
+                names to build a composite model.
             color(str): The color of the curve.
             dap_oversample(int): The oversampling factor for the DAP curve.
-            dap_parameters(dict | lmfit.Parameters | None): Optional lmfit parameter overrides sent to the DAP server.
+            dap_parameters(dict | list | lmfit.Parameters | None): Optional lmfit parameter overrides sent to the DAP server.
             **kwargs
 
         Returns:
