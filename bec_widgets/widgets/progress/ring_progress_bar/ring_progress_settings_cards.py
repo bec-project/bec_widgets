@@ -63,7 +63,8 @@ class RingCardWidget(QFrame):
         self.mode_combo.setCurrentText(self._get_display_mode_string(self.ring.config.mode))
         self._set_widget_mode_enabled(self.ring.config.mode)
 
-    def _get_theme_color(self, color_name: str) -> QColor | None:
+    @staticmethod
+    def _get_theme_color(color_name: str) -> QColor | None:
         app = QApplication.instance()
         if not app:
             return
@@ -249,12 +250,13 @@ class RingCardWidget(QFrame):
     def _on_signal_changed(self, signal: str):
         device = self.ui.device_combo_box.currentText()
         signal = self.ui.signal_combo_box.get_signal_name()
-        if not device or device not in self.container.bec_dispatcher.client.device_manager.devices:
+        if not device or device not in self.ring.bec_dispatcher.client.device_manager.devices:
             return
         self.ring.set_update("device", device=device, signal=signal)
         self.ring.config.signal = signal
 
-    def _unify_mode_string(self, mode: str) -> str:
+    @staticmethod
+    def _unify_mode_string(mode: str) -> str:
         """Convert mode string to a unified format"""
         mode = mode.lower()
         if mode == "scan progress":
@@ -263,7 +265,8 @@ class RingCardWidget(QFrame):
             return "device"
         return mode
 
-    def _get_display_mode_string(self, mode: str) -> str:
+    @staticmethod
+    def _get_display_mode_string(mode: str) -> str:
         """Convert mode string to display format"""
         match mode:
             case "manual":
