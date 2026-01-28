@@ -82,7 +82,21 @@ class Ring(BECConnector, QWidget):
         self.registered_slot: tuple[Callable, str | EndpointInfo] | None = None
         self.RID = None
         self._gap = 5
+        self._hovered = False
+        self._hover_progress = 0.0
+        self._hover_animation = QtCore.QPropertyAnimation(self, b"hover_progress")
+        self._hover_animation.setDuration(180)
+        easing_curve = (
+            QtCore.QEasingCurve.Type.OutCubic
+            if hasattr(QtCore.QEasingCurve, "Type")
+            else QtCore.QEasingCurve.OutCubic
+        )
+        self._hover_animation.setEasingCurve(easing_curve)
         self.set_start_angle(self.config.start_position)
+
+    def _refresh_hover_tooltip(self):
+        if self.progress_container and self.progress_container.is_ring_hovered(self):
+            self.progress_container.refresh_hover_tooltip(self)
 
     def set_value(self, value: int | float):
         """
@@ -156,6 +170,7 @@ class Ring(BECConnector, QWidget):
             width(int): Line width for the ring widget
         """
         self.config.line_width = width
+        self._refresh_hover_tooltip()
         self.update()
 
     def set_min_max_values(self, min_value: int | float, max_value: int | float):
@@ -168,6 +183,7 @@ class Ring(BECConnector, QWidget):
         """
         self.config.min_value = min_value
         self.config.max_value = max_value
+        self._refresh_hover_tooltip()
         self.update()
 
     def set_start_angle(self, start_angle: int):
@@ -204,6 +220,7 @@ class Ring(BECConnector, QWidget):
                     self.bec_dispatcher.disconnect_slot(*self.registered_slot)
                 self.config.mode = "manual"
                 self.registered_slot = None
+                self._refresh_hover_tooltip()
             case "scan":
                 if self.config.mode == "scan":
                     return
@@ -214,17 +231,20 @@ class Ring(BECConnector, QWidget):
                     self.on_scan_progress, MessageEndpoints.scan_progress()
                 )
                 self.registered_slot = (self.on_scan_progress, MessageEndpoints.scan_progress())
+                self._refresh_hover_tooltip()
             case "device":
                 if self.registered_slot is not None:
                     self.bec_dispatcher.disconnect_slot(*self.registered_slot)
                 self.config.mode = "device"
                 if device == "":
                     self.registered_slot = None
+                    self._refresh_hover_tooltip()
                     return
                 self.config.device = device
                 # self.config.signal = self._get_signal_from_device(device, signal)
                 signal = self._update_device_connection(device, signal)
                 self.config.signal = signal
+                self._refresh_hover_tooltip()
 
             case _:
                 raise ValueError(f"Unsupported mode: {mode}")
@@ -237,6 +257,7 @@ class Ring(BECConnector, QWidget):
             precision(int): Precision for the ring widget
         """
         self.config.precision = precision
+        self._refresh_hover_tooltip()
         self.update()
 
     def set_direction(self, direction: int):
@@ -247,6 +268,7 @@ class Ring(BECConnector, QWidget):
             direction(int): Direction for the ring widget. -1 for clockwise, 1 for counter-clockwise.
         """
         self.config.direction = direction
+        self._refresh_hover_tooltip()
         self.update()
 
     def _get_signals_for_device(self, device: str) -> dict[str, list[str]]:
@@ -424,8 +446,11 @@ class Ring(BECConnector, QWidget):
         rect.adjust(max_ring_size, max_ring_size, -max_ring_size, -max_ring_size)
 
         # Background arc
+        base_line_width = float(self.config.line_width)
+        hover_line_delta = min(3.0, round(base_line_width * 0.6, 1))
+        current_line_width = base_line_width + (hover_line_delta * self._hover_progress)
         painter.setPen(
-            QtGui.QPen(self._background_color, self.config.line_width, QtCore.Qt.PenStyle.SolidLine)
+            QtGui.QPen(self._background_color, current_line_width, QtCore.Qt.PenStyle.SolidLine)
         )
 
         gap: int = self.gap  # type: ignore
@@ -433,13 +458,25 @@ class Ring(BECConnector, QWidget):
         # Important: Qt uses a 16th of a degree for angles. start_position is therefore multiplied by 16.
         start_position: float = self.config.start_position * 16  # type: ignore
 
-        adjusted_rect = QtCore.QRect(
+        adjusted_rect = QtCore.QRectF(
             rect.left() + gap, rect.top() + gap, rect.width() - 2 * gap, rect.height() - 2 * gap
         )
+        if self._hover_progress > 0.0:
+            hover_radius_delta = 4.0
+            base_radius = adjusted_rect.width() / 2
+            if base_radius > 0:
+                target_radius = base_radius + (hover_radius_delta * self._hover_progress)
+                scale = target_radius / base_radius
+                center = adjusted_rect.center()
+                new_width = adjusted_rect.width() * scale
+                new_height = adjusted_rect.height() * scale
+                adjusted_rect = QtCore.QRectF(
+                    center.x() - new_width / 2, center.y() - new_height / 2, new_width, new_height
+                )
         painter.drawArc(adjusted_rect, start_position, 360 * 16)
 
         # Foreground arc
-        pen = QtGui.QPen(self.color, self.config.line_width, QtCore.Qt.PenStyle.SolidLine)
+        pen = QtGui.QPen(self.color, current_line_width, QtCore.Qt.PenStyle.SolidLine)
         pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
         painter.setPen(pen)
         proportion = (self.config.value - self.config.min_value) / (
@@ -448,6 +485,15 @@ class Ring(BECConnector, QWidget):
         angle = int(proportion * 360 * 16 * self.config.direction)
         painter.drawArc(adjusted_rect, start_position, angle)
         painter.end()
+
+    def set_hovered(self, hovered: bool):
+        if hovered == self._hovered:
+            return
+        self._hovered = hovered
+        self._hover_animation.stop()
+        self._hover_animation.setStartValue(self._hover_progress)
+        self._hover_animation.setEndValue(1.0 if hovered else 0.0)
+        self._hover_animation.start()
 
     def convert_color(self, color: str | tuple | QColor) -> QColor:
         """
@@ -522,6 +568,7 @@ class Ring(BECConnector, QWidget):
             float(max(self.config.min_value, min(self.config.max_value, value))),
             self.config.precision,
         )
+        self._refresh_hover_tooltip()
         self.update()
 
     @SafeProperty(float)
@@ -531,6 +578,7 @@ class Ring(BECConnector, QWidget):
     @min_value.setter
     def min_value(self, value: float):
         self.config.min_value = value
+        self._refresh_hover_tooltip()
         self.update()
 
     @SafeProperty(float)
@@ -540,6 +588,7 @@ class Ring(BECConnector, QWidget):
     @max_value.setter
     def max_value(self, value: float):
         self.config.max_value = value
+        self._refresh_hover_tooltip()
         self.update()
 
     @SafeProperty(str)
@@ -557,6 +606,7 @@ class Ring(BECConnector, QWidget):
     @device.setter
     def device(self, value: str):
         self.config.device = value
+        self._refresh_hover_tooltip()
 
     @SafeProperty(str)
     def signal(self) -> str:
@@ -565,6 +615,7 @@ class Ring(BECConnector, QWidget):
     @signal.setter
     def signal(self, value: str):
         self.config.signal = value
+        self._refresh_hover_tooltip()
 
     @SafeProperty(int)
     def line_width(self) -> int:
@@ -573,6 +624,7 @@ class Ring(BECConnector, QWidget):
     @line_width.setter
     def line_width(self, value: int):
         self.config.line_width = value
+        self._refresh_hover_tooltip()
         self.update()
 
     @SafeProperty(int)
@@ -591,6 +643,7 @@ class Ring(BECConnector, QWidget):
     @precision.setter
     def precision(self, value: int):
         self.config.precision = value
+        self._refresh_hover_tooltip()
         self.update()
 
     @SafeProperty(int)
@@ -600,6 +653,15 @@ class Ring(BECConnector, QWidget):
     @direction.setter
     def direction(self, value: int):
         self.config.direction = value
+        self.update()
+
+    @SafeProperty(float)
+    def hover_progress(self) -> float:
+        return self._hover_progress
+
+    @hover_progress.setter
+    def hover_progress(self, value: float):
+        self._hover_progress = value
         self.update()
 
 
