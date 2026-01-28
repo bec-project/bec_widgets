@@ -22,9 +22,9 @@ class DeviceSignal(BaseModel):
 
     device: str
     signal: str
-    dap: str | None = None
+    dap: str | list[str] | None = None
     dap_oversample: int = 1
-    dap_parameters: dict | None = None
+    dap_parameters: dict | list | None = None
 
     model_config: dict = {"validate_assignment": True}
 

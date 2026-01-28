@@ -48,7 +48,10 @@ if TYPE_CHECKING:  # pragma: no cover
 else:
     try:
         import lmfit  # type: ignore
-    except Exception:  # pragma: no cover
+    except Exception as e:  # pragma: no cover
+        logger.warning(
+            f"lmfit could not be imported: {e}. Custom DAP functionality will be unavailable."
+        )
         lmfit = None
 
 
@@ -705,8 +708,8 @@ class Waveform(PlotBase):
         signal_y: str | None = None,
         color: str | None = None,
         label: str | None = None,
-        dap: str | None = None,
-        dap_parameters: dict | lmfit.Parameters | None | object = None,
+        dap: str | list[str] | None = None,
+        dap_parameters: dict | list | lmfit.Parameters | None | object = None,
         scan_id: str | None = None,
         scan_number: int | None = None,
         **kwargs,
@@ -728,11 +731,14 @@ class Waveform(PlotBase):
             signal_y(str): The name of the entry for the y-axis.
             color(str): The color of the curve.
             label(str): The label of the curve.
-            dap(str): The dap model to use for the curve. When provided, a DAP curve is
+            dap(str | list[str]): The dap model to use for the curve. When provided, a DAP curve is
                 attached automatically for device, history, or custom data sources. Use
-                the same string as the LMFit model name.
-            dap_parameters(dict | lmfit.Parameters | None): Optional lmfit parameter overrides sent to the DAP server.
-                Values can be numeric (interpreted as fixed parameters) or dicts like`{"value": 1.0, "vary": False}`.
+                the same string as the LMFit model name, or a list of model names to build a composite.
+            dap_parameters(dict | list | lmfit.Parameters | None): Optional lmfit parameter overrides sent to
+                the DAP server. For a single model: values can be numeric (interpreted as fixed parameters)
+                or dicts like `{"value": 1.0, "vary": False}`. For composite models (dap is list), use either
+                a list aligned to the model list (each item is a param dict), or a dict of
+                `{ "ModelName": { "param": {...} } }` when model names are unique.
             scan_id(str):  Optional scan ID. When provided, the curve is treated as a **history** curve and
                 the y‑data (and optional x‑data) are fetched from that historical scan. Such curves are
                 never cleared by live‑scan resets.
@@ -836,10 +842,10 @@ class Waveform(PlotBase):
     def add_dap_curve(
         self,
         device_label: str,
-        dap_name: str,
+        dap_name: str | list[str],
         color: str | None = None,
         dap_oversample: int = 1,
-        dap_parameters: dict | lmfit.Parameters | None = None,
+        dap_parameters: dict | list | lmfit.Parameters | None = None,
         **kwargs,
     ) -> Curve:
         """
@@ -849,10 +855,11 @@ class Waveform(PlotBase):
 
         Args:
             device_label(str): The label of the source curve to add DAP to.
-            dap_name(str): The name of the DAP model to use.
+            dap_name(str | list[str]): The name of the DAP model to use, or a list of model
+                names to build a composite model.
             color(str): The color of the curve.
             dap_oversample(int): The oversampling factor for the DAP curve.
-            dap_parameters(dict | lmfit.Parameters | None): Optional lmfit parameter overrides sent to the DAP server.
+            dap_parameters(dict | list | lmfit.Parameters | None): Optional lmfit parameter overrides sent to the DAP server.
             **kwargs
 
         Returns:
@@ -877,7 +884,7 @@ class Waveform(PlotBase):
             dev_entry = "custom"
 
         # 2) Build a label for the new DAP curve
-        dap_label = f"{device_label}-{dap_name}"
+        dap_label = f"{device_label}-{self._format_dap_label(dap_name)}"
 
         # 3) Possibly raise if the DAP curve already exists
         if self._check_curve_id(dap_label):
@@ -904,7 +911,7 @@ class Waveform(PlotBase):
             signal=dev_entry,
             dap=dap_name,
             dap_oversample=dap_oversample,
-            dap_parameters=self._normalize_dap_parameters(dap_parameters),
+            dap_parameters=self._normalize_dap_parameters(dap_parameters, dap_name=dap_name),
         )
 
         # 4) Create the DAP curve config using `_add_curve(...)`
@@ -1776,7 +1783,9 @@ class Waveform(PlotBase):
 
             x_data, y_data = parent_curve.get_data()
             model_name = dap_curve.config.signal.dap
-            model = getattr(self.dap, model_name)
+            model = None
+            if not isinstance(model_name, (list, tuple)):
+                model = getattr(self.dap, model_name)
             try:
                 x_min, x_max = self.roi_region
                 x_data, y_data = self._crop_data(x_data, y_data, x_min, x_max)
@@ -1793,14 +1802,21 @@ class Waveform(PlotBase):
             if dap_parameters:
                 dap_kwargs["parameters"] = dap_parameters
 
+            if model is not None:
+                class_args = model._plugin_info["class_args"]
+                class_kwargs = model._plugin_info["class_kwargs"]
+            else:
+                class_args = []
+                class_kwargs = {"model": model_name}
+
             msg = messages.DAPRequestMessage(
                 dap_cls="LmfitService1D",
                 dap_type="on_demand",
                 config={
                     "args": [],
                     "kwargs": dap_kwargs,
-                    "class_args": model._plugin_info["class_args"],
-                    "class_kwargs": model._plugin_info["class_kwargs"],
+                    "class_args": class_args,
+                    "class_kwargs": class_kwargs,
                     "curve_label": dap_curve.name(),
                 },
                 metadata={"RID": f"{self.scan_id}-{self.gui_id}"},
@@ -1808,18 +1824,61 @@ class Waveform(PlotBase):
             self.client.connector.set_and_publish(MessageEndpoints.dap_request(), msg)
 
     @staticmethod
-    def _normalize_dap_parameters(parameters: dict | lmfit.Parameters | None) -> dict | None:
+    def _normalize_dap_parameters(
+        parameters: dict | list | lmfit.Parameters | None, dap_name: str | list[str] | None = None
+    ) -> dict | list | None:
         """
         Normalize user-provided lmfit parameters into a JSON-serializable dict suitable for the DAP server.
 
         Supports:
-        - `lmfit.Parameters`
+        - `lmfit.Parameters` (single-model only)
         - `dict[name -> number]` (treated as fixed parameter with `vary=False`)
         - `dict[name -> dict]` (lmfit.Parameter fields; defaults to `vary=False` if unspecified)
         - `dict[name -> lmfit.Parameter]`
+        - composite: `list[dict[param_name -> spec]]` aligned to model list
+        - composite: `dict[model_name -> dict[param_name -> spec]]` (unique model names only)
         """
         if parameters is None:
             return None
+        if isinstance(dap_name, (list, tuple)):
+            if lmfit is not None and isinstance(parameters, lmfit.Parameters):
+                raise TypeError("dap_parameters must be a dict when using composite dap models.")
+            if isinstance(parameters, (list, tuple)):
+                normalized_list: list[dict | None] = []
+                for idx, item in enumerate(parameters):
+                    if item is None:
+                        normalized_list.append(None)
+                        continue
+                    if not isinstance(item, dict):
+                        raise TypeError(
+                            f"dap_parameters list item {idx} must be a dict of parameter overrides."
+                        )
+                    normalized_list.append(Waveform._normalize_param_overrides(item))
+                return normalized_list or None
+            if not isinstance(parameters, dict):
+                raise TypeError(
+                    "dap_parameters must be a dict of model->params when using composite dap models."
+                )
+            model_names = set(dap_name)
+            invalid_models = set(parameters.keys()) - model_names
+            if invalid_models:
+                raise TypeError(
+                    f"Invalid dap_parameters keys for composite model: {sorted(invalid_models)}"
+                )
+            normalized_composite: dict[str, dict] = {}
+            for model_name in dap_name:
+                model_params = parameters.get(model_name)
+                if model_params is None:
+                    continue
+                if not isinstance(model_params, dict):
+                    raise TypeError(
+                        f"dap_parameters for '{model_name}' must be a dict of parameter overrides."
+                    )
+                normalized = Waveform._normalize_param_overrides(model_params)
+                if normalized:
+                    normalized_composite[model_name] = normalized
+            return normalized_composite or None
+
         if lmfit is not None and isinstance(parameters, lmfit.Parameters):
             return serialize_lmfit_params(parameters)
         if not isinstance(parameters, dict):
@@ -1829,6 +1888,10 @@ class Waveform(PlotBase):
                 )
             raise TypeError("dap_parameters must be a dict or lmfit.Parameters (or omitted).")
 
+        return Waveform._normalize_param_overrides(parameters)
+
+    @staticmethod
+    def _normalize_param_overrides(parameters: dict) -> dict | None:
         normalized: dict[str, dict] = {}
         for name, spec in parameters.items():
             if spec is None:
@@ -1849,6 +1912,12 @@ class Waveform(PlotBase):
             )
 
         return normalized or None
+
+    @staticmethod
+    def _format_dap_label(dap_name: str | list[str]) -> str:
+        if isinstance(dap_name, (list, tuple)):
+            return "+".join(dap_name)
+        return dap_name
 
     @SafeSlot(dict, dict)
     def update_dap_curves(self, msg, metadata):
@@ -2401,24 +2470,20 @@ class DemoApp(QMainWindow):  # pragma: no cover
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Waveform Demo")
-        self.resize(1200, 600)
+        self.resize(1600, 600)
         self.main_widget = QWidget(self)
         self.layout = QHBoxLayout(self.main_widget)
         self.setCentralWidget(self.main_widget)
 
-        self.waveform_popup = Waveform(popups=True)
-        self.waveform_popup.plot(device_y="waveform")
-
-        self.waveform_side = Waveform(popups=False)
-        self.waveform_side.plot(device_y="bpm4i", signal_y="bpm4i", dap="GaussianModel")
-        self.waveform_side.plot(device_y="bpm3a", signal_y="bpm3a")
-
         self.custom_waveform = Waveform(popups=True)
         self._populate_custom_curve_demo()
 
-        self.layout.addWidget(self.waveform_side)
-        self.layout.addWidget(self.waveform_popup)
+        self.sine_waveform = Waveform(popups=True)
+        self.sine_waveform.dap_params_update.connect(self._log_sine_dap_params)
+        self._populate_sine_curve_demo()
+
         self.layout.addWidget(self.custom_waveform)
+        self.layout.addWidget(self.sine_waveform)
 
     def _populate_custom_curve_demo(self):
         """
@@ -2450,12 +2515,12 @@ class DemoApp(QMainWindow):  # pragma: no cover
             dap_oversample=5,
         )
 
-        # 3) lmfit-style dict: any subset of lmfit.Parameter fields.
-        #    Here `center` is not fixed (vary=True) but its initial value is set.
+        # 3) Partial parameter override: this should still trigger guessing on the server
+        #    because not all Gaussian parameters are explicitly specified.
         self.custom_waveform.plot(
             x=x,
             y=y,
-            label="custom-gaussian-override-dict",
+            label="custom-gaussian-partial-guess",
             dap="GaussianModel",
             dap_parameters={
                 "center": {"value": 1.2, "vary": True},
@@ -2463,7 +2528,7 @@ class DemoApp(QMainWindow):  # pragma: no cover
             },
         )
 
-        # 4) Passing a real `lmfit.Parameters` object (optional: requires lmfit on the client).
+        # 4) Complete parameter override: this should skip guessing on the server.
         if lmfit is not None:
             params_gauss = lmfit.models.GaussianModel().make_params()
             params_gauss["amplitude"].set(value=amplitude, vary=False)
@@ -2472,12 +2537,105 @@ class DemoApp(QMainWindow):  # pragma: no cover
             self.custom_waveform.plot(
                 x=x,
                 y=y,
-                label="custom-gaussian-fixed-params",
+                label="custom-gaussian-complete-no-guess",
                 dap="GaussianModel",
                 dap_parameters=params_gauss,
             )
         else:
             logger.info("Skipping lmfit.Parameters demo (lmfit not installed on client).")
+
+        # Composite example: spectrum with three Gaussians (DAP-only)
+        x_spec = np.linspace(-5, 5, 800)
+        rng_spec = np.random.default_rng(123)
+        centers = [-2.0, 0.6, 2.4]
+        amplitudes = [2.5, 3.2, 1.8]
+        sigmas = [0.35, 0.5, 0.3]
+        y_spec = (
+            amplitudes[0] * np.exp(-((x_spec - centers[0]) ** 2) / (2 * sigmas[0] ** 2))
+            + amplitudes[1] * np.exp(-((x_spec - centers[1]) ** 2) / (2 * sigmas[1] ** 2))
+            + amplitudes[2] * np.exp(-((x_spec - centers[2]) ** 2) / (2 * sigmas[2] ** 2))
+            + rng_spec.normal(loc=0, scale=0.06, size=x_spec.size)
+        )
+
+        # 5) Composite model with partial overrides only: this should still trigger guessing.
+        self.custom_waveform.plot(
+            x=x_spec,
+            y=y_spec,
+            label="custom-gaussian-spectrum-partial-guess",
+            dap=["GaussianModel", "GaussianModel", "GaussianModel"],
+            dap_parameters=[
+                {"center": {"value": centers[0], "vary": False}},
+                {"center": {"value": centers[1], "vary": False}},
+                {"center": {"value": centers[2], "vary": False}},
+            ],
+        )
+
+        # 6) Composite model with all component parameters specified: this should skip guessing.
+        self.custom_waveform.plot(
+            x=x_spec,
+            y=y_spec,
+            label="custom-gaussian-spectrum-complete-no-guess",
+            dap=["GaussianModel", "GaussianModel", "GaussianModel"],
+            dap_parameters=[
+                {
+                    "amplitude": {"value": amplitudes[0], "vary": False},
+                    "center": {"value": centers[0], "vary": False},
+                    "sigma": {"value": sigmas[0], "vary": False, "min": 0.0},
+                },
+                {
+                    "amplitude": {"value": amplitudes[1], "vary": False},
+                    "center": {"value": centers[1], "vary": False},
+                    "sigma": {"value": sigmas[1], "vary": False, "min": 0.0},
+                },
+                {
+                    "amplitude": {"value": amplitudes[2], "vary": False},
+                    "center": {"value": centers[2], "vary": False},
+                    "sigma": {"value": sigmas[2], "vary": False, "min": 0.0},
+                },
+            ],
+        )
+
+    def _populate_sine_curve_demo(self):
+        """
+        Showcase how lmfit's base SineModel can struggle with a drifting baseline.
+        """
+        x = np.linspace(0, 6 * np.pi, 600)
+        rng = np.random.default_rng(7)
+        amplitude = 1.6
+        frequency = 0.75
+        phase = 0.4
+        offset = 0.8
+        slope = 0.08
+        noise = rng.normal(loc=0, scale=0.12, size=x.size)
+        y = offset + slope * x + amplitude * np.sin(2 * np.pi * frequency * x + phase) + noise
+
+        # Base SineModel (no offset support) to show the mismatch
+        self.sine_waveform.plot(x=x, y=y, label="custom-sine-data", dap="SineModel")
+
+        # Composite model: Sine + Linear baseline (offset + slope)
+        self.sine_waveform.plot(
+            x=x,
+            y=y,
+            label="custom-sine-composite",
+            dap=["SineModel", "LinearModel"],
+            dap_oversample=4,
+        )
+
+        if lmfit is None:
+            logger.info("Skipping sine lmfit demo (lmfit not installed on client).")
+            return
+
+        return
+
+    @staticmethod
+    def _log_sine_dap_params(params: dict, metadata: dict):
+        curve_id = metadata.get("curve_id")
+        if curve_id not in {
+            "custom-sine-data-SineModel",
+            "custom-sine-composite-SineModel+LinearModel",
+        }:
+            return
+        logger.info(f"SineModel DAP fit params ({curve_id}): {params}")
 
 
 if __name__ == "__main__":  # pragma: no cover
