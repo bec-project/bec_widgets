@@ -40,7 +40,7 @@ class ProgressbarConfig(ConnectionConfig):
     line_width: int = Field(20, description="Line widths for the progress bars.")
     start_position: int = Field(
         90,
-        description="Start position for the progress bars in degrees. Default is 90 degrees - corespons to "
+        description="Start position for the progress bars in degrees. Default is 90 degrees - corresponds to "
         "the top of the ring.",
     )
     min_value: int | float = Field(0, description="Minimum value for the progress bars.")
@@ -495,7 +495,8 @@ class Ring(BECConnector, QWidget):
         self._hover_animation.setEndValue(1.0 if hovered else 0.0)
         self._hover_animation.start()
 
-    def convert_color(self, color: str | tuple | QColor) -> QColor:
+    @staticmethod
+    def convert_color(color: str | tuple | QColor) -> QColor:
         """
         Convert the color to QColor
 
