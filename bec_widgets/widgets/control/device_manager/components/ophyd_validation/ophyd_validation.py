@@ -69,11 +69,12 @@ class DeviceTest(QtCore.QRunnable):
         enable_connect: bool,
         force_connect: bool,
         timeout: float,
+        device_manager_ds: object | None = None,
     ):
         super().__init__()
         self.uuid = device_model.uuid
         test_config = {device_model.device_name: device_model.device_config}
-        self.tester = StaticDeviceTest(config_dict=test_config)
+        self.tester = StaticDeviceTest(config_dict=test_config, device_manager_ds=device_manager_ds)
         self.signals = DeviceTestResult()
         self.device_config = device_model.device_config
         self.enable_connect = enable_connect
@@ -752,11 +753,15 @@ class OphydValidation(BECWidget, QtWidgets.QWidget):
             # Remove widget from list as it's safe to assume it can be loaded.
             self._remove_device_config(widget.device_model.device_config)
             return
+        dm_ds = None
+        if self.client:
+            dm_ds = getattr(self.client, "device_manager", None)
         runnable = DeviceTest(
             device_model=widget.device_model,
             enable_connect=connect,
             force_connect=force_connect,
             timeout=timeout,
+            device_manager_ds=dm_ds,
         )
         widget.validation_scheduled()
         if self.thread_pool_manager:
