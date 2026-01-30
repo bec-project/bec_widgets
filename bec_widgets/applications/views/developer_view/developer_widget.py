@@ -13,8 +13,8 @@ from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.toolbars.actions import MaterialIconAction
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
-from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import AdvancedDockArea
-from bec_widgets.widgets.containers.advanced_dock_area.basic_dock_area import DockAreaWidget
+from bec_widgets.widgets.containers.dock_area.basic_dock_area import DockAreaWidget
+from bec_widgets.widgets.containers.dock_area.dock_area import BECDockArea
 from bec_widgets.widgets.containers.qt_ads import CDockWidget
 from bec_widgets.widgets.editors.monaco.monaco_dock import MonacoDock
 from bec_widgets.widgets.editors.monaco.monaco_widget import MonacoWidget
@@ -99,7 +99,7 @@ class DeveloperWidget(DockAreaWidget):
         self.monaco = MonacoDock(self)
         self.monaco.setObjectName("MonacoEditor")
         self.monaco.save_enabled.connect(self._on_save_enabled_update)
-        self.plotting_ads = AdvancedDockArea(
+        self.plotting_ads = BECDockArea(
             self,
             mode="plot",
             default_add_direction="bottom",

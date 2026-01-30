@@ -10,7 +10,7 @@ from bec_widgets import SafeSlot
 from bec_widgets.utils.toolbars.actions import MaterialIconAction, WidgetAction
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle, ToolbarComponents
 from bec_widgets.utils.toolbars.connections import BundleConnection
-from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import list_quick_profiles
+from bec_widgets.widgets.containers.dock_area.profile_utils import list_quick_profiles
 
 
 class ProfileComboBox(QComboBox):
