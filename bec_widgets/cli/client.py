@@ -56,7 +56,6 @@ _Widgets = {
     "ScatterWaveform": "ScatterWaveform",
     "SignalLabel": "SignalLabel",
     "TextBox": "TextBox",
-    "VSCodeEditor": "VSCodeEditor",
     "Waveform": "Waveform",
     "WebConsole": "WebConsole",
     "WebsiteWidget": "WebsiteWidget",
@@ -5527,12 +5526,6 @@ class TextBox(RPCBase):
         Args:
             text (str): The text to set.
         """
-
-
-class VSCodeEditor(RPCBase):
-    """A widget to display the VSCode editor."""
-
-    ...
 
 
 class Waveform(RPCBase):
