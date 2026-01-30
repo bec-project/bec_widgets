@@ -10,17 +10,14 @@ from qtpy.QtCore import QSettings, Qt, QTimer
 from qtpy.QtGui import QPixmap
 from qtpy.QtWidgets import QDialog, QMessageBox, QWidget
 
-import bec_widgets.widgets.containers.advanced_dock_area.basic_dock_area as basic_dock_module
-import bec_widgets.widgets.containers.advanced_dock_area.profile_utils as profile_utils
-from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import (
-    AdvancedDockArea,
-    SaveProfileDialog,
-)
-from bec_widgets.widgets.containers.advanced_dock_area.basic_dock_area import (
+import bec_widgets.widgets.containers.dock_area.basic_dock_area as basic_dock_module
+import bec_widgets.widgets.containers.dock_area.profile_utils as profile_utils
+from bec_widgets.widgets.containers.dock_area.basic_dock_area import (
     DockAreaWidget,
     DockSettingsDialog,
 )
-from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import (
+from bec_widgets.widgets.containers.dock_area.dock_area import BECDockArea, SaveProfileDialog
+from bec_widgets.widgets.containers.dock_area.profile_utils import (
     SETTINGS_KEYS,
     default_profile_path,
     get_profile_info,
@@ -31,20 +28,17 @@ from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import (
     load_user_profile_screenshot,
     open_default_settings,
     open_user_settings,
-    plugin_profiles_dir,
     read_manifest,
     restore_user_from_default,
     set_quick_select,
     user_profile_path,
     write_manifest,
 )
-from bec_widgets.widgets.containers.advanced_dock_area.settings.dialogs import (
+from bec_widgets.widgets.containers.dock_area.settings.dialogs import (
     PreviewPanel,
     RestoreProfileDialog,
 )
-from bec_widgets.widgets.containers.advanced_dock_area.settings.workspace_manager import (
-    WorkSpaceManager,
-)
+from bec_widgets.widgets.containers.dock_area.settings.workspace_manager import WorkSpaceManager
 
 from .client_mocks import mocked_client
 
@@ -52,7 +46,7 @@ from .client_mocks import mocked_client
 @pytest.fixture
 def advanced_dock_area(qtbot, mocked_client):
     """Create an AdvancedDockArea instance for testing."""
-    widget = AdvancedDockArea(client=mocked_client)
+    widget = BECDockArea(client=mocked_client)
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
@@ -152,7 +146,7 @@ def workspace_manager_target():
             """Mock delete_profile that performs actual file deletion."""
             from qtpy.QtWidgets import QMessageBox
 
-            from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import (
+            from bec_widgets.widgets.containers.dock_area.profile_utils import (
                 delete_profile_files,
                 is_profile_read_only,
             )
@@ -190,7 +184,7 @@ def basic_dock_area(qtbot, mocked_client):
 class _NamespaceProfiles:
     """Helper that routes profile file helpers through a namespace."""
 
-    def __init__(self, widget: AdvancedDockArea):
+    def __init__(self, widget: BECDockArea):
         self.namespace = widget.profile_namespace
 
     def open_user(self, name: str):
@@ -215,7 +209,7 @@ class _NamespaceProfiles:
         return is_quick_select(name, namespace=self.namespace)
 
 
-def profile_helper(widget: AdvancedDockArea) -> _NamespaceProfiles:
+def profile_helper(widget: BECDockArea) -> _NamespaceProfiles:
     """Return a helper wired to the widget's profile namespace."""
     return _NamespaceProfiles(widget)
 
@@ -590,7 +584,7 @@ class TestAdvancedDockAreaInit:
 
     def test_init(self, advanced_dock_area):
         assert advanced_dock_area is not None
-        assert isinstance(advanced_dock_area, AdvancedDockArea)
+        assert isinstance(advanced_dock_area, BECDockArea)
         assert advanced_dock_area.mode == "creator"
         assert hasattr(advanced_dock_area, "dock_manager")
         assert hasattr(advanced_dock_area, "toolbar")
@@ -598,8 +592,8 @@ class TestAdvancedDockAreaInit:
         assert hasattr(advanced_dock_area, "state_manager")
 
     def test_rpc_and_plugin_flags(self):
-        assert AdvancedDockArea.RPC is True
-        assert AdvancedDockArea.PLUGIN is False
+        assert BECDockArea.RPC is True
+        assert BECDockArea.PLUGIN is False
 
     def test_user_access_list(self):
         expected_methods = [
@@ -611,7 +605,7 @@ class TestAdvancedDockAreaInit:
             "delete_all",
         ]
         for method in expected_methods:
-            assert method in AdvancedDockArea.USER_ACCESS
+            assert method in BECDockArea.USER_ACCESS
 
 
 class TestDockManagement:
@@ -1421,21 +1415,21 @@ class TestAdvancedDockAreaRestoreAndDialogs:
         pix = QPixmap(8, 8)
         pix.fill(Qt.red)
         monkeypatch.setattr(
-            "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.load_user_profile_screenshot",
+            "bec_widgets.widgets.containers.dock_area.dock_area.load_user_profile_screenshot",
             lambda name, namespace=None: pix,
         )
         monkeypatch.setattr(
-            "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.load_default_profile_screenshot",
+            "bec_widgets.widgets.containers.dock_area.dock_area.load_default_profile_screenshot",
             lambda name, namespace=None: pix,
         )
         monkeypatch.setattr(
-            "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.RestoreProfileDialog.confirm",
+            "bec_widgets.widgets.containers.dock_area.dock_area.RestoreProfileDialog.confirm",
             lambda *args, **kwargs: True,
         )
 
         with (
             patch(
-                "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.restore_user_from_default"
+                "bec_widgets.widgets.containers.dock_area.dock_area.restore_user_from_default"
             ) as mock_restore,
             patch.object(advanced_dock_area, "delete_all") as mock_delete_all,
             patch.object(advanced_dock_area, "load_profile") as mock_load_profile,
@@ -1457,20 +1451,20 @@ class TestAdvancedDockAreaRestoreAndDialogs:
         advanced_dock_area._current_profile_name = profile_name
         advanced_dock_area.isVisible = lambda: False
         monkeypatch.setattr(
-            "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.load_user_profile_screenshot",
+            "bec_widgets.widgets.containers.dock_area.dock_area.load_user_profile_screenshot",
             lambda name: QPixmap(),
         )
         monkeypatch.setattr(
-            "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.load_default_profile_screenshot",
+            "bec_widgets.widgets.containers.dock_area.dock_area.load_default_profile_screenshot",
             lambda name: QPixmap(),
         )
         monkeypatch.setattr(
-            "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.RestoreProfileDialog.confirm",
+            "bec_widgets.widgets.containers.dock_area.dock_area.RestoreProfileDialog.confirm",
             lambda *args, **kwargs: False,
         )
 
         with patch(
-            "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.restore_user_from_default"
+            "bec_widgets.widgets.containers.dock_area.dock_area.restore_user_from_default"
         ) as mock_restore:
             advanced_dock_area.restore_user_profile_from_default()
 
@@ -1479,7 +1473,7 @@ class TestAdvancedDockAreaRestoreAndDialogs:
     def test_restore_user_profile_from_default_no_target(self, advanced_dock_area, monkeypatch):
         advanced_dock_area._current_profile_name = None
         with patch(
-            "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.RestoreProfileDialog.confirm"
+            "bec_widgets.widgets.containers.dock_area.dock_area.RestoreProfileDialog.confirm"
         ) as mock_confirm:
             advanced_dock_area.restore_user_profile_from_default()
         mock_confirm.assert_not_called()
@@ -1723,8 +1717,7 @@ class TestWorkspaceProfileOperations:
                 return False
 
         with patch(
-            "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.SaveProfileDialog",
-            StubDialog,
+            "bec_widgets.widgets.containers.dock_area.dock_area.SaveProfileDialog", StubDialog
         ):
             advanced_dock_area.save_profile(profile_name, show_dialog=True)
 
@@ -1795,8 +1788,7 @@ class TestWorkspaceProfileOperations:
                 return False
 
         with patch(
-            "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.SaveProfileDialog",
-            StubDialog,
+            "bec_widgets.widgets.containers.dock_area.dock_area.SaveProfileDialog", StubDialog
         ):
             advanced_dock_area.save_profile(show_dialog=True)
 
@@ -1859,11 +1851,11 @@ class TestWorkspaceProfileOperations:
 
             with (
                 patch(
-                    "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.QMessageBox.question",
+                    "bec_widgets.widgets.containers.dock_area.dock_area.QMessageBox.question",
                     return_value=QMessageBox.Yes,
                 ) as mock_question,
                 patch(
-                    "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.QMessageBox.information",
+                    "bec_widgets.widgets.containers.dock_area.dock_area.QMessageBox.information",
                     return_value=None,
                 ) as mock_info,
             ):
@@ -1893,7 +1885,7 @@ class TestWorkspaceProfileOperations:
             mock_get_action.return_value.widget = mock_combo
 
             with patch(
-                "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.QMessageBox.question"
+                "bec_widgets.widgets.containers.dock_area.dock_area.QMessageBox.question"
             ) as mock_question:
                 mock_question.return_value = QMessageBox.Yes
 

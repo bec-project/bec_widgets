@@ -5,7 +5,7 @@ from typing import Literal, Mapping, Sequence
 
 import slugify
 from bec_lib import bec_logger
-from qtpy.QtCore import QTimer, Signal
+from qtpy.QtCore import Signal
 from qtpy.QtGui import QPixmap
 from qtpy.QtWidgets import (
     QApplication,
@@ -31,8 +31,8 @@ from bec_widgets.utils.toolbars.actions import (
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.utils.widget_state_manager import WidgetStateManager
-from bec_widgets.widgets.containers.advanced_dock_area.basic_dock_area import DockAreaWidget
-from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import (
+from bec_widgets.widgets.containers.dock_area.basic_dock_area import DockAreaWidget
+from bec_widgets.widgets.containers.dock_area.profile_utils import (
     SETTINGS_KEYS,
     default_profile_candidates,
     delete_profile_files,
@@ -55,14 +55,12 @@ from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import (
     user_profile_candidates,
     write_manifest,
 )
-from bec_widgets.widgets.containers.advanced_dock_area.settings.dialogs import (
+from bec_widgets.widgets.containers.dock_area.settings.dialogs import (
     RestoreProfileDialog,
     SaveProfileDialog,
 )
-from bec_widgets.widgets.containers.advanced_dock_area.settings.workspace_manager import (
-    WorkSpaceManager,
-)
-from bec_widgets.widgets.containers.advanced_dock_area.toolbar_components.workspace_actions import (
+from bec_widgets.widgets.containers.dock_area.settings.workspace_manager import WorkSpaceManager
+from bec_widgets.widgets.containers.dock_area.toolbar_components.workspace_actions import (
     WorkspaceConnection,
     workspace_bundle,
 )
@@ -90,7 +88,7 @@ _PROFILE_NAMESPACE_UNSET = object()
 PROFILE_STATE_KEYS = {key: SETTINGS_KEYS[key] for key in ("geom", "state", "ads_state")}
 
 
-class AdvancedDockArea(DockAreaWidget):
+class BECDockArea(DockAreaWidget):
     RPC = True
     PLUGIN = False
     USER_ACCESS = [
@@ -1163,7 +1161,7 @@ if __name__ == "__main__":  # pragma: no cover
     dispatcher = BECDispatcher(gui_id="ads")
     window = BECMainWindowNoRPC()
 
-    ads = AdvancedDockArea(mode="creator", enable_profile_management=True, root_widget=True)
+    ads = BECDockArea(mode="creator", enable_profile_management=True, root_widget=True)
 
     window.setCentralWidget(ads)
     window.show()

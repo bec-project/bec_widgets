@@ -28,7 +28,7 @@ from qtpy.QtWidgets import (
 
 from bec_widgets import BECWidget, SafeSlot
 from bec_widgets.utils.colors import get_accent_colors
-from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import (
+from bec_widgets.widgets.containers.dock_area.profile_utils import (
     get_profile_info,
     is_quick_select,
     list_profiles,

@@ -2,15 +2,15 @@ from __future__ import annotations
 
 from bec_lib import bec_logger
 
-from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import AdvancedDockArea
 from bec_widgets.widgets.containers.auto_update.auto_updates import AutoUpdates
+from bec_widgets.widgets.containers.dock_area.dock_area import BECDockArea
 
 logger = bec_logger.logger
 
 
 def dock_area(
     object_name: str | None = None, profile: str | None = None, start_empty: bool = False
-) -> AdvancedDockArea:
+) -> BECDockArea:
     """
     Create an advanced dock area using Qt Advanced Docking System.
 
@@ -20,7 +20,7 @@ def dock_area(
         start_empty(bool): If True, start with an empty dock area when loading specified profile.
 
     Returns:
-        AdvancedDockArea: The created advanced dock area.
+        BECDockArea: The created advanced dock area.
 
     Note:
         The "general" profile is mandatory and will always exist. If manually deleted,
@@ -29,7 +29,7 @@ def dock_area(
     # Default to "general" profile when called from CLI without specifying a profile
     effective_profile = profile if profile is not None else "general"
 
-    widget = AdvancedDockArea(
+    widget = BECDockArea(
         object_name=object_name,
         restore_initial_profile=True,
         root_widget=True,
@@ -51,7 +51,7 @@ def auto_update_dock_area(object_name: str | None = None) -> AutoUpdates:
         object_name(str): The name of the dock area.
 
     Returns:
-        AdvancedDockArea: The created dock area.
+        BECDockArea: The created dock area.
     """
     _auto_update = AutoUpdates(object_name=object_name)
     return _auto_update

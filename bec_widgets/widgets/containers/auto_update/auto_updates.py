@@ -7,7 +7,7 @@ from bec_lib.logger import bec_logger
 from bec_lib.messages import ScanStatusMessage
 
 from bec_widgets.utils.error_popups import SafeSlot
-from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import AdvancedDockArea
+from bec_widgets.widgets.containers.dock_area.dock_area import BECDockArea
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 from bec_widgets.widgets.containers.qt_ads import CDockWidget
 
@@ -37,7 +37,7 @@ class AutoUpdates(BECMainWindow):
     ):
         super().__init__(parent=parent, gui_id=gui_id, window_title=window_title, **kwargs)
 
-        self.dock_area = AdvancedDockArea(
+        self.dock_area = BECDockArea(
             parent=self,
             object_name="dock_area",
             enable_profile_management=False,
