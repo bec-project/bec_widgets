@@ -7,6 +7,11 @@ from bec_widgets.applications.views.developer_view.developer_view import Develop
 from bec_widgets.applications.views.device_manager_view.device_manager_view import DeviceManagerView
 from bec_widgets.applications.views.view import ViewBase, WaveformViewInline, WaveformViewPopup
 from bec_widgets.utils.colors import apply_theme
+from bec_widgets.utils.screen_utils import (
+    apply_centered_size,
+    available_screen_geometry,
+    main_app_size_for_screen,
+)
 from bec_widgets.widgets.containers.dock_area.dock_area import BECDockArea
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 
@@ -211,25 +216,12 @@ def main():  # pragma: no cover
     apply_theme("dark")
     w = BECMainApp(show_examples=args.examples)
 
-    screen = app.primaryScreen()
-    screen_geometry = screen.availableGeometry()
-    screen_width = screen_geometry.width()
-    screen_height = screen_geometry.height()
-    # 70% of screen height, keep 16:9 ratio
-    height = int(screen_height * 0.9)
-    width = int(height * (16 / 9))
-
-    # If width exceeds screen width, scale down
-    if width > screen_width * 0.9:
-        width = int(screen_width * 0.9)
-        height = int(width / (16 / 9))
-
-    w.resize(width, height)
-
-    # Center the window on the screen
-    x = screen_geometry.x() + (screen_geometry.width() - width) // 2
-    y = screen_geometry.y() + (screen_geometry.height() - height) // 2
-    w.move(x, y)
+    screen_geometry = available_screen_geometry()
+    if screen_geometry is not None:
+        width, height = main_app_size_for_screen(screen_geometry)
+        apply_centered_size(w, width, height, available=screen_geometry)
+    else:
+        w.resize(w.minimumSizeHint())
 
     w.show()
 

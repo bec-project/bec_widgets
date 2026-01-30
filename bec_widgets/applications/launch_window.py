@@ -27,6 +27,7 @@ from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.name_utils import pascal_to_snake
 from bec_widgets.utils.plugin_utils import get_plugin_auto_updates
 from bec_widgets.utils.round_frame import RoundedFrame
+from bec_widgets.utils.screen_utils import apply_window_geometry, centered_geometry_for_app
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.utils.ui_loader import UILoader
 from bec_widgets.widgets.containers.auto_update.auto_updates import AutoUpdates
@@ -75,23 +76,28 @@ class LaunchTile(RoundedFrame):
             circular_pixmap.fill(Qt.transparent)
 
             painter = QPainter(circular_pixmap)
-            painter.setRenderHints(QPainter.Antialiasing, True)
+            painter.setRenderHints(QPainter.RenderHint.Antialiasing, True)
             path = QPainterPath()
             path.addEllipse(0, 0, size, size)
             painter.setClipPath(path)
-            pixmap = pixmap.scaled(size, size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            pixmap = pixmap.scaled(
+                size,
+                size,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
             painter.drawPixmap(0, 0, pixmap)
             painter.end()
 
             self.icon_label.setPixmap(circular_pixmap)
-        self.layout.addWidget(self.icon_label, alignment=Qt.AlignCenter)
+        self.layout.addWidget(self.icon_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
         # Top label
         self.top_label = QLabel(top_label.upper())
         font_top = self.top_label.font()
         font_top.setPointSize(10)
         self.top_label.setFont(font_top)
-        self.layout.addWidget(self.top_label, alignment=Qt.AlignCenter)
+        self.layout.addWidget(self.top_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
         # Main label
         self.main_label = QLabel(main_label)
@@ -101,7 +107,7 @@ class LaunchTile(RoundedFrame):
         font_main.setPointSize(14)
         font_main.setBold(True)
         self.main_label.setFont(font_main)
-        self.main_label.setAlignment(Qt.AlignCenter)
+        self.main_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # Shrink font if the default would wrap on this platform / DPI
         content_width = (
@@ -117,13 +123,13 @@ class LaunchTile(RoundedFrame):
 
         self.layout.addWidget(self.main_label)
 
-        self.spacer_top = QSpacerItem(0, 10, QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.spacer_top = QSpacerItem(0, 10, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.layout.addItem(self.spacer_top)
 
         # Description
         self.description_label = QLabel(description)
         self.description_label.setWordWrap(True)
-        self.description_label.setAlignment(Qt.AlignCenter)
+        self.description_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.description_label)
 
         # Selector
@@ -133,7 +139,9 @@ class LaunchTile(RoundedFrame):
         else:
             self.selector = None
 
-        self.spacer_bottom = QSpacerItem(0, 0, QSizePolicy.Fixed, QSizePolicy.Expanding)
+        self.spacer_bottom = QSpacerItem(
+            0, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding
+        )
         self.layout.addItem(self.spacer_bottom)
 
         # Action button
@@ -153,7 +161,7 @@ class LaunchTile(RoundedFrame):
         }
         """
         )
-        self.layout.addWidget(self.action_button, alignment=Qt.AlignCenter)
+        self.layout.addWidget(self.action_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
     def _fit_label_to_width(self, label: QLabel, max_width: int, min_pt: int = 10):
         """
@@ -176,12 +184,13 @@ class LaunchTile(RoundedFrame):
         metrics = QFontMetrics(font)
         label.setFont(font)
         label.setWordWrap(False)
-        label.setText(metrics.elidedText(label.text(), Qt.ElideRight, max_width))
+        label.setText(metrics.elidedText(label.text(), Qt.TextElideMode.ElideRight, max_width))
 
 
 class LaunchWindow(BECMainWindow):
     RPC = True
     TILE_SIZE = (250, 300)
+    DEFAULT_LAUNCH_SIZE = (800, 600)
     USER_ACCESS = ["show_launcher", "hide_launcher"]
 
     def __init__(
@@ -206,7 +215,7 @@ class LaunchWindow(BECMainWindow):
         self.toolbar = ModularToolBar(parent=self)
         self.addToolBar(Qt.TopToolBarArea, self.toolbar)
         self.spacer = QWidget(self)
-        self.spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.toolbar.addWidget(self.spacer)
         self.toolbar.addWidget(self.dark_mode_button)
 
@@ -315,7 +324,7 @@ class LaunchWindow(BECMainWindow):
         )
         tile.setFixedWidth(self.TILE_SIZE[0])
         tile.setMinimumHeight(self.TILE_SIZE[1])
-        tile.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.MinimumExpanding)
+        tile.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.MinimumExpanding)
         if action_button:
             tile.action_button.clicked.connect(action_button)
         if show_selector and selector_items:
@@ -425,6 +434,8 @@ class LaunchWindow(BECMainWindow):
         from bec_widgets.applications import bw_launch
 
         with RPCRegister.delayed_broadcast() as rpc_register:
+            if geometry is None and launch_script != "custom_ui_file":
+                geometry = self._default_launch_geometry()
             existing_dock_areas = rpc_register.get_names_of_rpc_by_class_type(BECDockArea)
             if name is not None:
                 WidgetContainerUtils.raise_for_invalid_name(name)
@@ -448,13 +459,13 @@ class LaunchWindow(BECMainWindow):
 
             if launch_script == "auto_update":
                 auto_update = kwargs.pop("auto_update", None)
-                return self._launch_auto_update(auto_update)
+                return self._launch_auto_update(auto_update, geometry=geometry)
 
             if launch_script == "widget":
                 widget = kwargs.pop("widget", None)
                 if widget is None:
                     raise ValueError("Widget name must be provided.")
-                return self._launch_widget(widget)
+                return self._launch_widget(widget, geometry=geometry)
 
             launch = getattr(bw_launch, launch_script, None)
             if launch is None:
@@ -466,13 +477,13 @@ class LaunchWindow(BECMainWindow):
             logger.info(f"Created new dock area: {name}")
 
             if isinstance(result_widget, BECMainWindow):
-                self._apply_window_geometry(result_widget, geometry)
+                apply_window_geometry(result_widget, geometry)
                 result_widget.show()
             else:
                 window = BECMainWindowNoRPC()
                 window.setCentralWidget(result_widget)
                 window.setWindowTitle(f"BEC - {result_widget.objectName()}")
-                self._apply_window_geometry(window, geometry)
+                apply_window_geometry(window, geometry)
                 window.show()
             return result_widget
 
@@ -508,12 +519,14 @@ class LaunchWindow(BECMainWindow):
             window.setCentralWidget(loaded)
 
         window.setWindowTitle(f"BEC - {filename}")
-        self._apply_window_geometry(window, None)
+        apply_window_geometry(window, None)
         window.show()
         logger.info(f"Launched custom UI: {filename}, type: {type(window).__name__}")
         return window
 
-    def _launch_auto_update(self, auto_update: str) -> AutoUpdates:
+    def _launch_auto_update(
+        self, auto_update: str, geometry: tuple[int, int, int, int] | None = None
+    ) -> AutoUpdates:
         if auto_update in self.available_auto_updates:
             auto_update_cls = self.available_auto_updates[auto_update]
             window = auto_update_cls()
@@ -524,11 +537,13 @@ class LaunchWindow(BECMainWindow):
 
         window.resize(window.minimumSizeHint())
         window.setWindowTitle(f"BEC - {window.objectName()}")
-        self._apply_window_geometry(window, None)
+        apply_window_geometry(window, geometry)
         window.show()
         return window
 
-    def _launch_widget(self, widget: type[BECWidget]) -> QWidget:
+    def _launch_widget(
+        self, widget: type[BECWidget], geometry: tuple[int, int, int, int] | None = None
+    ) -> QWidget:
         name = pascal_to_snake(widget.__name__)
 
         WidgetContainerUtils.raise_for_invalid_name(name)
@@ -541,7 +556,7 @@ class LaunchWindow(BECMainWindow):
         window.setCentralWidget(widget_instance)
         window.resize(window.minimumSizeHint())
         window.setWindowTitle(f"BEC - {widget_instance.objectName()}")
-        self._apply_window_geometry(window, None)
+        apply_window_geometry(window, geometry)
         window.show()
         return window
 
@@ -589,30 +604,9 @@ class LaunchWindow(BECMainWindow):
             raise ValueError(f"Widget {widget} not found in available widgets.")
         return self.launch("widget", widget=self.available_widgets[widget])
 
-    def _apply_window_geometry(
-        self, window: QWidget, geometry: tuple[int, int, int, int] | None
-    ) -> None:
-        """Apply a provided geometry or center the window with an 80% layout."""
-        if geometry is not None:
-            window.setGeometry(*geometry)
-            return
-        default_geometry = self._default_window_geometry(window)
-        if default_geometry is not None:
-            window.setGeometry(*default_geometry)
-        else:
-            window.resize(window.minimumSizeHint())
-
-    @staticmethod
-    def _default_window_geometry(window: QWidget) -> tuple[int, int, int, int] | None:
-        screen = window.screen() or QApplication.primaryScreen()
-        if screen is None:
-            return None
-        available = screen.availableGeometry()
-        width = int(available.width() * 0.8)
-        height = int(available.height() * 0.8)
-        x = available.x() + (available.width() - width) // 2
-        y = available.y() + (available.height() - height) // 2
-        return x, y, width, height
+    def _default_launch_geometry(self) -> tuple[int, int, int, int] | None:
+        width, height = self.DEFAULT_LAUNCH_SIZE
+        return centered_geometry_for_app(width=width, height=height)
 
     @SafeSlot(popup_error=True)
     def _open_custom_ui_file(self):
@@ -703,7 +697,7 @@ class LaunchWindow(BECMainWindow):
         self.hide()
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     import sys
 
     from bec_widgets.utils.colors import apply_theme
