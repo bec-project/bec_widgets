@@ -7,7 +7,7 @@ from bec_widgets.applications.views.developer_view.developer_view import Develop
 from bec_widgets.applications.views.device_manager_view.device_manager_view import DeviceManagerView
 from bec_widgets.applications.views.view import ViewBase, WaveformViewInline, WaveformViewPopup
 from bec_widgets.utils.colors import apply_theme
-from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import AdvancedDockArea
+from bec_widgets.widgets.containers.dock_area.dock_area import BECDockArea
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 
 
@@ -45,7 +45,7 @@ class BECMainApp(BECMainWindow):
 
     def _add_views(self):
         self.add_section("BEC Applications", "bec_apps")
-        self.ads = AdvancedDockArea(self, profile_namespace="bec", auto_profile_namespace=False)
+        self.ads = BECDockArea(self, profile_namespace="bec", auto_profile_namespace=False)
         self.ads.setObjectName("MainWorkspace")
         self.device_manager = DeviceManagerView(self)
         self.developer_view = DeveloperView(self)

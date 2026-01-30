@@ -38,7 +38,7 @@ from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.toolbars.actions import MaterialIconAction
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
-from bec_widgets.widgets.containers.advanced_dock_area.basic_dock_area import DockAreaWidget
+from bec_widgets.widgets.containers.dock_area.basic_dock_area import DockAreaWidget
 from bec_widgets.widgets.control.device_manager.components import (
     DeviceTable,
     DMConfigView,

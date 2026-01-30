@@ -29,12 +29,9 @@ from bec_widgets.utils.plugin_utils import get_plugin_auto_updates
 from bec_widgets.utils.round_frame import RoundedFrame
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.utils.ui_loader import UILoader
-from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import AdvancedDockArea
-from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import (
-    get_last_profile,
-    list_profiles,
-)
 from bec_widgets.widgets.containers.auto_update.auto_updates import AutoUpdates
+from bec_widgets.widgets.containers.dock_area.dock_area import BECDockArea
+from bec_widgets.widgets.containers.dock_area.profile_utils import get_last_profile, list_profiles
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow, BECMainWindowNoRPC
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
 
@@ -428,7 +425,7 @@ class LaunchWindow(BECMainWindow):
         from bec_widgets.applications import bw_launch
 
         with RPCRegister.delayed_broadcast() as rpc_register:
-            existing_dock_areas = rpc_register.get_names_of_rpc_by_class_type(AdvancedDockArea)
+            existing_dock_areas = rpc_register.get_names_of_rpc_by_class_type(BECDockArea)
             if name is not None:
                 WidgetContainerUtils.raise_for_invalid_name(name)
                 # If name already exists, generate a unique one with counter suffix

@@ -9,7 +9,7 @@ def test_rpc_widget_handler():
     handler = RPCWidgetHandler()
     assert "Image" in handler.widget_classes
     assert "RingProgressBar" in handler.widget_classes
-    assert "AdvancedDockArea" in handler.widget_classes
+    assert "BECDockArea" in handler.widget_classes
 
 
 class _TestPluginWidget(BECWidget): ...

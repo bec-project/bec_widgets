@@ -90,7 +90,63 @@ except ImportError as e:
     logger.error(f"Failed loading plugins: \n{reduce(add, traceback.format_exception(e))}")
 
 
-class AdvancedDockArea(RPCBase):
+class AutoUpdates(RPCBase):
+    @property
+    @rpc_call
+    def enabled(self) -> "bool":
+        """
+        Get the enabled status of the auto updates.
+        """
+
+    @enabled.setter
+    @rpc_call
+    def enabled(self) -> "bool":
+        """
+        Get the enabled status of the auto updates.
+        """
+
+    @property
+    @rpc_call
+    def selected_device(self) -> "str | None":
+        """
+        Get the selected device from the auto update config.
+
+        Returns:
+            str: The selected device. If no device is selected, None is returned.
+        """
+
+    @selected_device.setter
+    @rpc_call
+    def selected_device(self) -> "str | None":
+        """
+        Get the selected device from the auto update config.
+
+        Returns:
+            str: The selected device. If no device is selected, None is returned.
+        """
+
+
+class AvailableDeviceResources(RPCBase):
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
+
+class BECDockArea(RPCBase):
     @rpc_call
     def new(
         self,
@@ -317,62 +373,6 @@ class AdvancedDockArea(RPCBase):
 
         Raises:
             ValueError: If the profile is read-only or doesn't exist (when show_dialog=False).
-        """
-
-
-class AutoUpdates(RPCBase):
-    @property
-    @rpc_call
-    def enabled(self) -> "bool":
-        """
-        Get the enabled status of the auto updates.
-        """
-
-    @enabled.setter
-    @rpc_call
-    def enabled(self) -> "bool":
-        """
-        Get the enabled status of the auto updates.
-        """
-
-    @property
-    @rpc_call
-    def selected_device(self) -> "str | None":
-        """
-        Get the selected device from the auto update config.
-
-        Returns:
-            str: The selected device. If no device is selected, None is returned.
-        """
-
-    @selected_device.setter
-    @rpc_call
-    def selected_device(self) -> "str | None":
-        """
-        Get the selected device from the auto update config.
-
-        Returns:
-            str: The selected device. If no device is selected, None is returned.
-        """
-
-
-class AvailableDeviceResources(RPCBase):
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-    @rpc_call
-    def attach(self):
-        """
-        None
-        """
-
-    @rpc_call
-    def detach(self):
-        """
-        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
 

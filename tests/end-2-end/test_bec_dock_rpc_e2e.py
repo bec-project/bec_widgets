@@ -122,12 +122,12 @@ def test_rpc_gui_obj(connected_client_gui_obj, qtbot):
     assert gui.windows["bec"] is gui.bec
     mw = gui.bec
     assert mw.__class__.__name__ == "RPCReference"
-    assert gui._ipython_registry[mw._gui_id].__class__.__name__ == "AdvancedDockArea"
+    assert gui._ipython_registry[mw._gui_id].__class__.__name__ == "BECDockArea"
 
     xw = gui.new("X")
     xw.delete_all()
     assert xw.__class__.__name__ == "RPCReference"
-    assert gui._ipython_registry[xw._gui_id].__class__.__name__ == "AdvancedDockArea"
+    assert gui._ipython_registry[xw._gui_id].__class__.__name__ == "BECDockArea"
     assert len(gui.windows) == 2
 
     assert gui._gui_is_alive()
