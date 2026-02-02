@@ -1944,12 +1944,12 @@ class Heatmap(RPCBase):
     @rpc_call
     def plot(
         self,
-        x_name: "str",
-        y_name: "str",
-        z_name: "str",
-        x_entry: "None | str" = None,
-        y_entry: "None | str" = None,
-        z_entry: "None | str" = None,
+        device_x: "str",
+        device_y: "str",
+        device_z: "str",
+        signal_x: "None | str" = None,
+        signal_y: "None | str" = None,
+        signal_z: "None | str" = None,
         color_map: "str | None" = "plasma",
         validate_bec: "bool" = True,
         interpolation: "Literal['linear', 'nearest'] | None" = None,
@@ -1963,12 +1963,12 @@ class Heatmap(RPCBase):
         Plot the heatmap with the given x, y, and z data.
 
         Args:
-            x_name (str): The name of the x-axis signal.
-            y_name (str): The name of the y-axis signal.
-            z_name (str): The name of the z-axis signal.
-            x_entry (str | None): The entry for the x-axis signal.
-            y_entry (str | None): The entry for the y-axis signal.
-            z_entry (str | None): The entry for the z-axis signal.
+            device_x (str): The name of the x-axis device signal.
+            device_y (str): The name of the y-axis device signal.
+            device_z (str): The name of the z-axis device signal.
+            signal_x (str | None): The entry for the x-axis device signal.
+            signal_y (str | None): The entry for the y-axis device signal.
+            signal_z (str | None): The entry for the z-axis device signal.
             color_map (str | None): The color map to use for the heatmap.
             validate_bec (bool): Whether to validate the entries against BEC signals.
             interpolation (Literal["linear", "nearest"] | None): The interpolation method to use.
@@ -1981,84 +1981,84 @@ class Heatmap(RPCBase):
 
     @property
     @rpc_call
-    def x_device_name(self) -> "str":
+    def device_x(self) -> "str":
         """
         Device name for the X axis.
         """
 
-    @x_device_name.setter
+    @device_x.setter
     @rpc_call
-    def x_device_name(self) -> "str":
+    def device_x(self) -> "str":
         """
         Device name for the X axis.
         """
 
     @property
     @rpc_call
-    def x_device_entry(self) -> "str":
+    def signal_x(self) -> "str":
         """
         Signal entry for the X axis device.
         """
 
-    @x_device_entry.setter
+    @signal_x.setter
     @rpc_call
-    def x_device_entry(self) -> "str":
+    def signal_x(self) -> "str":
         """
         Signal entry for the X axis device.
         """
 
     @property
     @rpc_call
-    def y_device_name(self) -> "str":
+    def device_y(self) -> "str":
         """
         Device name for the Y axis.
         """
 
-    @y_device_name.setter
+    @device_y.setter
     @rpc_call
-    def y_device_name(self) -> "str":
+    def device_y(self) -> "str":
         """
         Device name for the Y axis.
         """
 
     @property
     @rpc_call
-    def y_device_entry(self) -> "str":
+    def signal_y(self) -> "str":
         """
         Signal entry for the Y axis device.
         """
 
-    @y_device_entry.setter
+    @signal_y.setter
     @rpc_call
-    def y_device_entry(self) -> "str":
+    def signal_y(self) -> "str":
         """
         Signal entry for the Y axis device.
         """
 
     @property
     @rpc_call
-    def z_device_name(self) -> "str":
+    def device_z(self) -> "str":
         """
         Device name for the Z (color) axis.
         """
 
-    @z_device_name.setter
+    @device_z.setter
     @rpc_call
-    def z_device_name(self) -> "str":
+    def device_z(self) -> "str":
         """
         Device name for the Z (color) axis.
         """
 
     @property
     @rpc_call
-    def z_device_entry(self) -> "str":
+    def signal_z(self) -> "str":
         """
         Signal entry for the Z (color) axis device.
         """
 
-    @z_device_entry.setter
+    @signal_z.setter
     @rpc_call
-    def z_device_entry(self) -> "str":
+    def signal_z(self) -> "str":
         """
         Signal entry for the Z (color) axis device.
         """
@@ -2480,28 +2480,28 @@ class Image(RPCBase):
 
     @property
     @rpc_call
-    def device_name(self) -> "str":
+    def device(self) -> "str":
         """
         The name of the device to monitor for image data.
         """
 
-    @device_name.setter
+    @device.setter
     @rpc_call
-    def device_name(self) -> "str":
+    def device(self) -> "str":
         """
         The name of the device to monitor for image data.
         """
 
     @property
     @rpc_call
-    def device_entry(self) -> "str":
+    def signal(self) -> "str":
         """
         The signal/entry name to monitor on the device.
         """
 
-    @device_entry.setter
+    @signal.setter
     @rpc_call
-    def device_entry(self) -> "str":
+    def signal(self) -> "str":
         """
         The signal/entry name to monitor on the device.
         """
@@ -2609,8 +2609,8 @@ class Image(RPCBase):
     @rpc_call
     def image(
         self,
-        device_name: "str | None" = None,
-        device_entry: "str | None" = None,
+        device: "str | None" = None,
+        signal: "str | None" = None,
         color_map: "str | None" = None,
         color_bar: "Literal['simple', 'full'] | None" = None,
         vrange: "tuple[int, int] | None" = None,
@@ -2619,8 +2619,8 @@ class Image(RPCBase):
         Set the image source and update the image.
 
         Args:
-            device_name(str|None): The name of the device to monitor. If None or empty string, the current monitor will be disconnected.
-            device_entry(str|None): The signal/entry name to monitor on the device.
+            device(str|None): The name of the device to monitor. If None or empty string, the current monitor will be disconnected.
+            signal(str|None): The signal/entry name to monitor on the device.
             color_map(str): The color map to use for the image.
             color_bar(str): The type of color bar to use. Options are "simple" or "full".
             vrange(tuple): The range of values to use for the color map.
@@ -3632,14 +3632,14 @@ class MotorMap(RPCBase):
 
     @rpc_call
     def map(
-        self, x_name: "str", y_name: "str", validate_bec: "bool" = True, suppress_errors=False
+        self, device_x: "str", device_y: "str", validate_bec: "bool" = True, suppress_errors=False
     ) -> "None":
         """
         Set the x and y motor names.
 
         Args:
-            x_name(str): The name of the x motor.
-            y_name(str): The name of the y motor.
+            device_x(str): The name of the x motor.
+            device_y(str): The name of the y motor.
             validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
             suppress_errors(bool, optional): If True, suppress errors during validation. Defaults to False. Used for properties setting. If the validation fails, the changes are not applied.
         """
@@ -3661,28 +3661,28 @@ class MotorMap(RPCBase):
 
     @property
     @rpc_call
-    def x_motor(self) -> "str":
+    def device_x(self) -> "str":
         """
         Name of the motor shown on the X axis.
         """
 
-    @x_motor.setter
+    @device_x.setter
     @rpc_call
-    def x_motor(self) -> "str":
+    def device_x(self) -> "str":
         """
         Name of the motor shown on the X axis.
         """
 
     @property
     @rpc_call
-    def y_motor(self) -> "str":
+    def device_y(self) -> "str":
         """
         Name of the motor shown on the Y axis.
         """
 
-    @y_motor.setter
+    @device_y.setter
     @rpc_call
-    def y_motor(self) -> "str":
+    def device_y(self) -> "str":
         """
         Name of the motor shown on the Y axis.
         """
@@ -5227,12 +5227,12 @@ class ScatterWaveform(RPCBase):
     @rpc_call
     def plot(
         self,
-        x_name: "str",
-        y_name: "str",
-        z_name: "str",
-        x_entry: "None | str" = None,
-        y_entry: "None | str" = None,
-        z_entry: "None | str" = None,
+        device_x: "str",
+        device_y: "str",
+        device_z: "str",
+        signal_x: "None | str" = None,
+        signal_y: "None | str" = None,
+        signal_z: "None | str" = None,
         color_map: "str | None" = "plasma",
         label: "str | None" = None,
         validate_bec: "bool" = True,
@@ -5241,12 +5241,12 @@ class ScatterWaveform(RPCBase):
         Plot the data from the device signals.
 
         Args:
-            x_name (str): The name of the x device signal.
-            y_name (str): The name of the y device signal.
-            z_name (str): The name of the z device signal.
-            x_entry (None | str): The x entry of the device signal.
-            y_entry (None | str): The y entry of the device signal.
-            z_entry (None | str): The z entry of the device signal.
+            device_x (str): The name of the x device signal.
+            device_y (str): The name of the y device signal.
+            device_z (str): The name of the z device signal.
+            signal_x (None | str): The x entry of the device signal.
+            signal_y (None | str): The y entry of the device signal.
+            signal_z (None | str): The z entry of the device signal.
             color_map (str | None): The color map of the scatter waveform.
             label (str | None): The label of the curve.
             validate_bec (bool): Whether to validate the device signals with current BEC instance.
@@ -5274,84 +5274,84 @@ class ScatterWaveform(RPCBase):
 
     @property
     @rpc_call
-    def x_device_name(self) -> "str":
+    def device_x(self) -> "str":
         """
         Device name for the X axis.
         """
 
-    @x_device_name.setter
+    @device_x.setter
     @rpc_call
-    def x_device_name(self) -> "str":
+    def device_x(self) -> "str":
         """
         Device name for the X axis.
         """
 
     @property
     @rpc_call
-    def x_device_entry(self) -> "str":
+    def signal_x(self) -> "str":
         """
         Signal entry for the X axis device.
         """
 
-    @x_device_entry.setter
+    @signal_x.setter
     @rpc_call
-    def x_device_entry(self) -> "str":
+    def signal_x(self) -> "str":
         """
         Signal entry for the X axis device.
         """
 
     @property
     @rpc_call
-    def y_device_name(self) -> "str":
+    def device_y(self) -> "str":
         """
         Device name for the Y axis.
         """
 
-    @y_device_name.setter
+    @device_y.setter
     @rpc_call
-    def y_device_name(self) -> "str":
+    def device_y(self) -> "str":
         """
         Device name for the Y axis.
         """
 
     @property
     @rpc_call
-    def y_device_entry(self) -> "str":
+    def signal_y(self) -> "str":
         """
         Signal entry for the Y axis device.
         """
 
-    @y_device_entry.setter
+    @signal_y.setter
     @rpc_call
-    def y_device_entry(self) -> "str":
+    def signal_y(self) -> "str":
         """
         Signal entry for the Y axis device.
         """
 
     @property
     @rpc_call
-    def z_device_name(self) -> "str":
+    def device_z(self) -> "str":
         """
         Device name for the Z (color) axis.
         """
 
-    @z_device_name.setter
+    @device_z.setter
     @rpc_call
-    def z_device_name(self) -> "str":
+    def device_z(self) -> "str":
         """
         Device name for the Z (color) axis.
         """
 
     @property
     @rpc_call
-    def z_device_entry(self) -> "str":
+    def signal_z(self) -> "str":
         """
         Signal entry for the Z (color) axis device.
         """
 
-    @z_device_entry.setter
+    @signal_z.setter
     @rpc_call
-    def z_device_entry(self) -> "str":
+    def signal_z(self) -> "str":
         """
         Signal entry for the Z (color) axis device.
         """
@@ -5879,14 +5879,14 @@ class Waveform(RPCBase):
 
     @property
     @rpc_call
-    def x_entry(self) -> "str | None":
+    def signal_x(self) -> "str | None":
         """
         The x signal name.
         """
 
-    @x_entry.setter
+    @signal_x.setter
     @rpc_call
-    def x_entry(self) -> "str | None":
+    def signal_x(self) -> "str | None":
         """
         The x signal name.
         """
@@ -5953,10 +5953,10 @@ class Waveform(RPCBase):
         arg1: "list | np.ndarray | str | None" = None,
         y: "list | np.ndarray | None" = None,
         x: "list | np.ndarray | None" = None,
-        x_name: "str | None" = None,
-        y_name: "str | None" = None,
-        x_entry: "str | None" = None,
-        y_entry: "str | None" = None,
+        device_x: "str | None" = None,
+        device_y: "str | None" = None,
+        signal_x: "str | None" = None,
+        signal_y: "str | None" = None,
         color: "str | None" = None,
         label: "str | None" = None,
         dap: "str | None" = None,
@@ -5968,17 +5968,17 @@ class Waveform(RPCBase):
         Plot a curve to the plot widget.
 
         Args:
-            arg1(list | np.ndarray | str | None): First argument, which can be x data, y data, or y_name.
+            arg1(list | np.ndarray | str | None): First argument, which can be x data, y data, or device_y.
             y(list | np.ndarray): Custom y data to plot.
             x(list | np.ndarray): Custom y data to plot.
-            x_name(str): Name of the x signal.
+            device_x(str): Name of the x signal.
                 - "auto": Use the best effort signal.
                 - "timestamp": Use the timestamp signal.
                 - "index": Use the index signal.
                 - Custom signal name of a device from BEC.
-            y_name(str): The name of the device for the y-axis.
-            x_entry(str): The name of the entry for the x-axis.
-            y_entry(str): The name of the entry for the y-axis.
+            device_y(str): The name of the device for the y-axis.
+            signal_x(str): The name of the entry for the x-axis.
+            signal_y(str): The name of the entry for the y-axis.
             color(str): The color of the curve.
             label(str): The label of the curve.
             dap(str): The dap model to use for the curve. When provided, a DAP curve is

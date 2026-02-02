@@ -48,14 +48,14 @@ class FilledRectItem(pg.GraphicsObject):
 
 
 class MotorConfig(BaseModel):
-    name: str | None = Field(None, description="Motor name.")
+    device: str | None = Field(None, description="Motor name.")
     limits: list[float] | None = Field(None, description="Motor limits.")
 
 
 # noinspection PyDataclass
 class MotorMapConfig(ConnectionConfig):
-    x_motor: MotorConfig = Field(default_factory=MotorConfig, description="Motor X name.")
-    y_motor: MotorConfig = Field(default_factory=MotorConfig, description="Motor Y name.")
+    device_x: MotorConfig = Field(default_factory=MotorConfig, description="Motor X name.")
+    device_y: MotorConfig = Field(default_factory=MotorConfig, description="Motor Y name.")
     color: str | tuple | None = Field(
         (255, 255, 255, 255), description="The color of the last point of current position."
     )
@@ -109,10 +109,10 @@ class MotorMap(PlotBase):
         "map",
         "reset_history",
         "get_data",
-        "x_motor",
-        "x_motor.setter",
-        "y_motor",
-        "y_motor.setter",
+        "device_x",
+        "device_x.setter",
+        "device_y",
+        "device_y.setter",
     ]
 
     update_signal = Signal()
@@ -208,7 +208,7 @@ class MotorMap(PlotBase):
             return
 
         if motor_x != "" and motor_y != "":
-            if motor_x != self.config.x_motor.name or motor_y != self.config.y_motor.name:
+            if motor_x != self.config.device_x.device or motor_y != self.config.device_y.device:
                 self.map(motor_x, motor_y)
 
     def _add_motor_map_settings(self):
@@ -259,32 +259,32 @@ class MotorMap(PlotBase):
     ################################################################################
 
     @SafeProperty(str)
-    def x_motor(self) -> str:
+    def device_x(self) -> str:
         """Name of the motor shown on the X axis."""
-        return self.config.x_motor.name or ""
+        return self.config.device_x.device or ""
 
-    @x_motor.setter
-    def x_motor(self, motor_name: str) -> None:
+    @device_x.setter
+    def device_x(self, motor_name: str) -> None:
         motor_name = motor_name or ""
-        if motor_name == (self.config.x_motor.name or ""):
+        if motor_name == (self.config.device_x.device or ""):
             return
-        if motor_name and self.y_motor:
-            self.map(motor_name, self.y_motor, suppress_errors=True)
+        if motor_name and self.device_y:
+            self.map(motor_name, self.device_y, suppress_errors=True)
             return
         self._set_motor_name(axis="x", motor_name=motor_name)
 
     @SafeProperty(str)
-    def y_motor(self) -> str:
+    def device_y(self) -> str:
         """Name of the motor shown on the Y axis."""
-        return self.config.y_motor.name or ""
+        return self.config.device_y.device or ""
 
-    @y_motor.setter
-    def y_motor(self, motor_name: str) -> None:
+    @device_y.setter
+    def device_y(self, motor_name: str) -> None:
         motor_name = motor_name or ""
-        if motor_name == (self.config.y_motor.name or ""):
+        if motor_name == (self.config.device_y.device or ""):
             return
-        if motor_name and self.x_motor:
-            self.map(self.x_motor, motor_name, suppress_errors=True)
+        if motor_name and self.device_x:
+            self.map(self.device_x, motor_name, suppress_errors=True)
             return
         self._set_motor_name(axis="y", motor_name=motor_name)
 
@@ -452,13 +452,13 @@ class MotorMap(PlotBase):
         Update stored motor name for given axis and optionally refresh the toolbar selection.
         """
         motor_name = motor_name or ""
-        motor_config = self.config.x_motor if axis == "x" else self.config.y_motor
+        motor_config = self.config.device_x if axis == "x" else self.config.device_y
 
-        if motor_config.name == motor_name:
+        if motor_config.device == motor_name:
             return
 
-        motor_config.name = motor_name
-        self.property_changed.emit(f"{axis}_motor", motor_name)
+        motor_config.device = motor_name
+        self.property_changed.emit(f"device_{axis}", motor_name)
 
         if sync_toolbar:
             self._sync_motor_map_selection_toolbar()
@@ -468,14 +468,14 @@ class MotorMap(PlotBase):
     ################################################################################
     @SafeSlot()
     def map(
-        self, x_name: str, y_name: str, validate_bec: bool = True, suppress_errors=False
+        self, device_x: str, device_y: str, validate_bec: bool = True, suppress_errors=False
     ) -> None:
         """
         Set the x and y motor names.
 
         Args:
-            x_name(str): The name of the x motor.
-            y_name(str): The name of the y motor.
+            device_x(str): The name of the x motor.
+            device_y(str): The name of the y motor.
             validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
             suppress_errors(bool, optional): If True, suppress errors during validation. Defaults to False. Used for properties setting. If the validation fails, the changes are not applied.
         """
@@ -484,22 +484,22 @@ class MotorMap(PlotBase):
         if validate_bec:
             if suppress_errors:
                 try:
-                    self.entry_validator.validate_signal(x_name, None)
-                    self.entry_validator.validate_signal(y_name, None)
+                    self.entry_validator.validate_signal(device_x, None)
+                    self.entry_validator.validate_signal(device_y, None)
                 except Exception:
                     return
             else:
-                self.entry_validator.validate_signal(x_name, None)
-                self.entry_validator.validate_signal(y_name, None)
+                self.entry_validator.validate_signal(device_x, None)
+                self.entry_validator.validate_signal(device_y, None)
 
-        self._set_motor_name(axis="x", motor_name=x_name, sync_toolbar=False)
-        self._set_motor_name(axis="y", motor_name=y_name, sync_toolbar=False)
+        self._set_motor_name(axis="x", motor_name=device_x, sync_toolbar=False)
+        self._set_motor_name(axis="y", motor_name=device_y, sync_toolbar=False)
 
-        motor_x_limit = self._get_motor_limit(self.config.x_motor.name)
-        motor_y_limit = self._get_motor_limit(self.config.y_motor.name)
+        motor_x_limit = self._get_motor_limit(self.config.device_x.device)
+        motor_y_limit = self._get_motor_limit(self.config.device_y.device)
 
-        self.config.x_motor.limits = motor_x_limit
-        self.config.y_motor.limits = motor_y_limit
+        self.config.device_x.limits = motor_x_limit
+        self.config.device_y.limits = motor_y_limit
 
         # reconnect the signals
         self._connect_motor_to_slots()
@@ -574,19 +574,19 @@ class MotorMap(PlotBase):
             msg(dict): Message from the device readback.
             metadata(dict): Metadata of the message.
         """
-        x_motor = self.config.x_motor.name
-        y_motor = self.config.y_motor.name
+        device_x = self.config.device_x.device
+        device_y = self.config.device_y.device
 
-        if x_motor is None or y_motor is None:
+        if device_x is None or device_y is None:
             return
 
-        if x_motor in msg["signals"]:
-            x = msg["signals"][x_motor]["value"]
+        if device_x in msg["signals"]:
+            x = msg["signals"][device_x]["value"]
             self._buffer["x"].append(x)
             self._buffer["y"].append(self._buffer["y"][-1])
 
-        elif y_motor in msg["signals"]:
-            y = msg["signals"][y_motor]["value"]
+        elif device_y in msg["signals"]:
+            y = msg["signals"][device_y]["value"]
             self._buffer["y"].append(y)
             self._buffer["x"].append(self._buffer["x"][-1])
 
@@ -597,12 +597,12 @@ class MotorMap(PlotBase):
         self._disconnect_current_motors()
 
         endpoints_readback = [
-            MessageEndpoints.device_readback(self.config.x_motor.name),
-            MessageEndpoints.device_readback(self.config.y_motor.name),
+            MessageEndpoints.device_readback(self.config.device_x.device),
+            MessageEndpoints.device_readback(self.config.device_y.device),
         ]
         endpoints_limits = [
-            MessageEndpoints.device_limits(self.config.x_motor.name),
-            MessageEndpoints.device_limits(self.config.y_motor.name),
+            MessageEndpoints.device_limits(self.config.device_x.device),
+            MessageEndpoints.device_limits(self.config.device_y.device),
         ]
 
         self.bec_dispatcher.connect_slot(self.on_device_readback, endpoints_readback)
@@ -610,14 +610,14 @@ class MotorMap(PlotBase):
 
     def _disconnect_current_motors(self):
         """Disconnect the current motors from the slots."""
-        if self.config.x_motor.name is not None and self.config.y_motor.name is not None:
+        if self.config.device_x.device is not None and self.config.device_y.device is not None:
             endpoints_readback = [
-                MessageEndpoints.device_readback(self.config.x_motor.name),
-                MessageEndpoints.device_readback(self.config.y_motor.name),
+                MessageEndpoints.device_readback(self.config.device_x.device),
+                MessageEndpoints.device_readback(self.config.device_y.device),
             ]
             endpoints_limits = [
-                MessageEndpoints.device_limits(self.config.x_motor.name),
-                MessageEndpoints.device_limits(self.config.y_motor.name),
+                MessageEndpoints.device_limits(self.config.device_x.device),
+                MessageEndpoints.device_limits(self.config.device_y.device),
             ]
             self.bec_dispatcher.disconnect_slot(self.on_device_readback, endpoints_readback)
             self.bec_dispatcher.disconnect_slot(self.on_device_limits, endpoints_limits)
@@ -634,8 +634,8 @@ class MotorMap(PlotBase):
             msg(dict): Message from the device limits.
             metadata(dict): Metadata of the message.
         """
-        self.config.x_motor.limits = self._get_motor_limit(self.config.x_motor.name)
-        self.config.y_motor.limits = self._get_motor_limit(self.config.y_motor.name)
+        self.config.device_x.limits = self._get_motor_limit(self.config.device_x.device)
+        self.config.device_y.limits = self._get_motor_limit(self.config.device_y.device)
         self._swap_limit_map()
 
     def _get_motor_limit(self, motor: str) -> list | None:
@@ -663,8 +663,8 @@ class MotorMap(PlotBase):
         Make the motor map.
         """
 
-        motor_x_limit = self.config.x_motor.limits
-        motor_y_limit = self.config.y_motor.limits
+        motor_x_limit = self.config.device_x.limits
+        motor_y_limit = self.config.device_y.limits
 
         self._limit_map = self._make_limit_map(motor_x_limit, motor_y_limit)
         self.plot_item.addItem(self._limit_map)
@@ -678,10 +678,10 @@ class MotorMap(PlotBase):
 
         # Add the crosshair for initial motor coordinates
         initial_position_x = self._get_motor_init_position(
-            self.config.x_motor.name, self.config.precision
+            self.config.device_x.device, self.config.precision
         )
         initial_position_y = self._get_motor_init_position(
-            self.config.y_motor.name, self.config.precision
+            self.config.device_y.device, self.config.precision
         )
 
         self._buffer["x"] = [initial_position_x]
@@ -693,8 +693,8 @@ class MotorMap(PlotBase):
         self._add_coordinates_crosshair(initial_position_x, initial_position_y)
 
         # Set default labels for the plot
-        self.set_x_label_suffix(f"[{self.config.x_motor.name}-{self.config.x_motor.name}]")
-        self.set_y_label_suffix(f"[{self.config.y_motor.name}-{self.config.y_motor.name}]")
+        self.set_x_label_suffix(f"[{self.config.device_x.device}-{self.config.device_x.device}]")
+        self.set_y_label_suffix(f"[{self.config.device_y.device}-{self.config.device_y.device}]")
 
         self.update_signal.emit()
 
@@ -794,8 +794,8 @@ class MotorMap(PlotBase):
     def _swap_limit_map(self):
         """Swap the limit map."""
         self.plot_item.removeItem(self._limit_map)
-        x_limits = self.config.x_motor.limits
-        y_limits = self.config.y_motor.limits
+        x_limits = self.config.device_x.limits
+        y_limits = self.config.device_y.limits
         if x_limits is not None and y_limits is not None:
             self._limit_map = self._make_limit_map(x_limits, y_limits)
             self._limit_map.setZValue(-1)
@@ -828,8 +828,8 @@ class MotorMap(PlotBase):
         if motor_selection_action is None:
             return
         motor_selection: MotorSelection = motor_selection_action.widget
-        target_x = self.config.x_motor.name or ""
-        target_y = self.config.y_motor.name or ""
+        target_x = self.config.device_x.device or ""
+        target_y = self.config.device_y.device or ""
 
         if (
             motor_selection.motor_x.currentText() == target_x
@@ -864,10 +864,10 @@ class DemoApp(QMainWindow):  # pragma: no cover
         self.setCentralWidget(self.main_widget)
 
         self.motor_map_popup = MotorMap(popups=True)
-        self.motor_map_popup.map(x_name="samx", y_name="samy", validate_bec=True)
+        self.motor_map_popup.map(device_x="samx", device_y="samy", validate_bec=True)
 
         self.motor_map_side = MotorMap(popups=False)
-        self.motor_map_side.map(x_name="samx", y_name="samy", validate_bec=True)
+        self.motor_map_side.map(device_x="samx", device_y="samy", validate_bec=True)
 
         self.layout.addWidget(self.motor_map_side)
         self.layout.addWidget(self.motor_map_popup)

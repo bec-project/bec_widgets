@@ -47,9 +47,9 @@ heatmap_widget = dock_area.new().new(gui.available_widgets.Heatmap)
 
 # Plot a heatmap with x and y motor positions and z detector signal
 heatmap_widget.plot(
-    x_name='samx',  # X-axis motor
-    y_name='samy',  # Y-axis motor  
-    z_name='bpm4i', # Z-axis detector signal
+    device_x='samx',  # X-axis motor
+    device_y='samy',  # Y-axis motor  
+    device_z='bpm4i', # Z-axis detector signal
     color_map='plasma'
 )
 heatmap_widget.title = "Grid Scan - Sample Position vs BPM Intensity"
@@ -66,12 +66,12 @@ heatmap_widget = dock_area.new().new(gui.available_widgets.Heatmap)
 
 # Plot heatmap with specific data entries
 heatmap_widget.plot(
-    x_name='motor1',
-    y_name='motor2', 
-    z_name='detector1',
-    x_entry='RBV',      # Use readback value for x
-    y_entry='RBV',      # Use readback value for y
-    z_entry='value',    # Use main value for z
+    device_x='motor1',
+    device_y='motor2', 
+    device_z='detector1',
+    signal_x='RBV',      # Use readback value for x
+    signal_y='RBV',      # Use readback value for y
+    signal_z='value',    # Use main value for z
     color_map='viridis',
     reload=True         # Force reload of data
 )

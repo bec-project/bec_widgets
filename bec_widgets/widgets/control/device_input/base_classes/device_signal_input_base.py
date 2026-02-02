@@ -266,6 +266,7 @@ class DeviceSignalInputBase(BECWidget):
 
         Args:
             device(str): Device to validate.
+            raise_on_false(bool): Raise ValueError if device is not found.
         """
         if device in self.dev:
             return True

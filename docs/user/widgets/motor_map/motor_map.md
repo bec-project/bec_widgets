@@ -29,8 +29,8 @@ mm1 = dock_area.new().new(gui.available_widgets.MotorMap)
 mm2 = dock_area.new().new(gui.available_widgets.MotorMap)
 
 # Add signals to the MotorMaps
-mm1.map(x_name='samx', y_name='samy')
-mm2.map(x_name='aptrx', y_name='aptry')
+mm1.map(device_x='samx', device_y='samy')
+mm2.map(device_x='aptrx', device_y='aptry')
 ```
 
 ## Example 2 - Customizing Motor Map Display
@@ -57,7 +57,7 @@ You can dynamically change the motors being tracked and reset the history of the
 mm1.reset_history()
 
 # Change the motors being tracked
-mm1.map(x_name='aptrx', y_name='aptry')
+mm1.map(device_x='aptrx', device_y='aptry')
 ```
 ````
 

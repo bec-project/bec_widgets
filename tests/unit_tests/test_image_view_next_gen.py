@@ -14,14 +14,9 @@ from tests.unit_tests.conftest import create_widget
 
 
 def _set_signal_config(
-    client,
-    device_name: str,
-    signal_name: str,
-    signal_class: str,
-    ndim: int,
-    obj_name: str | None = None,
+    client, device: str, signal_name: str, signal_class: str, ndim: int, obj_name: str | None = None
 ):
-    device = client.device_manager.devices[device_name]
+    device = client.device_manager.devices[device]
     device._info["signals"][signal_name] = {
         "obj_name": obj_name or signal_name,
         "signal_class": signal_class,
@@ -153,14 +148,14 @@ def test_image_setup_preview_signal_1d(qtbot, mocked_client):
         obj_name="waveform1d_img",
     )
 
-    view.image(device_name="waveform1d", device_entry="img")
+    view.image(device="waveform1d", signal="img")
 
     # Subscriptions should indicate 1‑D preview connection
     sub = view.subscriptions["main"]
     assert sub.source == "device_monitor_1d"
     assert sub.monitor_type == "1d"
-    assert view.device_name == "waveform1d"
-    assert view.device_entry == "img"
+    assert view.device == "waveform1d"
+    assert view.signal == "img"
 
     # Simulate a waveform update from the dispatcher
     waveform = np.arange(25, dtype=float)
@@ -187,14 +182,14 @@ def test_image_setup_preview_signal_2d(qtbot, mocked_client):
         obj_name="eiger_img2d",
     )
 
-    view.image(device_name="eiger", device_entry="img2d")
+    view.image(device="eiger", signal="img2d")
 
     # Subscriptions should indicate 2‑D preview connection
     sub = view.subscriptions["main"]
     assert sub.source == "device_monitor_2d"
     assert sub.monitor_type == "2d"
-    assert view.device_name == "eiger"
-    assert view.device_entry == "img2d"
+    assert view.device == "eiger"
+    assert view.signal == "img2d"
 
     # Simulate a 2‑D image update
     test_data = np.arange(16, dtype=float).reshape(4, 4)
@@ -259,7 +254,7 @@ def test_image_async_signal_uses_obj_name(qtbot, mocked_client, monkeypatch):
         mocked_client, "eiger", "img", signal_class="AsyncSignal", ndim=1, obj_name="async_obj"
     )
 
-    view.image(device_name="eiger", device_entry="img")
+    view.image(device="eiger", signal="img")
     assert view.subscriptions["main"].async_signal_name == "async_obj"
     assert view.async_update is True
 
@@ -300,7 +295,7 @@ def test_disconnect_clears_async_state(qtbot, mocked_client, monkeypatch):
         mocked_client, "eiger", "img", signal_class="AsyncSignal", ndim=2, obj_name="async_obj"
     )
 
-    view.image(device_name="eiger", device_entry="img")
+    view.image(device="eiger", signal="img")
     view.scan_id = "scan_x"
     view.old_scan_id = "scan_y"
     view.subscriptions["main"].async_signal_name = "async_obj"
@@ -308,7 +303,7 @@ def test_disconnect_clears_async_state(qtbot, mocked_client, monkeypatch):
     # Avoid touching real dispatcher
     monkeypatch.setattr(view.bec_dispatcher, "disconnect_slot", lambda *args, **kwargs: None)
 
-    view.disconnect_monitor(device_name="eiger", device_entry="img")
+    view.disconnect_monitor(device="eiger", signal="img")
 
     assert view.subscriptions["main"].async_signal_name is None
     assert view.async_update is False
@@ -322,7 +317,7 @@ def test_image_setup_rejects_unsupported_signal_class(qtbot, mocked_client):
     view = create_widget(qtbot, Image, client=mocked_client)
     _set_signal_config(mocked_client, "eiger", "img", signal_class="Signal", ndim=2)
 
-    view.image(device_name="eiger", device_entry="img")
+    view.image(device="eiger", signal="img")
 
     assert view.subscriptions["main"].source is None
     assert view.subscriptions["main"].monitor_type is None
@@ -333,13 +328,13 @@ def test_image_disconnects_with_missing_entry(qtbot, mocked_client):
     view = create_widget(qtbot, Image, client=mocked_client)
     _set_signal_config(mocked_client, "eiger", "img", signal_class="PreviewSignal", ndim=2)
 
-    view.image(device_name="eiger", device_entry="img")
-    assert view.device_name == "eiger"
-    assert view.device_entry == "img"
+    view.image(device="eiger", signal="img")
+    assert view.device == "eiger"
+    assert view.signal == "img"
 
-    view.image(device_name="eiger", device_entry=None)
-    assert view.device_name == ""
-    assert view.device_entry == ""
+    view.image(device="eiger", signal=None)
+    assert view.device == ""
+    assert view.signal == ""
 
 
 def test_handle_scan_change_clears_buffers_and_resets_crosshair(qtbot, mocked_client, monkeypatch):
@@ -541,8 +536,8 @@ def test_setup_image_from_toolbar(qtbot, mocked_client, monkeypatch):
     bec_image_view.on_device_selection_changed(None)
     qtbot.wait(200)
 
-    assert bec_image_view.device_name == "eiger"
-    assert bec_image_view.device_entry == "img"
+    assert bec_image_view.device == "eiger"
+    assert bec_image_view.signal == "img"
     assert bec_image_view.subscriptions["main"].source == "device_monitor_2d"
     assert bec_image_view.subscriptions["main"].monitor_type == "2d"
     assert bec_image_view.main_image.raw_data is None
@@ -834,8 +829,8 @@ def test_device_selection_syncs_from_properties(qtbot, mocked_client, monkeypatc
         ),
     )
 
-    view.device_name = "eiger"
-    view.device_entry = "img2d"
+    view.device = "eiger"
+    view.signal = "img2d"
 
     qtbot.wait(200)  # Allow signal processing
 
@@ -847,19 +842,19 @@ def test_device_selection_syncs_from_properties(qtbot, mocked_client, monkeypatc
     )
 
 
-def test_device_entry_syncs_from_toolbar(qtbot, mocked_client):
+def test_signal_syncs_from_toolbar(qtbot, mocked_client):
     view = create_widget(qtbot, Image, client=mocked_client)
     _set_signal_config(mocked_client, "eiger", "img_a", signal_class="PreviewSignal", ndim=2)
     _set_signal_config(mocked_client, "eiger", "img_b", signal_class="PreviewSignal", ndim=2)
 
-    view.device_name = "eiger"
-    view.device_entry = "img_a"
+    view.device = "eiger"
+    view.signal = "img_a"
 
     device_selection = view.toolbar.components.get_action("device_selection").widget
     device_selection.signal_combo_box.blockSignals(True)
     device_selection.signal_combo_box.setCurrentText("img_b")
     device_selection.signal_combo_box.blockSignals(False)
 
-    view._sync_device_entry_from_toolbar()
+    view._sync_signal_from_toolbar()
 
-    assert view.device_entry == "img_b"
+    assert view.signal == "img_b"

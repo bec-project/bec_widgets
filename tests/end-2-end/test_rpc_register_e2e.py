@@ -12,19 +12,19 @@ def test_rpc_reference_objects(connected_client_gui_obj):
     dock_area = gui.window_list[0]
     plt = dock_area.new("Waveform", object_name="fig")
 
-    plt.plot(x_name="samx", y_name="bpm4i")
+    plt.plot(device_x="samx", device_y="bpm4i")
 
     im = dock_area.new("Image")
-    im.image(device_name="eiger", device_entry="preview")
+    im.image(device="eiger", signal="preview")
     motor_map = dock_area.new("MotorMap")
     motor_map.map("samx", "samy")
     plt_z = dock_area.new("Waveform")
-    plt_z.plot(x_name="samx", y_name="samy", z_name="bpm4i")
+    plt_z.plot(device_x="samx", device_y="samy", device_z="bpm4i")
 
     assert len(plt_z.curves) == 1
     assert len(plt.curves) == 1
-    assert im.device_name == "eiger"
-    assert im.device_entry == "preview"
+    assert im.device == "eiger"
+    assert im.signal == "preview"
 
     assert isinstance(im.main_image, RPCReference)
     image_item = gui._ipython_registry.get(im.main_image._gui_id, None)

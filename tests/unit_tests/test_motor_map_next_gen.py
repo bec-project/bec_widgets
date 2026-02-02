@@ -23,12 +23,12 @@ def test_motor_map_select_motor(qtbot, mocked_client):
     """Test selecting motors for the motor map."""
     mm = create_widget(qtbot, MotorMap, client=mocked_client)
 
-    mm.map(x_name="samx", y_name="samy", validate_bec=True)
+    mm.map(device_x="samx", device_y="samy", validate_bec=True)
 
-    assert mm.config.x_motor.name == "samx"
-    assert mm.config.y_motor.name == "samy"
-    assert mm.config.x_motor.limits == [-10, 10]
-    assert mm.config.y_motor.limits == [-5, 5]
+    assert mm.config.device_x.device == "samx"
+    assert mm.config.device_y.device == "samy"
+    assert mm.config.device_x.limits == [-10, 10]
+    assert mm.config.device_y.limits == [-5, 5]
     assert mm.config.scatter_size == 5
     assert mm.config.max_points == 5000
     assert mm.config.num_dim_points == 100
@@ -39,7 +39,7 @@ def test_motor_map_select_motor(qtbot, mocked_client):
 def test_motor_map_properties(qtbot, mocked_client):
     """Test setting and getting properties of MotorMap."""
     mm = create_widget(qtbot, MotorMap, client=mocked_client)
-    mm.map(x_name="samx", y_name="samy")
+    mm.map(device_x="samx", device_y="samy")
 
     # Test color property
     mm.color = (100, 150, 200, 255)
@@ -86,7 +86,7 @@ def test_motor_map_properties(qtbot, mocked_client):
 def test_motor_map_get_limits(qtbot, mocked_client):
     """Test getting motor limits."""
     mm = create_widget(qtbot, MotorMap, client=mocked_client)
-    mm.map(x_name="samx", y_name="samy")
+    mm.map(device_x="samx", device_y="samy")
     expected_limits = {"samx": [-10, 10], "samy": [-5, 5]}
 
     for motor_name, expected_limit in expected_limits.items():
@@ -133,7 +133,7 @@ def test_motor_map_reset_history(qtbot, mocked_client):
 def test_motor_map_on_device_readback(qtbot, mocked_client):
     """Test the motor map updates when receiving device readback."""
     mm = create_widget(qtbot, MotorMap, client=mocked_client)
-    mm.map(x_name="samx", y_name="samy")
+    mm.map(device_x="samx", device_y="samy")
 
     # Clear the buffer and add initial position
     mm._buffer = {"x": [1.0], "y": [2.0]}
@@ -161,7 +161,7 @@ def test_motor_map_on_device_readback(qtbot, mocked_client):
 def test_motor_map_max_points_limit(qtbot, mocked_client):
     """Test that the buffer doesn't exceed max_points."""
     mm = create_widget(qtbot, MotorMap, client=mocked_client)
-    mm.map(x_name="samx", y_name="samy")
+    mm.map(device_x="samx", device_y="samy")
 
     # Add more points than max_points
     mm._buffer = {"x": [1.0, 2.0, 3.0, 4.0], "y": [5.0, 6.0, 7.0, 8.0]}
@@ -219,7 +219,7 @@ def test_motor_map_limit_map(qtbot, mocked_client):
 
 def test_motor_map_change_limits(qtbot, mocked_client):
     mm = create_widget(qtbot, MotorMap, client=mocked_client)
-    mm.map(x_name="samx", y_name="samy")
+    mm.map(device_x="samx", device_y="samy")
 
     # Original mocked limits are
     # samx: [-10, 10]
@@ -229,8 +229,8 @@ def test_motor_map_change_limits(qtbot, mocked_client):
     rect = mm._limit_map.boundingRect()
     assert rect.width() == 20  # -10 to 10 inclusive
     assert rect.height() == 10  # -5 to 5 inclusive
-    assert mm.config.x_motor.limits == [-10, 10]
-    assert mm.config.y_motor.limits == [-5, 5]
+    assert mm.config.device_x.limits == [-10, 10]
+    assert mm.config.device_y.limits == [-5, 5]
 
     # Change the limits of the samx motor
     mm.dev["samx"].limits = [-20, 20]
@@ -239,8 +239,8 @@ def test_motor_map_change_limits(qtbot, mocked_client):
     qtbot.wait(200)  # Allow time for the update to process
 
     # Check that the limits map was updated
-    assert mm.config.x_motor.limits == [-20, 20]
-    assert mm.config.y_motor.limits == [-5, 5]
+    assert mm.config.device_x.limits == [-20, 20]
+    assert mm.config.device_y.limits == [-5, 5]
     rect = mm._limit_map.boundingRect()
     assert rect.width() == 40  # -20 to 20 inclusive
     assert rect.height() == 10  # -5 to 5 inclusive -> same as before
@@ -276,13 +276,13 @@ def test_motor_map_toolbar_selection(qtbot, mocked_client):
     motor_selection.widget.motor_x.setCurrentText("samx")
     motor_selection.widget.motor_y.setCurrentText("samy")
 
-    assert mm.config.x_motor.name == "samx"
-    assert mm.config.y_motor.name == "samy"
+    assert mm.config.device_x.device == "samx"
+    assert mm.config.device_y.device == "samy"
 
     motor_selection.widget.motor_y.setCurrentText("samz")
 
-    assert mm.config.x_motor.name == "samx"
-    assert mm.config.y_motor.name == "samz"
+    assert mm.config.device_x.device == "samx"
+    assert mm.config.device_y.device == "samz"
 
 
 def test_motor_selection_set_motors_blocks_signals(qtbot, mocked_client):
@@ -306,19 +306,19 @@ def test_motor_properties_partial_then_complete_map(qtbot, mocked_client):
     mm = create_widget(qtbot, MotorMap, client=mocked_client)
 
     spy = QSignalSpy(mm.property_changed)
-    mm.x_motor = "samx"
+    mm.device_x = "samx"
 
-    assert mm.config.x_motor.name == "samx"
-    assert mm.config.y_motor.name is None
+    assert mm.config.device_x.device == "samx"
+    assert mm.config.device_y.device is None
     assert mm._trace is None  # map not triggered yet
-    assert spy.at(0) == ["x_motor", "samx"]
+    assert spy.at(0) == ["device_x", "samx"]
 
-    mm.y_motor = "samy"
+    mm.device_y = "samy"
 
-    assert mm.config.x_motor.name == "samx"
-    assert mm.config.y_motor.name == "samy"
+    assert mm.config.device_x.device == "samx"
+    assert mm.config.device_y.device == "samy"
     assert mm._trace is not None  # map called once both valid
-    assert spy.at(1) == ["y_motor", "samy"]
+    assert spy.at(1) == ["device_y", "samy"]
     assert len(mm._buffer["x"]) == 1
     assert len(mm._buffer["y"]) == 1
 
@@ -331,9 +331,9 @@ def test_set_motor_name_emits_and_syncs_toolbar(qtbot, mocked_client):
     spy = QSignalSpy(mm.property_changed)
     mm._set_motor_name("x", "samx")
 
-    assert mm.config.x_motor.name == "samx"
+    assert mm.config.device_x.device == "samx"
     assert motor_selection.motor_x.currentText() == "samx"
-    assert spy.at(0) == ["x_motor", "samx"]
+    assert spy.at(0) == ["device_x", "samx"]
 
     # Calling with same name should be a no-op
     initial_count = spy.count()
@@ -350,7 +350,7 @@ def test_motor_map_settings_dialog(qtbot, mocked_client):
         assert action_ref().action.isVisible()
 
     # set properties to be fetched by dialog
-    mm.map(x_name="samx", y_name="samy")
+    mm.map(device_x="samx", device_y="samy")
     mm.precision = 2
     mm.max_points = 1000
     mm.scatter_size = 10

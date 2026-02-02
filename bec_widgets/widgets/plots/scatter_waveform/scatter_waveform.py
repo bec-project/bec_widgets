@@ -49,18 +49,18 @@ class ScatterWaveform(PlotBase):
         "update_with_scan_history",
         "clear_all",
         # Device properties
-        "x_device_name",
-        "x_device_name.setter",
-        "x_device_entry",
-        "x_device_entry.setter",
-        "y_device_name",
-        "y_device_name.setter",
-        "y_device_entry",
-        "y_device_entry.setter",
-        "z_device_name",
-        "z_device_name.setter",
-        "z_device_entry",
-        "z_device_entry.setter",
+        "device_x",
+        "device_x.setter",
+        "signal_x",
+        "signal_x.setter",
+        "device_y",
+        "device_y.setter",
+        "signal_y",
+        "signal_y.setter",
+        "device_z",
+        "device_z.setter",
+        "signal_z",
+        "signal_z.setter",
     ]
 
     sync_signal_update = Signal()
@@ -208,12 +208,12 @@ class ScatterWaveform(PlotBase):
     @SafeSlot(popup_error=True)
     def plot(
         self,
-        x_name: str,
-        y_name: str,
-        z_name: str,
-        x_entry: None | str = None,
-        y_entry: None | str = None,
-        z_entry: None | str = None,
+        device_x: str,
+        device_y: str,
+        device_z: str,
+        signal_x: None | str = None,
+        signal_y: None | str = None,
+        signal_z: None | str = None,
         color_map: str | None = "plasma",
         label: str | None = None,
         validate_bec: bool = True,
@@ -222,12 +222,12 @@ class ScatterWaveform(PlotBase):
         Plot the data from the device signals.
 
         Args:
-            x_name (str): The name of the x device signal.
-            y_name (str): The name of the y device signal.
-            z_name (str): The name of the z device signal.
-            x_entry (None | str): The x entry of the device signal.
-            y_entry (None | str): The y entry of the device signal.
-            z_entry (None | str): The z entry of the device signal.
+            device_x (str): The name of the x device signal.
+            device_y (str): The name of the y device signal.
+            device_z (str): The name of the z device signal.
+            signal_x (None | str): The x entry of the device signal.
+            signal_y (None | str): The y entry of the device signal.
+            signal_z (None | str): The z entry of the device signal.
             color_map (str | None): The color map of the scatter waveform.
             label (str | None): The label of the curve.
             validate_bec (bool): Whether to validate the device signals with current BEC instance.
@@ -237,9 +237,9 @@ class ScatterWaveform(PlotBase):
         """
 
         if validate_bec:
-            x_entry = self.entry_validator.validate_signal(x_name, x_entry)
-            y_entry = self.entry_validator.validate_signal(y_name, y_entry)
-            z_entry = self.entry_validator.validate_signal(z_name, z_entry)
+            signal_x = self.entry_validator.validate_signal(device_x, signal_x)
+            signal_y = self.entry_validator.validate_signal(device_y, signal_y)
+            signal_z = self.entry_validator.validate_signal(device_z, signal_z)
 
         if color_map is not None:
             try:
@@ -250,15 +250,15 @@ class ScatterWaveform(PlotBase):
                 )
 
         if label is None:
-            label = f"{z_name}-{z_entry}"
+            label = f"{device_z}-{signal_z}"
 
         config = ScatterCurveConfig(
             parent_id=self.gui_id,
             label=label,
             color_map=color_map,
-            x_device=ScatterDeviceSignal(name=x_name, entry=x_entry),
-            y_device=ScatterDeviceSignal(name=y_name, entry=y_entry),
-            z_device=ScatterDeviceSignal(name=z_name, entry=z_entry),
+            device_x=ScatterDeviceSignal(device=device_x, signal=signal_x),
+            device_y=ScatterDeviceSignal(device=device_y, signal=signal_y),
+            device_z=ScatterDeviceSignal(device=device_z, signal=signal_z),
         )
 
         # Add Curve
@@ -350,23 +350,23 @@ class ScatterWaveform(PlotBase):
             return "none"
 
         try:
-            x_name = self._main_curve.config.x_device.name
-            x_entry = self._main_curve.config.x_device.entry
-            y_name = self._main_curve.config.y_device.name
-            y_entry = self._main_curve.config.y_device.entry
-            z_name = self._main_curve.config.z_device.name
-            z_entry = self._main_curve.config.z_device.entry
+            device_x = self._main_curve.config.device_x.device
+            signal_x = self._main_curve.config.device_x.signal
+            device_y = self._main_curve.config.device_y.device
+            signal_y = self._main_curve.config.device_y.signal
+            device_z = self._main_curve.config.device_z.device
+            signal_z = self._main_curve.config.device_z.signal
         except AttributeError:
             return
 
         if access_key == "val":
-            x_data = data.get(x_name, {}).get(x_entry, {}).get(access_key, None)
-            y_data = data.get(y_name, {}).get(y_entry, {}).get(access_key, None)
-            z_data = data.get(z_name, {}).get(z_entry, {}).get(access_key, None)
+            x_data = data.get(device_x, {}).get(signal_x, {}).get(access_key, None)
+            y_data = data.get(device_y, {}).get(signal_y, {}).get(access_key, None)
+            z_data = data.get(device_z, {}).get(signal_z, {}).get(access_key, None)
         else:
-            x_data = data.get(x_name, {}).get(x_entry, {}).read().get("value", None)
-            y_data = data.get(y_name, {}).get(y_entry, {}).read().get("value", None)
-            z_data = data.get(z_name, {}).get(z_entry, {}).read().get("value", None)
+            x_data = data.get(device_x, {}).get(signal_x, {}).read().get("value", None)
+            y_data = data.get(device_y, {}).get(signal_y, {}).read().get("value", None)
+            z_data = data.get(device_z, {}).get(signal_z, {}).read().get("value", None)
 
         self._main_curve.set_data(x=x_data, y=y_data, z=z_data)
 
@@ -399,14 +399,14 @@ class ScatterWaveform(PlotBase):
     ################################################################################
 
     @SafeProperty(str)
-    def x_device_name(self) -> str:
+    def device_x(self) -> str:
         """Device name for the X axis."""
-        if self._main_curve is None or self._main_curve.config.x_device is None:
+        if self._main_curve is None or self._main_curve.config.device_x is None:
             return ""
-        return self._main_curve.config.x_device.name or ""
+        return self._main_curve.config.device_x.device or ""
 
-    @x_device_name.setter
-    def x_device_name(self, device_name: str) -> None:
+    @device_x.setter
+    def device_x(self, device_name: str) -> None:
         """
         Set the X device name.
 
@@ -419,33 +419,33 @@ class ScatterWaveform(PlotBase):
             try:
                 entry = self.entry_validator.validate_signal(device_name, None)
                 # Update or create config
-                if self._main_curve.config.x_device is None:
-                    self._main_curve.config.x_device = ScatterDeviceSignal(
-                        name=device_name, entry=entry
+                if self._main_curve.config.device_x is None:
+                    self._main_curve.config.device_x = ScatterDeviceSignal(
+                        device=device_name, signal=entry
                     )
                 else:
-                    self._main_curve.config.x_device.name = device_name
-                    self._main_curve.config.x_device.entry = entry
-                self.property_changed.emit("x_device_name", device_name)
+                    self._main_curve.config.device_x.device = device_name
+                    self._main_curve.config.device_x.signal = entry
+                self.property_changed.emit("device_x", device_name)
                 self.update_labels()
                 self._try_auto_plot()
             except Exception:
                 pass  # Silently fail if device is not available yet
         else:
-            if self._main_curve.config.x_device is not None:
-                self._main_curve.config.x_device = None
-            self.property_changed.emit("x_device_name", "")
+            if self._main_curve.config.device_x is not None:
+                self._main_curve.config.device_x = None
+            self.property_changed.emit("device_x", "")
             self.update_labels()
 
     @SafeProperty(str)
-    def x_device_entry(self) -> str:
+    def signal_x(self) -> str:
         """Signal entry for the X axis device."""
-        if self._main_curve is None or self._main_curve.config.x_device is None:
+        if self._main_curve is None or self._main_curve.config.device_x is None:
             return ""
-        return self._main_curve.config.x_device.entry or ""
+        return self._main_curve.config.device_x.signal or ""
 
-    @x_device_entry.setter
-    def x_device_entry(self, entry: str) -> None:
+    @signal_x.setter
+    def signal_x(self, entry: str) -> None:
         """
         Set the X device entry.
 
@@ -455,29 +455,29 @@ class ScatterWaveform(PlotBase):
         if not entry:
             return
 
-        if self._main_curve.config.x_device is None:
-            logger.warning("Cannot set x_device_entry without x_device_name set first.")
+        if self._main_curve.config.device_x is None:
+            logger.warning("Cannot set signal_x without device_x set first.")
             return
 
-        device_name = self._main_curve.config.x_device.name
+        device_name = self._main_curve.config.device_x.device
         try:
-            validated_entry = self.entry_validator.validate_signal(device_name, entry)
-            self._main_curve.config.x_device.entry = validated_entry
-            self.property_changed.emit("x_device_entry", validated_entry)
+            validated_signal = self.entry_validator.validate_signal(device_name, entry)
+            self._main_curve.config.device_x.signal = validated_signal
+            self.property_changed.emit("signal_x", validated_signal)
             self.update_labels()
             self._try_auto_plot()
         except Exception:
             pass  # Silently fail if validation fails
 
     @SafeProperty(str)
-    def y_device_name(self) -> str:
+    def device_y(self) -> str:
         """Device name for the Y axis."""
-        if self._main_curve is None or self._main_curve.config.y_device is None:
+        if self._main_curve is None or self._main_curve.config.device_y is None:
             return ""
-        return self._main_curve.config.y_device.name or ""
+        return self._main_curve.config.device_y.device or ""
 
-    @y_device_name.setter
-    def y_device_name(self, device_name: str) -> None:
+    @device_y.setter
+    def device_y(self, device_name: str) -> None:
         """
         Set the Y device name.
 
@@ -490,33 +490,33 @@ class ScatterWaveform(PlotBase):
             try:
                 entry = self.entry_validator.validate_signal(device_name, None)
                 # Update or create config
-                if self._main_curve.config.y_device is None:
-                    self._main_curve.config.y_device = ScatterDeviceSignal(
-                        name=device_name, entry=entry
+                if self._main_curve.config.device_y is None:
+                    self._main_curve.config.device_y = ScatterDeviceSignal(
+                        device=device_name, signal=entry
                     )
                 else:
-                    self._main_curve.config.y_device.name = device_name
-                    self._main_curve.config.y_device.entry = entry
-                self.property_changed.emit("y_device_name", device_name)
+                    self._main_curve.config.device_y.device = device_name
+                    self._main_curve.config.device_y.signal = entry
+                self.property_changed.emit("device_y", device_name)
                 self.update_labels()
                 self._try_auto_plot()
             except Exception:
                 pass  # Silently fail if device is not available yet
         else:
-            if self._main_curve.config.y_device is not None:
-                self._main_curve.config.y_device = None
-            self.property_changed.emit("y_device_name", "")
+            if self._main_curve.config.device_y is not None:
+                self._main_curve.config.device_y = None
+            self.property_changed.emit("device_y", "")
             self.update_labels()
 
     @SafeProperty(str)
-    def y_device_entry(self) -> str:
+    def signal_y(self) -> str:
         """Signal entry for the Y axis device."""
-        if self._main_curve is None or self._main_curve.config.y_device is None:
+        if self._main_curve is None or self._main_curve.config.device_y is None:
             return ""
-        return self._main_curve.config.y_device.entry or ""
+        return self._main_curve.config.device_y.signal or ""
 
-    @y_device_entry.setter
-    def y_device_entry(self, entry: str) -> None:
+    @signal_y.setter
+    def signal_y(self, entry: str) -> None:
         """
         Set the Y device entry.
 
@@ -526,29 +526,29 @@ class ScatterWaveform(PlotBase):
         if not entry:
             return
 
-        if self._main_curve.config.y_device is None:
-            logger.warning("Cannot set y_device_entry without y_device_name set first.")
+        if self._main_curve.config.device_y is None:
+            logger.warning("Cannot set signal_y without device_y set first.")
             return
 
-        device_name = self._main_curve.config.y_device.name
+        device_name = self._main_curve.config.device_y.device
         try:
-            validated_entry = self.entry_validator.validate_signal(device_name, entry)
-            self._main_curve.config.y_device.entry = validated_entry
-            self.property_changed.emit("y_device_entry", validated_entry)
+            validated_signal = self.entry_validator.validate_signal(device_name, entry)
+            self._main_curve.config.device_y.signal = validated_signal
+            self.property_changed.emit("signal_y", validated_signal)
             self.update_labels()
             self._try_auto_plot()
         except Exception:
             pass  # Silently fail if validation fails
 
     @SafeProperty(str)
-    def z_device_name(self) -> str:
+    def device_z(self) -> str:
         """Device name for the Z (color) axis."""
-        if self._main_curve is None or self._main_curve.config.z_device is None:
+        if self._main_curve is None or self._main_curve.config.device_z is None:
             return ""
-        return self._main_curve.config.z_device.name or ""
+        return self._main_curve.config.device_z.device or ""
 
-    @z_device_name.setter
-    def z_device_name(self, device_name: str) -> None:
+    @device_z.setter
+    def device_z(self, device_name: str) -> None:
         """
         Set the Z device name.
 
@@ -561,33 +561,33 @@ class ScatterWaveform(PlotBase):
             try:
                 entry = self.entry_validator.validate_signal(device_name, None)
                 # Update or create config
-                if self._main_curve.config.z_device is None:
-                    self._main_curve.config.z_device = ScatterDeviceSignal(
-                        name=device_name, entry=entry
+                if self._main_curve.config.device_z is None:
+                    self._main_curve.config.device_z = ScatterDeviceSignal(
+                        device=device_name, signal=entry
                     )
                 else:
-                    self._main_curve.config.z_device.name = device_name
-                    self._main_curve.config.z_device.entry = entry
-                self.property_changed.emit("z_device_name", device_name)
+                    self._main_curve.config.device_z.device = device_name
+                    self._main_curve.config.device_z.signal = entry
+                self.property_changed.emit("device_z", device_name)
                 self.update_labels()
                 self._try_auto_plot()
             except Exception:
                 pass  # Silently fail if device is not available yet
         else:
-            if self._main_curve.config.z_device is not None:
-                self._main_curve.config.z_device = None
-            self.property_changed.emit("z_device_name", "")
+            if self._main_curve.config.device_z is not None:
+                self._main_curve.config.device_z = None
+            self.property_changed.emit("device_z", "")
             self.update_labels()
 
     @SafeProperty(str)
-    def z_device_entry(self) -> str:
+    def signal_z(self) -> str:
         """Signal entry for the Z (color) axis device."""
-        if self._main_curve is None or self._main_curve.config.z_device is None:
+        if self._main_curve is None or self._main_curve.config.device_z is None:
             return ""
-        return self._main_curve.config.z_device.entry or ""
+        return self._main_curve.config.device_z.signal or ""
 
-    @z_device_entry.setter
-    def z_device_entry(self, entry: str) -> None:
+    @signal_z.setter
+    def signal_z(self, entry: str) -> None:
         """
         Set the Z device entry.
 
@@ -597,15 +597,15 @@ class ScatterWaveform(PlotBase):
         if not entry:
             return
 
-        if self._main_curve.config.z_device is None:
-            logger.warning("Cannot set z_device_entry without z_device_name set first.")
+        if self._main_curve.config.device_z is None:
+            logger.warning("Cannot set signal_z without device_z set first.")
             return
 
-        device_name = self._main_curve.config.z_device.name
+        device_name = self._main_curve.config.device_z.device
         try:
-            validated_entry = self.entry_validator.validate_signal(device_name, entry)
-            self._main_curve.config.z_device.entry = validated_entry
-            self.property_changed.emit("z_device_entry", validated_entry)
+            validated_signal = self.entry_validator.validate_signal(device_name, entry)
+            self._main_curve.config.device_z.signal = validated_signal
+            self.property_changed.emit("signal_z", validated_signal)
             self.update_labels()
             self._try_auto_plot()
         except Exception:
@@ -615,25 +615,25 @@ class ScatterWaveform(PlotBase):
         """
         Attempt to automatically call plot() if all three devices are set.
         """
-        has_x = self._main_curve.config.x_device is not None
-        has_y = self._main_curve.config.y_device is not None
-        has_z = self._main_curve.config.z_device is not None
+        has_x = self._main_curve.config.device_x is not None
+        has_y = self._main_curve.config.device_y is not None
+        has_z = self._main_curve.config.device_z is not None
 
         if has_x and has_y and has_z:
-            x_name = self._main_curve.config.x_device.name
-            x_entry = self._main_curve.config.x_device.entry
-            y_name = self._main_curve.config.y_device.name
-            y_entry = self._main_curve.config.y_device.entry
-            z_name = self._main_curve.config.z_device.name
-            z_entry = self._main_curve.config.z_device.entry
+            device_x = self._main_curve.config.device_x.device
+            signal_x = self._main_curve.config.device_x.signal
+            device_y = self._main_curve.config.device_y.device
+            signal_y = self._main_curve.config.device_y.signal
+            device_z = self._main_curve.config.device_z.device
+            signal_z = self._main_curve.config.device_z.signal
             try:
                 self.plot(
-                    x_name=x_name,
-                    y_name=y_name,
-                    z_name=z_name,
-                    x_entry=x_entry,
-                    y_entry=y_entry,
-                    z_entry=z_entry,
+                    device_x=device_x,
+                    device_y=device_y,
+                    device_z=device_z,
+                    signal_x=signal_x,
+                    signal_y=signal_y,
+                    signal_z=signal_z,
                     validate_bec=False,  # Don't validate - entries already validated
                 )
             except Exception as e:
@@ -650,21 +650,21 @@ class ScatterWaveform(PlotBase):
         config = self._main_curve.config
 
         # Safely get device names
-        x_device = config.x_device
-        y_device = config.y_device
+        device_x = config.device_x
+        device_y = config.device_y
 
-        x_name = x_device.name if x_device else None
-        y_name = y_device.name if y_device else None
+        device_x = device_x.device if device_x else None
+        device_y = device_y.device if device_y else None
 
-        if x_name is not None:
-            self.x_label = x_name  # type: ignore
-            x_dev = self.dev.get(x_name)
+        if device_x is not None:
+            self.x_label = device_x  # type: ignore
+            x_dev = self.dev.get(device_x)
             if x_dev and hasattr(x_dev, "egu"):
                 self.x_label_units = x_dev.egu()
 
-        if y_name is not None:
-            self.y_label = y_name  # type: ignore
-            y_dev = self.dev.get(y_name)
+        if device_y is not None:
+            self.y_label = device_y  # type: ignore
+            y_dev = self.dev.get(device_y)
             if y_dev and hasattr(y_dev, "egu"):
                 self.y_label_units = y_dev.egu()
 
@@ -756,7 +756,7 @@ class DemoApp(QMainWindow):  # pragma: no cover
         self.setCentralWidget(self.main_widget)
 
         self.waveform_popup = ScatterWaveform(popups=True)
-        self.waveform_popup.plot("samx", "samy", "bpm4i")
+        self.waveform_popup.plot(device_x="samx", device_y="samy", device_z="bpm4i")
 
         self.waveform_side = ScatterWaveform(popups=False)
         self.waveform_popup.plot("samx", "samy", "bpm3a")
