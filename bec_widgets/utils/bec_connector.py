@@ -12,7 +12,7 @@ import shiboken6 as shb
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import_from
 from pydantic import BaseModel, Field, field_validator
-from qtpy.QtCore import Property, QObject, QRunnable, QThreadPool, QTimer, Signal
+from qtpy.QtCore import Property, QObject, QRunnable, QThreadPool, Signal
 from qtpy.QtWidgets import QApplication
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
@@ -23,7 +23,6 @@ from bec_widgets.utils.yaml_dialog import load_yaml, load_yaml_gui, save_yaml, s
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_widgets.utils.bec_dispatcher import BECDispatcher
-    from bec_widgets.widgets.containers.dock import BECDock
 else:
     BECDispatcher = lazy_import_from("bec_widgets.utils.bec_dispatcher", ("BECDispatcher",))
 
