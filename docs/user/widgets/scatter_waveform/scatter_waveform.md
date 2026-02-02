@@ -20,7 +20,7 @@ The 2D scatter plot widget is designed for more complex data visualization. It e
 ```python
 # Add a new dock_area, a new dock and a BECWaveForm to the dock
 plt = gui.new().new().new(gui.available_widgets.ScatterWaveform)
-plt.plot(x_name='samx', y_name='samy', z_name='bpm4i')
+plt.plot(device_x='samx', device_y='samy', device_z='bpm4i')
 
 ```
 

@@ -140,7 +140,7 @@ class CurveSetting(SettingWidget):
             signal_x = self.signal_x.currentText()
             signal_data = self.signal_x.itemData(self.signal_x.currentIndex())
             if signal_x != "":
-                self.target_widget.x_entry = signal_data.get("obj_name", signal_x)
+                self.target_widget.signal_x = signal_data.get("obj_name", signal_x)
         else:
             self.target_widget.x_mode = self.mode_combo.currentText()
         self.curve_manager.send_curve_json()

@@ -48,7 +48,7 @@ class HeatmapSettings(SettingWidget):
         if popup is False:
             self.ui.button_apply.clicked.connect(self.accept_changes)
 
-        self.ui.x_name.setFocus()
+        self.ui.device_x.setFocus()
 
     @SafeSlot()
     def fetch_all_properties(self):
@@ -62,44 +62,44 @@ class HeatmapSettings(SettingWidget):
         color_map = getattr(self.target_widget, "color_map", None)
 
         # Default values for device properties
-        x_name, x_entry = None, None
-        y_name, y_entry = None, None
-        z_name, z_entry = None, None
+        device_x, signal_x = None, None
+        device_y, signal_y = None, None
+        device_z, signal_z = None, None
 
         # Safely access device properties
         if hasattr(self.target_widget, "_image_config") and self.target_widget._image_config:
             config = self.target_widget._image_config
 
-            if hasattr(config, "x_device") and config.x_device:
-                x_name = getattr(config.x_device, "name", None)
-                x_entry = getattr(config.x_device, "entry", None)
+            if hasattr(config, "device_x") and config.device_x:
+                device_x = getattr(config.device_x, "device", None)
+                signal_x = getattr(config.device_x, "signal", None)
 
-            if hasattr(config, "y_device") and config.y_device:
-                y_name = getattr(config.y_device, "name", None)
-                y_entry = getattr(config.y_device, "entry", None)
+            if hasattr(config, "device_y") and config.device_y:
+                device_y = getattr(config.device_y, "device", None)
+                signal_y = getattr(config.device_y, "signal", None)
 
-            if hasattr(config, "z_device") and config.z_device:
-                z_name = getattr(config.z_device, "name", None)
-                z_entry = getattr(config.z_device, "entry", None)
+            if hasattr(config, "device_z") and config.device_z:
+                device_z = getattr(config.device_z, "device", None)
+                signal_z = getattr(config.device_z, "signal", None)
 
         # Apply the properties to the settings widget
         if hasattr(self.ui, "color_map"):
             self.ui.color_map.colormap = color_map
 
-        if hasattr(self.ui, "x_name"):
-            self.ui.x_name.set_device(x_name)
-        if hasattr(self.ui, "x_entry") and x_entry is not None:
-            self.ui.x_entry.set_to_obj_name(x_entry)
+        if hasattr(self.ui, "device_x"):
+            self.ui.device_x.set_device(device_x)
+        if hasattr(self.ui, "signal_x") and signal_x is not None:
+            self.ui.signal_x.set_to_obj_name(signal_x)
 
-        if hasattr(self.ui, "y_name"):
-            self.ui.y_name.set_device(y_name)
-        if hasattr(self.ui, "y_entry") and y_entry is not None:
-            self.ui.y_entry.set_to_obj_name(y_entry)
+        if hasattr(self.ui, "device_y"):
+            self.ui.device_y.set_device(device_y)
+        if hasattr(self.ui, "signal_y") and signal_y is not None:
+            self.ui.signal_y.set_to_obj_name(signal_y)
 
-        if hasattr(self.ui, "z_name"):
-            self.ui.z_name.set_device(z_name)
-        if hasattr(self.ui, "z_entry") and z_entry is not None:
-            self.ui.z_entry.set_to_obj_name(z_entry)
+        if hasattr(self.ui, "device_z"):
+            self.ui.device_z.set_device(device_z)
+        if hasattr(self.ui, "signal_z") and signal_z is not None:
+            self.ui.signal_z.set_to_obj_name(signal_z)
 
         if hasattr(self.ui, "interpolation"):
             self.ui.interpolation.setCurrentText(
@@ -119,12 +119,12 @@ class HeatmapSettings(SettingWidget):
         """
         Apply all properties from the settings widget to the target widget.
         """
-        x_name = self.ui.x_name.currentText()
-        x_entry = self.ui.x_entry.get_signal_name()
-        y_name = self.ui.y_name.currentText()
-        y_entry = self.ui.y_entry.get_signal_name()
-        z_name = self.ui.z_name.currentText()
-        z_entry = self.ui.z_entry.get_signal_name()
+        device_x = self.ui.device_x.currentText()
+        signal_x = self.ui.signal_x.get_signal_name()
+        device_y = self.ui.device_y.currentText()
+        signal_y = self.ui.signal_y.get_signal_name()
+        device_z = self.ui.device_z.currentText()
+        signal_z = self.ui.signal_z.get_signal_name()
         validate_bec = self.ui.validate_bec.checked
         color_map = self.ui.color_map.colormap
         interpolation = self.ui.interpolation.currentText()
@@ -132,12 +132,12 @@ class HeatmapSettings(SettingWidget):
         enforce_interpolation = self.ui.enforce_interpolation.isChecked()
 
         self.target_widget.plot(
-            x_name=x_name,
-            y_name=y_name,
-            z_name=z_name,
-            x_entry=x_entry,
-            y_entry=y_entry,
-            z_entry=z_entry,
+            device_x=device_x,
+            device_y=device_y,
+            device_z=device_z,
+            signal_x=signal_x,
+            signal_y=signal_y,
+            signal_z=signal_z,
             color_map=color_map,
             validate_bec=validate_bec,
             interpolation=interpolation,
@@ -147,17 +147,17 @@ class HeatmapSettings(SettingWidget):
         )
 
     def cleanup(self):
-        self.ui.x_name.close()
-        self.ui.x_name.deleteLater()
-        self.ui.x_entry.close()
-        self.ui.x_entry.deleteLater()
-        self.ui.y_name.close()
-        self.ui.y_name.deleteLater()
-        self.ui.y_entry.close()
-        self.ui.y_entry.deleteLater()
-        self.ui.z_name.close()
-        self.ui.z_name.deleteLater()
-        self.ui.z_entry.close()
-        self.ui.z_entry.deleteLater()
+        self.ui.device_x.close()
+        self.ui.device_x.deleteLater()
+        self.ui.signal_x.close()
+        self.ui.signal_x.deleteLater()
+        self.ui.device_y.close()
+        self.ui.device_y.deleteLater()
+        self.ui.signal_y.close()
+        self.ui.signal_y.deleteLater()
+        self.ui.device_z.close()
+        self.ui.device_z.deleteLater()
+        self.ui.signal_z.close()
+        self.ui.signal_z.deleteLater()
         self.ui.interpolation.close()
         self.ui.interpolation.deleteLater()

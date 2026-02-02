@@ -20,8 +20,8 @@ logger = bec_logger.logger
 class DeviceSignal(BaseModel):
     """The configuration of a signal in the 1D waveform widget."""
 
-    name: str
-    entry: str
+    device: str
+    signal: str
     dap: str | None = None
     dap_oversample: int = 1
 

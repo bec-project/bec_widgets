@@ -58,8 +58,8 @@ def test_rpc_add_dock_with_plots_e2e(qtbot, bec_client_lib, connected_client_gui
     assert gui._ipython_registry[mm._gui_id].__class__ == MotorMap
 
     mm.map("samx", "samy")
-    curve = wf.plot(x_name="samx", y_name="bpm4i")
-    im_item = im.image(device_name="eiger", device_entry="preview")
+    curve = wf.plot(device_x="samx", device_y="bpm4i")
+    im_item = im.image(device="eiger", signal="preview")
 
     assert curve.__class__.__name__ == "RPCReference"
     assert curve.__class__ == RPCReference

@@ -32,8 +32,8 @@ plt1 = dock_area.new().new('Waveform')
 plt2 = gui.my_new_dock_area.new().new(gui.available_widgets.Waveform) # as an alternative example via dynamic name space
 
 # Add signals to the WaveformWidget
-plt1.plot(x_name='samx', y_name='bpm4i')
-plt2.plot(x_name='samx', y_name='bpm3i')
+plt1.plot(device_x='samx', device_y='bpm4i')
+plt2.plot(device_x='samx', device_y='bpm3i')
 
 # set axis labels
 plt1.title = "Gauss plots vs. samx"
@@ -60,10 +60,10 @@ In addition to the scan curve, you can also add a second curve that fits the sig
 ```python
 # Add a new dock_area, dock and Waveform and plot bpm4i vs samx with a GaussianModel DAP
 plt = gui.new().new().new('Waveform')
-plt.plot(x_name='samx', y_name='bpm4i', dap="GaussianModel")
+plt.plot(device_x='samx', device_y='bpm4i', dap="GaussianModel")
 
 # Add a second curve to the same plot without DAP
-plt.plot(x_name='samx', y_name='bpm3a')
+plt.plot(device_x='samx', device_y='bpm3a')
 
 # Add DAP to the second curve
 plt.add_dap_curve(device_label='bpm3a-bpm3a', dap_name='GaussianModel')

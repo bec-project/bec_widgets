@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 from bec_lib.logger import bec_logger
 from bec_qthemes._icon.material_icons import material_icon
 from qtpy.QtGui import QValidator
-from qtpy.QtWidgets import QApplication
 
 
 class ScanIndexValidator(QValidator):
@@ -226,7 +225,7 @@ class CurveRow(QTreeWidgetItem):
             self.device_edit.currentTextChanged.connect(self.entry_edit.set_device)
             self.device_edit.device_reset.connect(self.entry_edit.reset_selection)
             if self.config.signal:
-                device_index = self.device_edit.findText(self.config.signal.name or "")
+                device_index = self.device_edit.findText(self.config.signal.device or "")
                 if device_index >= 0:
                     self.device_edit.setCurrentIndex(device_index)
                     # Force the entry_edit to update based on the device name
@@ -235,7 +234,7 @@ class CurveRow(QTreeWidgetItem):
                     # If the device name is not found, set the first enabled item
                     self.device_edit.setCurrentIndex(0)
 
-                if not self.entry_edit.set_to_obj_name(self.config.signal.entry):
+                if not self.entry_edit.set_to_obj_name(self.config.signal.signal):
                     # If the entry is not found, try to set it to the first enabled item
                     if not self.entry_edit.set_to_first_enabled():
                         # If no enabled item is found, set to the first item
@@ -309,15 +308,15 @@ class CurveRow(QTreeWidgetItem):
         dev_name = ""
         dev_entry = ""
         if self.config.signal:
-            dev_name = self.config.signal.name
-            dev_entry = self.config.signal.entry
+            dev_name = self.config.signal.device
+            dev_entry = self.config.signal.signal
 
         # Create a new config for the DAP row
         dap_cfg = CurveConfig(
             widget_class="Curve",
             source="dap",
             parent_label=parent_label,
-            signal=DeviceSignal(name=dev_name, entry=dev_entry),
+            signal=DeviceSignal(device=dev_name, signal=dev_entry),
         )
         new_dap = CurveRow(self.tree, parent_item=self, config=dap_cfg, device_manager=self.dev)
         # Expand device row to show new child
@@ -395,10 +394,10 @@ class CurveRow(QTreeWidgetItem):
                         device_entry = device_entry_info.get("obj_name", device_entry)
                 else:
                     device_entry = self.entry_validator.validate_signal(
-                        name=device_name, entry=device_entry
+                        device=device_name, signal=device_entry
                     )
 
-            self.config.signal = DeviceSignal(name=device_name, entry=device_entry)
+            self.config.signal = DeviceSignal(device=device_name, signal=device_entry)
             scan_combo_text = self.scan_index_combo.currentText()
             if scan_combo_text == "live" or scan_combo_text == "":
                 self.config.scan_number = None
@@ -422,16 +421,16 @@ class CurveRow(QTreeWidgetItem):
             if self.parent_item:
                 parent_conf_dict = self.parent_item.export_data()
             parent_conf = CurveConfig(**parent_conf_dict)
-            dev_name = ""
-            dev_entry = ""
+            device = ""
+            signal = ""
             if parent_conf.signal:
-                dev_name = parent_conf.signal.name
-                dev_entry = parent_conf.signal.entry
+                device = parent_conf.signal.device
+                signal = parent_conf.signal.signal
             # Dap from the DapComboBox
             new_dap = "GaussianModel"
             if hasattr(self, "dap_combo"):
                 new_dap = self.dap_combo.fit_model_combobox.currentText()
-            self.config.signal = DeviceSignal(name=dev_name, entry=dev_entry, dap=new_dap)
+            self.config.signal = DeviceSignal(device=device, signal=signal, dap=new_dap)
             self.config.source = "dap"
             self.config.parent_label = parent_conf.label
             self.config.label = f"{parent_conf.label}-{new_dap}"
@@ -613,15 +612,12 @@ class CurveTree(BECWidget, QWidget):
                     item.config.color = new_col
                     item.config.symbol_color = new_col
 
-    def add_new_curve(self, name: str = None, entry: str = None):
+    def add_new_curve(self, device: str = None, signal: str = None):
         """Add a new device-type CurveRow with an assigned colormap color.
 
         Args:
-            name (str, optional): Device name.
-            entry (str, optional): Device entry.
-            style (str, optional): Pen style. Defaults to "solid".
-            width (int, optional): Pen width. Defaults to 4.
-            symbol_size (int, optional): Symbol size. Defaults to 7.
+            device (str, optional): Device name.
+            signal (str, optional): Device entry.
 
         Returns:
             CurveRow: The newly created top-level row.
@@ -630,7 +626,7 @@ class CurveTree(BECWidget, QWidget):
             widget_class="Curve",
             parent_id=self.waveform.gui_id,
             source="device",
-            signal=DeviceSignal(name=name or "", entry=entry or ""),
+            signal=DeviceSignal(device=device or "", signal=signal or ""),
         )
         new_row = CurveRow(self.tree, parent_item=None, config=cfg, device_manager=self.dev)
 

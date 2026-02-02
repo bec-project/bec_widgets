@@ -64,32 +64,32 @@ class DeviceSelection(QWidget):
         layout.addWidget(self.device_combo_box, stretch=1)
         layout.addWidget(self.signal_combo_box, stretch=1)
 
-    def set_device_and_signal(self, device_name: str | None, device_entry: str | None) -> None:
+    def set_device_and_signal(self, device: str | None, signal: str | None) -> None:
         """Set the displayed device and signal without emitting selection signals."""
-        device_name = device_name or ""
-        device_entry = device_entry or ""
+        device = device or ""
+        signal = signal or ""
 
         self.device_combo_box.blockSignals(True)
         self.signal_combo_box.blockSignals(True)
 
         try:
-            if device_name:
+            if device:
                 # Set device in device_combo_box
-                index = self.device_combo_box.findText(device_name)
+                index = self.device_combo_box.findText(device)
                 if index >= 0:
                     self.device_combo_box.setCurrentIndex(index)
                 else:
                     # Device not found in list, but still set it
-                    self.device_combo_box.setCurrentText(device_name)
+                    self.device_combo_box.setCurrentText(device)
 
                 # Only update signal combobox device filter if it's actually changing
                 # This prevents redundant repopulation which can cause duplicates !!!!
                 current_device = getattr(self.signal_combo_box, "_device", None)
-                if current_device != device_name:
-                    self.signal_combo_box.set_device(device_name)
+                if current_device != device:
+                    self.signal_combo_box.set_device(device)
 
                 # Sync signal combobox selection
-                if device_entry:
+                if signal:
                     # Try to find the signal by component_name (which is what's displayed)
                     found = False
                     for i in range(self.signal_combo_box.count()):
@@ -99,14 +99,14 @@ class DeviceSelection(QWidget):
                         # Check if this matches our signal
                         if config_data:
                             component_name = config_data.get("component_name", "")
-                            if text == component_name or text == device_entry:
+                            if text == component_name or text == signal:
                                 self.signal_combo_box.setCurrentIndex(i)
                                 found = True
                                 break
 
                     if not found:
-                        # Fallback: try to match the device_entry directly
-                        index = self.signal_combo_box.findText(device_entry)
+                        # Fallback: try to match the signal directly
+                        index = self.signal_combo_box.findText(signal)
                         if index >= 0:
                             self.signal_combo_box.setCurrentIndex(index)
             else:
@@ -187,8 +187,8 @@ class DeviceSelectionConnection(BundleConnection):
         self.components = components
         self.target_widget = target_widget
         self._connected = False
-        self.register_property_sync("device_name", self._sync_from_device_name)
-        self.register_property_sync("device_entry", self._sync_from_device_entry)
+        self.register_property_sync("device", self._sync_from_device)
+        self.register_property_sync("signal", self._sync_from_signal)
         self.register_property_sync("connection_status", self._sync_connection_status)
         self.register_property_sync("connection_error", self._sync_connection_status)
 
@@ -222,26 +222,22 @@ class DeviceSelectionConnection(BundleConnection):
         self._connected = False
         widget.cleanup()
 
-    def _sync_from_device_name(self, _):
+    def _sync_from_device(self, _):
         try:
             widget = self._widget()
         except Exception:
             return
 
-        widget.set_device_and_signal(
-            self.target_widget.device_name, self.target_widget.device_entry
-        )
-        self.target_widget._sync_device_entry_from_toolbar()
+        widget.set_device_and_signal(self.target_widget.device, self.target_widget.signal)
+        self.target_widget._sync_signal_from_toolbar()
 
-    def _sync_from_device_entry(self, _):
+    def _sync_from_signal(self, _):
         try:
             widget = self._widget()
         except Exception:
             return
 
-        widget.set_device_and_signal(
-            self.target_widget.device_name, self.target_widget.device_entry
-        )
+        widget.set_device_and_signal(self.target_widget.device, self.target_widget.signal)
 
     def _sync_connection_status(self, _):
         try:

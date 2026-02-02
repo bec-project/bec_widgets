@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import IntEnum
 from functools import partial
-from typing import TYPE_CHECKING, List, Tuple
+from typing import TYPE_CHECKING, Any, List, Tuple
 
 from bec_lib.logger import bec_logger
 from bec_qthemes import apply_theme, material_icon

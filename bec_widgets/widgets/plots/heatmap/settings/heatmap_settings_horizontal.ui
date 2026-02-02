@@ -196,7 +196,7 @@
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="DeviceComboBox" name="x_name">
+         <widget class="DeviceComboBox" name="device_x">
           <property name="editable">
            <bool>true</bool>
           </property>
@@ -206,7 +206,7 @@
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="SignalComboBox" name="x_entry">
+         <widget class="SignalComboBox" name="signal_x">
           <property name="editable">
            <bool>true</bool>
           </property>
@@ -236,7 +236,7 @@
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="DeviceComboBox" name="y_name">
+         <widget class="DeviceComboBox" name="device_y">
           <property name="editable">
            <bool>true</bool>
           </property>
@@ -246,7 +246,7 @@
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="SignalComboBox" name="y_entry">
+         <widget class="SignalComboBox" name="signal_y">
           <property name="editable">
            <bool>true</bool>
           </property>
@@ -276,7 +276,7 @@
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="DeviceComboBox" name="z_name">
+         <widget class="DeviceComboBox" name="device_z">
           <property name="editable">
            <bool>true</bool>
           </property>
@@ -286,7 +286,7 @@
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="SignalComboBox" name="z_entry">
+         <widget class="SignalComboBox" name="signal_z">
           <property name="editable">
            <bool>true</bool>
           </property>
@@ -322,21 +322,21 @@
   </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>x_name</tabstop>
-  <tabstop>y_name</tabstop>
-  <tabstop>z_name</tabstop>
-  <tabstop>x_entry</tabstop>
-  <tabstop>y_entry</tabstop>
-  <tabstop>z_entry</tabstop>
+  <tabstop>device_x</tabstop>
+  <tabstop>device_y</tabstop>
+  <tabstop>device_z</tabstop>
+  <tabstop>signal_x</tabstop>
+  <tabstop>signal_y</tabstop>
+  <tabstop>signal_z</tabstop>
   <tabstop>interpolation</tabstop>
   <tabstop>oversampling_factor</tabstop>
  </tabstops>
  <resources/>
  <connections>
   <connection>
-   <sender>x_name</sender>
+   <sender>device_x</sender>
    <signal>device_reset()</signal>
-   <receiver>x_entry</receiver>
+   <receiver>signal_x</receiver>
    <slot>reset_selection()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -350,9 +350,9 @@
    </hints>
   </connection>
   <connection>
-   <sender>x_name</sender>
+   <sender>device_x</sender>
    <signal>currentTextChanged(QString)</signal>
-   <receiver>x_entry</receiver>
+   <receiver>signal_x</receiver>
    <slot>set_device(QString)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -366,9 +366,9 @@
    </hints>
   </connection>
   <connection>
-   <sender>y_name</sender>
+   <sender>device_y</sender>
    <signal>device_reset()</signal>
-   <receiver>y_entry</receiver>
+   <receiver>signal_y</receiver>
    <slot>reset_selection()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -382,9 +382,9 @@
    </hints>
   </connection>
   <connection>
-   <sender>y_name</sender>
+   <sender>device_y</sender>
    <signal>currentTextChanged(QString)</signal>
-   <receiver>y_entry</receiver>
+   <receiver>signal_y</receiver>
    <slot>set_device(QString)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -398,9 +398,9 @@
    </hints>
   </connection>
   <connection>
-   <sender>z_name</sender>
+   <sender>device_z</sender>
    <signal>device_reset()</signal>
-   <receiver>z_entry</receiver>
+   <receiver>signal_z</receiver>
    <slot>reset_selection()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -414,9 +414,9 @@
    </hints>
   </connection>
   <connection>
-   <sender>z_name</sender>
+   <sender>device_z</sender>
    <signal>currentTextChanged(QString)</signal>
-   <receiver>z_entry</receiver>
+   <receiver>signal_z</receiver>
    <slot>set_device(QString)</slot>
    <hints>
     <hint type="sourcelabel">

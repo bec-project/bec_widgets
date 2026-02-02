@@ -58,7 +58,7 @@
                             </widget>
                         </item>
                         <item row="0" column="1">
-                            <widget class="DeviceLineEdit" name="x_name"/>
+                            <widget class="DeviceLineEdit" name="device_x"/>
                         </item>
                         <item row="1" column="0">
                             <widget class="QLabel" name="label_2">
@@ -68,7 +68,7 @@
                             </widget>
                         </item>
                         <item row="1" column="1">
-                            <widget class="QLineEdit" name="x_entry"/>
+                            <widget class="QLineEdit" name="signal_x"/>
                         </item>
                     </layout>
                 </widget>
@@ -87,7 +87,7 @@
                             </widget>
                         </item>
                         <item row="0" column="1">
-                            <widget class="DeviceLineEdit" name="y_name"/>
+                            <widget class="DeviceLineEdit" name="device_y"/>
                         </item>
                         <item row="1" column="0">
                             <widget class="QLabel" name="label_4">
@@ -97,7 +97,7 @@
                             </widget>
                         </item>
                         <item row="1" column="1">
-                            <widget class="QLineEdit" name="y_entry"/>
+                            <widget class="QLineEdit" name="signal_y"/>
                         </item>
                     </layout>
                 </widget>
@@ -116,7 +116,7 @@
                             </widget>
                         </item>
                         <item row="0" column="1">
-                            <widget class="DeviceLineEdit" name="z_name"/>
+                            <widget class="DeviceLineEdit" name="device_z"/>
                         </item>
                         <item row="1" column="0">
                             <widget class="QLabel" name="label_6">
@@ -126,7 +126,7 @@
                             </widget>
                         </item>
                         <item row="1" column="1">
-                            <widget class="QLineEdit" name="z_entry"/>
+                            <widget class="QLineEdit" name="signal_z"/>
                         </item>
                     </layout>
                 </widget>
@@ -153,9 +153,9 @@
     <resources/>
     <connections>
         <connection>
-            <sender>x_name</sender>
+            <sender>device_x</sender>
             <signal>textChanged(QString)</signal>
-            <receiver>x_entry</receiver>
+            <receiver>signal_x</receiver>
             <slot>clear()</slot>
             <hints>
                 <hint type="sourcelabel">
@@ -169,9 +169,9 @@
             </hints>
         </connection>
         <connection>
-            <sender>y_name</sender>
+            <sender>device_y</sender>
             <signal>textChanged(QString)</signal>
-            <receiver>y_entry</receiver>
+            <receiver>signal_y</receiver>
             <slot>clear()</slot>
             <hints>
                 <hint type="sourcelabel">
@@ -185,9 +185,9 @@
             </hints>
         </connection>
         <connection>
-            <sender>z_name</sender>
+            <sender>device_z</sender>
             <signal>textChanged(QString)</signal>
-            <receiver>z_entry</receiver>
+            <receiver>signal_z</receiver>
             <slot>clear()</slot>
             <hints>
                 <hint type="sourcelabel">
