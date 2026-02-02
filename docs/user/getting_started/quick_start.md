@@ -45,7 +45,7 @@ For the introduction given here, we will focus on the plotting widgets of BECWid
 
 ```python
 plt = gui.new().new().new(gui.available_widgets.Waveform)
-plt.plot(x_name='samx', y_name='bpm4i')
+plt.plot(device_x='samx', device_y='bpm4i')
 ```
 Here, we create a new plot with a subscription to the devices `samx` and `bpm4i` and assign the plot to the object `plt`. We can now use this object to further customize the plot, e.g. changing the title (`title`), axis labels (`x_label`) 
 <!-- or limits (`x_lim`).  -->
@@ -112,7 +112,7 @@ Let's assume BEC was just started and the `gui` object is available in the clien
 ```python
 dock_area = gui.new()
 plt = dock_area.new().new(gui.available_widgets.Waveform)
-plt.plot(x_name='samx', y_name='bpm4i')
+plt.plot(device_x='samx', device_y='bpm4i')
 plt.curves[0].set_color(color="white")
 plt.title = '1D Waveform'
 ```

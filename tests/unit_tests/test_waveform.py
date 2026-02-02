@@ -107,8 +107,8 @@ def test_plot_single_arg_input_sync(qtbot, mocked_client):
 
     assert c1.config.source == "device"
     assert c2.config.source == "device"
-    assert c1.config.signal == DeviceSignal(name="bpm4i", entry="bpm4i", dap=None)
-    assert c2.config.signal == DeviceSignal(name="bpm3a", entry="bpm3a", dap=None)
+    assert c1.config.signal == DeviceSignal(device="bpm4i", signal="bpm4i", dap=None)
+    assert c2.config.signal == DeviceSignal(device="bpm3a", signal="bpm3a", dap=None)
 
     # Check that the curve is added to the plot
     assert len(wf.plot_item.curves) == 2
@@ -122,8 +122,8 @@ def test_plot_single_arg_input_async(qtbot, mocked_client):
 
     assert c1.config.source == "device"
     assert c2.config.source == "device"
-    assert c1.config.signal == DeviceSignal(name="eiger", entry="eiger", dap=None)
-    assert c2.config.signal == DeviceSignal(name="async_device", entry="async_device", dap=None)
+    assert c1.config.signal == DeviceSignal(device="eiger", signal="eiger", dap=None)
+    assert c2.config.signal == DeviceSignal(device="async_device", signal="async_device", dap=None)
 
     # Check that the curve is added to the plot
     assert len(wf.plot_item.curves) == 2
@@ -305,7 +305,7 @@ def test_curve_json_setter_ignores_custom(qtbot, mocked_client):
         "label": "device_curve",
         "color": "#ff0000",
         "source": "device",
-        "signal": {"name": "bpm4i", "entry": "bpm4i", "dap": None},
+        "signal": {"device": "bpm4i", "signal": "bpm4i", "dap": None},
     }
     custom_curve_config = {
         "widget_class": "Curve",
@@ -475,7 +475,7 @@ def test_add_dap_curve(qtbot, mocked_client_with_dap, monkeypatch):
     dap_curve = wf.add_dap_curve(device_label="bpm4i-bpm4i", dap_name="GaussianModel")
     assert dap_curve is not None
     assert dap_curve.config.source == "dap"
-    assert dap_curve.config.signal.name == "bpm4i"
+    assert dap_curve.config.signal.device == "bpm4i"
     assert dap_curve.config.signal.dap == "GaussianModel"
 
 
@@ -491,8 +491,8 @@ def test_add_dap_curve_custom_source(qtbot, mocked_client_with_dap):
     dap_curve = wf.add_dap_curve(device_label=custom_curve.name(), dap_name="GaussianModel")
     assert dap_curve.config.source == "dap"
     assert dap_curve.config.parent_label == custom_curve.name()
-    assert dap_curve.config.signal.name == custom_curve.name()
-    assert dap_curve.config.signal.entry == "custom"
+    assert dap_curve.config.signal.device == custom_curve.name()
+    assert dap_curve.config.signal.signal == "custom"
     assert dap_curve.config.signal.dap == "GaussianModel"
 
 
@@ -764,7 +764,7 @@ def test_curve_set_data_error_non_custom(qtbot, mocked_client):
     Test that calling set_data on a non-custom (device) curve raises a ValueError.
     """
     wf = create_widget(qtbot, Waveform, client=mocked_client)
-    # Create a device curve by providing y_name (which makes source 'device')
+    # Create a device curve by providing device_y (which makes source 'device')
     # Assume that entry_validator returns a valid entry.
     c = wf.plot(arg1="bpm4i", label="device_curve")
     with pytest.raises(ValueError):
@@ -1136,20 +1136,20 @@ def test_update_with_scan_history_by_index(qtbot, mocked_client, scan_history_fa
     assert len(wf.client.history._scan_ids) == 2, "Expected two history scans"
 
     # Do history curve plotting
-    wf.plot(y_name="bpm4i", y_entry="bpm4i", scan_id="hist1")
-    wf.plot(y_name="bpm4i", scan_number=2)
+    wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist1")
+    wf.plot(device_y="bpm4i", scan_number=2)
 
     assert len(wf.plot_item.curves) == 2, "Expected two curves for history scans"
     c1, c2 = wf.plot_item.curves
     # First curve should be for hist1, second for hist2
-    assert c1.config.signal.name == "bpm4i"
-    assert c1.config.signal.entry == "bpm4i"
+    assert c1.config.signal.device == "bpm4i"
+    assert c1.config.signal.signal == "bpm4i"
     assert c1.config.scan_id == "hist1"
     assert c1.config.scan_number == 1
     assert c1.name() == "bpm4i-bpm4i-scan-1"
 
-    assert c2.config.signal.name == "bpm4i"
-    assert c2.config.signal.entry == "bpm4i"
+    assert c2.config.signal.device == "bpm4i"
+    assert c2.config.signal.signal == "bpm4i"
     assert c2.config.scan_id == "hist2"
     assert c2.config.scan_number == 2
     assert c2.name() == "bpm4i-bpm4i-scan-2"
@@ -1163,7 +1163,7 @@ def test_history_curve_x_modes_pre_plot(qtbot, mocked_client, scan_history_facto
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     hist1, hist2 = inject_scan_history(wf, scan_history_factory, ("hist1", 1), ("hist2", 2))
     wf.x_mode = mode
-    c = wf.plot(y_name="bpm4i", y_entry="bpm4i", scan_id="hist1")
+    c = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist1")
     assert c.config.current_x_mode == mode
 
 
@@ -1174,7 +1174,7 @@ def test_history_curve_x_modes_post_plot(qtbot, mocked_client, scan_history_fact
     """
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     hist1, hist2 = inject_scan_history(wf, scan_history_factory, ("hist1", 1), ("hist2", 2))
-    c = wf.plot(y_name="bpm4i", y_entry="bpm4i", scan_id="hist1")
+    c = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist1")
     # Change x_mode after plotting
     wf.x_mode = mode
     # Refresh history curves
@@ -1191,7 +1191,7 @@ def test_history_curve_incompatible_x_mode_hides_curve(qtbot, mocked_client, sca
     # Inject history scan for this test
     [history_msg] = inject_scan_history(wf, scan_history_factory, ("hist_bad", 1))
     # Plot history curve
-    c = wf.plot(y_name="bpm4i", y_entry="bpm4i", scan_id=history_msg.scan_id)
+    c = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id=history_msg.scan_id)
     # Curve should be hidden due to incompatible x_mode
     assert not c.isVisible()
 
@@ -1212,7 +1212,7 @@ def test_fetch_history_data_no_stored_data_raises(
     # Force get_history_scan_item to return our dummy
     monkeypatch.setattr(wf, "get_history_scan_item", lambda scan_id, scan_index: dummy_scan)
     # Attempt to plot history curve should be suppressed by SafeSlot and return None
-    c = wf.plot(y_name="bpm4i", y_entry="bpm4i", scan_id="dummy", scan_number=1)
+    c = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="dummy", scan_number=1)
     assert c is None
     assert len(wf.curves) == 0
 
@@ -1224,7 +1224,7 @@ def test_history_curve_device_missing_returns_none(qtbot, mocked_client, scan_hi
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     wf.x_mode = "index"
     [history_msg] = inject_scan_history(wf, scan_history_factory, ("hist_dev_missing", 1))
-    c = wf.plot(y_name="non-existing", y_entry="non-existing", scan_id=history_msg.scan_id)
+    c = wf.plot(device_y="non-existing", signal_y="non-existing", scan_id=history_msg.scan_id)
     assert c is None
 
 
@@ -1238,7 +1238,7 @@ def test_history_curve_custom_shape_mismatch_hides_curve(
     wf.x_mode = "async_device"
     [history_msg] = inject_scan_history(wf, scan_history_factory, ("hist_custom_shape", 1))
     # Force shape mismatch for x-data
-    c = wf.plot(y_name="bpm4i", y_entry="bpm4i", scan_id=history_msg.scan_id)
+    c = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id=history_msg.scan_id)
     assert c is not None
     assert not c.isVisible()
 
@@ -1250,7 +1250,7 @@ def test_history_curve_index_mode_plots_curve(qtbot, mocked_client, scan_history
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     wf.x_mode = "index"
     [history_msg] = inject_scan_history(wf, scan_history_factory, ("hist_index", 1))
-    c = wf.plot(y_name="bpm4i", y_entry="bpm4i", scan_id=history_msg.scan_id)
+    c = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id=history_msg.scan_id)
     assert c is not None
     assert c.isVisible()
     assert c.config.current_x_mode == "index"
@@ -1263,7 +1263,7 @@ def test_history_curve_timestamp_mode_plots_curve(qtbot, mocked_client, scan_his
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     wf.x_mode = "timestamp"
     [history_msg] = inject_scan_history(wf, scan_history_factory, ("hist_time", 1))
-    c = wf.plot(y_name="bpm4i", y_entry="bpm4i", scan_id=history_msg.scan_id)
+    c = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id=history_msg.scan_id)
     assert c is not None
     assert c.isVisible()
     assert c.config.current_x_mode == "timestamp"
@@ -1279,7 +1279,7 @@ def test_history_curve_auto_valid_uses_first_report_device(
     wf.x_mode = "auto"
     [history_msg] = inject_scan_history(wf, scan_history_factory, ("hist_auto_valid", 1))
     # Plot history curve
-    c = wf.plot(y_name="bpm4i", y_entry="bpm4i", scan_id=history_msg.scan_id)
+    c = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id=history_msg.scan_id)
     assert c is not None
     assert c.isVisible()
     # Should have fallen back to the first scan_report_device
@@ -1295,7 +1295,7 @@ def test_history_curve_file_not_found_returns_none(qtbot, mocked_client, scan_hi
     # Inject a valid history message then corrupt its file_path
     [history_msg] = inject_scan_history(wf, scan_history_factory, ("bad_file", 1))
     history_msg.file_path = "/nonexistent/path.h5"
-    c = wf.plot(y_name="bpm4i", y_entry="bpm4i", scan_id=history_msg.scan_id)
+    c = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id=history_msg.scan_id)
     assert c is None
 
 
@@ -1306,5 +1306,5 @@ def test_history_curve_scan_not_found_returns_none(qtbot, mocked_client):
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     wf.x_mode = "index"
     # No history scans injected for this widget
-    c = wf.plot(y_name="bpm4i", y_entry="bpm4i", scan_id="unknown_scan")
+    c = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="unknown_scan")
     assert c is None

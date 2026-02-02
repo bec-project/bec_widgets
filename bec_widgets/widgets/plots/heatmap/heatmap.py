@@ -35,8 +35,8 @@ logger = bec_logger.logger
 class HeatmapDeviceSignal(BaseModel):
     """The configuration of a signal in the scatter waveform widget."""
 
-    name: str
-    entry: str
+    device: str
+    signal: str
 
     model_config: dict = {"validate_assignment": True}
 
@@ -65,13 +65,13 @@ class HeatmapConfig(ConnectionConfig):
     lock_aspect_ratio: bool = Field(
         False, description="Whether to lock the aspect ratio of the image."
     )
-    x_device: HeatmapDeviceSignal | None = Field(
+    device_x: HeatmapDeviceSignal | None = Field(
         None, description="The x device signal of the heatmap."
     )
-    y_device: HeatmapDeviceSignal | None = Field(
+    device_y: HeatmapDeviceSignal | None = Field(
         None, description="The y device signal of the heatmap."
     )
-    z_device: HeatmapDeviceSignal | None = Field(
+    device_z: HeatmapDeviceSignal | None = Field(
         None, description="The z device signal of the heatmap."
     )
 
@@ -204,18 +204,18 @@ class Heatmap(ImageBase):
         "rois",
         "plot",
         # Device properties
-        "x_device_name",
-        "x_device_name.setter",
-        "x_device_entry",
-        "x_device_entry.setter",
-        "y_device_name",
-        "y_device_name.setter",
-        "y_device_entry",
-        "y_device_entry.setter",
-        "z_device_name",
-        "z_device_name.setter",
-        "z_device_entry",
-        "z_device_entry.setter",
+        "device_x",
+        "device_x.setter",
+        "signal_x",
+        "signal_x.setter",
+        "device_y",
+        "device_y.setter",
+        "signal_y",
+        "signal_y.setter",
+        "device_z",
+        "device_z.setter",
+        "signal_z",
+        "signal_z.setter",
     ]
 
     PLUGIN = True
@@ -238,9 +238,9 @@ class Heatmap(ImageBase):
                 interpolation="linear",
                 oversampling_factor=1.0,
                 lock_aspect_ratio=False,
-                x_device=None,
-                y_device=None,
-                z_device=None,
+                device_x=None,
+                device_y=None,
+                device_z=None,
             )
         super().__init__(parent=parent, config=config, theme_update=True, **kwargs)
         self._image_config = config
@@ -314,12 +314,12 @@ class Heatmap(ImageBase):
     @SafeSlot(popup_error=True)
     def plot(
         self,
-        x_name: str,
-        y_name: str,
-        z_name: str,
-        x_entry: None | str = None,
-        y_entry: None | str = None,
-        z_entry: None | str = None,
+        device_x: str,
+        device_y: str,
+        device_z: str,
+        signal_x: None | str = None,
+        signal_y: None | str = None,
+        signal_z: None | str = None,
         color_map: str | None = "plasma",
         validate_bec: bool = True,
         interpolation: Literal["linear", "nearest"] | None = None,
@@ -333,12 +333,12 @@ class Heatmap(ImageBase):
         Plot the heatmap with the given x, y, and z data.
 
         Args:
-            x_name (str): The name of the x-axis signal.
-            y_name (str): The name of the y-axis signal.
-            z_name (str): The name of the z-axis signal.
-            x_entry (str | None): The entry for the x-axis signal.
-            y_entry (str | None): The entry for the y-axis signal.
-            z_entry (str | None): The entry for the z-axis signal.
+            device_x (str): The name of the x-axis device signal.
+            device_y (str): The name of the y-axis device signal.
+            device_z (str): The name of the z-axis device signal.
+            signal_x (str | None): The entry for the x-axis device signal.
+            signal_y (str | None): The entry for the y-axis device signal.
+            signal_z (str | None): The entry for the z-axis device signal.
             color_map (str | None): The color map to use for the heatmap.
             validate_bec (bool): Whether to validate the entries against BEC signals.
             interpolation (Literal["linear", "nearest"] | None): The interpolation method to use.
@@ -349,13 +349,13 @@ class Heatmap(ImageBase):
             reload (bool): Whether to reload the heatmap with new data.
         """
         if validate_bec:
-            x_entry = self.entry_validator.validate_signal(x_name, x_entry)
-            y_entry = self.entry_validator.validate_signal(y_name, y_entry)
-            z_entry = self.entry_validator.validate_signal(z_name, z_entry)
+            signal_x = self.entry_validator.validate_signal(device_x, signal_x)
+            signal_y = self.entry_validator.validate_signal(device_y, signal_y)
+            signal_z = self.entry_validator.validate_signal(device_z, signal_z)
 
-        if x_entry is None or y_entry is None or z_entry is None:
+        if signal_x is None or signal_y is None or signal_z is None:
             raise ValueError("x, y, and z entries must be provided.")
-        if x_name is None or y_name is None or z_name is None:
+        if device_x is None or device_y is None or device_z is None:
             raise ValueError("x, y, and z names must be provided.")
 
         if interpolation is None:
@@ -374,24 +374,24 @@ class Heatmap(ImageBase):
             show_config_label = self._image_config.show_config_label
 
         def _device_key(device: HeatmapDeviceSignal | None) -> tuple[str | None, str | None]:
-            return (device.name if device else None, device.entry if device else None)
+            return (device.device if device else None, device.signal if device else None)
 
         prev_cfg = getattr(self, "_image_config", None)
         config_changed = False
-        if prev_cfg and prev_cfg.x_device and prev_cfg.y_device and prev_cfg.z_device:
+        if prev_cfg and prev_cfg.device_x and prev_cfg.device_y and prev_cfg.device_z:
             config_changed = any(
                 (
-                    _device_key(prev_cfg.x_device) != (x_name, x_entry),
-                    _device_key(prev_cfg.y_device) != (y_name, y_entry),
-                    _device_key(prev_cfg.z_device) != (z_name, z_entry),
+                    _device_key(prev_cfg.device_x) != (device_x, signal_x),
+                    _device_key(prev_cfg.device_y) != (device_y, signal_y),
+                    _device_key(prev_cfg.device_z) != (device_z, signal_z),
                 )
             )
 
         self._image_config = HeatmapConfig(
             parent_id=self.gui_id,
-            x_device=HeatmapDeviceSignal(name=x_name, entry=x_entry),
-            y_device=HeatmapDeviceSignal(name=y_name, entry=y_entry),
-            z_device=HeatmapDeviceSignal(name=z_name, entry=z_entry),
+            device_x=HeatmapDeviceSignal(device=device_x, signal=signal_x),
+            device_y=HeatmapDeviceSignal(device=device_y, signal=signal_y),
+            device_z=HeatmapDeviceSignal(device=device_z, signal=signal_z),
             color_map=color_map,
             color_bar=None,
             interpolation=interpolation,
@@ -428,26 +428,26 @@ class Heatmap(ImageBase):
             return
 
         # Safely get device names (might be None if not yet configured)
-        x_device = self._image_config.x_device
-        y_device = self._image_config.y_device
-        z_device = self._image_config.z_device
+        device_x = self._image_config.device_x
+        device_y = self._image_config.device_y
+        device_z = self._image_config.device_z
 
-        x_name = x_device.name if x_device else None
-        y_name = y_device.name if y_device else None
-        z_name = z_device.name if z_device else None
+        device_x_name = device_x.device if device_x else None
+        device_y_name = device_y.device if device_y else None
+        device_z_name = device_z.device if device_z else None
 
-        if x_name is not None:
-            self.x_label = x_name  # type: ignore
-            x_dev = self.dev.get(x_name)
+        if device_x_name is not None:
+            self.x_label = device_x_name  # type: ignore
+            x_dev = self.dev.get(device_x_name)
             if x_dev and hasattr(x_dev, "egu"):
                 self.x_label_units = x_dev.egu()
-        if y_name is not None:
-            self.y_label = y_name  # type: ignore
-            y_dev = self.dev.get(y_name)
+        if device_y_name is not None:
+            self.y_label = device_y_name  # type: ignore
+            y_dev = self.dev.get(device_y_name)
             if y_dev and hasattr(y_dev, "egu"):
                 self.y_label_units = y_dev.egu()
-        if z_name is not None:
-            self.title = z_name
+        if device_z_name is not None:
+            self.title = device_z_name
 
     def _init_toolbar_heatmap(self):
         """
@@ -572,23 +572,23 @@ class Heatmap(ImageBase):
         if self._image_config is None:
             return
         try:
-            x_name = self._image_config.x_device.name
-            x_entry = self._image_config.x_device.entry
-            y_name = self._image_config.y_device.name
-            y_entry = self._image_config.y_device.entry
-            z_name = self._image_config.z_device.name
-            z_entry = self._image_config.z_device.entry
+            device_x = self._image_config.device_x.device
+            signal_x = self._image_config.device_x.signal
+            device_y = self._image_config.device_y.device
+            signal_y = self._image_config.device_y.signal
+            device_z = self._image_config.device_z.device
+            signal_z = self._image_config.device_z.signal
         except AttributeError:
             return
 
         if access_key == "val":
-            x_data = data.get(x_name, {}).get(x_entry, {}).get(access_key, None)
-            y_data = data.get(y_name, {}).get(y_entry, {}).get(access_key, None)
-            z_data = data.get(z_name, {}).get(z_entry, {}).get(access_key, None)
+            x_data = data.get(device_x, {}).get(signal_x, {}).get(access_key, None)
+            y_data = data.get(device_y, {}).get(signal_y, {}).get(access_key, None)
+            z_data = data.get(device_z, {}).get(signal_z, {}).get(access_key, None)
         else:
-            x_data = data.get(x_name, {}).get(x_entry, {}).read().get("value", None)
-            y_data = data.get(y_name, {}).get(y_entry, {}).read().get("value", None)
-            z_data = data.get(z_name, {}).get(z_entry, {}).read().get("value", None)
+            x_data = data.get(device_x, {}).get(signal_x, {}).read().get("value", None)
+            y_data = data.get(device_y, {}).get(signal_y, {}).read().get("value", None)
+            z_data = data.get(device_z, {}).get(signal_z, {}).read().get("value", None)
 
             if not isinstance(x_data, list):
                 x_data = x_data.tolist() if isinstance(x_data, np.ndarray) else None
@@ -839,7 +839,6 @@ class Heatmap(ImageBase):
             x_data (np.ndarray): The x data.
             y_data (np.ndarray): The y data.
             z_data (np.ndarray): The z data.
-            msg (messages.ScanStatusMessage): The scan status message.
 
         Returns:
             tuple[np.ndarray, QTransform]: The image data and the QTransform.
@@ -854,7 +853,7 @@ class Heatmap(ImageBase):
         if len(z_data) < 4:
             # LinearNDInterpolator requires at least 4 points to interpolate
             return None, None
-        return self.get_step_scan_image(x_data, y_data, z_data, msg)
+        return self.get_step_scan_image(x_data, y_data, z_data)
 
     def _is_grid_scan_supported(self, msg: messages.ScanStatusMessage) -> bool:
         """Check if the scan can use optimized grid_scan rendering.
@@ -871,11 +870,11 @@ class Heatmap(ImageBase):
         if msg.scan_name != "grid_scan" or self._image_config.enforce_interpolation:
             return False
 
-        device_x = self._image_config.x_device.entry
-        device_y = self._image_config.y_device.entry
+        signal_x = self._image_config.device_x.signal
+        signal_y = self._image_config.device_y.signal
         return (
-            device_x in msg.request_inputs["arg_bundle"]
-            and device_y in msg.request_inputs["arg_bundle"]
+            signal_x in msg.request_inputs["arg_bundle"]
+            and signal_y in msg.request_inputs["arg_bundle"]
         )
 
     def get_grid_scan_image(
@@ -893,9 +892,9 @@ class Heatmap(ImageBase):
 
         args = self.arg_bundle_to_dict(4, msg.request_inputs["arg_bundle"])
 
-        x_entry = self._image_config.x_device.entry
-        y_entry = self._image_config.y_device.entry
-        shape = (args[x_entry][-1], args[y_entry][-1])
+        signal_x = self._image_config.device_x.signal
+        signal_y = self._image_config.device_y.signal
+        shape = (args[signal_x][-1], args[signal_y][-1])
 
         data = self.main_image.raw_data
 
@@ -925,8 +924,8 @@ class Heatmap(ImageBase):
                 return origin + np.linspace(start, stop, npts)
             return np.linspace(start, stop, npts)
 
-        x_levels = _axis_levels(x_entry, shape[0])
-        y_levels = _axis_levels(y_entry, shape[1])
+        x_levels = _axis_levels(signal_x, shape[0])
+        y_levels = _axis_levels(signal_y, shape[1])
 
         pixel_size_x = (
             float(x_levels[-1] - x_levels[0]) / max(shape[0] - 1, 1) if shape[0] > 1 else 1.0
@@ -949,7 +948,7 @@ class Heatmap(ImageBase):
             if snaked and (slow_i % 2 == 1):
                 fast_i = args[fast_entry][-1] - 1 - fast_i
 
-            if x_entry == fast_entry:
+            if signal_x == fast_entry:
                 x_i, y_i = fast_i, slow_i
             else:
                 x_i, y_i = slow_i, fast_i
@@ -959,11 +958,7 @@ class Heatmap(ImageBase):
         return data, transform
 
     def get_step_scan_image(
-        self,
-        x_data: list[float],
-        y_data: list[float],
-        z_data: list[float],
-        msg: messages.ScanStatusMessage,
+        self, x_data: list[float], y_data: list[float], z_data: list[float]
     ) -> tuple[np.ndarray, QTransform]:
         """
         Get the image data for an arbitrary step scan.
@@ -972,7 +967,6 @@ class Heatmap(ImageBase):
             x_data (list[float]): The x data.
             y_data (list[float]): The y data.
             z_data (list[float]): The z data.
-            msg (messages.ScanStatusMessage): The scan status message.
 
         Returns:
             tuple[np.ndarray, QTransform]: The image data and the QTransform.
@@ -1033,7 +1027,7 @@ class Heatmap(ImageBase):
         to avoid recalculating the grid for the same scan.
 
         Args:
-            _scan_id (str): The scan ID. Needed for caching but not used in the function.
+            positions: positions of the data points.
 
         Returns:
             tuple[np.ndarray, np.ndarray, QTransform]: The grid x and y coordinates and the QTransform.
@@ -1108,11 +1102,13 @@ class Heatmap(ImageBase):
 
         return max(1, width_pixels), max(1, height_pixels)
 
-    def arg_bundle_to_dict(self, bundle_size: int, args: list) -> dict:
+    @staticmethod
+    def arg_bundle_to_dict(bundle_size: int, args: list) -> dict:
         """
         Convert the argument bundle to a dictionary.
 
         Args:
+            bundle_size (int): The size of each argument bundle.
             args (list): The argument bundle.
 
         Returns:
@@ -1160,14 +1156,14 @@ class Heatmap(ImageBase):
     ################################################################################
 
     @SafeProperty(str)
-    def x_device_name(self) -> str:
+    def device_x(self) -> str:
         """Device name for the X axis."""
-        if self._image_config.x_device is None:
+        if self._image_config.device_x is None:
             return ""
-        return self._image_config.x_device.name or ""
+        return self._image_config.device_x.device or ""
 
-    @x_device_name.setter
-    def x_device_name(self, device_name: str) -> None:
+    @device_x.setter
+    def device_x(self, device_name: str) -> None:
         """
         Set the X device name.
 
@@ -1179,27 +1175,27 @@ class Heatmap(ImageBase):
         # Get current entry or validate
         if device_name:
             try:
-                entry = self.entry_validator.validate_signal(device_name, None)
-                self._image_config.x_device = HeatmapDeviceSignal(name=device_name, entry=entry)
-                self.property_changed.emit("x_device_name", device_name)
+                signal = self.entry_validator.validate_signal(device_name, None)
+                self._image_config.device_x = HeatmapDeviceSignal(device=device_name, signal=signal)
+                self.property_changed.emit("device_x", device_name)
                 self.update_labels()  # Update axis labels
                 self._try_auto_plot()
             except Exception:
                 pass  # Silently fail if device is not available yet
         else:
-            self._image_config.x_device = None
-            self.property_changed.emit("x_device_name", "")
+            self._image_config.device_x = None
+            self.property_changed.emit("device_x", "")
             self.update_labels()  # Clear axis labels
 
     @SafeProperty(str)
-    def x_device_entry(self) -> str:
+    def signal_x(self) -> str:
         """Signal entry for the X axis device."""
-        if self._image_config.x_device is None:
+        if self._image_config.device_x is None:
             return ""
-        return self._image_config.x_device.entry or ""
+        return self._image_config.device_x.signal or ""
 
-    @x_device_entry.setter
-    def x_device_entry(self, entry: str) -> None:
+    @signal_x.setter
+    def signal_x(self, entry: str) -> None:
         """
         Set the X device entry.
 
@@ -1209,32 +1205,32 @@ class Heatmap(ImageBase):
         if not entry:
             return
 
-        if self._image_config.x_device is None:
-            logger.warning("Cannot set x_device_entry without x_device_name set first.")
+        if self._image_config.device_x is None:
+            logger.warning("Cannot set signal_x without device_x set first.")
             return
 
-        device_name = self._image_config.x_device.name
+        device_name = self._image_config.device_x.device
         try:
             # Validate the entry for this device
-            validated_entry = self.entry_validator.validate_signal(device_name, entry)
-            self._image_config.x_device = HeatmapDeviceSignal(
-                name=device_name, entry=validated_entry
+            validated_signal = self.entry_validator.validate_signal(device_name, entry)
+            self._image_config.device_x = HeatmapDeviceSignal(
+                device=device_name, signal=validated_signal
             )
-            self.property_changed.emit("x_device_entry", validated_entry)
+            self.property_changed.emit("signal_x", validated_signal)
             self.update_labels()  # Update axis labels
             self._try_auto_plot()
         except Exception:
             pass  # Silently fail if validation fails
 
     @SafeProperty(str)
-    def y_device_name(self) -> str:
+    def device_y(self) -> str:
         """Device name for the Y axis."""
-        if self._image_config.y_device is None:
+        if self._image_config.device_y is None:
             return ""
-        return self._image_config.y_device.name or ""
+        return self._image_config.device_y.device or ""
 
-    @y_device_name.setter
-    def y_device_name(self, device_name: str) -> None:
+    @device_y.setter
+    def device_y(self, device_name: str) -> None:
         """
         Set the Y device name.
 
@@ -1246,27 +1242,27 @@ class Heatmap(ImageBase):
         # Get current entry or validate
         if device_name:
             try:
-                entry = self.entry_validator.validate_signal(device_name, None)
-                self._image_config.y_device = HeatmapDeviceSignal(name=device_name, entry=entry)
-                self.property_changed.emit("y_device_name", device_name)
+                signal = self.entry_validator.validate_signal(device_name, None)
+                self._image_config.device_y = HeatmapDeviceSignal(device=device_name, signal=signal)
+                self.property_changed.emit("device_y", device_name)
                 self.update_labels()  # Update axis labels
                 self._try_auto_plot()
             except Exception:
                 pass  # Silently fail if device is not available yet
         else:
-            self._image_config.y_device = None
-            self.property_changed.emit("y_device_name", "")
+            self._image_config.device_y = None
+            self.property_changed.emit("device_y", "")
             self.update_labels()  # Clear axis labels
 
     @SafeProperty(str)
-    def y_device_entry(self) -> str:
+    def signal_y(self) -> str:
         """Signal entry for the Y axis device."""
-        if self._image_config.y_device is None:
+        if self._image_config.device_y is None:
             return ""
-        return self._image_config.y_device.entry or ""
+        return self._image_config.device_y.signal or ""
 
-    @y_device_entry.setter
-    def y_device_entry(self, entry: str) -> None:
+    @signal_y.setter
+    def signal_y(self, entry: str) -> None:
         """
         Set the Y device entry.
 
@@ -1276,18 +1272,18 @@ class Heatmap(ImageBase):
         if not entry:
             return
 
-        if self._image_config.y_device is None:
-            logger.warning("Cannot set y_device_entry without y_device_name set first.")
+        if self._image_config.device_y is None:
+            logger.warning("Cannot set signal_y without device_y set first.")
             return
 
-        device_name = self._image_config.y_device.name
+        device_name = self._image_config.device_y.device
         try:
             # Validate the entry for this device
-            validated_entry = self.entry_validator.validate_signal(device_name, entry)
-            self._image_config.y_device = HeatmapDeviceSignal(
-                name=device_name, entry=validated_entry
+            validated_signal = self.entry_validator.validate_signal(device_name, entry)
+            self._image_config.device_y = HeatmapDeviceSignal(
+                device=device_name, signal=validated_signal
             )
-            self.property_changed.emit("y_device_entry", validated_entry)
+            self.property_changed.emit("signal_y", validated_signal)
             self.update_labels()  # Update axis labels
             self._try_auto_plot()
         except Exception as e:
@@ -1295,14 +1291,14 @@ class Heatmap(ImageBase):
             pass  # Silently fail if validation fails
 
     @SafeProperty(str)
-    def z_device_name(self) -> str:
+    def device_z(self) -> str:
         """Device name for the Z (color) axis."""
-        if self._image_config.z_device is None:
+        if self._image_config.device_z is None:
             return ""
-        return self._image_config.z_device.name or ""
+        return self._image_config.device_z.device or ""
 
-    @z_device_name.setter
-    def z_device_name(self, device_name: str) -> None:
+    @device_z.setter
+    def device_z(self, device_name: str) -> None:
         """
         Set the Z device name.
 
@@ -1314,28 +1310,28 @@ class Heatmap(ImageBase):
         # Get current entry or validate
         if device_name:
             try:
-                entry = self.entry_validator.validate_signal(device_name, None)
-                self._image_config.z_device = HeatmapDeviceSignal(name=device_name, entry=entry)
-                self.property_changed.emit("z_device_name", device_name)
+                signal = self.entry_validator.validate_signal(device_name, None)
+                self._image_config.device_z = HeatmapDeviceSignal(device=device_name, signal=signal)
+                self.property_changed.emit("device_z", device_name)
                 self.update_labels()  # Update axis labels (title)
                 self._try_auto_plot()
             except Exception as e:
                 logger.debug(f"Z device name validation failed: {e}")
                 pass  # Silently fail if device is not available yet
         else:
-            self._image_config.z_device = None
-            self.property_changed.emit("z_device_name", "")
+            self._image_config.device_z = None
+            self.property_changed.emit("device_z", "")
             self.update_labels()  # Clear axis labels
 
     @SafeProperty(str)
-    def z_device_entry(self) -> str:
+    def signal_z(self) -> str:
         """Signal entry for the Z (color) axis device."""
-        if self._image_config.z_device is None:
+        if self._image_config.device_z is None:
             return ""
-        return self._image_config.z_device.entry or ""
+        return self._image_config.device_z.signal or ""
 
-    @z_device_entry.setter
-    def z_device_entry(self, entry: str) -> None:
+    @signal_z.setter
+    def signal_z(self, entry: str) -> None:
         """
         Set the Z device entry.
 
@@ -1345,18 +1341,18 @@ class Heatmap(ImageBase):
         if not entry:
             return
 
-        if self._image_config.z_device is None:
-            logger.warning("Cannot set z_device_entry without z_device_name set first.")
+        if self._image_config.device_z is None:
+            logger.warning("Cannot set signal_z without device_z set first.")
             return
 
-        device_name = self._image_config.z_device.name
+        device_name = self._image_config.device_z.device
         try:
             # Validate the entry for this device
-            validated_entry = self.entry_validator.validate_signal(device_name, entry)
-            self._image_config.z_device = HeatmapDeviceSignal(
-                name=device_name, entry=validated_entry
+            validated_signal = self.entry_validator.validate_signal(device_name, entry)
+            self._image_config.device_z = HeatmapDeviceSignal(
+                device=device_name, signal=validated_signal
             )
-            self.property_changed.emit("z_device_entry", validated_entry)
+            self.property_changed.emit("signal_z", validated_signal)
             self.update_labels()  # Update axis labels (title)
             self._try_auto_plot()
         except Exception as e:
@@ -1368,25 +1364,25 @@ class Heatmap(ImageBase):
         Attempt to automatically call plot() if all three devices are set.
         Similar to waveform's approach but requires all three devices.
         """
-        has_x = self._image_config.x_device is not None
-        has_y = self._image_config.y_device is not None
-        has_z = self._image_config.z_device is not None
+        has_x = self._image_config.device_x is not None
+        has_y = self._image_config.device_y is not None
+        has_z = self._image_config.device_z is not None
 
         if has_x and has_y and has_z:
-            x_name = self._image_config.x_device.name
-            x_entry = self._image_config.x_device.entry
-            y_name = self._image_config.y_device.name
-            y_entry = self._image_config.y_device.entry
-            z_name = self._image_config.z_device.name
-            z_entry = self._image_config.z_device.entry
+            device_x = self._image_config.device_x.device
+            signal_x = self._image_config.device_x.signal
+            device_y = self._image_config.device_y.device
+            signal_y = self._image_config.device_y.signal
+            device_z = self._image_config.device_z.device
+            signal_z = self._image_config.device_z.signal
             try:
                 self.plot(
-                    x_name=x_name,
-                    y_name=y_name,
-                    z_name=z_name,
-                    x_entry=x_entry,
-                    y_entry=y_entry,
-                    z_entry=z_entry,
+                    device_x=device_x,
+                    device_y=device_y,
+                    device_z=device_z,
+                    signal_x=signal_x,
+                    signal_y=signal_y,
+                    signal_z=signal_z,
                     validate_bec=False,  # Don't validate - entries already validated
                 )
             except Exception as e:
@@ -1533,6 +1529,6 @@ if __name__ == "__main__":  # pragma: no cover
 
     app = QApplication(sys.argv)
     heatmap = Heatmap()
-    heatmap.plot(x_name="samx", y_name="samy", z_name="bpm4i", oversampling_factor=5.0)
+    heatmap.plot(device_x="samx", device_y="samy", device_z="bpm4i", oversampling_factor=5.0)
     heatmap.show()
     sys.exit(app.exec_())

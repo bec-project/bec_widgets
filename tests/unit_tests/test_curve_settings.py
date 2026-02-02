@@ -179,15 +179,15 @@ def test_add_new_curve(curve_tree_fixture):
     assert curve_tree.tree.topLevelItemCount() == 0
 
     with patch.object(curve_tree, "_ensure_color_buffer_size") as ensure_spy:
-        new_item = curve_tree.add_new_curve(name="bpm4i", entry="bpm4i")
+        new_item = curve_tree.add_new_curve(device="bpm4i", signal="bpm4i")
         ensure_spy.assert_called_once()
 
     assert curve_tree.tree.topLevelItemCount() == 1
     last_item = curve_tree.all_items[-1]
     assert last_item is new_item
     assert new_item.config.source == "device"
-    assert new_item.config.signal.name == "bpm4i"
-    assert new_item.config.signal.entry == "bpm4i"
+    assert new_item.config.signal.device == "bpm4i"
+    assert new_item.config.signal.signal == "bpm4i"
     assert new_item.config.color in curve_tree.color_buffer
 
 
@@ -197,8 +197,8 @@ def test_renormalize_colors(curve_tree_fixture):
     """
     curve_tree, wf = curve_tree_fixture
     # Add multiple curves
-    c1 = curve_tree.add_new_curve(name="bpm4i", entry="bpm4i")
-    c2 = curve_tree.add_new_curve(name="bpm3a", entry="bpm3a")
+    c1 = curve_tree.add_new_curve(device="bpm4i", signal="bpm4i")
+    c2 = curve_tree.add_new_curve(device="bpm3a", signal="bpm3a")
     curve_tree.color_buffer = []
 
     set_color_spy_c1 = patch.object(c1.color_button, "set_color")
@@ -215,7 +215,7 @@ def test_expand_collapse(curve_tree_fixture):
     Test expand_all_daps() and collapse_all_daps() calls expand/collapse on every top-level item.
     """
     curve_tree, wf = curve_tree_fixture
-    c1 = curve_tree.add_new_curve(name="bpm4i", entry="bpm4i")
+    c1 = curve_tree.add_new_curve(device="bpm4i", signal="bpm4i")
     curve_tree.tree.expandAll()
     expand_spy = patch.object(curve_tree.tree, "expandItem")
     collapse_spy = patch.object(curve_tree.tree, "collapseItem")
@@ -236,8 +236,8 @@ def test_send_curve_json(curve_tree_fixture, monkeypatch):
     """
     curve_tree, wf = curve_tree_fixture
     # Add multiple curves
-    curve_tree.add_new_curve(name="bpm4i", entry="bpm4i")
-    curve_tree.add_new_curve(name="bpm3a", entry="bpm3a")
+    curve_tree.add_new_curve(device="bpm4i", signal="bpm4i")
+    curve_tree.add_new_curve(device="bpm3a", signal="bpm3a")
 
     curve_tree.color_palette = "viridis"
     curve_tree.send_curve_json()
@@ -282,7 +282,7 @@ def test_add_dap_row(curve_tree_fixture):
     curve_tree, wf = curve_tree_fixture
 
     # Add a device curve first
-    device_row = curve_tree.add_new_curve(name="bpm4i", entry="bpm4i")
+    device_row = curve_tree.add_new_curve(device="bpm4i", signal="bpm4i")
     assert device_row.source == "device"
     assert curve_tree.tree.topLevelItemCount() == 1
     assert device_row.childCount() == 0
@@ -299,8 +299,8 @@ def test_add_dap_row(curve_tree_fixture):
     assert dap_child.config.parent_label == device_row.config.label
 
     # Check that the DAP inherits device name/entry from parent
-    assert dap_child.config.signal.name == "bpm4i"
-    assert dap_child.config.signal.entry == "bpm4i"
+    assert dap_child.config.signal.device == "bpm4i"
+    assert dap_child.config.signal.signal == "bpm4i"
 
     # Check that the item is in the curve_tree's all_items list
     assert dap_child in curve_tree.all_items
@@ -313,8 +313,8 @@ def test_remove_self_top_level(curve_tree_fixture):
     curve_tree, wf = curve_tree_fixture
 
     # Add two device curves
-    row1 = curve_tree.add_new_curve(name="bpm4i", entry="bpm4i")
-    row2 = curve_tree.add_new_curve(name="bpm3a", entry="bpm3a")
+    row1 = curve_tree.add_new_curve(device="bpm4i", signal="bpm4i")
+    row2 = curve_tree.add_new_curve(device="bpm3a", signal="bpm3a")
     assert curve_tree.tree.topLevelItemCount() == 2
     assert len(curve_tree.all_items) == 2
 
@@ -335,7 +335,7 @@ def test_remove_self_child(curve_tree_fixture):
     curve_tree, wf = curve_tree_fixture
 
     # Add a device curve and a DAP child
-    device_row = curve_tree.add_new_curve(name="bpm4i", entry="bpm4i")
+    device_row = curve_tree.add_new_curve(device="bpm4i", signal="bpm4i")
     device_row.add_dap_row()
     dap_child = device_row.child(0)
 
@@ -360,7 +360,7 @@ def test_export_data_dap(curve_tree_fixture):
     curve_tree, wf = curve_tree_fixture
 
     # Add a device curve with specific parameters
-    device_row = curve_tree.add_new_curve(name="bpm4i", entry="bpm4i")
+    device_row = curve_tree.add_new_curve(device="bpm4i", signal="bpm4i")
 
     # Add a DAP child
     device_row.add_dap_row()
@@ -375,8 +375,8 @@ def test_export_data_dap(curve_tree_fixture):
     # Check the exported data
     assert exported["source"] == "dap"
     assert exported["parent_label"] == "bpm4i-bpm4i"
-    assert exported["signal"]["name"] == "bpm4i"
-    assert exported["signal"]["entry"] == "bpm4i"
+    assert exported["signal"]["device"] == "bpm4i"
+    assert exported["signal"]["signal"] == "bpm4i"
     assert exported["signal"]["dap"] == "GaussianModel"
     assert exported["label"] == "bpm4i-bpm4i-GaussianModel"
 
@@ -422,7 +422,7 @@ def test_export_data_history_curve(curve_tree_fixture, scan_history_factory):
     wf.client.queue.scan_storage.current_scan = None
 
     # Create a device row and select scan index "2"
-    device_row = curve_tree.add_new_curve(name="bpm4i", entry="bpm4i")
+    device_row = curve_tree.add_new_curve(device="bpm4i", signal="bpm4i")
     device_row.scan_index_combo.setCurrentText("2")
 
     exported = device_row.export_data()

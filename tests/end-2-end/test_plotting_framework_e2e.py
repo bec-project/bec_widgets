@@ -34,7 +34,7 @@ def test_rpc_plotting_shortcuts_init_configs(qtbot, connected_client_gui_obj):
     sw = dock_area.new("ScatterWaveform")
     mw = dock_area.new("MultiWaveform")
 
-    c1 = wf.plot(x_name="samx", y_name="bpm4i")
+    c1 = wf.plot(device_x="samx", device_y="bpm4i")
     # Adding custom curves, removing one and adding it again should not crash
     c2 = wf.plot(y=[1, 2, 3], x=[1, 2, 3])
     assert c2.object_name == "Curve_0"
@@ -42,9 +42,9 @@ def test_rpc_plotting_shortcuts_init_configs(qtbot, connected_client_gui_obj):
     c3 = wf.plot(y=[1, 2, 3], x=[1, 2, 3])
     assert c3.object_name == "Curve_0"
 
-    im.image(device_name="eiger", device_entry="preview")
-    mm.map(x_name="samx", y_name="samy")
-    sw.plot(x_name="samx", y_name="samy", z_name="bpm4a")
+    im.image(device="eiger", signal="preview")
+    mm.map(device_x="samx", device_y="samy")
+    sw.plot(device_x="samx", device_y="samy", device_z="bpm4a")
     mw.plot(monitor="waveform")
     # Adding multiple custom curves sho
 
@@ -70,8 +70,8 @@ def test_rpc_plotting_shortcuts_init_configs(qtbot, connected_client_gui_obj):
     # Curve
     assert c1._config_dict["signal"] == {
         "dap": None,
-        "name": "bpm4i",
-        "entry": "bpm4i",
+        "device": "bpm4i",
+        "signal": "bpm4i",
         "dap_oversample": 1,
     }
     assert c1._config_dict["source"] == "device"
@@ -90,9 +90,9 @@ def test_rpc_waveform_scan(qtbot, bec_client_lib, connected_client_gui_obj):
     wf = dock_area.new("Waveform")
 
     # add 3 different curves to track
-    wf.plot(x_name="samx", y_name="bpm4i")
-    wf.plot(x_name="samx", y_name="bpm3a")
-    wf.plot(x_name="samx", y_name="bpm4d")
+    wf.plot(device_x="samx", device_y="bpm4i")
+    wf.plot(device_x="samx", device_y="bpm3a")
+    wf.plot(device_x="samx", device_y="bpm4d")
 
     status = scans.line_scan(dev.samx, -5, 5, steps=10, exp_time=0.05, relative=False)
     status.wait()
@@ -133,7 +133,7 @@ def test_async_plotting(qtbot, bec_client_lib, connected_client_gui_obj):
     dev.waveform.async_update.set("add").wait()
     dev.waveform.waveform_shape.set(10000).wait()
     wf = dock_area.new("Waveform")
-    curve = wf.plot(y_name="waveform")
+    curve = wf.plot(device_y="waveform")
 
     status = scans.line_scan(dev.samx, -5, 5, steps=5, exp_time=0.05, relative=False)
     status.wait()
@@ -165,7 +165,7 @@ def test_rpc_image(qtbot, bec_client_lib, connected_client_gui_obj):
     scans = client.scans
 
     im = dock_area.new("Image")
-    im.image(device_name="eiger", device_entry="preview")
+    im.image(device="eiger", signal="preview")
 
     status = scans.line_scan(dev.samx, -5, 5, steps=10, exp_time=0.05, relative=False)
     status.wait()
@@ -188,7 +188,7 @@ def test_rpc_motor_map(qtbot, bec_client_lib, connected_client_gui_obj):
     dock_area = gui.bec
 
     motor_map = dock_area.new("MotorMap")
-    motor_map.map(x_name="samx", y_name="samy")
+    motor_map.map(device_x="samx", device_y="samy")
 
     initial_pos_x = dev.samx.read()["samx"]["value"]
     initial_pos_y = dev.samy.read()["samy"]["value"]
@@ -219,7 +219,7 @@ def test_dap_rpc(qtbot, bec_client_lib, connected_client_gui_obj):
     dock_area = gui.bec
 
     wf = dock_area.new("Waveform")
-    wf.plot(x_name="samx", y_name="bpm4i", dap="GaussianModel")
+    wf.plot(device_x="samx", device_y="bpm4i", dap="GaussianModel")
 
     dev.bpm4i.sim.select_model("GaussianModel")
     params = dev.bpm4i.sim.params
@@ -262,7 +262,7 @@ def test_waveform_passing_device(qtbot, bec_client_lib, connected_client_gui_obj
 
     wf = dock_area.new("Waveform")
     c1 = wf.plot(
-        y_name=dev.samx, y_entry=dev.samx.setpoint
+        device_y=dev.samx, signal_y=dev.samx.setpoint
     )  # using setpoint to not use readback signal
 
     assert c1.object_name == "samx_samx_setpoint"
@@ -342,7 +342,7 @@ def test_rpc_waveform_history_curve(
 
         # Add curve from history using the chosen selector; single curve per scan to avoid duplicates
         kwargs = {history_selector: sel_value}
-        curve = wf.plot(x_name="samx", y_name="bpm4i", **kwargs)
+        curve = wf.plot(device_x="samx", device_y="bpm4i", **kwargs)
 
         num_elements = 10
 

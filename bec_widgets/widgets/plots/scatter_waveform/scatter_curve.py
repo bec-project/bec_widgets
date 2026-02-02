@@ -20,8 +20,8 @@ logger = bec_logger.logger
 class ScatterDeviceSignal(BaseModel):
     """The configuration of a signal in the scatter waveform widget."""
 
-    name: str
-    entry: str
+    device: str
+    signal: str
 
     model_config: dict = {"validate_assignment": True}
 
@@ -40,13 +40,13 @@ class ScatterCurveConfig(ConnectionConfig):
     color_map: str | None = Field(
         "plasma", description="The color palette of the figure widget.", validate_default=True
     )
-    x_device: ScatterDeviceSignal | None = Field(
+    device_x: ScatterDeviceSignal | None = Field(
         None, description="The x device signal of the scatter waveform."
     )
-    y_device: ScatterDeviceSignal | None = Field(
+    device_y: ScatterDeviceSignal | None = Field(
         None, description="The y device signal of the scatter waveform."
     )
-    z_device: ScatterDeviceSignal | None = Field(
+    device_z: ScatterDeviceSignal | None = Field(
         None, description="The z device signal of the scatter waveform."
     )
 

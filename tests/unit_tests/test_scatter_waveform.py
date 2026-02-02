@@ -37,7 +37,7 @@ def test_scatter_waveform_plot(qtbot, mocked_client):
 
     assert curve is not None
     assert isinstance(curve.config, ScatterCurveConfig)
-    assert curve.config.x_device == ScatterDeviceSignal(name="samx", entry="samx")
+    assert curve.config.device_x == ScatterDeviceSignal(device="samx", signal="samx")
     assert curve.config.label == "bpm4i-bpm4i"
 
 
@@ -144,49 +144,49 @@ def test_device_safe_properties_get(qtbot, mocked_client):
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
 
     # Initially devices should be empty
-    assert swf.x_device_name == ""
-    assert swf.x_device_entry == ""
-    assert swf.y_device_name == ""
-    assert swf.y_device_entry == ""
-    assert swf.z_device_name == ""
-    assert swf.z_device_entry == ""
+    assert swf.device_x == ""
+    assert swf.signal_x == ""
+    assert swf.device_y == ""
+    assert swf.signal_y == ""
+    assert swf.device_z == ""
+    assert swf.signal_z == ""
 
     # Set devices via plot
-    swf.plot(x_name="samx", y_name="samy", z_name="bpm4i")
+    swf.plot(device_x="samx", device_y="samy", device_z="bpm4i")
 
     # Check properties return device names and entries separately
-    assert swf.x_device_name == "samx"
-    assert swf.x_device_entry  # Should have some entry
-    assert swf.y_device_name == "samy"
-    assert swf.y_device_entry  # Should have some entry
-    assert swf.z_device_name == "bpm4i"
-    assert swf.z_device_entry  # Should have some entry
+    assert swf.device_x == "samx"
+    assert swf.signal_x  # Should have some entry
+    assert swf.device_y == "samy"
+    assert swf.signal_y  # Should have some entry
+    assert swf.device_z == "bpm4i"
+    assert swf.signal_z  # Should have some entry
 
 
 def test_device_safe_properties_set_name(qtbot, mocked_client):
     """Test that device SafeProperty setters work for device names."""
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
 
-    # Set x_device_name - should auto-validate entry
-    swf.x_device_name = "samx"
-    assert swf._main_curve.config.x_device is not None
-    assert swf._main_curve.config.x_device.name == "samx"
-    assert swf._main_curve.config.x_device.entry is not None  # Entry should be validated
-    assert swf.x_device_name == "samx"
+    # Set device_x - should auto-validate entry
+    swf.device_x = "samx"
+    assert swf._main_curve.config.device_x is not None
+    assert swf._main_curve.config.device_x.device == "samx"
+    assert swf._main_curve.config.device_x.signal is not None  # Entry should be validated
+    assert swf.device_x == "samx"
 
-    # Set y_device_name
-    swf.y_device_name = "samy"
-    assert swf._main_curve.config.y_device is not None
-    assert swf._main_curve.config.y_device.name == "samy"
-    assert swf._main_curve.config.y_device.entry is not None
-    assert swf.y_device_name == "samy"
+    # Set device_y
+    swf.device_y = "samy"
+    assert swf._main_curve.config.device_y is not None
+    assert swf._main_curve.config.device_y.device == "samy"
+    assert swf._main_curve.config.device_y.signal is not None
+    assert swf.device_y == "samy"
 
-    # Set z_device_name
-    swf.z_device_name = "bpm4i"
-    assert swf._main_curve.config.z_device is not None
-    assert swf._main_curve.config.z_device.name == "bpm4i"
-    assert swf._main_curve.config.z_device.entry is not None
-    assert swf.z_device_name == "bpm4i"
+    # Set device_z
+    swf.device_z = "bpm4i"
+    assert swf._main_curve.config.device_z is not None
+    assert swf._main_curve.config.device_z.device == "bpm4i"
+    assert swf._main_curve.config.device_z.signal is not None
+    assert swf.device_z == "bpm4i"
 
 
 def test_device_safe_properties_set_entry(qtbot, mocked_client):
@@ -194,24 +194,24 @@ def test_device_safe_properties_set_entry(qtbot, mocked_client):
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
 
     # Set device name first - this auto-validates entry
-    swf.x_device_name = "samx"
-    initial_entry = swf.x_device_entry
+    swf.device_x = "samx"
+    initial_entry = swf.signal_x
     assert initial_entry  # Should have auto-validated entry
 
     # Override with specific entry
-    swf.x_device_entry = "samx"
-    assert swf._main_curve.config.x_device.entry == "samx"
-    assert swf.x_device_entry == "samx"
+    swf.signal_x = "samx"
+    assert swf._main_curve.config.device_x.signal == "samx"
+    assert swf.signal_x == "samx"
 
     # Same for y device
-    swf.y_device_name = "samy"
-    swf.y_device_entry = "samy_setpoint"
-    assert swf._main_curve.config.y_device.entry == "samy_setpoint"
+    swf.device_y = "samy"
+    swf.signal_y = "samy_setpoint"
+    assert swf._main_curve.config.device_y.signal == "samy_setpoint"
 
     # Same for z device
-    swf.z_device_name = "bpm4i"
-    swf.z_device_entry = "bpm4i"
-    assert swf._main_curve.config.z_device.entry == "bpm4i"
+    swf.device_z = "bpm4i"
+    swf.signal_z = "bpm4i"
+    assert swf._main_curve.config.device_z.signal == "bpm4i"
 
 
 def test_device_entry_cannot_be_set_without_name(qtbot, mocked_client):
@@ -219,10 +219,10 @@ def test_device_entry_cannot_be_set_without_name(qtbot, mocked_client):
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
 
     # Try to set entry without device name
-    swf.x_device_entry = "some_entry"
+    swf.signal_x = "some_entry"
     # Should not crash, entry should remain empty
-    assert swf.x_device_entry == ""
-    assert swf._main_curve.config.x_device is None
+    assert swf.signal_x == ""
+    assert swf._main_curve.config.device_x is None
 
 
 def test_device_safe_properties_set_empty(qtbot, mocked_client):
@@ -230,13 +230,13 @@ def test_device_safe_properties_set_empty(qtbot, mocked_client):
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
 
     # Set device first
-    swf.x_device_name = "samx"
-    assert swf._main_curve.config.x_device is not None
+    swf.device_x = "samx"
+    assert swf._main_curve.config.device_x is not None
 
     # Set to empty string - should clear the device
-    swf.x_device_name = ""
-    assert swf.x_device_name == ""
-    assert swf._main_curve.config.x_device is None
+    swf.device_x = ""
+    assert swf.device_x == ""
+    assert swf._main_curve.config.device_x is None
 
 
 def test_device_safe_properties_auto_plot(qtbot, mocked_client):
@@ -244,14 +244,14 @@ def test_device_safe_properties_auto_plot(qtbot, mocked_client):
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
 
     # Set all three devices
-    swf.x_device_name = "samx"
-    swf.y_device_name = "samy"
-    swf.z_device_name = "bpm4i"
+    swf.device_x = "samx"
+    swf.device_y = "samy"
+    swf.device_z = "bpm4i"
 
     # Check that plot was called (config should be updated)
-    assert swf._main_curve.config.x_device is not None
-    assert swf._main_curve.config.y_device is not None
-    assert swf._main_curve.config.z_device is not None
+    assert swf._main_curve.config.device_x is not None
+    assert swf._main_curve.config.device_y is not None
+    assert swf._main_curve.config.device_z is not None
 
 
 def test_device_properties_update_labels(qtbot, mocked_client):
@@ -259,11 +259,11 @@ def test_device_properties_update_labels(qtbot, mocked_client):
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
 
     # Set x device - should update x label
-    swf.x_device_name = "samx"
+    swf.device_x = "samx"
     assert swf.x_label == "samx"
 
     # Set y device - should update y label
-    swf.y_device_name = "samy"
+    swf.device_y = "samy"
     assert swf.y_label == "samy"
 
     # Note: ScatterWaveform doesn't have a title like Heatmap does for z_device
@@ -274,39 +274,39 @@ def test_device_properties_partial_configuration(qtbot, mocked_client):
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
 
     # Set only x device
-    swf.x_device_name = "samx"
-    assert swf.x_device_name == "samx"
-    assert swf.y_device_name == ""
-    assert swf.z_device_name == ""
+    swf.device_x = "samx"
+    assert swf.device_x == "samx"
+    assert swf.device_y == ""
+    assert swf.device_z == ""
 
     # Set only y device (x already set)
-    swf.y_device_name = "samy"
-    assert swf.x_device_name == "samx"
-    assert swf.y_device_name == "samy"
-    assert swf.z_device_name == ""
+    swf.device_y = "samy"
+    assert swf.device_x == "samx"
+    assert swf.device_y == "samy"
+    assert swf.device_z == ""
 
     # Auto-plot should not trigger yet (z missing)
     # But devices should be configured
-    assert swf._main_curve.config.x_device is not None
-    assert swf._main_curve.config.y_device is not None
+    assert swf._main_curve.config.device_x is not None
+    assert swf._main_curve.config.device_y is not None
 
 
 def test_device_properties_in_user_access(qtbot, mocked_client):
     """Test that device properties are exposed in USER_ACCESS for RPC."""
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
 
-    assert "x_device_name" in ScatterWaveform.USER_ACCESS
-    assert "x_device_name.setter" in ScatterWaveform.USER_ACCESS
-    assert "x_device_entry" in ScatterWaveform.USER_ACCESS
-    assert "x_device_entry.setter" in ScatterWaveform.USER_ACCESS
-    assert "y_device_name" in ScatterWaveform.USER_ACCESS
-    assert "y_device_name.setter" in ScatterWaveform.USER_ACCESS
-    assert "y_device_entry" in ScatterWaveform.USER_ACCESS
-    assert "y_device_entry.setter" in ScatterWaveform.USER_ACCESS
-    assert "z_device_name" in ScatterWaveform.USER_ACCESS
-    assert "z_device_name.setter" in ScatterWaveform.USER_ACCESS
-    assert "z_device_entry" in ScatterWaveform.USER_ACCESS
-    assert "z_device_entry.setter" in ScatterWaveform.USER_ACCESS
+    assert "device_x" in ScatterWaveform.USER_ACCESS
+    assert "device_x.setter" in ScatterWaveform.USER_ACCESS
+    assert "signal_x" in ScatterWaveform.USER_ACCESS
+    assert "signal_x.setter" in ScatterWaveform.USER_ACCESS
+    assert "device_y" in ScatterWaveform.USER_ACCESS
+    assert "device_y.setter" in ScatterWaveform.USER_ACCESS
+    assert "signal_y" in ScatterWaveform.USER_ACCESS
+    assert "signal_y.setter" in ScatterWaveform.USER_ACCESS
+    assert "device_z" in ScatterWaveform.USER_ACCESS
+    assert "device_z.setter" in ScatterWaveform.USER_ACCESS
+    assert "signal_z" in ScatterWaveform.USER_ACCESS
+    assert "signal_z.setter" in ScatterWaveform.USER_ACCESS
 
 
 def test_device_properties_validation(qtbot, mocked_client):
@@ -314,15 +314,15 @@ def test_device_properties_validation(qtbot, mocked_client):
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
 
     # Set device name - entry should be auto-validated
-    swf.x_device_name = "samx"
-    initial_entry = swf.x_device_entry
+    swf.device_x = "samx"
+    initial_entry = swf.signal_x
 
     # The entry should be validated (will be "samx" in the mock)
     assert initial_entry == "samx"
 
     # Set a different entry - should also be validated
-    swf.x_device_entry = "samx"  # Use same name as validated entry
-    assert swf.x_device_entry == "samx"
+    swf.signal_x = "samx"  # Use same name as validated entry
+    assert swf.signal_x == "samx"
 
 
 def test_device_properties_with_plot_method(qtbot, mocked_client):
@@ -330,17 +330,17 @@ def test_device_properties_with_plot_method(qtbot, mocked_client):
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
 
     # Use plot method
-    swf.plot(x_name="samx", y_name="samy", z_name="bpm4i")
+    swf.plot(device_x="samx", device_y="samy", device_z="bpm4i")
 
     # Properties should reflect the plotted devices
-    assert swf.x_device_name == "samx"
-    assert swf.y_device_name == "samy"
-    assert swf.z_device_name == "bpm4i"
+    assert swf.device_x == "samx"
+    assert swf.device_y == "samy"
+    assert swf.device_z == "bpm4i"
 
     # Entries should be validated
-    assert swf.x_device_entry == "samx"
-    assert swf.y_device_entry == "samy"
-    assert swf.z_device_entry == "bpm4i"
+    assert swf.signal_x == "samx"
+    assert swf.signal_y == "samy"
+    assert swf.signal_z == "bpm4i"
 
 
 def test_device_properties_overwrite_via_properties(qtbot, mocked_client):
@@ -348,16 +348,16 @@ def test_device_properties_overwrite_via_properties(qtbot, mocked_client):
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
 
     # First set via plot
-    swf.plot(x_name="samx", y_name="samy", z_name="bpm4i")
+    swf.plot(device_x="samx", device_y="samy", device_z="bpm4i")
 
     # Overwrite x device via properties
-    swf.x_device_name = "samz"
-    assert swf.x_device_name == "samz"
-    assert swf._main_curve.config.x_device.name == "samz"
+    swf.device_x = "samz"
+    assert swf.device_x == "samz"
+    assert swf._main_curve.config.device_x.device == "samz"
 
     # Overwrite y device entry
-    swf.y_device_entry = "samy"
-    assert swf.y_device_entry == "samy"
+    swf.signal_y = "samy"
+    assert swf.signal_y == "samy"
 
 
 def test_device_properties_clearing_devices(qtbot, mocked_client):
@@ -365,18 +365,18 @@ def test_device_properties_clearing_devices(qtbot, mocked_client):
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
 
     # Set all devices
-    swf.x_device_name = "samx"
-    swf.y_device_name = "samy"
-    swf.z_device_name = "bpm4i"
+    swf.device_x = "samx"
+    swf.device_y = "samy"
+    swf.device_z = "bpm4i"
 
     # Clear x device
-    swf.x_device_name = ""
-    assert swf.x_device_name == ""
-    assert swf._main_curve.config.x_device is None
+    swf.device_x = ""
+    assert swf.device_x == ""
+    assert swf._main_curve.config.device_x is None
 
     # Y and Z should still be set
-    assert swf.y_device_name == "samy"
-    assert swf.z_device_name == "bpm4i"
+    assert swf.device_y == "samy"
+    assert swf.device_z == "bpm4i"
 
 
 def test_device_properties_property_changed_signal(qtbot, mocked_client):
@@ -390,12 +390,12 @@ def test_device_properties_property_changed_signal(qtbot, mocked_client):
     swf.property_changed.connect(mock_handler)
 
     # Set device name
-    swf.x_device_name = "samx"
+    swf.device_x = "samx"
 
     # Signal should have been emitted
     assert mock_handler.called
     # Check it was called with correct arguments
-    mock_handler.assert_any_call("x_device_name", "samx")
+    mock_handler.assert_any_call("device_x", "samx")
 
 
 def test_device_entry_validation_with_invalid_device(qtbot, mocked_client):
@@ -403,7 +403,7 @@ def test_device_entry_validation_with_invalid_device(qtbot, mocked_client):
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
 
     # Try to set invalid device name
-    swf.x_device_name = "nonexistent_device"
+    swf.device_x = "nonexistent_device"
 
     # Should not crash, but device might not be set if validation fails
     # The implementation silently fails, so we just check it doesn't crash
@@ -414,17 +414,17 @@ def test_device_properties_sequential_entry_changes(qtbot, mocked_client):
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
 
     # Set device
-    swf.x_device_name = "samx"
+    swf.device_x = "samx"
 
     # Change entry multiple times
-    swf.x_device_entry = "samx_velocity"
-    assert swf.x_device_entry == "samx_velocity"
+    swf.signal_x = "samx_velocity"
+    assert swf.signal_x == "samx_velocity"
 
-    swf.x_device_entry = "samx_setpoint"
-    assert swf.x_device_entry == "samx_setpoint"
+    swf.signal_x = "samx_setpoint"
+    assert swf.signal_x == "samx_setpoint"
 
-    swf.x_device_entry = "samx"
-    assert swf.x_device_entry == "samx"
+    swf.signal_x = "samx"
+    assert swf.signal_x == "samx"
 
 
 def test_device_properties_with_none_values(qtbot, mocked_client):
@@ -432,15 +432,15 @@ def test_device_properties_with_none_values(qtbot, mocked_client):
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
 
     # Device name None should be treated as empty
-    swf.x_device_name = None
-    assert swf.x_device_name == ""
+    swf.device_x = None
+    assert swf.device_x == ""
 
     # Set a device first
-    swf.y_device_name = "samy"
+    swf.device_y = "samy"
 
     # Entry None should not change anything
-    swf.y_device_entry = None
-    assert swf.y_device_entry  # Should still have validated entry
+    swf.signal_y = None
+    assert swf.signal_y  # Should still have validated entry
 
 
 ################################################################################
@@ -457,9 +457,9 @@ def test_scatter_curve_settings_accept_changes(qtbot, mocked_client):
     qtbot.addWidget(settings)
 
     # Set up the widgets with test values
-    settings.ui.x_name.set_device("samx")
-    settings.ui.y_name.set_device("samy")
-    settings.ui.z_name.set_device("bpm4i")
+    settings.ui.device_x.set_device("samx")
+    settings.ui.device_y.set_device("samy")
+    settings.ui.device_z.set_device("bpm4i")
 
     # Mock the plot method to verify it gets called with correct arguments
     with patch.object(swf, "plot") as mock_plot:
@@ -472,9 +472,9 @@ def test_scatter_curve_settings_accept_changes(qtbot, mocked_client):
         call_kwargs = mock_plot.call_args[1]
 
         # Verify device names were extracted correctly
-        assert call_kwargs["x_name"] == "samx"
-        assert call_kwargs["y_name"] == "samy"
-        assert call_kwargs["z_name"] == "bpm4i"
+        assert call_kwargs["device_x"] == "samx"
+        assert call_kwargs["device_y"] == "samy"
+        assert call_kwargs["device_z"] == "bpm4i"
 
 
 def test_scatter_curve_settings_accept_changes_with_entries(qtbot, mocked_client):
@@ -486,9 +486,9 @@ def test_scatter_curve_settings_accept_changes_with_entries(qtbot, mocked_client
     qtbot.addWidget(settings)
 
     # Set devices first to populate signal comboboxes
-    settings.ui.x_name.set_device("samx")
-    settings.ui.y_name.set_device("samy")
-    settings.ui.z_name.set_device("bpm4i")
+    settings.ui.device_x.set_device("samx")
+    settings.ui.device_y.set_device("samy")
+    settings.ui.device_z.set_device("bpm4i")
     qtbot.wait(100)  # Allow time for signals to populate
 
     # Mock the plot method
@@ -499,9 +499,9 @@ def test_scatter_curve_settings_accept_changes_with_entries(qtbot, mocked_client
         call_kwargs = mock_plot.call_args[1]
 
         # Verify entries are extracted (will use get_signal_name())
-        assert "x_entry" in call_kwargs
-        assert "y_entry" in call_kwargs
-        assert "z_entry" in call_kwargs
+        assert "signal_x" in call_kwargs
+        assert "signal_y" in call_kwargs
+        assert "signal_z" in call_kwargs
 
 
 def test_scatter_curve_settings_accept_changes_color_map(qtbot, mocked_client):
@@ -514,9 +514,9 @@ def test_scatter_curve_settings_accept_changes_color_map(qtbot, mocked_client):
     qtbot.addWidget(settings)
 
     # Set devices
-    settings.ui.x_name.set_device("samx")
-    settings.ui.y_name.set_device("samy")
-    settings.ui.z_name.set_device("bpm4i")
+    settings.ui.device_x.set_device("samx")
+    settings.ui.device_y.set_device("samy")
+    settings.ui.device_z.set_device("bpm4i")
 
     # Get the current colormap
     color_map = settings.ui.color_map.colormap
@@ -532,13 +532,13 @@ def test_scatter_curve_settings_fetch_all_properties(qtbot, mocked_client):
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
 
     # First set up the scatter waveform with some data
-    swf.plot(x_name="samx", y_name="samy", z_name="bpm4i")
+    swf.plot(device_x="samx", device_y="samy", device_z="bpm4i")
 
     # Create the settings widget - it should fetch properties automatically
     settings = ScatterCurveSettings(parent=None, target_widget=swf, popup=True)
     qtbot.addWidget(settings)
 
     # Verify the settings widget has fetched the values
-    assert settings.ui.x_name.currentText() == "samx"
-    assert settings.ui.y_name.currentText() == "samy"
-    assert settings.ui.z_name.currentText() == "bpm4i"
+    assert settings.ui.device_x.currentText() == "samx"
+    assert settings.ui.device_y.currentText() == "samy"
+    assert settings.ui.device_z.currentText() == "bpm4i"

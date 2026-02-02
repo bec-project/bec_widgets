@@ -234,7 +234,7 @@ def test_widgets_e2e_image(qtbot, connected_client_gui_obj, random_generator_fro
     scans = bec.scans
     dev = bec.device_manager.devices
     # Test rpc calls
-    img = widget.image(device_name=dev.eiger.name, device_entry="preview")
+    img = widget.image(device=dev.eiger.name, signal="preview")
     assert img.get_data() is None
     # Run a scan and plot the image
     s = scans.line_scan(dev.samx, -3, 3, steps=50, exp_time=0.01, relative=False)
@@ -254,7 +254,7 @@ def test_widgets_e2e_image(qtbot, connected_client_gui_obj, random_generator_fro
     assert np.allclose(img.get_data(), last_img)
 
     # Now add a device with a preview signal
-    img = widget.image(device_name="eiger", device_entry="preview")
+    img = widget.image(device="eiger", signal="preview")
     s = scans.line_scan(dev.samx, -3, 3, steps=50, exp_time=0.01, relative=False)
     s.wait()
 

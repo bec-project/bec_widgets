@@ -55,7 +55,7 @@ bec_figure = BECFigure(gui_id="my_gui_app_id")
 window.setCentralWidget(bec_figure)
 
 # prepare to plot samx motor vs bpm4i value
-bec_figure.plot(x_name="samx", y_name="bpm4i")
+bec_figure.plot(device_x="samx", device_y="bpm4i")
 ```
 
 In the example just above, the resulting application will show a plot of samx
@@ -96,7 +96,7 @@ window = QMainWindow()
 bec_figure = BECFigure(parent=window, gui_id="my_gui_app_id")
 window.setCentralWidget(bec_figure)
 
-bec_figure.plot(x_name="samx", y_name="bpm4i")
+bec_figure.plot(device_x="samx", device_y="bpm4i")
 
 # ensuring proper cleanup
 def final_cleanup():

@@ -256,8 +256,8 @@ class AutoUpdates(BECMainWindow):
         # as the label and title
         wf.clear_all()
         wf.plot(
-            x_name=dev_x,
-            y_name=dev_y,
+            device_x=dev_x,
+            device_y=dev_y,
             label=f"Scan {info.scan_number} - {dev_y}",
             title=f"Scan {info.scan_number}",
             x_label=dev_x,
@@ -265,7 +265,7 @@ class AutoUpdates(BECMainWindow):
         )
 
         logger.info(
-            f"Auto Update [simple_line_scan]: Started plot with: x_name={dev_x}, y_name={dev_y}"
+            f"Auto Update [simple_line_scan]: Started plot with: device_x={dev_x}, device_y={dev_y}"
         )
 
     def simple_grid_scan(self, info: ScanStatusMessage) -> None:
@@ -288,11 +288,14 @@ class AutoUpdates(BECMainWindow):
         # Clear the scatter waveform widget and plot the data
         scatter.clear_all()
         scatter.plot(
-            x_name=dev_x, y_name=dev_y, z_name=dev_z, label=f"Scan {info.scan_number} - {dev_z}"
+            device_x=dev_x,
+            device_y=dev_y,
+            device_z=dev_z,
+            label=f"Scan {info.scan_number} - {dev_z}",
         )
 
         logger.info(
-            f"Auto Update [simple_grid_scan]: Started plot with: x_name={dev_x}, y_name={dev_y}, z_name={dev_z}"
+            f"Auto Update [simple_grid_scan]: Started plot with: device_x={dev_x}, device_y={dev_y}, device_z={dev_z}"
         )
 
     def best_effort(self, info: ScanStatusMessage) -> None:
@@ -317,15 +320,17 @@ class AutoUpdates(BECMainWindow):
         # Clear the waveform widget and plot the data
         wf.clear_all()
         wf.plot(
-            x_name=dev_x,
-            y_name=dev_y,
+            device_x=dev_x,
+            device_y=dev_y,
             label=f"Scan {info.scan_number} - {dev_y}",
             title=f"Scan {info.scan_number}",
             x_label=dev_x,
             y_label=dev_y,
         )
 
-        logger.info(f"Auto Update [best_effort]: Started plot with: x_name={dev_x}, y_name={dev_y}")
+        logger.info(
+            f"Auto Update [best_effort]: Started plot with: device_x={dev_x}, device_y={dev_y}"
+        )
 
     #######################################################################
     ################# GUI Callbacks #######################################

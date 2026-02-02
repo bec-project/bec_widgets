@@ -73,8 +73,8 @@ class Waveform(PlotBase):
         "curves",
         "x_mode",
         "x_mode.setter",
-        "x_entry",
-        "x_entry.setter",
+        "signal_x",
+        "signal_x.setter",
         "color_palette",
         "color_palette.setter",
         "skip_large_dataset_warning",
@@ -409,7 +409,7 @@ class Waveform(PlotBase):
             self.scan_history_dialog.layout.addWidget(self.scan_history_widget)
             self.scan_history_widget.scan_history_device_viewer.request_history_plot.connect(
                 lambda scan_id, device_name, signal_name: self.plot(
-                    y_name=device_name, y_entry=signal_name, scan_id=scan_id
+                    device_y=device_name, signal_y=signal_name, scan_id=scan_id
                 )
             )
             self.scan_history_dialog.finished.connect(self._scan_history_closed)
@@ -534,14 +534,14 @@ class Waveform(PlotBase):
         self.round_plot_widget.apply_plot_widget_style()  # To keep the correct theme
 
     @SafeProperty(str)
-    def x_entry(self) -> str | None:
+    def signal_x(self) -> str | None:
         """
         The x signal name.
         """
         return self.x_axis_mode["entry"]
 
-    @x_entry.setter
-    def x_entry(self, value: str | None):
+    @signal_x.setter
+    def signal_x(self, value: str | None):
         """
         Set the x signal name.
 
@@ -551,7 +551,7 @@ class Waveform(PlotBase):
         if value is None:
             return
         if self.x_axis_mode["name"] in ["auto", "index", "timestamp"]:
-            logger.warning("Cannot set x_entry when x_mode is not 'device'.")
+            logger.warning("Cannot set signal_x when x_mode is not 'device'.")
             return
         self.x_axis_mode["entry"] = self.entry_validator.validate_signal(self.x_mode, value)
         self._switch_x_axis_item(mode="device")
@@ -690,10 +690,10 @@ class Waveform(PlotBase):
         arg1: list | np.ndarray | str | None = None,
         y: list | np.ndarray | None = None,
         x: list | np.ndarray | None = None,
-        x_name: str | None = None,
-        y_name: str | None = None,
-        x_entry: str | None = None,
-        y_entry: str | None = None,
+        device_x: str | None = None,
+        device_y: str | None = None,
+        signal_x: str | None = None,
+        signal_y: str | None = None,
         color: str | None = None,
         label: str | None = None,
         dap: str | None = None,
@@ -705,17 +705,17 @@ class Waveform(PlotBase):
         Plot a curve to the plot widget.
 
         Args:
-            arg1(list | np.ndarray | str | None): First argument, which can be x data, y data, or y_name.
+            arg1(list | np.ndarray | str | None): First argument, which can be x data, y data, or device_y.
             y(list | np.ndarray): Custom y data to plot.
             x(list | np.ndarray): Custom y data to plot.
-            x_name(str): Name of the x signal.
+            device_x(str): Name of the x signal.
                 - "auto": Use the best effort signal.
                 - "timestamp": Use the timestamp signal.
                 - "index": Use the index signal.
                 - Custom signal name of a device from BEC.
-            y_name(str): The name of the device for the y-axis.
-            x_entry(str): The name of the entry for the x-axis.
-            y_entry(str): The name of the entry for the y-axis.
+            device_y(str): The name of the device for the y-axis.
+            signal_x(str): The name of the entry for the x-axis.
+            signal_y(str): The name of the entry for the y-axis.
             color(str): The color of the curve.
             label(str): The label of the curve.
             dap(str): The dap model to use for the curve. When provided, a DAP curve is
@@ -741,7 +741,7 @@ class Waveform(PlotBase):
             y_data = np.asarray(y)
 
         if isinstance(arg1, str):
-            y_name = arg1
+            device_y = arg1
         elif isinstance(arg1, list):
             if isinstance(y, list):
                 source = "custom"
@@ -762,17 +762,17 @@ class Waveform(PlotBase):
                 x_data = arg1[:, 0]
                 y_data = arg1[:, 1]
 
-        # If y_name is set => device data
-        if y_name is not None and x_data is None and y_data is None:
+        # If device_y is set => device data
+        if device_y is not None and x_data is None and y_data is None:
             source = "device"
             # Validate or obtain entry
-            y_entry = self.entry_validator.validate_signal(name=y_name, entry=y_entry)
+            signal_y = self.entry_validator.validate_signal(device_y, signal_y)
 
-        # If user gave x_name => store in x_axis_mode, but do not set data here
-        if x_name is not None:
-            self.x_mode = x_name
-            if x_name not in ["timestamp", "index", "auto"]:
-                self.x_axis_mode["entry"] = self.entry_validator.validate_signal(x_name, x_entry)
+        # If user gave device_x => store in x_axis_mode, but do not set data here
+        if device_x is not None:
+            self.x_mode = device_x
+            if device_x not in ["timestamp", "index", "auto"]:
+                self.x_axis_mode["entry"] = self.entry_validator.validate_signal(device_x, signal_x)
 
         # Decide label if not provided
         if label is None:
@@ -781,7 +781,7 @@ class Waveform(PlotBase):
                     "Curve", [c.object_name for c in self.curves]
                 )
             else:
-                label = f"{y_name}-{y_entry}"
+                label = f"{device_y}-{signal_y}"
 
         # If color not provided, generate from palette
         if color is None:
@@ -801,7 +801,7 @@ class Waveform(PlotBase):
 
         # If it's device-based, attach DeviceSignal
         if source == "device":
-            config.signal = DeviceSignal(name=y_name, entry=y_entry)
+            config.signal = DeviceSignal(device=device_y, signal=signal_y)
 
         if scan_id is not None or scan_number is not None:
             config.source = "history"
@@ -851,8 +851,8 @@ class Waveform(PlotBase):
                 f"Only device, history, or custom curves support fitting."
             )
 
-        dev_name = getattr(getattr(device_curve.config, "signal", None), "name", None)
-        dev_entry = getattr(getattr(device_curve.config, "signal", None), "entry", None)
+        dev_name = getattr(getattr(device_curve.config, "signal", None), "device", None)
+        dev_entry = getattr(getattr(device_curve.config, "signal", None), "signal", None)
         if dev_name is None:
             dev_name = device_label
         if dev_entry is None:
@@ -882,7 +882,7 @@ class Waveform(PlotBase):
 
         # Attach device signal with DAP
         config.signal = DeviceSignal(
-            name=dev_name, entry=dev_entry, dap=dap_name, dap_oversample=dap_oversample
+            device=dev_name, signal=dev_entry, dap=dap_name, dap_oversample=dap_oversample
         )
 
         # 4) Create the DAP curve config using `_add_curve(...)`
@@ -927,7 +927,7 @@ class Waveform(PlotBase):
 
         label = config.label
         if config.source == "history":
-            label = f"{config.signal.name}-{config.signal.entry}-scan-{config.scan_number}"
+            label = f"{config.signal.device}-{config.signal.signal}-scan-{config.scan_number}"
             config.label = label
         if not label:
             # Fallback label
@@ -1003,8 +1003,8 @@ class Waveform(PlotBase):
         self, curve: Curve, scan_item: ScanDataContainer
     ) -> Curve | None:
         # Check if the data are already set
-        device = curve.config.signal.name
-        entry = curve.config.signal.entry
+        device = curve.config.signal.device
+        entry = curve.config.signal.signal
 
         all_devices_used = getattr(
             getattr(scan_item, "_msg", None), "stored_data_info", None
@@ -1043,20 +1043,20 @@ class Waveform(PlotBase):
                 )
                 curve.setVisible(False)
                 return
-            x_entry_custom = self.x_axis_mode.get("entry")
-            if x_entry_custom is None:
-                x_entry_custom = self.entry_validator.validate_signal(
+            signal_x_custom = self.x_axis_mode.get("entry")
+            if signal_x_custom is None:
+                signal_x_custom = self.entry_validator.validate_signal(
                     self.x_axis_mode["name"], None
                 )
-            if x_entry_custom not in all_devices_used[self.x_axis_mode["name"]]:
+            if signal_x_custom not in all_devices_used[self.x_axis_mode["name"]]:
                 logger.warning(
-                    f"Custom entry '{x_entry_custom}' for device '{self.x_axis_mode['name']}' not found in scan item of history curve '{curve.name()}'; scan ID: {curve.config.scan_id}."
+                    f"Custom entry '{signal_x_custom}' for device '{self.x_axis_mode['name']}' not found in scan item of history curve '{curve.name()}'; scan ID: {curve.config.scan_id}."
                 )
                 curve.setVisible(False)
                 return
             x_shape = (
                 scan_item._msg.stored_data_info.get(self.x_axis_mode["name"])
-                .get(x_entry_custom)
+                .get(signal_x_custom)
                 .shape[0]
             )
             if x_shape != y_shape:
@@ -1066,9 +1066,9 @@ class Waveform(PlotBase):
                 curve.setVisible(False)
                 return
             x_device = scan_item.devices.get(self.x_axis_mode["name"])
-            x_data = x_device.get(x_entry_custom).read().get("value")
+            x_data = x_device.get(signal_x_custom).read().get("value")
             curve.config.current_x_mode = self.x_axis_mode["name"]
-            self._update_x_label_suffix(f" (custom: {self.x_axis_mode['name']}-{x_entry_custom})")
+            self._update_x_label_suffix(f" (custom: {self.x_axis_mode['name']}-{signal_x_custom})")
         elif self.x_axis_mode["name"] == "auto":
             if (
                 self._current_x_device is None
@@ -1083,24 +1083,24 @@ class Waveform(PlotBase):
                     curve.set_data(x=x_data, y=y_data)
                     self._update_x_label_suffix(" (auto: index)")
                     return curve
-                x_entry = self.entry_validator.validate_signal(scan_motors[0], None)
-                if x_entry not in all_devices_used.get(scan_motors[0], {}):
+                signal_x = self.entry_validator.validate_signal(scan_motors[0], None)
+                if signal_x not in all_devices_used.get(scan_motors[0], {}):
                     logger.warning(
-                        f"Auto x entry '{x_entry}' for device '{scan_motors[0]}' not found in scan item of history curve '{curve.name()}'; scan ID: {curve.config.scan_id}."
+                        f"Auto x entry '{signal_x}' for device '{scan_motors[0]}' not found in scan item of history curve '{curve.name()}'; scan ID: {curve.config.scan_id}."
                     )
                     curve.setVisible(False)
                     return
-                if y_shape != all_devices_used.get(scan_motors[0]).get(x_entry, {}).shape[0]:
+                if y_shape != all_devices_used.get(scan_motors[0]).get(signal_x, {}).shape[0]:
                     logger.warning(
-                        f"Shape mismatch for x data '{all_devices_used.get(scan_motors[0]).get(x_entry, {}).get('shape', [0])[0]}' and y data '{y_shape}' in history curve '{curve.name()}'; scan ID: {curve.config.scan_id}."
+                        f"Shape mismatch for x data '{all_devices_used.get(scan_motors[0]).get(signal_x, {}).get('shape', [0])[0]}' and y data '{y_shape}' in history curve '{curve.name()}'; scan ID: {curve.config.scan_id}."
                     )
                     curve.setVisible(False)
                     return
-                x_data = scan_item.devices.get(scan_motors[0]).get(x_entry).read().get("value")
-                self._current_x_device = (scan_motors[0], x_entry)
-                self._update_x_label_suffix(f" (auto: {scan_motors[0]}-{x_entry})")
+                x_data = scan_item.devices.get(scan_motors[0]).get(signal_x).read().get("value")
+                self._current_x_device = (scan_motors[0], signal_x)
+                self._update_x_label_suffix(f" (auto: {scan_motors[0]}-{signal_x})")
                 curve.config.current_x_mode = "auto"
-                self._update_x_label_suffix(f" (auto: {scan_motors[0]}-{x_entry})")
+                self._update_x_label_suffix(f" (auto: {scan_motors[0]}-{signal_x})")
             else:  # Scan in auto mode was done and live scan already set the current x device
                 if self._current_x_device[0] not in all_devices_used:
                     logger.warning(
@@ -1446,8 +1446,8 @@ class Waveform(PlotBase):
             return
         data, access_key = self._fetch_scan_data_and_access()
         for curve in self._sync_curves:
-            device_name = curve.config.signal.name
-            device_entry = curve.config.signal.entry
+            device_name = curve.config.signal.device
+            device_entry = curve.config.signal.signal
             if access_key == "val":
                 device_data = data.get(device_name, {}).get(device_entry, {}).get(access_key, None)
             else:
@@ -1481,8 +1481,8 @@ class Waveform(PlotBase):
         data, access_key = self._fetch_scan_data_and_access()
 
         for curve in self._async_curves:
-            device_name = curve.config.signal.name
-            device_entry = curve.config.signal.entry
+            device_name = curve.config.signal.device
+            device_entry = curve.config.signal.signal
             if access_key == "val":  # live access
                 device_data = data.get(device_name, {}).get(device_entry, {}).get(access_key, None)
             else:  # history access
@@ -1535,8 +1535,8 @@ class Waveform(PlotBase):
         bec_async_signals = self.client.device_manager.get_bec_signals(
             ["AsyncSignal", "AsyncMultiSignal"]
         )
-        for entry_name, _, entry_data in bec_async_signals:
-            if entry_name == name and entry_data.get("obj_name") == signal:
+        for signal_name, _, entry_data in bec_async_signals:
+            if signal_name == name and entry_data.get("obj_name") == signal:
                 return True, entry_data.get("storage_name")
         return False, signal
 
@@ -1547,8 +1547,8 @@ class Waveform(PlotBase):
         Args:
             curve(Curve): The curve to set up.
         """
-        name = curve.config.signal.name
-        signal = curve.config.signal.entry
+        name = curve.config.signal.device
+        signal = curve.config.signal.signal
         async_signal_found, signal = self._check_async_signal_found(name, signal)
 
         try:
@@ -1621,7 +1621,7 @@ class Waveform(PlotBase):
             x_data = None  # Reset x_data
             y_data = None  # Reset y_data
             # Get the curve data
-            async_data = msg["signals"].get(curve.config.signal.entry, None)
+            async_data = msg["signals"].get(curve.config.signal.signal, None)
             if async_data is None:
                 continue
             # y-data
@@ -1665,12 +1665,12 @@ class Waveform(PlotBase):
 
             # x_axis_mode is device signal
             # Only consider device signals that are async for now, fallback is index
-            x_device_entry = self.x_axis_mode["entry"]
-            async_data = msg["signals"].get(x_device_entry, None)
+            signal_x = self.x_axis_mode["entry"]
+            async_data = msg["signals"].get(signal_x, None)
             # Make sure the signal exists, otherwise fall back to index
             if async_data is None:
                 # Try to grab the data from device signals
-                data_plot_x = self._get_x_data(plot_mode, x_device_entry)
+                data_plot_x = self._get_x_data(plot_mode, signal_x)
             else:
                 data_plot_x = np.asarray(async_data["value"])
             if x_data is not None:
@@ -1678,7 +1678,7 @@ class Waveform(PlotBase):
             # Fallback incase data is not of equal length
             if len(data_plot_x) != len(data_plot_y):
                 logger.warning(
-                    f"Async data for curve {curve.name()} and x_axis {x_device_entry} is not of equal length. Falling back to 'index' plotting."
+                    f"Async data for curve {curve.name()} and x_axis {signal_x} is not of equal length. Falling back to 'index' plotting."
                 )
                 data_plot_x = np.linspace(0, len(data_plot_y) - 1, len(data_plot_y))
 
@@ -1858,18 +1858,18 @@ class Waveform(PlotBase):
 
         # 1 User wants custom signal
         if self.x_axis_mode["name"] not in ["timestamp", "index", "auto"]:
-            x_name = self.x_axis_mode["name"]
-            x_entry = self.x_axis_mode.get("entry", None)
-            if x_entry is None:
-                x_entry = self.entry_validator.validate_signal(x_name, None)
+            device_x = self.x_axis_mode["name"]
+            signal_x = self.x_axis_mode.get("entry", None)
+            if signal_x is None:
+                signal_x = self.entry_validator.validate_signal(device_x, None)
             # if the motor was not scanned, an empty list is returned and curves are not updated
             if access_key == "val":  # live data
-                x_data = data.get(x_name, {}).get(x_entry, {}).get(access_key, [0])
+                x_data = data.get(device_x, {}).get(signal_x, {}).get(access_key, [0])
             else:  # history data
-                entry_obj = data.get(x_name, {}).get(x_entry)
+                entry_obj = data.get(device_x, {}).get(signal_x)
                 x_data = entry_obj.read()["value"] if entry_obj else [0]
-            new_suffix = f" (custom: {x_name}-{x_entry})"
-            self._current_x_device = (x_name, x_entry)
+            new_suffix = f" (custom: {device_x}-{signal_x})"
+            self._current_x_device = (device_x, signal_x)
 
         # 2 User wants timestamp
         if self.x_axis_mode["name"] == "timestamp":
@@ -1913,15 +1913,15 @@ class Waveform(PlotBase):
                     x_data = None
                     new_suffix = " (auto: index)"
                 else:
-                    x_name = scan_report_devices[0]
-                    x_entry = self.entry_validator.validate_signal(x_name, None)
+                    device_x = scan_report_devices[0]
+                    signal_x = self.entry_validator.validate_signal(device_x, None)
                     if access_key == "val":
-                        x_data = data.get(x_name, {}).get(x_entry, {}).get(access_key, None)
+                        x_data = data.get(device_x, {}).get(signal_x, {}).get(access_key, None)
                     else:
-                        entry_obj = data.get(x_name, {}).get(x_entry)
+                        entry_obj = data.get(device_x, {}).get(signal_x)
                         x_data = entry_obj.read()["value"] if entry_obj else None
-                    new_suffix = f" (auto: {x_name}-{x_entry})"
-                self._current_x_device = (x_name, x_entry)
+                    new_suffix = f" (auto: {device_x}-{signal_x})"
+                self._current_x_device = (device_x, signal_x)
         self._update_x_label_suffix(new_suffix)
         return x_data
 
@@ -1999,7 +1999,7 @@ class Waveform(PlotBase):
         for curve in self.curves:
             if curve.config.source != "device":
                 continue
-            dev_name = curve.config.signal.name
+            dev_name = curve.config.signal.device
             if dev_name in readout_priority_async:
                 self._async_curves.append(curve)
                 if hasattr(self.scan_item, "live_data"):
@@ -2347,11 +2347,11 @@ class DemoApp(QMainWindow):  # pragma: no cover
         self.setCentralWidget(self.main_widget)
 
         self.waveform_popup = Waveform(popups=True)
-        self.waveform_popup.plot(y_name="waveform")
+        self.waveform_popup.plot(device_y="waveform")
 
         self.waveform_side = Waveform(popups=False)
-        self.waveform_side.plot(y_name="bpm4i", y_entry="bpm4i", dap="GaussianModel")
-        self.waveform_side.plot(y_name="bpm3a", y_entry="bpm3a")
+        self.waveform_side.plot(device_y="bpm4i", signal_y="bpm4i", dap="GaussianModel")
+        self.waveform_side.plot(device_y="bpm3a", signal_y="bpm3a")
 
         self.custom_waveform = Waveform(popups=True)
         self._populate_custom_curve_demo()

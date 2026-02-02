@@ -30,11 +30,11 @@ def heatmap_widget(qtbot, mocked_client):
 
 
 def test_heatmap_plot(heatmap_widget):
-    heatmap_widget.plot(x_name="samx", y_name="samy", z_name="bpm4i")
+    heatmap_widget.plot(device_x="samx", device_y="samy", device_z="bpm4i")
 
-    assert heatmap_widget._image_config.x_device.name == "samx"
-    assert heatmap_widget._image_config.y_device.name == "samy"
-    assert heatmap_widget._image_config.z_device.name == "bpm4i"
+    assert heatmap_widget._image_config.device_x.device == "samx"
+    assert heatmap_widget._image_config.device_y.device == "samy"
+    assert heatmap_widget._image_config.device_z.device == "bpm4i"
 
 
 def test_heatmap_on_scan_status_no_scan_id(heatmap_widget):
@@ -78,7 +78,7 @@ def test_heatmap_get_image_data_grid_scan(heatmap_widget):
         info={},
         request_inputs={"arg_bundle": ["samx", -5, 5, 10, "samy", -5, 5, 10], "kwargs": {}},
     )
-    heatmap_widget.plot(x_name="samx", y_name="samy", z_name="bpm4i")
+    heatmap_widget.plot(device_x="samx", device_y="samy", device_z="bpm4i")
 
     heatmap_widget.status_message = scan_msg
     with mock.patch.object(heatmap_widget, "get_grid_scan_image") as mock_get_grid_scan_image:
@@ -147,9 +147,9 @@ def test_heatmap_get_grid_scan_image(heatmap_widget):
     )
     heatmap_widget._image_config = HeatmapConfig(
         parent_id="parent_id",
-        x_device=HeatmapDeviceSignal(name="samx", entry="samx"),
-        y_device=HeatmapDeviceSignal(name="samy", entry="samy"),
-        z_device=HeatmapDeviceSignal(name="bpm4i", entry="bpm4i"),
+        device_x=HeatmapDeviceSignal(device="samx", signal="samx"),
+        device_y=HeatmapDeviceSignal(device="samy", signal="samy"),
+        device_z=HeatmapDeviceSignal(device="bpm4i", signal="bpm4i"),
         color_map="viridis",
     )
     img, _ = heatmap_widget.get_grid_scan_image(list(range(100)), msg=scan_msg)
@@ -174,9 +174,9 @@ def _grid_positions(
 def test_heatmap_grid_scan_direction_and_snaking_x_fast(heatmap_widget):
     heatmap_widget._image_config = HeatmapConfig(
         parent_id="parent_id",
-        x_device=HeatmapDeviceSignal(name="samx", entry="samx"),
-        y_device=HeatmapDeviceSignal(name="samy", entry="samy"),
-        z_device=HeatmapDeviceSignal(name="bpm4i", entry="bpm4i"),
+        device_x=HeatmapDeviceSignal(device="samx", signal="samx"),
+        device_y=HeatmapDeviceSignal(device="samy", signal="samy"),
+        device_z=HeatmapDeviceSignal(device="bpm4i", signal="bpm4i"),
         color_map="viridis",
     )
 
@@ -219,9 +219,9 @@ def test_heatmap_grid_scan_direction_and_snaking_x_fast(heatmap_widget):
 def test_heatmap_grid_scan_direction_and_snaking_y_fast(heatmap_widget):
     heatmap_widget._image_config = HeatmapConfig(
         parent_id="parent_id",
-        x_device=HeatmapDeviceSignal(name="samx", entry="samx"),
-        y_device=HeatmapDeviceSignal(name="samy", entry="samy"),
-        z_device=HeatmapDeviceSignal(name="bpm4i", entry="bpm4i"),
+        device_x=HeatmapDeviceSignal(device="samx", signal="samx"),
+        device_y=HeatmapDeviceSignal(device="samy", signal="samy"),
+        device_z=HeatmapDeviceSignal(device="bpm4i", signal="bpm4i"),
         color_map="viridis",
     )
 
@@ -277,13 +277,13 @@ def test_heatmap_get_step_scan_image(heatmap_widget):
     heatmap_widget.scan_item.status_message = scan_msg
     heatmap_widget._image_config = HeatmapConfig(
         parent_id="parent_id",
-        x_device=HeatmapDeviceSignal(name="samx", entry="samx"),
-        y_device=HeatmapDeviceSignal(name="samy", entry="samy"),
-        z_device=HeatmapDeviceSignal(name="bpm4i", entry="bpm4i"),
+        device_x=HeatmapDeviceSignal(device="samx", signal="samx"),
+        device_y=HeatmapDeviceSignal(device="samy", signal="samy"),
+        device_z=HeatmapDeviceSignal(device="bpm4i", signal="bpm4i"),
         color_map="viridis",
     )
     img, _ = heatmap_widget.get_step_scan_image(
-        list(np.random.rand(100)), list(np.random.rand(100)), list(range(100)), msg=scan_msg
+        list(np.random.rand(100)), list(np.random.rand(100)), list(range(100))
     )
     assert img.shape > (10, 10)
 
@@ -291,9 +291,9 @@ def test_heatmap_get_step_scan_image(heatmap_widget):
 def test_heatmap_update_plot_no_scan_item(heatmap_widget):
     heatmap_widget._image_config = HeatmapConfig(
         parent_id="parent_id",
-        x_device=HeatmapDeviceSignal(name="samx", entry="samx"),
-        y_device=HeatmapDeviceSignal(name="samy", entry="samy"),
-        z_device=HeatmapDeviceSignal(name="bpm4i", entry="bpm4i"),
+        device_x=HeatmapDeviceSignal(device="samx", signal="samx"),
+        device_y=HeatmapDeviceSignal(device="samy", signal="samy"),
+        device_z=HeatmapDeviceSignal(device="bpm4i", signal="bpm4i"),
         color_map="viridis",
     )
     with mock.patch.object(heatmap_widget.main_image, "setImage") as mock_set_image:
@@ -304,9 +304,9 @@ def test_heatmap_update_plot_no_scan_item(heatmap_widget):
 def test_heatmap_update_plot(heatmap_widget):
     heatmap_widget._image_config = HeatmapConfig(
         parent_id="parent_id",
-        x_device=HeatmapDeviceSignal(name="samx", entry="samx"),
-        y_device=HeatmapDeviceSignal(name="samy", entry="samy"),
-        z_device=HeatmapDeviceSignal(name="bpm4i", entry="bpm4i"),
+        device_x=HeatmapDeviceSignal(device="samx", signal="samx"),
+        device_y=HeatmapDeviceSignal(device="samy", signal="samy"),
+        device_z=HeatmapDeviceSignal(device="bpm4i", signal="bpm4i"),
         color_map="viridis",
     )
     heatmap_widget.scan_item = create_dummy_scan_item()
@@ -331,9 +331,9 @@ def test_heatmap_update_plot(heatmap_widget):
 def test_heatmap_update_plot_without_status_message(heatmap_widget):
     heatmap_widget._image_config = HeatmapConfig(
         parent_id="parent_id",
-        x_device=HeatmapDeviceSignal(name="samx", entry="samx"),
-        y_device=HeatmapDeviceSignal(name="samy", entry="samy"),
-        z_device=HeatmapDeviceSignal(name="bpm4i", entry="bpm4i"),
+        device_x=HeatmapDeviceSignal(device="samx", signal="samx"),
+        device_y=HeatmapDeviceSignal(device="samy", signal="samy"),
+        device_z=HeatmapDeviceSignal(device="bpm4i", signal="bpm4i"),
         color_map="viridis",
     )
     heatmap_widget.scan_item = create_dummy_scan_item()
@@ -346,9 +346,9 @@ def test_heatmap_update_plot_without_status_message(heatmap_widget):
 def test_heatmap_update_plot_no_img_data(heatmap_widget):
     heatmap_widget._image_config = HeatmapConfig(
         parent_id="parent_id",
-        x_device=HeatmapDeviceSignal(name="samx", entry="samx"),
-        y_device=HeatmapDeviceSignal(name="samy", entry="samy"),
-        z_device=HeatmapDeviceSignal(name="bpm4i", entry="bpm4i"),
+        device_x=HeatmapDeviceSignal(device="samx", signal="samx"),
+        device_y=HeatmapDeviceSignal(device="samy", signal="samy"),
+        device_z=HeatmapDeviceSignal(device="bpm4i", signal="bpm4i"),
         color_map="viridis",
     )
     heatmap_widget.scan_item = create_dummy_scan_item()
@@ -407,7 +407,7 @@ def test_heatmap_settings_popup_accept_changes(heatmap_widget, qtbot):
     """
     Test that changes made in the settings dialog are applied correctly.
     """
-    heatmap_widget.plot(x_name="samx", y_name="samy", z_name="bpm4i")
+    heatmap_widget.plot(device_x="samx", device_y="samy", device_z="bpm4i")
     assert heatmap_widget.color_map == "plasma"  # Default colormap
     heatmap_widget.show_heatmap_settings()
     qtbot.waitUntil(lambda: heatmap_widget.heatmap_dialog is not None)
@@ -431,7 +431,7 @@ def test_heatmap_settings_popup_show_settings(heatmap_widget, qtbot):
     """
     Test that the settings dialog opens and contains the expected elements.
     """
-    heatmap_widget.plot(x_name="samx", y_name="samy", z_name="bpm4i")
+    heatmap_widget.plot(device_x="samx", device_y="samy", device_z="bpm4i")
     heatmap_widget.show_heatmap_settings()
     qtbot.waitUntil(lambda: heatmap_widget.heatmap_dialog is not None)
 
@@ -439,13 +439,13 @@ def test_heatmap_settings_popup_show_settings(heatmap_widget, qtbot):
     assert dialog.isVisible()
     assert dialog.widget is not None
     assert hasattr(dialog.widget.ui, "color_map")
-    assert hasattr(dialog.widget.ui, "x_name")
-    assert hasattr(dialog.widget.ui, "y_name")
-    assert hasattr(dialog.widget.ui, "z_name")
+    assert hasattr(dialog.widget.ui, "device_x")
+    assert hasattr(dialog.widget.ui, "device_y")
+    assert hasattr(dialog.widget.ui, "device_z")
 
     # Check that the ui elements are correctly initialized
     assert dialog.widget.ui.color_map.colormap == heatmap_widget.color_map
-    assert dialog.widget.ui.x_name.currentText() == heatmap_widget._image_config.x_device.name
+    assert dialog.widget.ui.device_x.currentText() == heatmap_widget._image_config.device_x.device
 
     dialog.reject()
     qtbot.waitUntil(lambda: heatmap_widget.heatmap_dialog is None)
@@ -458,7 +458,7 @@ def test_heatmap_widget_reset(heatmap_widget):
     heatmap_widget._pending_interpolation_request = object()
     heatmap_widget._latest_interpolation_version = 5
     heatmap_widget.scan_item = create_dummy_scan_item()
-    heatmap_widget.plot(x_name="samx", y_name="samy", z_name="bpm4i")
+    heatmap_widget.plot(device_x="samx", device_y="samy", device_z="bpm4i")
 
     heatmap_widget.reset()
     assert heatmap_widget._grid_index is None
@@ -476,12 +476,12 @@ def test_heatmap_widget_update_plot_with_scan_history(heatmap_widget, grid_scan_
     heatmap_widget.client.history._scan_ids.append(grid_scan_history_msg.scan_id)
     heatmap_widget.client.queue.scan_storage.current_scan = None
     heatmap_widget.plot(
-        x_name="samx",
-        y_name="samy",
-        z_name="bpm4i",
-        x_entry="samx",
-        y_entry="samy",
-        z_entry="bpm4i",
+        device_x="samx",
+        device_y="samy",
+        device_z="bpm4i",
+        signal_x="samx",
+        signal_y="samy",
+        signal_z="bpm4i",
     )
     qtbot.waitUntil(lambda: heatmap_widget.main_image.raw_data is not None)
     qtbot.waitUntil(lambda: heatmap_widget.main_image.raw_data.shape == (10, 10))
@@ -602,219 +602,219 @@ def test_finish_interpolation_thread_cleans_references(heatmap_widget):
 def test_device_safe_properties_get(heatmap_widget):
     """Test that device SafeProperty getters work correctly."""
     # Initially devices should be empty
-    assert heatmap_widget.x_device_name == ""
-    assert heatmap_widget.x_device_entry == ""
-    assert heatmap_widget.y_device_name == ""
-    assert heatmap_widget.y_device_entry == ""
-    assert heatmap_widget.z_device_name == ""
-    assert heatmap_widget.z_device_entry == ""
+    assert heatmap_widget.device_x == ""
+    assert heatmap_widget.signal_x == ""
+    assert heatmap_widget.device_y == ""
+    assert heatmap_widget.signal_y == ""
+    assert heatmap_widget.device_z == ""
+    assert heatmap_widget.signal_z == ""
 
     # Set devices via plot
-    heatmap_widget.plot(x_name="samx", y_name="samy", z_name="bpm4i")
+    heatmap_widget.plot(device_x="samx", device_y="samy", device_z="bpm4i")
 
     # Check properties return device names and entries separately
-    assert heatmap_widget.x_device_name == "samx"
-    assert heatmap_widget.x_device_entry  # Should have some entry
-    assert heatmap_widget.y_device_name == "samy"
-    assert heatmap_widget.y_device_entry  # Should have some entry
-    assert heatmap_widget.z_device_name == "bpm4i"
-    assert heatmap_widget.z_device_entry  # Should have some entry
+    assert heatmap_widget.device_x == "samx"
+    assert heatmap_widget.signal_x  # Should have some entry
+    assert heatmap_widget.device_y == "samy"
+    assert heatmap_widget.signal_y  # Should have some entry
+    assert heatmap_widget.device_z == "bpm4i"
+    assert heatmap_widget.signal_z  # Should have some entry
 
 
 def test_device_safe_properties_set_name(heatmap_widget):
     """Test that device SafeProperty setters work for device names."""
-    # Set x_device_name - should auto-validate entry
-    heatmap_widget.x_device_name = "samx"
-    assert heatmap_widget._image_config.x_device is not None
-    assert heatmap_widget._image_config.x_device.name == "samx"
-    assert heatmap_widget._image_config.x_device.entry is not None  # Entry should be validated
-    assert heatmap_widget.x_device_name == "samx"
+    # Set device_x - should auto-validate entry
+    heatmap_widget.device_x = "samx"
+    assert heatmap_widget._image_config.device_x is not None
+    assert heatmap_widget._image_config.device_x.device == "samx"
+    assert heatmap_widget._image_config.device_x.signal is not None  # Entry should be validated
+    assert heatmap_widget.device_x == "samx"
 
-    # Set y_device_name
-    heatmap_widget.y_device_name = "samy"
-    assert heatmap_widget._image_config.y_device is not None
-    assert heatmap_widget._image_config.y_device.name == "samy"
-    assert heatmap_widget._image_config.y_device.entry is not None
-    assert heatmap_widget.y_device_name == "samy"
+    # Set device_y
+    heatmap_widget.device_y = "samy"
+    assert heatmap_widget._image_config.device_y is not None
+    assert heatmap_widget._image_config.device_y.device == "samy"
+    assert heatmap_widget._image_config.device_y.signal is not None
+    assert heatmap_widget.device_y == "samy"
 
-    # Set z_device_name
-    heatmap_widget.z_device_name = "bpm4i"
-    assert heatmap_widget._image_config.z_device is not None
-    assert heatmap_widget._image_config.z_device.name == "bpm4i"
-    assert heatmap_widget._image_config.z_device.entry is not None
-    assert heatmap_widget.z_device_name == "bpm4i"
+    # Set device_z
+    heatmap_widget.device_z = "bpm4i"
+    assert heatmap_widget._image_config.device_z is not None
+    assert heatmap_widget._image_config.device_z.device == "bpm4i"
+    assert heatmap_widget._image_config.device_z.signal is not None
+    assert heatmap_widget.device_z == "bpm4i"
 
 
 def test_device_safe_properties_set_entry(heatmap_widget):
     """Test that device entry properties can override default entries."""
     # Set device name first - this auto-validates entry
-    heatmap_widget.x_device_name = "samx"
-    initial_entry = heatmap_widget.x_device_entry
+    heatmap_widget.device_x = "samx"
+    initial_entry = heatmap_widget.signal_x
     assert initial_entry  # Should have auto-validated entry
 
     # Override with specific entry
-    heatmap_widget.x_device_entry = "samx"
-    assert heatmap_widget._image_config.x_device.entry == "samx"
-    assert heatmap_widget.x_device_entry == "samx"
+    heatmap_widget.signal_x = "samx"
+    assert heatmap_widget._image_config.device_x.signal == "samx"
+    assert heatmap_widget.signal_x == "samx"
 
     # Same for y device
-    heatmap_widget.y_device_name = "samy"
-    heatmap_widget.y_device_entry = "samy_setpoint"
-    assert heatmap_widget._image_config.y_device.entry == "samy_setpoint"
+    heatmap_widget.device_y = "samy"
+    heatmap_widget.signal_y = "samy_setpoint"
+    assert heatmap_widget._image_config.device_y.signal == "samy_setpoint"
 
     # Same for z device
-    heatmap_widget.z_device_name = "bpm4i"
-    heatmap_widget.z_device_entry = "bpm4i"
-    assert heatmap_widget._image_config.z_device.entry == "bpm4i"
+    heatmap_widget.device_z = "bpm4i"
+    heatmap_widget.signal_z = "bpm4i"
+    assert heatmap_widget._image_config.device_z.signal == "bpm4i"
 
 
 def test_device_entry_cannot_be_set_without_name(heatmap_widget):
     """Test that setting entry without device name logs warning and does nothing."""
     # Try to set entry without device name
-    heatmap_widget.x_device_entry = "some_entry"
+    heatmap_widget.signal_x = "some_entry"
     # Should not crash, entry should remain empty
-    assert heatmap_widget.x_device_entry == ""
-    assert heatmap_widget._image_config.x_device is None
+    assert heatmap_widget.signal_x == ""
+    assert heatmap_widget._image_config.device_x is None
 
 
 def test_device_safe_properties_set_empty(heatmap_widget):
     """Test that device SafeProperty setters handle empty strings."""
     # Set device first
-    heatmap_widget.x_device_name = "samx"
-    assert heatmap_widget._image_config.x_device is not None
+    heatmap_widget.device_x = "samx"
+    assert heatmap_widget._image_config.device_x is not None
 
     # Set to empty string - should clear the device
-    heatmap_widget.x_device_name = ""
-    assert heatmap_widget.x_device_name == ""
-    assert heatmap_widget._image_config.x_device is None
+    heatmap_widget.device_x = ""
+    assert heatmap_widget.device_x == ""
+    assert heatmap_widget._image_config.device_x is None
 
 
 def test_device_safe_properties_auto_plot(heatmap_widget):
     """Test that setting all three devices triggers auto-plot."""
     # Set all three devices
-    heatmap_widget.x_device_name = "samx"
-    heatmap_widget.y_device_name = "samy"
-    heatmap_widget.z_device_name = "bpm4i"
+    heatmap_widget.device_x = "samx"
+    heatmap_widget.device_y = "samy"
+    heatmap_widget.device_z = "bpm4i"
 
     # Check that plot was called (image_config should be updated)
-    assert heatmap_widget._image_config.x_device is not None
-    assert heatmap_widget._image_config.y_device is not None
-    assert heatmap_widget._image_config.z_device is not None
+    assert heatmap_widget._image_config.device_x is not None
+    assert heatmap_widget._image_config.device_y is not None
+    assert heatmap_widget._image_config.device_z is not None
 
 
 def test_device_properties_update_labels(heatmap_widget):
     """Test that setting device properties updates axis labels."""
     # Set x device - should update x label
-    heatmap_widget.x_device_name = "samx"
+    heatmap_widget.device_x = "samx"
     assert heatmap_widget.x_label == "samx"
 
     # Set y device - should update y label
-    heatmap_widget.y_device_name = "samy"
+    heatmap_widget.device_y = "samy"
     assert heatmap_widget.y_label == "samy"
 
     # Set z device - should update title
-    heatmap_widget.z_device_name = "bpm4i"
+    heatmap_widget.device_z = "bpm4i"
     assert heatmap_widget.title == "bpm4i"
 
 
 def test_device_properties_partial_configuration(heatmap_widget):
     """Test that widget handles partial device configuration gracefully."""
     # Set only x device
-    heatmap_widget.x_device_name = "samx"
-    assert heatmap_widget.x_device_name == "samx"
-    assert heatmap_widget.y_device_name == ""
-    assert heatmap_widget.z_device_name == ""
+    heatmap_widget.device_x = "samx"
+    assert heatmap_widget.device_x == "samx"
+    assert heatmap_widget.device_y == ""
+    assert heatmap_widget.device_z == ""
 
     # Set only y device (x already set)
-    heatmap_widget.y_device_name = "samy"
-    assert heatmap_widget.x_device_name == "samx"
-    assert heatmap_widget.y_device_name == "samy"
-    assert heatmap_widget.z_device_name == ""
+    heatmap_widget.device_y = "samy"
+    assert heatmap_widget.device_x == "samx"
+    assert heatmap_widget.device_y == "samy"
+    assert heatmap_widget.device_z == ""
 
     # Auto-plot should not trigger yet (z missing)
     # But devices should be configured
-    assert heatmap_widget._image_config.x_device is not None
-    assert heatmap_widget._image_config.y_device is not None
+    assert heatmap_widget._image_config.device_x is not None
+    assert heatmap_widget._image_config.device_y is not None
 
 
 def test_device_properties_in_user_access(heatmap_widget):
     """Test that device properties are exposed in USER_ACCESS for RPC."""
     from bec_widgets.widgets.plots.heatmap.heatmap import Heatmap
 
-    assert "x_device_name" in Heatmap.USER_ACCESS
-    assert "x_device_name.setter" in Heatmap.USER_ACCESS
-    assert "x_device_entry" in Heatmap.USER_ACCESS
-    assert "x_device_entry.setter" in Heatmap.USER_ACCESS
-    assert "y_device_name" in Heatmap.USER_ACCESS
-    assert "y_device_name.setter" in Heatmap.USER_ACCESS
-    assert "y_device_entry" in Heatmap.USER_ACCESS
-    assert "y_device_entry.setter" in Heatmap.USER_ACCESS
-    assert "z_device_name" in Heatmap.USER_ACCESS
-    assert "z_device_name.setter" in Heatmap.USER_ACCESS
-    assert "z_device_entry" in Heatmap.USER_ACCESS
-    assert "z_device_entry.setter" in Heatmap.USER_ACCESS
+    assert "device_x" in Heatmap.USER_ACCESS
+    assert "device_x.setter" in Heatmap.USER_ACCESS
+    assert "signal_x" in Heatmap.USER_ACCESS
+    assert "signal_x.setter" in Heatmap.USER_ACCESS
+    assert "device_y" in Heatmap.USER_ACCESS
+    assert "device_y.setter" in Heatmap.USER_ACCESS
+    assert "signal_y" in Heatmap.USER_ACCESS
+    assert "signal_y.setter" in Heatmap.USER_ACCESS
+    assert "device_z" in Heatmap.USER_ACCESS
+    assert "device_z.setter" in Heatmap.USER_ACCESS
+    assert "signal_z" in Heatmap.USER_ACCESS
+    assert "signal_z.setter" in Heatmap.USER_ACCESS
 
 
 def test_device_properties_validation(heatmap_widget):
     """Test that device entries are validated through entry_validator."""
     # Set device name - entry should be auto-validated
-    heatmap_widget.x_device_name = "samx"
-    initial_entry = heatmap_widget.x_device_entry
+    heatmap_widget.device_x = "samx"
+    initial_entry = heatmap_widget.signal_x
 
     # The entry should be validated (will be "samx" in the mock)
     assert initial_entry == "samx"
 
     # Set a different entry - should also be validated
-    heatmap_widget.x_device_entry = "samx"  # Use same name as validated entry
-    assert heatmap_widget.x_device_entry == "samx"
+    heatmap_widget.signal_x = "samx"  # Use same name as validated entry
+    assert heatmap_widget.signal_x == "samx"
 
 
 def test_device_properties_with_plot_method(heatmap_widget):
     """Test that device properties reflect values set via plot() method."""
     # Use plot method
-    heatmap_widget.plot(x_name="samx", y_name="samy", z_name="bpm4i")
+    heatmap_widget.plot(device_x="samx", device_y="samy", device_z="bpm4i")
 
     # Properties should reflect the plotted devices
-    assert heatmap_widget.x_device_name == "samx"
-    assert heatmap_widget.y_device_name == "samy"
-    assert heatmap_widget.z_device_name == "bpm4i"
+    assert heatmap_widget.device_x == "samx"
+    assert heatmap_widget.device_y == "samy"
+    assert heatmap_widget.device_z == "bpm4i"
 
     # Entries should be validated
-    assert heatmap_widget.x_device_entry == "samx"
-    assert heatmap_widget.y_device_entry == "samy"
-    assert heatmap_widget.z_device_entry == "bpm4i"
+    assert heatmap_widget.signal_x == "samx"
+    assert heatmap_widget.signal_y == "samy"
+    assert heatmap_widget.signal_z == "bpm4i"
 
 
 def test_device_properties_overwrite_via_properties(heatmap_widget):
     """Test that device properties can overwrite values set via plot()."""
     # First set via plot
-    heatmap_widget.plot(x_name="samx", y_name="samy", z_name="bpm4i")
+    heatmap_widget.plot(device_x="samx", device_y="samy", device_z="bpm4i")
 
     # Overwrite x device via properties
-    heatmap_widget.x_device_name = "samz"
-    assert heatmap_widget.x_device_name == "samz"
-    assert heatmap_widget._image_config.x_device.name == "samz"
+    heatmap_widget.device_x = "samz"
+    assert heatmap_widget.device_x == "samz"
+    assert heatmap_widget._image_config.device_x.device == "samz"
 
     # Overwrite y device entry
-    heatmap_widget.y_device_entry = "samy"
-    assert heatmap_widget.y_device_entry == "samy"
+    heatmap_widget.signal_y = "samy"
+    assert heatmap_widget.signal_y == "samy"
 
 
 def test_device_properties_clearing_devices(heatmap_widget):
     """Test clearing devices by setting to empty string."""
     # Set all devices
-    heatmap_widget.x_device_name = "samx"
-    heatmap_widget.y_device_name = "samy"
-    heatmap_widget.z_device_name = "bpm4i"
+    heatmap_widget.device_x = "samx"
+    heatmap_widget.device_y = "samy"
+    heatmap_widget.device_z = "bpm4i"
 
     # Clear x device
-    heatmap_widget.x_device_name = ""
-    assert heatmap_widget.x_device_name == ""
-    assert heatmap_widget._image_config.x_device is None
+    heatmap_widget.device_x = ""
+    assert heatmap_widget.device_x == ""
+    assert heatmap_widget._image_config.device_x is None
 
     # Y and Z should still be set
-    assert heatmap_widget.y_device_name == "samy"
-    assert heatmap_widget.z_device_name == "bpm4i"
+    assert heatmap_widget.device_y == "samy"
+    assert heatmap_widget.device_z == "bpm4i"
 
 
 def test_device_properties_property_changed_signal(heatmap_widget):
@@ -826,12 +826,12 @@ def test_device_properties_property_changed_signal(heatmap_widget):
     heatmap_widget.property_changed.connect(mock_handler)
 
     # Set device name
-    heatmap_widget.x_device_name = "samx"
+    heatmap_widget.device_x = "samx"
 
     # Signal should have been emitted
     assert mock_handler.called
     # Check it was called with correct arguments
-    mock_handler.assert_any_call("x_device_name", "samx")
+    mock_handler.assert_any_call("device_x", "samx")
 
 
 def test_auto_emit_syncs_heatmap_toolbar_actions(heatmap_widget):
@@ -855,7 +855,7 @@ def test_auto_emit_syncs_heatmap_toolbar_actions(heatmap_widget):
 def test_device_entry_validation_with_invalid_device(heatmap_widget):
     """Test that invalid device names are handled gracefully."""
     # Try to set invalid device name
-    heatmap_widget.x_device_name = "nonexistent_device"
+    heatmap_widget.device_x = "nonexistent_device"
 
     # Should not crash, but device might not be set if validation fails
     # The implementation silently fails, so we just check it doesn't crash
@@ -864,28 +864,28 @@ def test_device_entry_validation_with_invalid_device(heatmap_widget):
 def test_device_properties_sequential_entry_changes(heatmap_widget):
     """Test changing device entry multiple times."""
     # Set device
-    heatmap_widget.x_device_name = "samx"
+    heatmap_widget.device_x = "samx"
 
     # Change entry multiple times
-    heatmap_widget.x_device_entry = "samx_velocity"
-    assert heatmap_widget.x_device_entry == "samx_velocity"
+    heatmap_widget.signal_x = "samx_velocity"
+    assert heatmap_widget.signal_x == "samx_velocity"
 
-    heatmap_widget.x_device_entry = "samx_setpoint"
-    assert heatmap_widget.x_device_entry == "samx_setpoint"
+    heatmap_widget.signal_x = "samx_setpoint"
+    assert heatmap_widget.signal_x == "samx_setpoint"
 
-    heatmap_widget.x_device_entry = "samx"
-    assert heatmap_widget.x_device_entry == "samx"
+    heatmap_widget.signal_x = "samx"
+    assert heatmap_widget.signal_x == "samx"
 
 
 def test_device_properties_with_none_values(heatmap_widget):
     """Test that None values are handled as empty strings."""
     # Device name None should be treated as empty
-    heatmap_widget.x_device_name = None
-    assert heatmap_widget.x_device_name == ""
+    heatmap_widget.device_x = None
+    assert heatmap_widget.device_x == ""
 
     # Set a device first
-    heatmap_widget.y_device_name = "samy"
+    heatmap_widget.device_y = "samy"
 
     # Entry None should not change anything
-    heatmap_widget.y_device_entry = None
-    assert heatmap_widget.y_device_entry  # Should still have validated entry
+    heatmap_widget.signal_y = None
+    assert heatmap_widget.signal_y  # Should still have validated entry

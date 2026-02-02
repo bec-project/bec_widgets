@@ -102,17 +102,17 @@ class WaveformViewPopup(ViewBase):  # pragma: no cover
         self.device_edit.insertItem(0, "")
         self.device_edit.setEditable(True)
         self.device_edit.setCurrentIndex(0)
-        self.entry_edit = SignalComboBox(parent=self)
-        self.entry_edit.include_config_signals = False
-        self.entry_edit.insertItem(0, "")
-        self.entry_edit.setEditable(True)
-        self.device_edit.currentTextChanged.connect(self.entry_edit.set_device)
-        self.device_edit.device_reset.connect(self.entry_edit.reset_selection)
+        self.signal_edit = SignalComboBox(parent=self)
+        self.signal_edit.include_config_signals = False
+        self.signal_edit.insertItem(0, "")
+        self.signal_edit.setEditable(True)
+        self.device_edit.currentTextChanged.connect(self.signal_edit.set_device)
+        self.device_edit.device_reset.connect(self.signal_edit.reset_selection)
 
         form = QFormLayout()
         form.addRow(label)
         form.addRow("Device", self.device_edit)
-        form.addRow("Signal", self.entry_edit)
+        form.addRow("Signal", self.signal_edit)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, parent=dialog)
         buttons.accepted.connect(dialog.accept)
@@ -124,7 +124,7 @@ class WaveformViewPopup(ViewBase):  # pragma: no cover
 
         if dialog.exec_() == QDialog.Accepted:
             self.waveform.plot(
-                y_name=self.device_edit.currentText(), y_entry=self.entry_edit.currentText()
+                device_y=self.device_edit.currentText(), signal_y=self.signal_edit.currentText()
             )
 
     @SafeSlot()
@@ -249,7 +249,7 @@ class WaveformViewInline(ViewBase):  # pragma: no cover
         dev = self.device_edit.currentText()
         sig = self.entry_edit.currentText()
         if dev and sig:
-            self.waveform.plot(y_name=dev, y_entry=sig)
+            self.waveform.plot(device_y=dev, signal_y=sig)
         self.stack.setCurrentIndex(1)
 
     def _show_waveform_without_changes(self):
