@@ -5,6 +5,7 @@ from bec_widgets.applications.navigation_centre.side_bar import SideBar
 from bec_widgets.applications.navigation_centre.side_bar_components import NavigationItem
 from bec_widgets.applications.views.developer_view.developer_view import DeveloperView
 from bec_widgets.applications.views.device_manager_view.device_manager_view import DeviceManagerView
+from bec_widgets.applications.views.dock_area_view.dock_area_view import DockAreaView
 from bec_widgets.applications.views.view import ViewBase, WaveformViewInline, WaveformViewPopup
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.screen_utils import (
@@ -12,7 +13,6 @@ from bec_widgets.utils.screen_utils import (
     available_screen_geometry,
     main_app_size_for_screen,
 )
-from bec_widgets.widgets.containers.dock_area.dock_area import BECDockArea
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 
 
@@ -50,13 +50,16 @@ class BECMainApp(BECMainWindow):
 
     def _add_views(self):
         self.add_section("BEC Applications", "bec_apps")
-        self.ads = BECDockArea(self, profile_namespace="bec", auto_profile_namespace=False)
-        self.ads.setObjectName("MainWorkspace")
+        self.dock_area = DockAreaView(self)
         self.device_manager = DeviceManagerView(self)
         self.developer_view = DeveloperView(self)
 
         self.add_view(
-            icon="widgets", title="Dock Area", id="dock_area", widget=self.ads, mini_text="Docks"
+            icon="widgets",
+            title="Dock Area",
+            id="dock_area",
+            widget=self.dock_area,
+            mini_text="Docks",
         )
         self.add_view(
             icon="display_settings",
