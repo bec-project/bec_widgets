@@ -1,7 +1,8 @@
 import json
 import time
+from functools import partial
 from unittest import mock
-from unittest.mock import PropertyMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import fakeredis
 import h5py
@@ -15,6 +16,7 @@ from bec_qthemes import apply_theme
 from pytestqt.exceptions import TimeoutError as QtBotTimeoutError
 from qtpy.QtCore import QEvent, QEventLoop
 from qtpy.QtWidgets import QApplication, QMessageBox
+from redis import Redis
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.tests.utils import DEVICES, DMMock
@@ -81,11 +83,22 @@ def rpc_register():
 _REDIS_CONN: QtRedisConnector | None = None
 
 
-def global_mock_qt_redis_connector(*_, **__):
+def global_qt_fakeredis_connector(*_, **__):
     global _REDIS_CONN
     if _REDIS_CONN is None:
         _REDIS_CONN = QtRedisConnector(bootstrap="localhost:1", redis_cls=fakeredis.FakeRedis)
     return _REDIS_CONN
+
+
+def mock_redis_connector(*_, **__):
+    # redis_mock = MagicMock(spec=QtRedisConnector)
+    # redis_mock._redis_conn = MagicMock(spec=Redis)
+    # redis_mock._convert_endpointinfo.side_effect = partial(
+    #     QtRedisConnector._convert_endpointinfo, redis_mock
+    # )
+    redis_mock = QtRedisConnector(bootstrap="localhost:1", redis_cls=MagicMock)
+    redis_mock.poll_messages = MagicMock()
+    return redis_mock
 
 
 def mock_client(*_, **__):
@@ -98,15 +111,15 @@ def mock_client(*_, **__):
     ):
         client = BECClient(
             config=service_config.ServiceConfig(config={"redis": {"host": "localhost", "port": 1}}),
-            connector_cls=global_mock_qt_redis_connector,
+            connector_cls=mock_redis_connector,
         )
         client.start()
     client.device_manager.add_devices(DEVICES)
     return client
 
 
-@pytest.fixture(autouse=True)
-def bec_dispatcher(threads_check):  # pylint: disable=unused-argument
+@pytest.fixture(autouse=True, scope="session")
+def bec_dispatcher():  # pylint: disable=unused-argument
     with mock.patch.object(bec_dispatcher_module, "BECClient", mock_client):
         bec_dispatcher = bec_dispatcher_module.BECDispatcher()
     yield bec_dispatcher
