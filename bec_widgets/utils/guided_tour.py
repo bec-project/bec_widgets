@@ -16,7 +16,6 @@ from qtpy.QtGui import QAction, QColor, QKeySequence, QPainter, QPen, QShortcut
 from qtpy.QtWidgets import (
     QAbstractItemView,
     QApplication,
-    QDialogButtonBox,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -24,7 +23,6 @@ from qtpy.QtWidgets import (
     QMenu,
     QMenuBar,
     QPushButton,
-    QSizePolicy,
     QTableWidgetItem,
     QToolBar,
     QVBoxLayout,
@@ -308,7 +306,7 @@ class GuidedTour(QObject):
             widget_ref = _resolve_toolbar_button
             default_title = getattr(widget, "tooltip", "Toolbar Menu")
         elif isinstance(widget, QRect):
-            widget_ref = saferef.safe_ref(widget)
+            widget_ref = widget
             default_title = "Area"
         else:
             widget_ref = saferef.safe_ref(widget)
