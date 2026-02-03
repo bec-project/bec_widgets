@@ -99,7 +99,7 @@ class DeviceManagerView(ViewBase):
             1: "Shows if a device is connectable. Validated on demand.",
             2: "Device name, unique across all devices within a config.",
             3: "Device class used to initialize the device on the BEC server.",
-            4: "Defines how BEC treats readings of the device during scans. The options are 'monitored', 'baseline', ' async', 'continuous' or 'on_demand'.",
+            4: "Defines how BEC treats readings of the device during scans. The options are 'monitored', 'baseline', 'async', 'continuous' or 'on_demand'.",
             5: "Defines how BEC reacts if a device readback fails. Options are 'raise', 'retry', or 'buffer'.",
             6: "User-defined tags associated with the device.",
             7: "A brief description of the device.",
