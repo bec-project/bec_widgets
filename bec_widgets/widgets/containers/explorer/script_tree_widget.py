@@ -63,7 +63,7 @@ class ScriptTreeWidget(QWidget):
         layout.setSpacing(0)
 
         # Create tree view
-        self.tree = QTreeView()
+        self.tree = QTreeView(parent=self)
         self.tree.setHeaderHidden(True)
         self.tree.setRootIsDecorated(True)
 
@@ -71,12 +71,12 @@ class ScriptTreeWidget(QWidget):
         self.tree.setMouseTracking(True)
 
         # Create file system model
-        self.model = QFileSystemModel()
+        self.model = QFileSystemModel(parent=self)
         self.model.setNameFilters(["*.py"])
         self.model.setNameFilterDisables(False)
 
         # Create proxy model to filter out underscore directories
-        self.proxy_model = QSortFilterProxyModel()
+        self.proxy_model = QSortFilterProxyModel(parent=self)
         self.proxy_model.setFilterRegularExpression(QRegularExpression("^[^_].*"))
         self.proxy_model.setSourceModel(self.model)
         self.tree.setModel(self.proxy_model)
