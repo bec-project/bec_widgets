@@ -12,7 +12,6 @@ from bec_widgets.widgets.plots.waveform.settings.curve_settings.curve_tree impor
     ScanIndexValidator,
 )
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
-from tests.unit_tests.client_mocks import dap_plugin_message, mocked_client, mocked_client_with_dap
 from tests.unit_tests.conftest import create_widget
 
 ##################################################
@@ -21,11 +20,11 @@ from tests.unit_tests.conftest import create_widget
 
 
 @pytest.fixture
-def curve_setting_fixture(qtbot, mocked_client):
+def curve_setting_fixture(qtbot, mock_client_w_devices):
     """
     Creates a CurveSetting widget targeting a mock or real Waveform widget.
     """
-    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf = create_widget(qtbot, Waveform, client=mock_client_w_devices)
     wf.x_mode = "auto"
     curve_setting = create_widget(qtbot, CurveSetting, parent=None, target_widget=wf)
     return curve_setting, wf

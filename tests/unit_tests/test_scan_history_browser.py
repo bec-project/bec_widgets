@@ -15,8 +15,6 @@ from bec_widgets.widgets.services.scan_history_browser.scan_history_browser impo
     ScanHistoryBrowser,
 )
 
-from .client_mocks import mocked_client
-
 
 @pytest.fixture
 def scan_history_msg():

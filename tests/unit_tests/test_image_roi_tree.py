@@ -7,7 +7,6 @@ from qtpy.QtCore import QPointF, Qt
 from bec_widgets.widgets.plots.image.image import Image
 from bec_widgets.widgets.plots.image.setting_widgets.image_roi_tree import ROIPropertyTree
 from bec_widgets.widgets.plots.roi.image_roi import CircularROI, RectangularROI
-from tests.unit_tests.client_mocks import mocked_client
 from tests.unit_tests.conftest import create_widget
 
 

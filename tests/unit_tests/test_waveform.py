@@ -18,14 +18,6 @@ from bec_widgets.widgets.plots.waveform.waveform import Waveform
 from bec_widgets.widgets.services.scan_history_browser.scan_history_browser import (
     ScanHistoryBrowser,
 )
-from tests.unit_tests.client_mocks import (
-    DummyData,
-    create_dummy_scan_item,
-    dap_plugin_message,
-    inject_scan_history,
-    mocked_client,
-    mocked_client_with_dap,
-)
 
 from .conftest import create_widget
 

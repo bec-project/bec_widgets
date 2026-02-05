@@ -12,7 +12,6 @@ from bec_widgets.widgets.plots.roi.image_roi import (
     RectangularROI,
     ROIController,
 )
-from tests.unit_tests.client_mocks import mocked_client
 from tests.unit_tests.conftest import create_widget
 
 

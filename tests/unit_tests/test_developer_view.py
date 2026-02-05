@@ -22,8 +22,6 @@ from bec_widgets.widgets.editors.monaco.monaco_dock import MonacoDock
 from bec_widgets.widgets.editors.monaco.monaco_widget import MonacoWidget
 from bec_widgets.widgets.utility.ide_explorer.ide_explorer import IDEExplorer
 
-from .client_mocks import mocked_client
-
 
 @pytest.fixture
 def developer_view(qtbot, mocked_client):

@@ -2,8 +2,6 @@ import pytest
 
 from bec_widgets.widgets.editors.text_box.text_box import DEFAULT_TEXT, TextBox
 
-from .client_mocks import mocked_client
-
 
 @pytest.fixture
 def text_box_widget(qtbot, mocked_client):

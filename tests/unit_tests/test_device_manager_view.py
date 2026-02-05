@@ -43,8 +43,6 @@ from bec_widgets.widgets.control.device_manager.components.ophyd_validation.ophy
     OphydValidation,
 )
 
-from .client_mocks import mocked_client
-
 
 @pytest.fixture
 def device_config() -> dict:

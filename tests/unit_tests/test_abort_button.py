@@ -6,8 +6,6 @@ import pytest
 
 from bec_widgets.widgets.control.buttons.button_abort.button_abort import AbortButton
 
-from .client_mocks import mocked_client
-
 
 @pytest.fixture
 def abort_button(qtbot, mocked_client):

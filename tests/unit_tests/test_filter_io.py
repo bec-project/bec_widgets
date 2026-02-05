@@ -6,7 +6,6 @@ from bec_widgets.widgets.control.device_input.device_line_edit.device_line_edit 
 )
 from bec_widgets.widgets.dap.dap_combo_box.dap_combo_box import DapComboBox
 
-from .client_mocks import mocked_client
 from .conftest import create_widget
 
 

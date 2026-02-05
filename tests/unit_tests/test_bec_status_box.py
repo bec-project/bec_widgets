@@ -9,8 +9,6 @@ from bec_widgets.widgets.services.bec_status_box.bec_status_box import (
     BECStatusBox,
 )
 
-from .client_mocks import mocked_client
-
 
 @pytest.fixture
 def service_status_fixture():

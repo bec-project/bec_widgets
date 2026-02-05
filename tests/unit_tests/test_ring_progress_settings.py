@@ -3,7 +3,6 @@ import pytest
 from bec_widgets.utils.settings_dialog import SettingsDialog
 from bec_widgets.widgets.progress.ring_progress_bar.ring_progress_bar import RingProgressBar
 from bec_widgets.widgets.progress.ring_progress_bar.ring_progress_settings_cards import RingSettings
-from tests.unit_tests.client_mocks import mocked_client
 
 
 @pytest.fixture

@@ -9,8 +9,6 @@ from bec_widgets.utils import BECConnector
 from bec_widgets.utils.error_popups import SafeProperty
 from bec_widgets.utils.error_popups import SafeSlot as Slot
 
-from .client_mocks import mocked_client
-
 
 class BECConnectorQObject(BECConnector, QObject): ...
 

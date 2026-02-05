@@ -5,7 +5,6 @@ from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtCore import QPointF
 
 from bec_widgets.widgets.plots.image.image import Image
-from tests.unit_tests.client_mocks import mocked_client
 from tests.unit_tests.conftest import create_widget
 
 ##################################################

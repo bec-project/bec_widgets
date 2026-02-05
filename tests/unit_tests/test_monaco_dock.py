@@ -8,8 +8,6 @@ from qtpy.QtWidgets import QFileDialog, QMessageBox
 from bec_widgets.widgets.editors.monaco.monaco_dock import MonacoDock
 from bec_widgets.widgets.editors.monaco.monaco_widget import MonacoWidget
 
-from .client_mocks import mocked_client
-
 
 @pytest.fixture
 def monaco_dock(qtbot, mocked_client) -> Generator[MonacoDock, None, None]:

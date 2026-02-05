@@ -9,8 +9,6 @@ from bec_widgets.cli.server import GUIServer
 from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.utils.rpc_server import RegistryNotReadyError, RPCServer, SingleshotRPCRepeat
 
-from .client_mocks import mocked_client
-
 
 class DummyWidget(BECConnector, QWidget):
     def __init__(self, parent=None, client=None, **kwargs):

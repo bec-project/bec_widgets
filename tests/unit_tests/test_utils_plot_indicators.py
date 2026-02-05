@@ -3,8 +3,6 @@ from qtpy.QtCore import QPointF
 
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
 
-from .client_mocks import mocked_client
-
 
 @pytest.fixture
 def plot_widget_with_arrow_item(qtbot, mocked_client):

@@ -40,8 +40,6 @@ from bec_widgets.widgets.containers.dock_area.settings.dialogs import (
 )
 from bec_widgets.widgets.containers.dock_area.settings.workspace_manager import WorkSpaceManager
 
-from .client_mocks import mocked_client
-
 
 @pytest.fixture
 def advanced_dock_area(qtbot, mocked_client):

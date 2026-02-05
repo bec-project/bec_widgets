@@ -7,7 +7,6 @@ from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.editors.monaco.monaco_widget import MonacoWidget
 from bec_widgets.widgets.editors.monaco.scan_control_dialog import ScanControlDialog
 
-from .client_mocks import mocked_client
 from .test_scan_control import available_scans_message
 
 

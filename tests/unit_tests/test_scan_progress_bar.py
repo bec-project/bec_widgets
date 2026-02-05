@@ -14,8 +14,6 @@ from bec_widgets.widgets.progress.scan_progressbar.scan_progressbar import (
     ScanProgressBar,
 )
 
-from .client_mocks import mocked_client
-
 
 @pytest.fixture
 def scan_progressbar(qtbot, mocked_client):

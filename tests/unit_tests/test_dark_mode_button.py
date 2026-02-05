@@ -7,7 +7,7 @@ from bec_widgets.utils.colors import apply_theme
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
 
 # pylint: disable=unused-import
-from .client_mocks import mocked_client
+
 
 # pylint: disable=redefined-outer-name
 

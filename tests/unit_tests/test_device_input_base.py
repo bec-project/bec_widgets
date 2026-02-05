@@ -11,7 +11,6 @@ from bec_widgets.widgets.control.device_input.base_classes.device_input_base imp
 )
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 
-from .client_mocks import mocked_client
 from .conftest import create_widget
 
 

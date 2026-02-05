@@ -3,8 +3,6 @@ from qtpy.QtCore import QUrl
 
 from bec_widgets.widgets.editors.website.website import WebsiteWidget
 
-from .client_mocks import mocked_client
-
 
 @pytest.fixture
 def website_widget(qtbot, mocked_client):

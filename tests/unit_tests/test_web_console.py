@@ -12,8 +12,6 @@ from bec_widgets.widgets.editors.web_console.web_console import (
     _web_console_registry,
 )
 
-from .client_mocks import mocked_client
-
 
 @pytest.fixture
 def mocked_server_startup():

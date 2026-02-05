@@ -3,8 +3,6 @@ from bec_lib import messages
 
 from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
 
-from .client_mocks import mocked_client
-
 
 @pytest.fixture
 def bec_queue_msg_full():

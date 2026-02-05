@@ -10,7 +10,6 @@ from bec_widgets.widgets.plots.scatter_waveform.scatter_waveform import ScatterW
 from bec_widgets.widgets.plots.scatter_waveform.settings.scatter_curve_setting import (
     ScatterCurveSettings,
 )
-from tests.unit_tests.client_mocks import create_dummy_scan_item, mocked_client
 
 from .conftest import create_widget
 

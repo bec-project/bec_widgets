@@ -4,8 +4,6 @@ from qtpy.QtWidgets import QWidget
 from bec_widgets.applications.main_app import BECMainApp
 from bec_widgets.applications.views.view import ViewBase
 
-from .client_mocks import mocked_client
-
 ANIM_TEST_DURATION = 60  # ms
 
 

@@ -4,8 +4,6 @@ import pytest
 
 from bec_widgets.widgets.control.buttons.stop_button.stop_button import StopButton
 
-from .client_mocks import mocked_client
-
 
 @pytest.fixture
 def stop_button(qtbot, mocked_client):

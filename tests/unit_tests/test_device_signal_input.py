@@ -15,7 +15,6 @@ from bec_widgets.widgets.control.device_input.signal_line_edit.signal_line_edit 
     SignalLineEdit,
 )
 
-from .client_mocks import mocked_client
 from .conftest import create_widget
 
 

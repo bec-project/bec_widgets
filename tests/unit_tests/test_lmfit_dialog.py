@@ -5,7 +5,6 @@ import pytest
 
 from bec_widgets.widgets.dap.lmfit_dialog.lmfit_dialog import LMFitDialog
 
-from .client_mocks import mocked_client
 from .conftest import create_widget
 
 

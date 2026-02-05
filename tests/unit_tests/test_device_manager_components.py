@@ -57,8 +57,6 @@ from bec_widgets.widgets.control.device_manager.components.ophyd_validation.vali
 )
 from bec_widgets.widgets.utility.toggle.toggle import ToggleSwitch
 
-from .client_mocks import mocked_client
-
 
 class TestConstants:
     """Test class for constants and configuration values."""

@@ -16,9 +16,6 @@ from bec_widgets.widgets.plots.heatmap.heatmap import (
 )
 
 # pytest: disable=unused-import
-from tests.unit_tests.client_mocks import mocked_client
-
-from .client_mocks import create_dummy_scan_item
 
 
 @pytest.fixture

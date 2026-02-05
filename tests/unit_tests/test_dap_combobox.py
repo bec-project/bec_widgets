@@ -2,7 +2,6 @@ import pytest
 
 from bec_widgets.widgets.dap.dap_combo_box.dap_combo_box import DapComboBox
 
-from .client_mocks import mocked_client
 from .conftest import create_widget
 
 

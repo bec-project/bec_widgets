@@ -1,7 +1,6 @@
 from qtpy.QtTest import QSignalSpy
 
 from bec_widgets.widgets.plots.motor_map.motor_map import MotorMap
-from tests.unit_tests.client_mocks import mocked_client
 
 from .conftest import create_widget
 

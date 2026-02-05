@@ -13,7 +13,6 @@ from bec_widgets.widgets.containers.main_window.addons.scroll_label import Scrol
 from bec_widgets.widgets.containers.main_window.addons.web_links import BECWebLinksMixin
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 
-from .client_mocks import mocked_client
 from .conftest import create_widget
 
 

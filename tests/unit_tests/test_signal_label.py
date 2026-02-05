@@ -11,8 +11,6 @@ from bec_widgets.widgets.control.device_input.base_classes.device_signal_input_b
 )
 from bec_widgets.widgets.utility.signal_label.signal_label import ChoiceDialog, SignalLabel
 
-from .client_mocks import mocked_client
-
 SAMX_INFO_DICT = {
     "signals": {
         "readback": {

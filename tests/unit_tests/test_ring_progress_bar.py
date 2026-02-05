@@ -10,8 +10,6 @@ from qtpy.QtGui import QColor
 from bec_widgets.utils import Colors
 from bec_widgets.widgets.progress.ring_progress_bar.ring_progress_bar import RingProgressBar
 
-from .client_mocks import mocked_client
-
 
 @pytest.fixture
 def ring_progress_bar(qtbot, mocked_client):

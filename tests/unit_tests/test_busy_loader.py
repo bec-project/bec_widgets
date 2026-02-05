@@ -5,8 +5,6 @@ from qtpy.QtWidgets import QLabel, QVBoxLayout, QWidget
 from bec_widgets import BECWidget
 from bec_widgets.widgets.utility.spinner.spinner import SpinnerWidget
 
-from .client_mocks import mocked_client
-
 
 class _TestBusyWidget(BECWidget, QWidget):
     def __init__(

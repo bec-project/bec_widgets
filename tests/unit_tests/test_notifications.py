@@ -13,8 +13,6 @@ from bec_widgets.widgets.containers.main_window.addons.notification_center.notif
     SeverityKind,
 )
 
-from .client_mocks import mocked_client
-
 
 @pytest.fixture
 def toast(qtbot):
