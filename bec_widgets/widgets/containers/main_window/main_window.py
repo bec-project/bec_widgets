@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING
 
 from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtCore import QEvent, QSize, Qt, QTimer
@@ -341,8 +340,18 @@ class BECMainWindow(BECWidget, QMainWindow):
         help_menu.addAction(bug_report)
         help_menu.addSeparator()
         self._app_id_action = QAction(self)
-        self._app_id_action.setEnabled(False)
+        self._app_id_action.triggered.connect(self._copy_app_id_to_clipboard)
+
         help_menu.addAction(self._app_id_action)
+
+    def _copy_app_id_to_clipboard(self):
+        """
+        Copy the app ID to the clipboard.
+        """
+        if self.bec_dispatcher.cli_server is not None:
+            server_id = self.bec_dispatcher.cli_server.gui_id
+            clipboard = QApplication.clipboard()
+            clipboard.setText(server_id)
 
     ################################################################################
     # Status Bar Addons
