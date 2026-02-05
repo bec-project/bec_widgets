@@ -9,17 +9,17 @@ from bec_widgets.widgets.control.device_input.device_line_edit.device_line_edit 
 
 
 @pytest.fixture
-def device_input_combobox(qtbot, mocked_client):
-    widget = DeviceComboBox(client=mocked_client)
+def device_input_combobox(qtbot, mock_client_w_devices):
+    widget = DeviceComboBox(client=mock_client_w_devices)
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
 
 
 @pytest.fixture
-def device_input_combobox_with_kwargs(qtbot, mocked_client):
+def device_input_combobox_with_kwargs(qtbot, mock_client_w_devices):
     widget = DeviceComboBox(
-        client=mocked_client,
+        client=mock_client_w_devices,
         gui_id="test_gui_id",
         device_filter=[BECDeviceFilter.POSITIONER],
         default="samx",
@@ -72,17 +72,17 @@ def test_get_device_from_input_combobox_init(device_input_combobox):
 
 
 @pytest.fixture
-def device_input_line_edit(qtbot, mocked_client):
-    widget = DeviceLineEdit(client=mocked_client)
+def device_input_line_edit(qtbot, mock_client_w_devices):
+    widget = DeviceLineEdit(client=mock_client_w_devices)
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
 
 
 @pytest.fixture
-def device_input_line_edit_with_kwargs(qtbot, mocked_client):
+def device_input_line_edit_with_kwargs(qtbot, mock_client_w_devices):
     widget = DeviceLineEdit(
-        client=mocked_client,
+        client=mock_client_w_devices,
         gui_id="test_gui_id",
         device_filter=[BECDeviceFilter.POSITIONER],
         default="samx",

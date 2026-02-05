@@ -132,7 +132,7 @@ def test_bec_connector_change_object_name(bec_connector):
     assert not any(obj.objectName() == previous_name for obj in all_objects)
 
 
-def test_bec_connector_export_settings():
+def test_bec_connector_export_settings(mocked_client):
 
     class MyWidget(BECConnector, QWidget):
         def __init__(self, parent=None, client=None, **kwargs):

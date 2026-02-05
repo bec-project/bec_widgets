@@ -4,6 +4,7 @@ import pytest
 from bec_lib.device import Signal
 from qtpy.QtWidgets import QWidget
 
+from bec_widgets.tests.utils import create_widget
 from bec_widgets.utils.ophyd_kind_util import Kind
 from bec_widgets.widgets.control.device_input.base_classes.device_input_base import BECDeviceFilter
 from bec_widgets.widgets.control.device_input.base_classes.device_signal_input_base import (
@@ -14,8 +15,6 @@ from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox im
 from bec_widgets.widgets.control.device_input.signal_line_edit.signal_line_edit import (
     SignalLineEdit,
 )
-
-from .conftest import create_widget
 
 
 class FakeSignal(Signal):

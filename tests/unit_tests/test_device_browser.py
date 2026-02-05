@@ -27,8 +27,8 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 @pytest.fixture
-def device_browser(qtbot, mocked_client):
-    dev_browser = DeviceBrowser(client=mocked_client)
+def device_browser(qtbot, mock_client_w_devices):
+    dev_browser = DeviceBrowser(client=mock_client_w_devices)
     dev_browser.dev["samx"].read_configuration = mock.MagicMock()
     qtbot.addWidget(dev_browser)
     qtbot.waitExposed(dev_browser)
@@ -146,8 +146,8 @@ def test_device_deletion(device_browser, qtbot):
     qtbot.waitUntil(lambda: widget.device not in device_browser.dev_list._item_dict, timeout=10000)
 
 
-def test_signal_display(mocked_client, qtbot):
-    signal_display = SignalDisplay(client=mocked_client, device="test_device")
+def test_signal_display(mock_client_w_devices, qtbot):
+    signal_display = SignalDisplay(client=mock_client_w_devices, device="test_device")
     qtbot.addWidget(signal_display)
     device_mock = mock.MagicMock()
     signal_display.dev = {"test_device": device_mock}
@@ -156,10 +156,10 @@ def test_signal_display(mocked_client, qtbot):
     device_mock.read_configuration.assert_called()
 
 
-def test_signal_display_no_device(mocked_client, qtbot):
+def test_signal_display_no_device(mock_client_w_devices, qtbot):
     device_mock = mock.MagicMock()
-    mocked_client.device_manager.devices = {"test_device_1": device_mock}
-    signal_display = SignalDisplay(client=mocked_client, device="test_device_2")
+    mock_client_w_devices.device_manager.devices = {"test_device_1": device_mock}
+    signal_display = SignalDisplay(client=mock_client_w_devices, device="test_device_2")
     qtbot.addWidget(signal_display)
     assert (
         signal_display._content_layout.itemAt(1).widget().text()
@@ -170,11 +170,11 @@ def test_signal_display_no_device(mocked_client, qtbot):
     device_mock.read_configuration.assert_not_called()
 
 
-def test_signal_display_omitted_not_added(mocked_client, qtbot):
+def test_signal_display_omitted_not_added(mock_client_w_devices, qtbot):
     device_mock = mock.MagicMock(spec=Device)
     device_mock._info = {"signals": {"signal_1": {"kind_str": "omitted"}}}
 
-    signal_display = SignalDisplay(client=mocked_client, device="test_device_1")
+    signal_display = SignalDisplay(client=mock_client_w_devices, device="test_device_1")
     signal_display.dev = {"test_device_1": device_mock}
     signal_display._populate()
 

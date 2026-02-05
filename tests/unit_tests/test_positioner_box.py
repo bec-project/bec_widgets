@@ -7,7 +7,7 @@ from qtpy.QtCore import Qt, QTimer
 from qtpy.QtGui import QValidator
 from qtpy.QtWidgets import QPushButton
 
-from bec_widgets.tests.utils import Positioner
+from bec_widgets.tests.utils import Positioner, create_widget
 from bec_widgets.widgets.control.device_control.positioner_box import (
     PositionerBox,
     PositionerControlLine,
@@ -15,8 +15,6 @@ from bec_widgets.widgets.control.device_control.positioner_box import (
 from bec_widgets.widgets.control.device_input.device_line_edit.device_line_edit import (
     DeviceLineEdit,
 )
-
-from .conftest import create_widget
 
 
 class PositionerWithoutPrecision(Positioner):

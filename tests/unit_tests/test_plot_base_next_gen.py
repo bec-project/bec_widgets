@@ -1,8 +1,7 @@
 import numpy as np
 
+from bec_widgets.tests.utils import create_widget
 from bec_widgets.widgets.plots.plot_base import PlotBase, UIMode
-
-from .conftest import create_widget
 
 # pylint: disable=unused-import
 # pylint: disable=missing-function-docstring

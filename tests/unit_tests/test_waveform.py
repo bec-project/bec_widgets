@@ -12,14 +12,13 @@ from pyqtgraph.graphicsItems.DateAxisItem import DateAxisItem
 from qtpy.QtCore import QTimer
 from qtpy.QtWidgets import QApplication, QCheckBox, QDialog, QDialogButtonBox, QDoubleSpinBox
 
+from bec_widgets.tests.utils import create_widget
 from bec_widgets.widgets.plots.plot_base import UIMode
 from bec_widgets.widgets.plots.waveform.curve import DeviceSignal
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
 from bec_widgets.widgets.services.scan_history_browser.scan_history_browser import (
     ScanHistoryBrowser,
 )
-
-from .conftest import create_widget
 
 # pylint: disable=unexpected-keyword-arg
 

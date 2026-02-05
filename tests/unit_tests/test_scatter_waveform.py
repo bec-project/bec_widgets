@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 
+from bec_widgets.tests.utils import create_widget
 from bec_widgets.widgets.plots.scatter_waveform.scatter_curve import (
     ScatterCurveConfig,
     ScatterDeviceSignal,
@@ -10,8 +11,6 @@ from bec_widgets.widgets.plots.scatter_waveform.scatter_waveform import ScatterW
 from bec_widgets.widgets.plots.scatter_waveform.settings.scatter_curve_setting import (
     ScatterCurveSettings,
 )
-
-from .conftest import create_widget
 
 
 def test_waveform_initialization(qtbot, mocked_client):

@@ -2,8 +2,8 @@ import pytest
 from qtpy.QtCore import QPoint, QSize, Qt
 from qtpy.QtWidgets import QLabel, QPushButton, QVBoxLayout, QWidget
 
+from bec_widgets.tests.utils import create_widget
 from bec_widgets.widgets.utility.widget_finder.widget_finder import WidgetFinderComboBox
-from tests.unit_tests.conftest import create_widget
 
 
 @pytest.fixture

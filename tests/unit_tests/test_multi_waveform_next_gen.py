@@ -1,8 +1,7 @@
 import numpy as np
 
+from bec_widgets.tests.utils import create_widget
 from bec_widgets.widgets.plots.multi_waveform.multi_waveform import MultiWaveform
-
-from .conftest import create_widget
 
 ##################################################
 # MultiWaveform widget base functionality tests

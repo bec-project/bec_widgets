@@ -27,7 +27,7 @@ def widget_busy(qtbot, mocked_client):
 
 
 @pytest.fixture
-def widget_idle(qtbot):
+def widget_idle(qtbot, mocked_client):
     w = _TestBusyWidget(client=mocked_client, start_busy=False)
     qtbot.addWidget(w)
     w.resize(320, 200)

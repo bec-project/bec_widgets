@@ -1,11 +1,19 @@
 # pylint: skip-file
+import json
+import time
 from unittest.mock import MagicMock
 
+import h5py
+from bec_lib import messages
+from bec_lib.bec_service import messages
 from bec_lib.config_helper import ConfigHelper
 from bec_lib.device import Device as BECDevice
 from bec_lib.device import Positioner as BECPositioner
 from bec_lib.device import ReadoutPriority
 from bec_lib.devicemanager import DeviceContainer
+from bec_lib.messages import _StoredDataInfo
+from bec_lib.scan_history import ScanHistory
+from qtpy.QtCore import QEvent, QEventLoop
 
 
 class FakeDevice(BECDevice):
@@ -308,3 +316,157 @@ def check_remote_data_size(widget, plot_name, num_elements):
     Used in the qtbot.waitUntil function.
     """
     return len(widget.get_all_data()[plot_name]["x"]) == num_elements
+
+
+class DummyData:
+    def __init__(self, val, timestamps):
+        self.val = val
+        self.timestamps = timestamps
+
+    def get(self, key, default=None):
+        if key == "val":
+            return self.val
+        return default
+
+
+def create_dummy_scan_item():
+    """
+    Helper to create a dummy scan item with both live_data and metadata/status_message info.
+    """
+    dummy_live_data = {
+        "samx": {"samx": DummyData(val=[10, 20, 30], timestamps=[100, 200, 300])},
+        "samy": {"samy": DummyData(val=[5, 10, 15], timestamps=[100, 200, 300])},
+        "bpm4i": {"bpm4i": DummyData(val=[5, 6, 7], timestamps=[101, 201, 301])},
+        "async_device": {"async_device": DummyData(val=[1, 2, 3], timestamps=[11, 21, 31])},
+    }
+    dummy_scan = MagicMock()
+    dummy_scan.live_data = dummy_live_data
+    dummy_scan.metadata = {
+        "bec": {
+            "scan_id": "dummy",
+            "scan_report_devices": ["samx"],
+            "readout_priority": {"monitored": ["bpm4i"], "async": ["async_device"]},
+        }
+    }
+    dummy_scan.status_message.info = {
+        "readout_priority": {"monitored": ["bpm4i"], "async": ["async_device"]},
+        "scan_report_devices": ["samx"],
+    }
+    return dummy_scan
+
+
+def inject_scan_history(widget, scan_history_factory, *history_args):
+    """
+    Helper to inject scan history messages into client history.
+    """
+    history_msgs = []
+    for scan_id, scan_number in history_args:
+        history_msgs.append(scan_history_factory(scan_id=scan_id, scan_number=scan_number))
+    widget.client.history = ScanHistory(widget.client, False)
+    for msg in history_msgs:
+        widget.client.history._scan_data[msg.scan_id] = msg
+        widget.client.history._scan_ids.append(msg.scan_id)
+    widget.client.queue.scan_storage.current_scan = None
+    return history_msgs
+
+
+def create_history_file(file_path, data: dict, metadata: dict) -> messages.ScanHistoryMessage:
+    """
+    Helper to create a history file with the given data.
+    The data should contain readout groups, e.g.
+    {
+        "baseline": {"samx": {"samx": {"value": [1, 2, 3], "timestamp": [100, 200, 300]}},
+        "monitored": {"bpm4i": {"bpm4i": {"value": [5, 6, 7], "timestamp": [101, 201, 301]}}},
+        "async": {"async_device": {"async_device": {"value": [1, 2, 3], "timestamp": [11, 21, 31]}}},
+    }
+
+    """
+
+    with h5py.File(file_path, "w") as f:
+        _metadata = f.create_group("entry/collection/metadata")
+        _metadata.create_dataset("sample_name", data="test_sample")
+        metadata_bec = f.create_group("entry/collection/metadata/bec")
+        for key, value in metadata.items():
+            if isinstance(value, dict):
+                metadata_bec.create_group(key)
+                for sub_key, sub_value in value.items():
+                    if isinstance(sub_value, list):
+                        sub_value = json.dumps(sub_value)
+                        metadata_bec[key].create_dataset(sub_key, data=sub_value)
+                    elif isinstance(sub_value, dict):
+                        for sub_sub_key, sub_sub_value in sub_value.items():
+                            sub_sub_group = metadata_bec[key].create_group(sub_key)
+                            # Handle _StoredDataInfo objects
+                            if isinstance(sub_sub_value, _StoredDataInfo):
+                                # Store the numeric shape
+                                sub_sub_group.create_dataset("shape", data=sub_sub_value.shape)
+                                # Store the dtype as a UTF-8 string
+                                dt = sub_sub_value.dtype or ""
+                                sub_sub_group.create_dataset(
+                                    "dtype", data=dt, dtype=h5py.string_dtype(encoding="utf-8")
+                                )
+                                continue
+                            if isinstance(sub_sub_value, list):
+                                json_val = json.dumps(sub_sub_value)
+                                sub_sub_group.create_dataset(sub_sub_key, data=json_val)
+                            elif isinstance(sub_sub_value, dict):
+                                for k2, v2 in sub_sub_value.items():
+                                    val = json.dumps(v2) if isinstance(v2, list) else v2
+                                    sub_sub_group.create_dataset(k2, data=val)
+                            else:
+                                sub_sub_group.create_dataset(sub_sub_key, data=sub_sub_value)
+                    else:
+                        metadata_bec[key].create_dataset(sub_key, data=sub_value)
+            else:
+                metadata_bec.create_dataset(key, data=value)
+        for group, devices in data.items():
+            readout_group = f.create_group(f"entry/collection/readout_groups/{group}")
+
+            for device, device_data in devices.items():
+                dev_group = f.create_group(f"entry/collection/devices/{device}")
+                for signal, signal_data in device_data.items():
+                    signal_group = dev_group.create_group(signal)
+                    for signal_key, signal_values in signal_data.items():
+                        signal_group.create_dataset(signal_key, data=signal_values)
+
+                readout_group[device] = h5py.SoftLink(f"/entry/collection/devices/{device}")
+    msg = messages.ScanHistoryMessage(
+        scan_id=metadata["scan_id"],
+        scan_name=metadata["scan_name"],
+        exit_status=metadata["exit_status"],
+        file_path=file_path,
+        scan_number=metadata["scan_number"],
+        dataset_number=metadata["dataset_number"],
+        start_time=time.time(),
+        end_time=time.time(),
+        num_points=metadata["num_points"],
+        request_inputs=metadata["request_inputs"],
+        stored_data_info=metadata.get("stored_data_info"),
+        metadata={"scan_report_devices": metadata.get("scan_report_devices")},
+    )
+    return msg
+
+
+def create_widget(qtbot, widget, *args, **kwargs):
+    """
+    Create a widget and add it to the qtbot for testing. This is a helper function that
+    should be used in all tests that require a widget to be created.
+
+    Args:
+        qtbot (fixture): pytest-qt fixture
+        widget (QWidget): widget class to be created
+        *args: positional arguments for the widget
+        **kwargs: keyword arguments for the widget
+
+    Returns:
+        QWidget: the created widget
+    """
+    widget = widget(*args, **kwargs)
+    qtbot.addWidget(widget)
+    qtbot.waitExposed(widget)
+    return widget
+
+
+def process_all_deferred_deletes(qapp):
+    qapp.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    qapp.processEvents(QEventLoop.ProcessEventsFlag.AllEvents)

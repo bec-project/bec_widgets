@@ -2,9 +2,8 @@ from unittest import mock
 
 import pytest
 
+from bec_widgets.tests.utils import create_widget
 from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox2D
-
-from .conftest import create_widget
 
 
 @pytest.fixture

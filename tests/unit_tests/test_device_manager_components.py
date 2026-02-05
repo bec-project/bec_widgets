@@ -56,6 +56,7 @@ from bec_widgets.widgets.control.device_manager.components.ophyd_validation.vali
     ValidationListItem,
 )
 from bec_widgets.widgets.utility.toggle.toggle import ToggleSwitch
+from tests.unit_tests.conftest import mocked_client
 
 
 class TestConstants:
@@ -362,7 +363,7 @@ class TestDeviceTable:
         assert hasattr(device_table, "client_callback_id")
 
     def test_device_table_client_device_update_callback(
-        self, device_table: DeviceTable, mocked_client, qtbot
+        self, device_table: DeviceTable, mock_client_w_devices, qtbot
     ):
         """
         Test that runs the client device update callback. This should update the status of devices in the table
@@ -373,6 +374,7 @@ class TestDeviceTable:
         device from the client and run the callback. The table should update the status of the
         removed device to CAN_CONNECT and all others to CONNECTED.
         """
+        mocked_client = mock_client_w_devices
         device_configs_changed_calls = []
         requested_update_for_multiple_device_validations = []
 

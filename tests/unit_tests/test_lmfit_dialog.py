@@ -3,9 +3,8 @@ from unittest import mock
 import numpy as np
 import pytest
 
+from bec_widgets.tests.utils import create_widget
 from bec_widgets.widgets.dap.lmfit_dialog.lmfit_dialog import LMFitDialog
-
-from .conftest import create_widget
 
 
 @pytest.fixture(scope="function")

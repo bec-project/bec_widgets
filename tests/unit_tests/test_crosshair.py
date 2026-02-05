@@ -4,11 +4,10 @@ import pytest
 from qtpy.QtCore import QPointF, Qt
 from qtpy.QtGui import QTransform
 
+from bec_widgets.tests.utils import create_widget
 from bec_widgets.utils import Crosshair
 from bec_widgets.widgets.plots.image.image_item import ImageItem
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
-
-from .conftest import create_widget
 
 # pylint: disable = redefined-outer-name
 

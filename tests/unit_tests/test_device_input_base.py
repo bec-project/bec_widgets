@@ -4,14 +4,13 @@ import pytest
 from bec_lib.device import ReadoutPriority
 from qtpy.QtWidgets import QWidget
 
+from bec_widgets.tests.utils import create_widget
 from bec_widgets.widgets.control.device_input.base_classes.device_input_base import (
     BECDeviceFilter,
     DeviceInputBase,
     DeviceInputConfig,
 )
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
-
-from .conftest import create_widget
 
 
 # DeviceInputBase is meant to be mixed in a QWidget

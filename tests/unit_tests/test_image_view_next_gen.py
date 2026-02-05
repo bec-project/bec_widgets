@@ -4,8 +4,8 @@ import pytest
 from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtCore import QPointF
 
+from bec_widgets.tests.utils import create_widget
 from bec_widgets.widgets.plots.image.image import Image
-from tests.unit_tests.conftest import create_widget
 
 ##################################################
 # Image widget base functionality tests

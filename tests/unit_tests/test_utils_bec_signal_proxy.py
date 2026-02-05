@@ -3,10 +3,9 @@ from unittest import mock
 import pyqtgraph as pg
 import pytest
 
+from bec_widgets.tests.utils import create_widget
 from bec_widgets.utils.bec_signal_proxy import BECSignalProxy
 from bec_widgets.widgets.dap.dap_combo_box.dap_combo_box import DapComboBox
-
-from .conftest import create_widget
 
 
 @pytest.fixture

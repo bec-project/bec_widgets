@@ -2,11 +2,10 @@ from qtpy.QtCore import Qt
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QColorDialog
 
+from bec_widgets.tests.utils import create_widget
 from bec_widgets.widgets.utility.visual.color_button_native.color_button_native import (
     ColorButtonNative,
 )
-
-from .conftest import create_widget
 
 
 def test_color_button_native(qtbot):
