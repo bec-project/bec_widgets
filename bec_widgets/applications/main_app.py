@@ -227,6 +227,34 @@ class BECMainApp(BECMainWindow):
         )
         tour_steps.append(toggle_step)
 
+        # Register the sidebar icons
+        sidebar_dock_area = self.sidebar.components.get("dock_area")
+        if sidebar_dock_area:
+            dock_step = self.guided_tour.register_widget(
+                widget=sidebar_dock_area,
+                title="Dock Area View",
+                text="Click here to access the Dock Area view, where you can manage and arrange your dockable panels.",
+            )
+            tour_steps.append(dock_step)
+
+        sidebar_device_manager = self.sidebar.components.get("device_manager")
+        if sidebar_device_manager:
+            device_manager_step = self.guided_tour.register_widget(
+                widget=sidebar_device_manager,
+                title="Device Manager View",
+                text="Click here to open the Device Manager view, where you can view and manage device configs.",
+            )
+            tour_steps.append(device_manager_step)
+
+        sidebar_developer_view = self.sidebar.components.get("developer_view")
+        if sidebar_developer_view:
+            developer_view_step = self.guided_tour.register_widget(
+                widget=sidebar_developer_view,
+                title="Developer View",
+                text="Click here to access the Developer view to write scripts and makros.",
+            )
+            tour_steps.append(developer_view_step)
+
         # Register the dark mode toggle
         dark_mode_item = self.sidebar.components.get("dark_mode")
         if dark_mode_item:
@@ -289,7 +317,7 @@ class BECMainApp(BECMainWindow):
             nav_step = self.guided_tour.register_widget(
                 widget=nav_item,
                 title=view_tour.view_title,
-                text=f"Navigate to the {view_tour.view_title} to access its features and functionality.",
+                text=f"Let's explore the features of the {view_tour.view_title}.",
             )
             tour_steps.append(nav_step)
             tour_steps.extend(view_tour.step_ids)
