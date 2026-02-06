@@ -94,7 +94,7 @@ class DeveloperView(ViewBase):
         )
         step_ids.append(step_id)
 
-        return ViewTourSteps(view_title="Integrated Development Environment", step_ids=step_ids)
+        return ViewTourSteps(view_title="Developer View", step_ids=step_ids)
 
 
 if __name__ == "__main__":
