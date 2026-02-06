@@ -106,10 +106,12 @@ class TutorialOverlay(QWidget):
         # Back button with material icon
         self.back_btn = QPushButton("Back")
         self.back_btn.setIcon(material_icon("arrow_back"))
+        self.back_btn.setToolTip("Press Backspace to go back")
 
         # Next button with material icon
         self.next_btn = QPushButton("Next")
         self.next_btn.setIcon(material_icon("arrow_forward"))
+        self.next_btn.setToolTip("Press Enter to continue")
 
         btn_layout.addStretch()
         btn_layout.addWidget(self.back_btn)
@@ -121,6 +123,11 @@ class TutorialOverlay(QWidget):
 
         # Escape closes the tour
         QShortcut(QKeySequence(Qt.Key.Key_Escape), self, activated=self.close_btn.click)
+        # Enter and Return activates the next button
+        QShortcut(QKeySequence(Qt.Key.Key_Return), self, activated=self.next_btn.click)
+        QShortcut(QKeySequence(Qt.Key.Key_Enter), self, activated=self.next_btn.click)
+        # Map Backspace to the back button
+        QShortcut(QKeySequence(Qt.Key.Key_Backspace), self, activated=self.back_btn.click)
 
         return box
 
