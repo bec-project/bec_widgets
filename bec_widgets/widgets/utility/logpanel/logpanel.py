@@ -104,7 +104,7 @@ class BecLogsQueue(BECConnector, QObject):
     @SafeSlot(verify_sender=True)
     def _process_incoming_log_msg(self, msg: dict, _metadata: dict):
         try:
-            _msg = LogMessage(**msg)
+            _msg = LogMessage.model_validate(msg)
             self._data.append(_msg)
             if self.filter is None or self.filter(_msg):
                 self._display_queue.append(self._line_formatter(_msg))

@@ -91,7 +91,7 @@ class AutoUpdates(BECMainWindow):
         """
         Callback for scan status messages.
         """
-        msg = ScanStatusMessage(**content, metadata=metadata)
+        msg = ScanStatusMessage.model_validate({**content, "metadata": metadata})
         if not self.enabled:
             return
 

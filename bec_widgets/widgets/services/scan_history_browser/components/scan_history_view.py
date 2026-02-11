@@ -212,7 +212,7 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
     @SafeSlot(dict)
     def update_history(self, msg_dump: dict):
         """Update the scan history with new scan data."""
-        msg = ScanHistoryMessage(**msg_dump)
+        msg = ScanHistoryMessage.model_validate(msg_dump)
         self.add_scan(msg)
         self.ensure_history_max_length()
 
@@ -221,7 +221,7 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
         """Update the scan history with a full list of scan data."""
         messages = []
         for msg_dump in all_messages:
-            msg = ScanHistoryMessage(**msg_dump)
+            msg = ScanHistoryMessage.model_validate(msg_dump)
             messages.append(msg)
             if len(messages) >= self.max_length:
                 messages.pop(0)

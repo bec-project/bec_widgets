@@ -152,7 +152,7 @@ class ScanHistoryDeviceViewer(BECWidget, QtWidgets.QWidget):
         Args:
             msg (ScanHistoryMessage): The scan history message containing device data.
         """
-        msg = ScanHistoryMessage(**msg)
+        msg = ScanHistoryMessage.model_validate(msg)
         if metadata is not None:
             msg.metadata = metadata
         # Keep track of current device name

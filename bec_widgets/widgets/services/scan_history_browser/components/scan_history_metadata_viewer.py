@@ -118,7 +118,7 @@ class ScanHistoryMetadataViewer(BECWidget, QtWidgets.QGroupBox):
         Args:
             msg (ScanHistoryMessage): The message containing scan metadata.
         """
-        msg = ScanHistoryMessage(**msg)
+        msg = ScanHistoryMessage.model_validate(msg)
         if metadata is not None:
             msg.metadata = metadata
         if msg == self.scan_history_msg:
