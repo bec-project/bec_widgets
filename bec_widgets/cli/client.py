@@ -1072,6 +1072,26 @@ class DeviceInputBase(RPCBase):
         """
 
 
+class DeviceManagerView(RPCBase):
+    """A view for users to manage devices within the application."""
+
+    @rpc_call
+    def activate(self) -> "None":
+        """
+        Switch the parent application to this view.
+        """
+
+
+class DockAreaView(RPCBase):
+    """Modular dock area view for arranging and managing multiple dockable widgets."""
+
+    @rpc_call
+    def activate(self) -> "None":
+        """
+        Switch the parent application to this view.
+        """
+
+
 class DockAreaWidget(RPCBase):
     """Lightweight dock area that exposes the core Qt ADS docking helpers without any"""
 
@@ -5539,6 +5559,16 @@ class TextBox(RPCBase):
         """
 
 
+class ViewBase(RPCBase):
+    """Wrapper for a content widget used inside the main app's stacked view."""
+
+    @rpc_call
+    def activate(self) -> "None":
+        """
+        Switch the parent application to this view.
+        """
+
+
 class Waveform(RPCBase):
     """Widget for plotting waveforms."""
 
@@ -6107,6 +6137,22 @@ class Waveform(RPCBase):
     def clear_all(self):
         """
         Clear all curves from the plot widget.
+        """
+
+
+class WaveformViewInline(RPCBase):
+    @rpc_call
+    def activate(self) -> "None":
+        """
+        Switch the parent application to this view.
+        """
+
+
+class WaveformViewPopup(RPCBase):
+    @rpc_call
+    def activate(self) -> "None":
+        """
+        Switch the parent application to this view.
         """
 
 

@@ -10,6 +10,7 @@ from bec_widgets.applications.views.device_manager_view.device_manager_view impo
 from bec_widgets.applications.views.dock_area_view.dock_area_view import DockAreaView
 from bec_widgets.applications.views.view import ViewBase, WaveformViewInline, WaveformViewPopup
 from bec_widgets.utils.colors import apply_theme
+from bec_widgets.utils.name_utils import sanitize_namespace
 from bec_widgets.utils.guided_tour import GuidedTour
 from bec_widgets.utils.screen_utils import (
     apply_centered_size,
@@ -63,17 +64,10 @@ class BECMainApp(BECMainWindow):
         self.device_manager = DeviceManagerView(self)
         self.developer_view = DeveloperView(self)
 
-        self.add_view(
-            icon="widgets",
-            title="Dock Area",
-            id="dock_area",
-            widget=self.dock_area,
-            mini_text="Docks",
-        )
+        self.add_view(icon="widgets", title="Dock Area", widget=self.dock_area, mini_text="Docks")
         self.add_view(
             icon="display_settings",
             title="Device Manager",
-            id="device_manager",
             widget=self.device_manager,
             mini_text="DM",
         )
@@ -81,30 +75,28 @@ class BECMainApp(BECMainWindow):
             icon="code_blocks",
             title="IDE",
             widget=self.developer_view,
-            id="developer_view",
+            mini_text="IDE",
             exclusive=True,
         )
 
         if self._show_examples:
             self.add_section("Examples", "examples")
             waveform_view_popup = WaveformViewPopup(
-                parent=self, id="waveform_view_popup", title="Waveform Plot"
+                parent=self, view_id="waveform_view_popup", title="Waveform Plot"
             )
             waveform_view_stack = WaveformViewInline(
-                parent=self, id="waveform_view_stack", title="Waveform Plot"
+                parent=self, view_id="waveform_view_stack", title="Waveform Plot"
             )
 
             self.add_view(
                 icon="show_chart",
                 title="Waveform With Popup",
-                id="waveform_popup",
                 widget=waveform_view_popup,
                 mini_text="Popup",
             )
             self.add_view(
                 icon="show_chart",
                 title="Waveform InLine Stack",
-                id="waveform_stack",
                 widget=waveform_view_stack,
                 mini_text="Stack",
             )
@@ -130,7 +122,7 @@ class BECMainApp(BECMainWindow):
         *,
         icon: str,
         title: str,
-        id: str,
+        view_id: str | None = None,
         widget: QWidget,
         mini_text: str | None = None,
         position: int | None = None,
@@ -144,7 +136,8 @@ class BECMainApp(BECMainWindow):
         Args:
             icon(str): Icon name for the nav item.
             title(str): Title for the nav item.
-            id(str): Unique ID for the view/item.
+            view_id(str, optional): Unique ID for the view/item. If omitted, uses mini_text;
+                if mini_text is also omitted, uses title.
             widget(QWidget): The widget to add to the stack.
             mini_text(str, optional): Short text for the nav item when sidebar is collapsed.
             position(int, optional): Position to insert the nav item.
@@ -157,10 +150,11 @@ class BECMainApp(BECMainWindow):
 
 
         """
+        resolved_id = sanitize_namespace(view_id or mini_text or title)
         item = self.sidebar.add_item(
             icon=icon,
             title=title,
-            id=id,
+            id=resolved_id,
             mini_text=mini_text,
             position=position,
             from_top=from_top,
@@ -170,13 +164,15 @@ class BECMainApp(BECMainWindow):
         # Wrap plain widgets into a ViewBase so enter/exit hooks are available
         if isinstance(widget, ViewBase):
             view_widget = widget
-            view_widget.view_id = id
+            view_widget.view_id = resolved_id
             view_widget.view_title = title
         else:
-            view_widget = ViewBase(content=widget, parent=self, id=id, title=title)
+            view_widget = ViewBase(content=widget, parent=self, view_id=resolved_id, title=title)
+
+        view_widget.change_object_name(resolved_id)
 
         idx = self.stack.addWidget(view_widget)
-        self._view_index[id] = idx
+        self._view_index[resolved_id] = idx
         return item
 
     def set_current(self, id: str) -> None:
@@ -356,6 +352,13 @@ class BECMainApp(BECMainWindow):
             tour_action.triggered.connect(self.start_guided_tour)
             tour_action.setShortcut("F1")  # Add keyboard shortcut
             help_menu.addAction(tour_action)
+
+    def cleanup(self):
+        for view_id, idx in self._view_index.items():
+            view = self.stack.widget(idx)
+            view.close()
+            view.deleteLater()
+        super().cleanup()
 
 
 def main():  # pragma: no cover

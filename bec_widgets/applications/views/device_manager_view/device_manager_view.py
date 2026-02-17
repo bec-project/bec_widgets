@@ -20,10 +20,11 @@ class DeviceManagerView(ViewBase):
         parent: QWidget | None = None,
         content: QWidget | None = None,
         *,
-        id: str | None = None,
+        view_id: str | None = None,
         title: str | None = None,
+        **kwargs,
     ):
-        super().__init__(parent=parent, content=content, id=id, title=title)
+        super().__init__(parent=parent, content=content, view_id=view_id, title=title, **kwargs)
         self.device_manager_widget = DeviceManagerWidget(parent=self)
         self.set_content(self.device_manager_widget)
 
@@ -170,7 +171,7 @@ if __name__ == "__main__":  # pragma: no cover
     _app.add_view(
         icon="display_settings",
         title="Device Manager",
-        id="device_manager",
+        view_id="device_manager",
         widget=device_manager_view.device_manager_widget,
         mini_text="DM",
     )

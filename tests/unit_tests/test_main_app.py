@@ -54,16 +54,16 @@ def app_with_spies(qtbot, mocked_client):
 
     app.add_section("Tests", id="tests")
 
-    v1 = SpyView(id="v1", title="V1")
-    v2 = SpyView(id="v2", title="V2")
-    vv = SpyVetoView(id="vv", title="VV")
+    v1 = SpyView(view_id="v1", title="V1")
+    v2 = SpyView(view_id="v2", title="V2")
+    vv = SpyVetoView(view_id="vv", title="VV")
 
-    app.add_view(icon="widgets", title="View 1", id="v1", widget=v1, mini_text="v1")
-    app.add_view(icon="widgets", title="View 2", id="v2", widget=v2, mini_text="v2")
-    app.add_view(icon="widgets", title="Veto View", id="vv", widget=vv, mini_text="vv")
+    app.add_view(icon="widgets", title="View 1", view_id="v1", widget=v1, mini_text="v1")
+    app.add_view(icon="widgets", title="View 2", view_id="v2", widget=v2, mini_text="v2")
+    app.add_view(icon="widgets", title="Veto View", view_id="vv", widget=vv, mini_text="vv")
 
     # Start from dock_area (default) to avoid extra enter/exit counts on spies
-    assert app.stack.currentIndex() == app._view_index["dock_area"]
+    assert app.stack.currentIndex() == app._view_index["Docks"]
     return app, v1, v2, vv
 
 
@@ -113,6 +113,21 @@ def test_on_exit_veto_prevents_switch_until_allowed(app_with_spies, qtbot):
     # Now the switch should have happened, and v1 received on_enter
     assert app.stack.currentIndex() == app._view_index["v1"]
     assert v1.enter_calls >= 1
+
+
+def test_added_view_gets_short_object_name(app_with_spies):
+    app, v1, _, _ = app_with_spies
+    assert v1.object_name == "v1"
+    assert app._view_index["v1"] >= 0
+
+
+def test_view_switch_method_switches_to_target(app_with_spies, qtbot):
+    app, v1, _, _ = app_with_spies
+    app.set_current("dock_area")
+    qtbot.wait(10)
+    v1.activate()
+    qtbot.wait(10)
+    assert app.stack.currentIndex() == app._view_index["v1"]
 
 
 def test_guided_tour_is_initialized(app_with_spies):
