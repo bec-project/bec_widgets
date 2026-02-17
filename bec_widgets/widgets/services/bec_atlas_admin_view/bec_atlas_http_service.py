@@ -1,7 +1,7 @@
 import json
 
 from pydantic import BaseModel
-from qtpy.QtCore import QUrl, Signal
+from qtpy.QtCore import QUrl, QUrlQuery, Signal
 from qtpy.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 from qtpy.QtWidgets import QMessageBox, QWidget
 
@@ -21,6 +21,7 @@ class BECAtlasHTTPService(QWidget):
 
     http_response_received = Signal(dict)
     authenticated = Signal(bool)
+    account_changed = Signal(bool)
 
     def __init__(self, parent=None, base_url: str = "", headers: dict | None = None):
         super().__init__(parent)
@@ -68,6 +69,10 @@ class BECAtlasHTTPService(QWidget):
         elif "logout" in request_url and status == 200:
             self._authenticated = False
             self.authenticated.emit(False)
+        if "deployments/experiment" in request_url and status == 200:
+            self.account_changed.emit(True)
+        elif "deployments/experiment" in request_url and status != 200:
+            self.account_changed.emit(False)
 
         # TODO, should we handle failures here or rather on more high levels?
         if status == 401:
@@ -115,28 +120,44 @@ class BECAtlasHTTPService(QWidget):
     # HTTP Methods
     ################
 
-    def get_request(self, endpoint: str):
+    def get_request(self, endpoint: str, query_parameters: dict | None = None):
         """
         GET request to the API endpoint.
 
         Args:
             endpoint (str): The API endpoint to send the GET request to.
+            query_parameters (dict | None): Optional query parameters to include in the URL.
         """
         url = QUrl(self._base_url + endpoint)
+        if query_parameters:
+            query = QUrlQuery()
+            for key, value in query_parameters.items():
+                query.addQueryItem(key, value)
+            url.setQuery(query)
         request = QNetworkRequest(url)
         for key, value in self._headers.items():
             request.setRawHeader(key.encode("utf-8"), value.encode("utf-8"))
         self.network_manager.get(request)
 
-    def post_request(self, endpoint: str, payload: dict):
+    def post_request(
+        self, endpoint: str, payload: dict | None = None, query_parameters: dict | None = None
+    ):
         """
         POST request to the API endpoint with a JSON payload.
 
         Args:
             endpoint (str): The API endpoint to send the POST request to.
             payload (dict): The JSON payload to include in the POST request.
+            query_parameters (dict | None): Optional query parameters to include in the URL.
         """
+        if payload is None:
+            payload = {}
         url = QUrl(self._base_url + endpoint)
+        if query_parameters:
+            query = QUrlQuery()
+            for key, value in query_parameters.items():
+                query.addQueryItem(key, value)
+            url.setQuery(query)
         request = QNetworkRequest(url)
 
         # Headers
@@ -146,7 +167,6 @@ class BECAtlasHTTPService(QWidget):
 
         payload_dump = json.dumps(payload).encode("utf-8")
         reply = self.network_manager.post(request, payload_dump)
-        reply.finished.connect(lambda: self._handle_reply(reply))
 
     ################
     # API Methods
@@ -166,13 +186,16 @@ class BECAtlasHTTPService(QWidget):
         """Check the health status of BEC Atlas."""
         self.get_request("/health")
 
-    def get_realms(self, include_deployments: bool = True):
+    def get_experiments_for_realm(self, realm_id: str):
         """Get the list of realms from BEC Atlas. Requires authentication."""
-        if not self._authenticated:
-            self._show_login()
+        endpoint = "/realms/experiments"
+        query_parameters = {"realm_id": realm_id}
+        self.get_request(endpoint, query_parameters=query_parameters)
 
-        # Requires authentication
-        endpoint = "/realms"
-        if include_deployments:
-            endpoint += "?include_deployments=true"
-        self.get_request(endpoint)
+    @SafeSlot(str, str)
+    def set_experiment(self, experiment_id: str, deployment_id: str) -> None:
+        """Set the current experiment information for the service."""
+        self.post_request(
+            "/deployments/experiment",
+            query_parameters={"experiment_id": experiment_id, "deployment_id": deployment_id},
+        )
