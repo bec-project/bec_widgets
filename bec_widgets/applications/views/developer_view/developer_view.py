@@ -14,10 +14,11 @@ class DeveloperView(ViewBase):
         parent: QWidget | None = None,
         content: QWidget | None = None,
         *,
-        id: str | None = None,
+        view_id: str | None = None,
         title: str | None = None,
+        **kwargs,
     ):
-        super().__init__(parent=parent, content=content, id=id, title=title)
+        super().__init__(parent=parent, content=content, view_id=view_id, title=title, **kwargs)
         self.developer_widget = DeveloperWidget(parent=self)
         self.set_content(self.developer_widget)
 
@@ -125,7 +126,11 @@ if __name__ == "__main__":
     _app.resize(width, height)
     developer_view = DeveloperView()
     _app.add_view(
-        icon="code_blocks", title="IDE", widget=developer_view, id="developer_view", exclusive=True
+        icon="code_blocks",
+        title="IDE",
+        widget=developer_view,
+        view_id="developer_view",
+        exclusive=True,
     )
     _app.show()
     # developer_view.show()

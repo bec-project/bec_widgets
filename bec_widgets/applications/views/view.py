@@ -17,6 +17,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from bec_widgets import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import SignalComboBox
@@ -35,7 +36,7 @@ class ViewTourSteps(BaseModel):
     step_ids: List[str]
 
 
-class ViewBase(QWidget):
+class ViewBase(BECWidget, QWidget):
     """Wrapper for a content widget used inside the main app's stacked view.
 
     Subclasses can implement `on_enter` and `on_exit` to run custom logic when the view becomes visible or is about to be hidden.
@@ -43,21 +44,26 @@ class ViewBase(QWidget):
     Args:
         content (QWidget): The actual view widget to display.
         parent (QWidget | None): Parent widget.
-        id (str | None): Optional view id, useful for debugging or introspection.
+        view_id (str | None): Optional view view_id, useful for debugging or introspection.
         title (str | None): Optional human-readable title.
     """
+
+    RPC = True
+    PLUGIN = False
+    USER_ACCESS = ["activate"]
 
     def __init__(
         self,
         parent: QWidget | None = None,
         content: QWidget | None = None,
         *,
-        id: str | None = None,
+        view_id: str | None = None,
         title: str | None = None,
+        **kwargs,
     ):
-        super().__init__(parent=parent)
+        super().__init__(parent=parent, **kwargs)
         self.content: QWidget | None = None
-        self.view_id = id
+        self.view_id = view_id
         self.view_title = title
 
         lay = QVBoxLayout(self)
@@ -90,6 +96,26 @@ class ViewBase(QWidget):
         Default implementation allows switching.
         """
         return True
+
+    @SafeSlot()
+    def activate(self) -> None:
+        """Switch the parent application to this view."""
+        if not self.view_id:
+            raise ValueError("Cannot switch view without a view_id.")
+
+        parent = self.parent()
+        while parent is not None:
+            if hasattr(parent, "set_current"):
+                parent.set_current(self.view_id)
+                return
+            parent = parent.parent()
+        raise RuntimeError("Could not find a parent application with set_current().")
+
+    def cleanup(self):
+        if self.content is not None:
+            self.content.close()
+            self.content.deleteLater()
+        super().cleanup()
 
     def register_tour_steps(self, guided_tour, main_app) -> ViewTourSteps | None:
         """Register this view's components with the guided tour.
