@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Iterable
 
 from bec_lib.plugin_helper import _get_available_plugins
-from qtpy.QtWidgets import QGraphicsWidget, QWidget
+from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils import BECConnector
 from bec_widgets.utils.bec_widget import BECWidget
@@ -166,18 +166,17 @@ class BECClassContainer:
         return [info.obj for info in self.collection]
 
 
-def get_custom_classes(repo_name: str) -> BECClassContainer:
-    """
-    Get all RPC-enabled classes in the specified repository.
-
-    Args:
-        repo_name(str): The name of the repository.
-
-    Returns:
-        dict: A dictionary with keys "connector_classes" and "top_level_classes" and values as lists of classes.
-    """
+def _collect_classes_from_package(repo_name: str, package: str) -> BECClassContainer:
+    """Collect classes from a package subtree (for example ``widgets`` or ``applications``)."""
     collection = BECClassContainer()
-    anchor_module = importlib.import_module(f"{repo_name}.widgets")
+    try:
+        anchor_module = importlib.import_module(f"{repo_name}.{package}")
+    except ModuleNotFoundError as exc:
+        # Some plugin repositories expose only one subtree. Skip gracefully if it does not exist.
+        if exc.name == f"{repo_name}.{package}":
+            return collection
+        raise
+
     directory = os.path.dirname(anchor_module.__file__)
     for root, _, files in sorted(os.walk(directory)):
         for file in files:
@@ -185,13 +184,13 @@ def get_custom_classes(repo_name: str) -> BECClassContainer:
                 continue
 
             path = os.path.join(root, file)
-            subs = os.path.dirname(os.path.relpath(path, directory)).split("/")
-            if len(subs) == 1 and not subs[0]:
+            rel_dir = os.path.dirname(os.path.relpath(path, directory))
+            if rel_dir in ("", "."):
                 module_name = file.split(".")[0]
             else:
-                module_name = ".".join(subs + [file.split(".")[0]])
+                module_name = ".".join(rel_dir.split(os.sep) + [file.split(".")[0]])
 
-            module = importlib.import_module(f"{repo_name}.widgets.{module_name}")
+            module = importlib.import_module(f"{repo_name}.{package}.{module_name}")
 
             for name in dir(module):
                 obj = getattr(module, name)
@@ -203,12 +202,30 @@ def get_custom_classes(repo_name: str) -> BECClassContainer:
                         class_info.is_connector = True
                     if issubclass(obj, QWidget) or issubclass(obj, BECWidget):
                         class_info.is_widget = True
-                    if len(subs) == 1 and (
-                        issubclass(obj, QWidget) or issubclass(obj, QGraphicsWidget)
-                    ):
-                        class_info.is_top_level = True
                     if hasattr(obj, "PLUGIN") and obj.PLUGIN:
                         class_info.is_plugin = True
                     collection.add_class(class_info)
+    return collection
 
+
+def get_custom_classes(
+    repo_name: str, packages: tuple[str, ...] | None = None
+) -> BECClassContainer:
+    """
+    Get all relevant classes for RPC/CLI in the specified repository.
+
+    By default, discovery is limited to ``<repo>.widgets`` for backward compatibility.
+    Additional package subtrees (for example ``applications``) can be included explicitly.
+
+    Args:
+        repo_name(str): The name of the repository.
+        packages(tuple[str, ...] | None): Optional tuple of package names to scan. Defaults to ("widgets",) for backward compatibility.
+
+    Returns:
+        BECClassContainer: Container with collected class information.
+    """
+    selected_packages = packages or ("widgets",)
+    collection = BECClassContainer()
+    for package in selected_packages:
+        collection += _collect_classes_from_package(repo_name, package)
     return collection
