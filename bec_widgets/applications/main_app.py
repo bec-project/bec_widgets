@@ -5,6 +5,7 @@ from qtpy.QtWidgets import QApplication, QHBoxLayout, QStackedWidget, QWidget
 from bec_widgets.applications.navigation_centre.reveal_animator import ANIMATION_DURATION
 from bec_widgets.applications.navigation_centre.side_bar import SideBar
 from bec_widgets.applications.navigation_centre.side_bar_components import NavigationItem
+from bec_widgets.applications.views.admin_view.admin_view import AdminView
 from bec_widgets.applications.views.developer_view.developer_view import DeveloperView
 from bec_widgets.applications.views.device_manager_view.device_manager_view import DeviceManagerView
 from bec_widgets.applications.views.dock_area_view.dock_area_view import DockAreaView
@@ -63,6 +64,8 @@ class BECMainApp(BECMainWindow):
         self.dock_area = DockAreaView(self)
         self.device_manager = DeviceManagerView(self)
         # self.developer_view = DeveloperView(self) #TODO temporary disable until the bugs with BECShell are resolved
+        self.admin_view = AdminView(self)
+
         self.add_view(icon="widgets", title="Dock Area", widget=self.dock_area, mini_text="Docks")
         self.add_view(
             icon="display_settings",
@@ -78,6 +81,13 @@ class BECMainApp(BECMainWindow):
         #     mini_text="IDE",
         #     exclusive=True,
         # )
+        self.add_view(
+            icon="admin_panel_settings",
+            title="Admin View",
+            widget=self.admin_view,
+            id="admin_view",
+            mini_text="Admin",
+        )
 
         if self._show_examples:
             self.add_section("Examples", "examples")
