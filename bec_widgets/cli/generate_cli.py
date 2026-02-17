@@ -291,7 +291,8 @@ def main():
 
     client_path = module_dir / client_subdir / "client.py"
 
-    rpc_classes = get_custom_classes(module_name)
+    packages = ("widgets", "applications") if module_name == "bec_widgets" else ("widgets",)
+    rpc_classes = get_custom_classes(module_name, packages=packages)
     logger.info(f"Obtained classes with RPC objects: {rpc_classes!r}")
 
     generator = ClientGenerator(base=module_name == "bec_widgets")
