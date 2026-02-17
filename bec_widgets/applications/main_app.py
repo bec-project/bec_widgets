@@ -87,6 +87,7 @@ class BECMainApp(BECMainWindow):
             widget=self.admin_view,
             id="admin_view",
             mini_text="Admin",
+            from_top=False,
         )
 
         if self._show_examples:
