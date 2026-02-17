@@ -19,7 +19,7 @@ def format_schedule(
 ) -> tuple[str, str] | tuple[datetime | None, datetime | None]:
     """Format the schedule information to display start and end times."""
     if not schedule:
-        return "", ""
+        return (None, None) if as_datetime else ("", "")
     start, end = _pick_schedule_entry(schedule)
     if as_datetime:
         return start, end

@@ -42,6 +42,7 @@ class ExperimentMatCard(BECWidget, QWidget):
         self,
         parent=None,
         show_activate_button: bool = True,
+        button_text: str = "Activate",
         title: str = "Next Experiment",
         **kwargs,
     ):
@@ -73,7 +74,9 @@ class ExperimentMatCard(BECWidget, QWidget):
         self._group_box.setStyleSheet(
             "QGroupBox { border: none; }; QLabel { border: none; padding: 0px; }"
         )
-        self._fill_group_box(title=title, show_activate_button=show_activate_button)
+        self._fill_group_box(
+            title=title, show_activate_button=show_activate_button, button_text=button_text
+        )
         self.apply_theme("light")
 
     def apply_theme(self, theme: str):
@@ -88,7 +91,9 @@ class ExperimentMatCard(BECWidget, QWidget):
         if isinstance(shadow, QGraphicsDropShadowEffect):
             shadow.setColor(palette.shadow().color())
 
-    def _fill_group_box(self, title: str, show_activate_button: bool):
+    def _fill_group_box(
+        self, title: str, show_activate_button: bool, button_text: str = "Activate"
+    ):
         group_layout = QVBoxLayout(self._group_box)
         group_layout.setContentsMargins(16, 16, 16, 16)
         group_layout.setSpacing(12)
@@ -149,8 +154,11 @@ class ExperimentMatCard(BECWidget, QWidget):
         group_layout.addWidget(self._abstract_label)
 
         # Add activate button at the bottom
-        self._activate_button = QPushButton("Activate", self._group_box)
+        self._activate_button = QPushButton(button_text, self._group_box)
         self._activate_button.clicked.connect(self._emit_next_experiment)
+        self._activate_button.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
         group_layout.addWidget(self._activate_button, alignment=Qt.AlignmentFlag.AlignHCenter)
         self._activate_button.setVisible(show_activate_button)
 
@@ -167,12 +175,7 @@ class ExperimentMatCard(BECWidget, QWidget):
         layout.addLayout(card_row)
         layout.addStretch(0)
 
-    def _remove_border_from_labels(self):
-        for label in self._group_box.findChildren(BorderLessLabel):
-            label.setStyleSheet("border: none;")
-
     def _emit_next_experiment(self):
-        print("Emitting next experiment signal with info:", self.experiment_info)
         self.experiment_selected.emit(self.experiment_info)
 
     def set_experiment_info(self, info: ExperimentInfoMessage | dict):
@@ -215,26 +218,26 @@ if __name__ == "__main__":
     exp_info = {
         "_id": "p22622",
         "owner_groups": ["admin"],
-        "access_groups": ["unx-sls_x01da_bs", "p22622"],
-        "realm_id": "Debye",
-        "proposal": "20250656",
-        "title": "In-situ XAS Investigation of Cu Single-Atom Catalysts under Pulsed Electrochemical CO2 reduction reaction",
-        "firstname": "Adam",
-        "lastname": "Clark",
-        "email": "adam.clark@psi.ch",
-        "account": "clark_a",
-        "pi_firstname": "Adam",
-        "pi_lastname": "Clark",
-        "pi_email": "adam.clark@psi.ch",
-        "pi_account": "clark_a",
+        "access_groups": ["unx-sls_xda_bs", "p22622"],
+        "realm_id": "TestBeamline",
+        "proposal": "12345967",
+        "title": "Test Experiment for Mat Card Widget",
+        "firstname": "John",
+        "lastname": "Doe",
+        "email": "john.doe@psi.ch",
+        "account": "doe_j",
+        "pi_firstname": "Jane",
+        "pi_lastname": "Smith",
+        "pi_email": "jane.smith@psi.ch",
+        "pi_account": "smith_j",
         "eaccount": "e22622",
         "pgroup": "p22622",
-        "abstract": "Some cool abstract which is now a very long text to test the popup functionality. This should be at least 500 characters long to ensure the popup can handle large amounts of text without issues. So text wrapping will not pose any problems.",  # "",
-        "schedule": [{"start": "27/06/2025 15:00:00", "end": "30/06/2025 07:00:00"}],
-        "proposal_submitted": "13/06/2025",
+        "abstract": "This is a test abstract for the experiment mat card widget. It should be long enough to test text wrapping and display in the card. The abstract provides a brief overview of the experiment, its goals, and its significance. This text is meant to simulate a real abstract that might be associated with an experiment in the BEC Atlas system. The card should be able to handle abstracts of varying lengths without any issues, ensuring that the user can read the full abstract even if it is quite long.",
+        "schedule": [{"start": "01/01/2025 08:00:00", "end": "03/01/2025 18:00:00"}],
+        "proposal_submitted": "15/12/2024",
         "proposal_expire": "31/12/2025",
-        "proposal_status": "Finished",
-        "delta_last_schedule": 187,
+        "proposal_status": "Scheduled",
+        "delta_last_schedule": 30,
         "mainproposal": "",
     }
 
