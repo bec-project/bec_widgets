@@ -161,6 +161,7 @@ class ExperimentMatCard(BECWidget, QWidget):
         )
         group_layout.addWidget(self._activate_button, alignment=Qt.AlignmentFlag.AlignHCenter)
         self._activate_button.setVisible(show_activate_button)
+        self._activate_button.setEnabled(False)
 
         self._card_frame.layout().setContentsMargins(12, 12, 12, 12)
         self._card_frame.layout().addWidget(self._group_box)
@@ -198,6 +199,7 @@ class ExperimentMatCard(BECWidget, QWidget):
         self._abstract_text = (info.abstract or "").strip()
         self._abstract_label.setText(self._abstract_text if self._abstract_text else "")
         self.experiment_info = info.model_dump()
+        self._activate_button.setEnabled(True)
 
     def set_title(self, title: str):
         """
