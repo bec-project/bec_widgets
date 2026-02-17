@@ -14,10 +14,11 @@ class DockAreaView(ViewBase):
         parent: QWidget | None = None,
         content: QWidget | None = None,
         *,
-        id: str | None = None,
+        view_id: str | None = None,
         title: str | None = None,
+        **kwargs,
     ):
-        super().__init__(parent=parent, content=content, id=id, title=title)
+        super().__init__(parent=parent, content=content, view_id=view_id, title=title, **kwargs)
         self.dock_area = BECDockArea(
             self, profile_namespace="bec", auto_profile_namespace=False, object_name="DockArea"
         )
