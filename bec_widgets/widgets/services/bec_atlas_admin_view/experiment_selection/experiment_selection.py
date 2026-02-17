@@ -82,8 +82,8 @@ class ExperimentSelection(QWidget):
         self._table_infos: list[dict[str, Any]] = []
 
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(16, 16, 16, 16)
-        main_layout.setSpacing(12)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        # main_layout.setSpacing(12)
         main_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setAutoFillBackground(True)
@@ -94,6 +94,7 @@ class ExperimentSelection(QWidget):
         self._card_tab = ExperimentMatCard(
             parent=self, show_activate_button=True, button_text="Activate Next Experiment"
         )
+        self._card_tab.experiment_selected.connect(self._emit_selected_experiment)
         if self._next_experiment:
             self._card_tab.set_experiment_info(self._next_experiment)
         self._table_tab = QWidget(self)
@@ -105,10 +106,6 @@ class ExperimentSelection(QWidget):
         # main_layout.addStretch()
 
         button_layout = QHBoxLayout()
-        self._select_button = QPushButton("Activate", self)
-        self._select_button.setEnabled(False)
-        self._select_button.clicked.connect(self._emit_selected_experiment)
-        button_layout.addWidget(self._select_button)
         main_layout.addLayout(button_layout)
         self._apply_table_filters()
         self.restore_default_view()
@@ -226,7 +223,10 @@ class ExperimentSelection(QWidget):
         hor_layout.addSpacing(12)  # Add space between table and side card
 
         # Add side card for experiment details
-        self._side_card = ExperimentMatCard(parent=self, show_activate_button=False)
+        self._side_card = ExperimentMatCard(
+            parent=self, show_activate_button=True, button_text="Activate Next Experiment"
+        )
+        self._side_card.experiment_selected.connect(self._emit_selected_experiment)
         hor_layout.addWidget(self._side_card, stretch=2)  # Ratio 5:2 between table and card
         layout.addLayout(hor_layout)
 
@@ -235,7 +235,6 @@ class ExperimentSelection(QWidget):
     @SafeSlot(bool)  # Overload for buttons
     def _apply_table_filters(self, *args, **kwargs):
         if self._tabs.currentWidget() is not self._table_tab:
-            self._select_button.setEnabled(True)
             return
 
         show_with = self._with_proposals.isChecked()
@@ -279,16 +278,11 @@ class ExperimentSelection(QWidget):
     def _update_selection_state(self):
         has_selection = False
         if self._tabs.currentWidget() is not self._table_tab:
-            self._select_button.setEnabled(True)
             return
         index = self._table.selectionModel().selectedRows()
-        if not index:
-            has_selection = False
         if len(index) > 0:
             index = index[0]
             self._side_card.set_experiment_info(self._table_infos[index.row()])
-            has_selection = True
-        self._select_button.setEnabled(has_selection)
 
     def _emit_selected_experiment(self):
         if self._tabs.currentWidget() is self._card_tab:

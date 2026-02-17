@@ -2,19 +2,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from bec_lib.endpoints import MessageEndpoints
-from bec_lib.messages import DeploymentInfoMessage
-from qtpy.QtCore import Qt
-from qtpy.QtWidgets import QSizePolicy, QStackedLayout, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.widgets.services.bec_atlas_admin_view.bec_atlas_admin_view import BECAtlasAdminView
-from bec_widgets.widgets.services.bec_atlas_admin_view.experiment_selection.experiment_selection import (
-    ExperimentSelection,
-)
 
 
 class AdminWidget(BECWidget, QWidget):
@@ -31,14 +22,14 @@ class AdminWidget(BECWidget, QWidget):
 
     def on_enter(self) -> None:
         """Called after the widget becomes visible."""
-        self.admin_view_widget.check_health()
 
     def on_exit(self) -> None:
         """Called before the widget is hidden."""
         self.admin_view_widget.logout()
 
 
-if __name__ == "__main__":
+# pylint: disable=ungrouped-imports
+if __name__ == "__main__":  # pragma: no cover
     from bec_qthemes import apply_theme
     from qtpy.QtWidgets import QApplication
 
