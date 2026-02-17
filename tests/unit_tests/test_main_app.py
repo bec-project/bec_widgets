@@ -130,6 +130,12 @@ def test_view_switch_method_switches_to_target(app_with_spies, qtbot):
     assert app.stack.currentIndex() == app._view_index["v1"]
 
 
+def test_view_content_widget_is_hidden_from_namespace(app_with_spies):
+    app, _, _, _ = app_with_spies
+    assert app.dock_area.content is app.dock_area.dock_area
+    assert app.dock_area.content.skip_rpc_namespace is True
+
+
 def test_guided_tour_is_initialized(app_with_spies):
     """Test that the guided tour is initialized in the main app."""
     app, _, _, _ = app_with_spies
