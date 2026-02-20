@@ -272,6 +272,8 @@ class BECConnector:
         Args:
             name (str): The new object name.
         """
+        # sanitize before setting to avoid issues with Qt object names and RPC namespaces
+        name = sanitize_namespace(name)
         super().setObjectName(name)
         self.object_name = name
         if self.rpc_register.object_is_registered(self):
