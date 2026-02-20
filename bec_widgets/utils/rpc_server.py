@@ -283,6 +283,8 @@ class RPCServer:
                 continue
             if not getattr(val, "RPC", True):
                 continue
+            if not getattr(val, "rpc_exposed", True):
+                continue
             data[key] = self._serialize_bec_connector(val)
         if self._broadcasted_data == data:
             return
@@ -333,7 +335,7 @@ class RPCServer:
             "widget_class": widget_class,
             "config": config_dict,
             "container_proxy": container_proxy,
-            "__rpc__": True,
+            "__rpc__": getattr(connector, "rpc_exposed", True),
         }
 
     # Suppose clients register callbacks to receive updates
