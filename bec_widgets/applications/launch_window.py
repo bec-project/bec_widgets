@@ -189,6 +189,7 @@ class LaunchTile(RoundedFrame):
 
 class LaunchWindow(BECMainWindow):
     RPC = True
+    PLUGIN = False
     TILE_SIZE = (250, 300)
     DEFAULT_LAUNCH_SIZE = (800, 600)
     USER_ACCESS = ["show_launcher", "hide_launcher"]
