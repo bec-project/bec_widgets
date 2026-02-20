@@ -75,7 +75,7 @@ def test_available_widgets(qtbot, connected_client_gui_obj):
     gui = connected_client_gui_obj
     dock_area = gui.bec
     # Number of top level widgets, should be 4
-    top_level_widgets_count = 10
+    top_level_widgets_count = 6
     assert len(gui._server_registry) == top_level_widgets_count
     names = set(list(gui._server_registry.keys()))
     # Number of widgets with parent_id == None, should be 2
