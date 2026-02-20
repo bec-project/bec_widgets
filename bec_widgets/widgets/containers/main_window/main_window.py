@@ -192,14 +192,16 @@ class BECMainWindow(BECWidget, QMainWindow):
     def _add_scan_progress_bar(self):
 
         # Setting HoverWidget for the scan progress bar - minimal and full version
-        self._scan_progress_bar_simple = ScanProgressBar(self, one_line_design=True)
+        self._scan_progress_bar_simple = ScanProgressBar(
+            self, one_line_design=True, rpc_exposed=False
+        )
         self._scan_progress_bar_simple.show_elapsed_time = False
         self._scan_progress_bar_simple.show_remaining_time = False
         self._scan_progress_bar_simple.show_source_label = False
         self._scan_progress_bar_simple.progressbar.label_template = ""
         self._scan_progress_bar_simple.progressbar.setFixedHeight(self.SCAN_PROGRESS_HEIGHT)
         self._scan_progress_bar_simple.progressbar.setFixedWidth(self.SCAN_PROGRESS_WIDTH)
-        self._scan_progress_bar_full = ScanProgressBar(self)
+        self._scan_progress_bar_full = ScanProgressBar(self, rpc_exposed=False)
         self._scan_progress_hover = HoverWidget(
             self, simple=self._scan_progress_bar_simple, full=self._scan_progress_bar_full
         )
