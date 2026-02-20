@@ -39,6 +39,18 @@ def test_bec_connector_set_gui_id(bec_connector):
     assert bec_connector.config.gui_id == "test_gui_id"
 
 
+def test_bec_connector_sanitize_names(mocked_client):
+    class MyWidget(BECConnector, QWidget):
+        def __init__(self, parent=None, client=None, **kwargs):
+            super().__init__(parent=parent, client=client, **kwargs)
+
+    widget = MyWidget(client=mocked_client)
+    widget.setObjectName("Test Name With Spaces")
+    assert widget.objectName() == "Test_Name_With_Spaces"
+    widget.setObjectName("Test@Name#With$Special%Characters!")
+    assert widget.objectName() == "Test_Name_With_Special_Characters_"
+
+
 def test_bec_connector_change_config(bec_connector):
     bec_connector.on_config_update({"gui_id": "test_gui_id"})
     assert bec_connector.config.gui_id == "test_gui_id"
