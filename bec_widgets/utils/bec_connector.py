@@ -88,6 +88,7 @@ class BECConnector:
         gui_id: str | None = None,
         object_name: str | None = None,
         root_widget: bool = False,
+        rpc_exposed: bool = True,
         **kwargs,
     ):
         """
@@ -99,6 +100,7 @@ class BECConnector:
             gui_id(str, optional): The GUI ID.
             object_name(str, optional): The object name.
             root_widget(bool, optional): If set to True, the parent_id will be always set to None, thus enforcing that the widget is accessible as a root widget of the BECGuiClient object.
+            rpc_exposed(bool, optional): If set to False, this instance is excluded from RPC registry broadcast and CLI namespace discovery.
             **kwargs:
         """
         # Extract object_name from kwargs to not pass it to Qt class
@@ -189,6 +191,8 @@ class BECConnector:
 
         # If set to True, the parent_id will be always set to None, thus enforcing that the widget is accessible as a root widget of the BECGuiClient object.
         self.root_widget = root_widget
+        # If set to False, this instance is not exposed through RPC at all.
+        self.rpc_exposed = bool(rpc_exposed)
 
         self._update_object_name()
 
@@ -220,8 +224,9 @@ class BECConnector:
         """
         # 1) Enforce unique objectName among siblings with the same BECConnector parent
         self._enforce_unique_sibling_name()
-        # 2) Register the object for RPC
-        self.rpc_register.add_rpc(self)
+        # 2) Register the object for RPC unless instance-level exposure is disabled.
+        if getattr(self, "rpc_exposed", True):
+            self.rpc_register.add_rpc(self)
         try:
             self.name_established.emit(self.object_name)
         except RuntimeError as e:
