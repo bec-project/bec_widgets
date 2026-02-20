@@ -2848,6 +2848,20 @@ class ImageItem(RPCBase):
         """
 
 
+class LaunchWindow(RPCBase):
+    @rpc_call
+    def show_launcher(self):
+        """
+        Show the launcher window.
+        """
+
+    @rpc_call
+    def hide_launcher(self):
+        """
+        Hide the launcher window.
+        """
+
+
 class LogPanel(RPCBase):
     """Displays a log panel"""
 

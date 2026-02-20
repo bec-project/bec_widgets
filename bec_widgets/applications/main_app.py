@@ -17,6 +17,8 @@ from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 
 
 class BECMainApp(BECMainWindow):
+    RPC = False
+    PLUGIN = False
 
     def __init__(
         self,

@@ -79,6 +79,8 @@ def markdown_to_html(md_text: str) -> str:
 
 
 class DeveloperWidget(DockAreaWidget):
+    RPC = False
+    PLUGIN = False
 
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent=parent, variant="compact", **kwargs)
