@@ -4,6 +4,8 @@ from qtpy.QtCore import Property, QEasingCurve, QPointF, QPropertyAnimation, Qt,
 from qtpy.QtGui import QColor, QPainter
 from qtpy.QtWidgets import QApplication, QWidget
 
+from bec_widgets.utils.error_popups import SafeConnect, SafeSlot
+
 
 class ToggleSwitch(QWidget):
     """
@@ -20,10 +22,10 @@ class ToggleSwitch(QWidget):
         self.setFixedSize(40, 21)
 
         self._thumb_pos = QPointF(3, 2)  # Use QPointF for the thumb position
-        self._active_track_color = QColor(33, 150, 243)
-        self._active_thumb_color = QColor(255, 255, 255)
-        self._inactive_track_color = QColor(200, 200, 200)
-        self._inactive_thumb_color = QColor(255, 255, 255)
+        theme = getattr(QApplication.instance(), "theme", None)
+        if theme:
+            SafeConnect(self, theme.theme_changed, self._update_theme_colors)
+        self._update_theme_colors()
 
         self._checked = checked
         self._track_color = self.inactive_track_color
@@ -33,6 +35,16 @@ class ToggleSwitch(QWidget):
         self._animation.setDuration(200)
         self._animation.setEasingCurve(QEasingCurve.Type.OutBack)
         self.setProperty("checked", checked)
+
+    @SafeSlot(str)
+    def _update_theme_colors(self, _theme: str | None = None):
+        theme = getattr(QApplication.instance(), "theme", None)
+        colors = theme.colors if theme else {}
+
+        self._active_track_color = colors.get("PRIMARY", QColor(33, 150, 243))
+        self._active_thumb_color = colors.get("ON_PRIMARY", QColor(255, 255, 255))
+        self._inactive_track_color = colors.get("SEPARATOR", QColor(200, 200, 200))
+        self._inactive_thumb_color = colors.get("ON_PRIMARY", QColor(255, 255, 255))
 
     @Property(bool)
     def checked(self):
@@ -155,7 +167,20 @@ class ToggleSwitch(QWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
+    from qtpy.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
+
+    from bec_widgets.utils.colors import apply_theme
+    from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
+
     app = QApplication(sys.argv)
-    window = ToggleSwitch()
+    apply_theme("dark")
+    widget = QWidget()
+    layout = QHBoxLayout(widget)
+    toggle = ToggleSwitch()
+    dark_mode_btn = DarkModeButton()
+    layout.addWidget(toggle)
+    layout.addWidget(dark_mode_btn)
+    window = QWidget()
+    window.setLayout(layout)
     window.show()
     sys.exit(app.exec())
