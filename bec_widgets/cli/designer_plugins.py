@@ -46,6 +46,10 @@ designer_plugins = {
         "bec_widgets.widgets.control.device_input.device_combobox.device_combobox",
         "DeviceComboBox",
     ),
+    "FeedbackDialog": (
+        "bec_widgets.widgets.utility.feedback_dialog.feedback_dialog",
+        "FeedbackDialog",
+    ),
     "Heatmap": ("bec_widgets.widgets.plots.heatmap.heatmap", "Heatmap"),
     "IDEExplorer": ("bec_widgets.widgets.utility.ide_explorer.ide_explorer", "IDEExplorer"),
     "Image": ("bec_widgets.widgets.plots.image.image", "Image"),
@@ -131,6 +135,7 @@ widget_icons = {
     "DarkModeButton": "dark_mode",
     "DeviceBrowser": "lists",
     "DeviceComboBox": "list_alt",
+    "FeedbackDialog": "feedback",
     "Heatmap": "dataset",
     "IDEExplorer": "widgets",
     "Image": "image",
