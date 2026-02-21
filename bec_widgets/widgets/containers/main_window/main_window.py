@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 
-from bec_lib import bec_logger
+from bec_lib import bec_logger, messages
 from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtCore import QSize, Qt, QTimer
 from qtpy.QtGui import QAction, QActionGroup, QIcon
@@ -36,6 +36,7 @@ from bec_widgets.widgets.containers.main_window.addons.notification_center.notif
 from bec_widgets.widgets.containers.main_window.addons.scroll_label import ScrollLabel
 from bec_widgets.widgets.containers.main_window.addons.web_links import BECWebLinksMixin
 from bec_widgets.widgets.progress.scan_progressbar.scan_progressbar import ScanProgressBar
+from bec_widgets.widgets.utility.feedback_dialog.feedback_dialog import FeedbackDialog
 from bec_widgets.widgets.utility.widget_hierarchy_tree.widget_hierarchy_tree import (
     WidgetHierarchyDialog,
 )
@@ -384,6 +385,16 @@ class BECMainWindow(BECWidget, QMainWindow):
 
         help_menu.addAction(bec_docs)
         help_menu.addAction(bug_report)
+
+        # Feedback action
+        feedback_icon = QApplication.style().standardIcon(
+            QStyle.StandardPixmap.SP_MessageBoxQuestion
+        )
+        feedback_action = QAction("Submit Feedback", self)
+        feedback_action.setIcon(feedback_icon)
+        feedback_action.triggered.connect(self._show_feedback_dialog)
+        help_menu.addAction(feedback_action)
+
         help_menu.addSeparator()
 
         self._app_id_action = QAction(self)
@@ -400,6 +411,19 @@ class BECMainWindow(BECWidget, QMainWindow):
 
         clipboard = QApplication.clipboard()
         clipboard.setText(cli_server.gui_id)
+
+    def _show_feedback_dialog(self):
+        """Show the feedback dialog and handle the submitted feedback."""
+        dialog = FeedbackDialog(self)
+
+        def on_feedback_submitted(rating: int, comment: str, email: str):
+            rating = max(0, min(rating, 5))  # Ensure rating is between 0 and 5
+
+            message = messages.FeedbackMessage(feedback=comment, rating=rating, contact=email)
+            self.bec_dispatcher.client.connector.send(MessageEndpoints.user_feedback(), message)
+
+        dialog.feedback_submitted.connect(on_feedback_submitted)
+        dialog.exec()
 
     ################################################################################
     # Status Bar Addons
