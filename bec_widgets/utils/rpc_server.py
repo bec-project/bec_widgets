@@ -336,20 +336,6 @@ class RPCServer:
             "__rpc__": True,
         }
 
-    @staticmethod
-    def _get_becwidget_ancestor(widget: QObject) -> BECConnector | None:
-        """
-        Traverse up the parent chain to find the nearest BECConnector.
-        Returns None if none is found.
-        """
-
-        parent = widget.parent()
-        while parent is not None:
-            if isinstance(parent, BECConnector):
-                return parent
-            parent = parent.parent()
-        return None
-
     # Suppose clients register callbacks to receive updates
     def add_registry_update_callback(self, cb: Callable) -> None:
         """
