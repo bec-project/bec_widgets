@@ -1,9 +1,13 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
+from unittest import mock
+
 import pytest
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
     QComboBox,
+    QLabel,
     QLineEdit,
+    QPushButton,
     QSpinBox,
     QTableWidget,
     QTableWidgetItem,
@@ -11,7 +15,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets.utils.widget_io import WidgetHierarchy, WidgetIO
+from bec_widgets.utils.widget_io import WidgetHierarchy, WidgetIO, WidgetTreeNode
 from bec_widgets.widgets.utility.toggle.toggle import ToggleSwitch
 
 
@@ -210,3 +214,165 @@ def test_find_widgets(example_widget):
     # Test search for non-existent widget returns empty list
     non_exist = WidgetIO.find_widgets("NonExistentWidget")
     assert non_exist == []
+
+
+# ── WidgetHierarchy._build_prefix ─────────────────────────────────────────────
+
+
+def test_build_prefix_empty():
+    assert WidgetHierarchy._build_prefix([]) == ""
+
+
+def test_build_prefix_single_last():
+    assert WidgetHierarchy._build_prefix([True]) == "└─ "
+
+
+def test_build_prefix_single_not_last():
+    assert WidgetHierarchy._build_prefix([False]) == "├─ "
+
+
+def test_build_prefix_nested_last_last():
+    # parent is last (True), child is last (True): "   └─ "
+    assert WidgetHierarchy._build_prefix([True, True]) == "   └─ "
+
+
+def test_build_prefix_nested_not_last_last():
+    # parent is not last (False), child is last (True): "│  └─ "
+    assert WidgetHierarchy._build_prefix([False, True]) == "│  └─ "
+
+
+def test_build_prefix_nested_not_last_not_last():
+    # parent is not last (False), child is not last (False): "│  ├─ "
+    assert WidgetHierarchy._build_prefix([False, False]) == "│  ├─ "
+
+
+def test_build_prefix_deep_tree():
+    # Three levels: not-last → not-last → last
+    assert WidgetHierarchy._build_prefix([False, False, True]) == "│  │  └─ "
+
+
+# ── WidgetHierarchy._filtered_children ────────────────────────────────────────
+
+
+def test_filtered_children_plain_widget(qtbot):
+    parent = QWidget()
+    qtbot.addWidget(parent)
+    child1 = QLabel(parent)
+    child2 = QPushButton(parent)
+    result = WidgetHierarchy._filtered_children(parent, exclude_internal_widgets=True)
+    assert child1 in result
+    assert child2 in result
+
+
+def test_filtered_children_combobox_excludes_internal(qtbot):
+    combo = QComboBox()
+    qtbot.addWidget(combo)
+    combo.addItems(["a", "b"])
+    result_excluded = WidgetHierarchy._filtered_children(combo, exclude_internal_widgets=True)
+    result_included = WidgetHierarchy._filtered_children(combo, exclude_internal_widgets=False)
+    internal_names = {c.__class__.__name__ for c in result_included}
+    excluded_names = {c.__class__.__name__ for c in result_excluded}
+    # At least one internal widget type is present when not excluded
+    assert internal_names & {"QFrame", "QListView"}
+    # The same internal types should be absent when excluded
+    assert not (excluded_names & {"QFrame", "QListView"})
+
+
+def test_filtered_children_skips_invalid_child(qtbot):
+    parent = QWidget()
+    qtbot.addWidget(parent)
+    child = QLabel(parent)
+    with mock.patch("shiboken6.isValid", side_effect=lambda w: w is not child):
+        result = WidgetHierarchy._filtered_children(parent, exclude_internal_widgets=False)
+    assert child not in result
+
+
+# ── WidgetHierarchy.iter_widget_tree ──────────────────────────────────────────
+
+
+def test_iter_widget_tree_basic(qtbot):
+    root = QWidget()
+    qtbot.addWidget(root)
+    child = QLabel(root)
+    nodes = list(WidgetHierarchy.iter_widget_tree(root))
+    widgets = [n.widget for n in nodes]
+    assert root in widgets
+    assert child in widgets
+
+
+def test_iter_widget_tree_root_node_attrs(qtbot):
+    root = QWidget()
+    qtbot.addWidget(root)
+    nodes = list(WidgetHierarchy.iter_widget_tree(root))
+    root_node = nodes[0]
+    assert root_node.widget is root
+    assert root_node.parent is None
+    assert root_node.depth == 0
+    assert root_node.prefix == ""
+
+
+def test_iter_widget_tree_child_node_attrs(qtbot):
+    root = QWidget()
+    qtbot.addWidget(root)
+    child = QLabel(root)
+    nodes = list(WidgetHierarchy.iter_widget_tree(root))
+    child_node = next(n for n in nodes if n.widget is child)
+    assert child_node.parent is root
+    assert child_node.depth == 1
+    assert child_node.prefix in ("├─ ", "└─ ")
+
+
+def test_iter_widget_tree_none_widget():
+    nodes = list(WidgetHierarchy.iter_widget_tree(None))
+    assert nodes == []
+
+
+def test_iter_widget_tree_invalid_widget(qtbot):
+    root = QWidget()
+    qtbot.addWidget(root)
+    with mock.patch("shiboken6.isValid", return_value=False):
+        nodes = list(WidgetHierarchy.iter_widget_tree(root))
+    assert nodes == []
+
+
+def test_iter_widget_tree_prevents_revisiting(qtbot):
+    """Visited-set prevents infinite loops when the same widget is returned
+    more than once by _filtered_children (simulates a circular-reference
+    scenario that cannot arise naturally in Qt but is handled defensively)."""
+    root = QWidget()
+    qtbot.addWidget(root)
+    child = QLabel(root)
+
+    call_count = 0
+
+    original = WidgetHierarchy._filtered_children
+
+    def patched(widget, exclude):
+        nonlocal call_count
+        result = original(widget, exclude)
+        # After the first call (for root), inject root itself as a child of child
+        if widget is child:
+            call_count += 1
+            result = [root] + result  # root already visited – should be skipped
+        return result
+
+    with mock.patch.object(WidgetHierarchy, "_filtered_children", staticmethod(patched)):
+        nodes = list(WidgetHierarchy.iter_widget_tree(root))
+
+    widget_ids = [id(n.widget) for n in nodes]
+    # root must appear exactly once despite being injected as a child of child
+    assert widget_ids.count(id(root)) == 1
+    assert call_count >= 1
+
+
+def test_iter_widget_tree_depth_and_prefix_for_multiple_children(qtbot):
+    root = QWidget()
+    qtbot.addWidget(root)
+    first = QLabel(root)
+    second = QPushButton(root)
+    nodes = list(WidgetHierarchy.iter_widget_tree(root))
+    child_nodes = [n for n in nodes if n.depth == 1]
+    prefixes = {n.prefix for n in child_nodes}
+    # Non-last child gets "├─ " and last child gets "└─ "
+    assert "├─ " in prefixes
+    assert "└─ " in prefixes
