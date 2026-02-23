@@ -86,3 +86,44 @@ def test_client_utils_passes_client_config_to_server(bec_dispatcher):
                 config=mixin._client._service_config.config,
                 logger=mock.ANY,
             )
+
+
+@contextmanager
+def _no_wait_for_server(_client):
+    yield
+
+
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_client_utils_apply_theme_explicit(theme):
+    gui = BECGuiClient()
+    launcher = mock.MagicMock()
+
+    with mock.patch.object(
+        BECGuiClient, "launcher", new_callable=mock.PropertyMock
+    ) as launcher_prop:
+        launcher_prop.return_value = launcher
+        with mock.patch("bec_widgets.cli.client_utils.wait_for_server", _no_wait_for_server):
+            with mock.patch.object(gui, "_check_if_server_is_alive", return_value=True):
+                gui.change_theme(theme)
+
+    launcher._run_rpc.assert_called_once_with("change_theme", theme=theme)
+
+
+@pytest.mark.parametrize("current_theme, expected_theme", [("light", "dark"), ("dark", "light")])
+def test_client_utils_apply_theme_toggles_when_none(current_theme, expected_theme):
+    gui = BECGuiClient()
+    launcher = mock.MagicMock()
+    launcher._run_rpc.side_effect = [current_theme, None]
+
+    with mock.patch.object(
+        BECGuiClient, "launcher", new_callable=mock.PropertyMock
+    ) as launcher_prop:
+        launcher_prop.return_value = launcher
+        with mock.patch("bec_widgets.cli.client_utils.wait_for_server", _no_wait_for_server):
+            with mock.patch.object(gui, "_check_if_server_is_alive", return_value=True):
+                gui.change_theme(None)
+
+    assert launcher._run_rpc.call_args_list == [
+        mock.call("fetch_theme"),
+        mock.call("change_theme", theme=expected_theme),
+    ]
