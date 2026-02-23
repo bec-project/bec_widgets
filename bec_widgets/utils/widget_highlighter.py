@@ -56,6 +56,12 @@ class WidgetHighlighter:
         fade.setEndValue(0.0)
         fade.finished.connect(frame.hide)
 
+        if self._animation_group is not None:
+            old_group = self._animation_group
+            self._animation_group = None
+            old_group.stop()
+            old_group.deleteLater()
+
         animation = QSequentialAnimationGroup(frame)
         animation.addAnimation(pulse)
         animation.addAnimation(fade)
