@@ -297,6 +297,25 @@ class BECGuiClient(RPCBase):
             return self._raise_all()
         return self._start(wait=wait)
 
+    def change_theme(self, theme: Literal["light", "dark"] | None = None) -> None:
+        """
+        Apply a GUI theme or toggle between dark and light.
+
+        Args:
+            theme(Literal["light", "dark"] | None): Theme to apply. If None, the current
+                theme is fetched from the GUI and toggled.
+        """
+        if not self._check_if_server_is_alive():
+            self._start(wait=True)
+
+        with wait_for_server(self):
+            if theme is None:
+                current_theme = self.launcher._run_rpc("fetch_theme")
+                next_theme = "light" if current_theme == "dark" else "dark"
+            else:
+                next_theme = theme
+            self.launcher._run_rpc("change_theme", theme=next_theme)
+
     def new(
         self,
         name: str | None = None,
