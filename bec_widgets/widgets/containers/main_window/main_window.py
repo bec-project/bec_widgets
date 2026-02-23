@@ -254,7 +254,7 @@ class BECMainWindow(BECWidget, QMainWindow):
         self.ui = loader.loader(ui_file)
         self.setCentralWidget(self.ui)
 
-    def _fetch_theme(self) -> str:
+    def fetch_theme(self) -> str:
         return self.app.theme.theme
 
     def _get_launcher_from_qapp(self):
