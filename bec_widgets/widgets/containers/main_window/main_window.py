@@ -415,6 +415,11 @@ class BECMainWindow(BECWidget, QMainWindow):
         self._widget_hierarchy_dialog.activateWindow()
 
     def cleanup(self):
+        # Widget hierarchy dialog cleanup
+        if self._widget_hierarchy_dialog is not None:
+            self._widget_hierarchy_dialog.close()
+            self._widget_hierarchy_dialog = None
+
         # Timer cleanup
         if hasattr(self, "_client_info_expire_timer") and self._client_info_expire_timer.isActive():
             self._client_info_expire_timer.stop()
