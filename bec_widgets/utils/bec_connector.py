@@ -127,8 +127,13 @@ class BECConnector:
             # the function depends on BECClient, and BECDispatcher
             @SafeSlot()
             def terminate(client=self.client, dispatcher=self.bec_dispatcher):
+                app = QApplication.instance()
+                gui_server = getattr(app, "gui_server", None)
+                if gui_server and hasattr(gui_server, "shutdown"):
+                    gui_server.shutdown()
                 logger.info("Disconnecting", repr(dispatcher))
                 dispatcher.disconnect_all()
+                dispatcher.stop_cli_server()
 
                 try:  # shutdown ophyd threads if any
                     from ophyd._pyepics_shim import _dispatcher
