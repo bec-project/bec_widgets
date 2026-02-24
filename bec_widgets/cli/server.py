@@ -8,6 +8,7 @@ import sys
 from contextlib import redirect_stderr, redirect_stdout
 
 import darkdetect
+import shiboken6
 from bec_lib.logger import bec_logger
 from bec_lib.service_config import ServiceConfig
 from bec_qthemes import apply_theme
@@ -93,6 +94,7 @@ class GUIServer:
         """
         Run the GUI server.
         """
+        logger.info("Starting GUIServer", repr(self))
         self.app = QApplication(sys.argv)
         if darkdetect.isDark():
             apply_theme("dark")
@@ -101,11 +103,11 @@ class GUIServer:
 
         self.app.setApplicationName("BEC")
         self.app.gui_id = self.gui_id  # type: ignore
+        self.app.gui_server = self  # type: ignore # make server accessible from QApplication for getattr in widgets
         self.setup_bec_icon()
 
         service_config = self._get_service_config()
         self.dispatcher = BECDispatcher(config=service_config, gui_id=self.gui_id)
-        # self.dispatcher.start_cli_server(gui_id=self.gui_id)
 
         if self.gui_class:
             self.launcher_window = LaunchWindow(
@@ -118,7 +120,7 @@ class GUIServer:
         self.launcher_window.setAttribute(Qt.WA_ShowWithoutActivating)  # type: ignore
 
         self.app.aboutToQuit.connect(self.shutdown)
-        self.app.setQuitOnLastWindowClosed(False)
+        self.app.setQuitOnLastWindowClosed(True)
 
         def sigint_handler(*args):
             # display message, for people to let it terminate gracefully
@@ -127,8 +129,7 @@ class GUIServer:
             with RPCRegister.delayed_broadcast():
                 for widget in QApplication.instance().topLevelWidgets():  # type: ignore
                     widget.close()
-            if self.app:
-                self.app.quit()
+            self.shutdown()
 
         signal.signal(signal.SIGINT, sigint_handler)
         signal.signal(signal.SIGTERM, sigint_handler)
@@ -149,9 +150,10 @@ class GUIServer:
         self.app.setWindowIcon(icon)
 
     def shutdown(self):
-        """
-        Shutdown the GUI server.
-        """
+        logger.info("Shutdown GUIServer", repr(self))
+        if self.launcher_window and shiboken6.isValid(self.launcher_window):
+            self.launcher_window.close()
+            self.launcher_window.deleteLater()
         if pylsp_server.is_running():
             pylsp_server.stop()
         if self.dispatcher:
