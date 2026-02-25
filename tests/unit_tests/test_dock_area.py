@@ -331,6 +331,31 @@ class TestBasicDockArea:
         assert manifest_entries[1]["object_name"] == "anchored_widget"
         assert manifest_entries[1]["floating"] is False
 
+    def test_tabbed_docks_keep_parent_after_tab_switch(self, basic_dock_area, qtbot):
+        first = QWidget(parent=basic_dock_area)
+        first.setObjectName("tab_parent_first")
+        second = QWidget(parent=basic_dock_area)
+        second.setObjectName("tab_parent_second")
+
+        first_dock = basic_dock_area.new(first, return_dock=True)
+        second_dock = basic_dock_area.new(second, return_dock=True, tab_with=first_dock)
+
+        dock_area = first_dock.dockAreaWidget()
+        assert dock_area is not None
+        qtbot.waitUntil(lambda: second_dock.dockAreaWidget() is dock_area, timeout=1000)
+
+        dock_area.setCurrentDockWidget(second_dock)
+        qtbot.waitUntil(
+            lambda: first_dock.parent() is dock_area and second_dock.parent() is dock_area,
+            timeout=1000,
+        )
+
+        dock_area.setCurrentDockWidget(first_dock)
+        qtbot.waitUntil(
+            lambda: first_dock.parent() is dock_area and second_dock.parent() is dock_area,
+            timeout=1000,
+        )
+
     def test_splitter_weight_coercion_supports_aliases(self, basic_dock_area):
         weights = {"default": 0.5, "left": 2, "center": 3, "right": 4}
 
