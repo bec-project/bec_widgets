@@ -192,6 +192,15 @@ class BECMainApp(BECMainWindow):
 
     # Internal: route sidebar selection to the stack
     def _on_view_selected(self, vid: str) -> None:
+        # Special handling for views that can not be switched to (e.g. dark mode toggle)
+        # Not registered as proper view with a stack index, so we ignore any logic below
+        # as it will anyways not result in a stack switch.
+        idx = self._view_index.get(vid)
+        if idx is None or not (0 <= idx < self.stack.count()):
+            return
+        # if vid == "dark_mode":
+        #     # Special handling for dark mode toggle item
+        #     return
         # Determine current view
         current_index = self.stack.currentIndex()
         current_view = (
