@@ -112,6 +112,7 @@ class DockAreaWidget(BECWidget, QWidget):
         )
 
         self._root_layout.addWidget(self.dock_manager, 1)
+        self._install_manager_parent_guards()
 
     ################################################################################
     # Dock Utility Helpers
@@ -254,6 +255,54 @@ class DockAreaWidget(BECWidget, QWidget):
 
         return lambda dock: self._default_close_handler(dock, widget)
 
+    def _install_manager_parent_guards(self) -> None:
+        """
+        Track ADS structural changes so drag/drop-created tab areas keep stable parenting.
+        """
+        self.dock_manager.dockAreaCreated.connect(self._normalize_all_dock_parents)
+        self.dock_manager.dockWidgetAdded.connect(self._normalize_all_dock_parents)
+        self.dock_manager.stateRestored.connect(self._normalize_all_dock_parents)
+        self.dock_manager.restoringState.connect(self._normalize_all_dock_parents)
+        self.dock_manager.focusedDockWidgetChanged.connect(self._normalize_all_dock_parents)
+        self._normalize_all_dock_parents()
+
+    def _iter_all_dock_areas(self) -> list[CDockAreaWidget]:
+        """Return all dock areas from all known dock containers."""
+        areas: list[CDockAreaWidget] = []
+        for i in range(self.dock_manager.dockAreaCount()):
+            area = self.dock_manager.dockArea(i)
+            if area is None or not isValid(area):
+                continue
+            areas.append(area)
+        return areas
+
+    def _connect_dock_area_parent_guards(self) -> None:
+        """Bind area-level tab/view events to parent normalization."""
+        for area in self._iter_all_dock_areas():
+            try:
+                area.currentChanged.connect(
+                    self._normalize_all_dock_parents, Qt.ConnectionType.UniqueConnection
+                )
+                area.viewToggled.connect(
+                    self._normalize_all_dock_parents, Qt.ConnectionType.UniqueConnection
+                )
+            except TypeError:
+                area.currentChanged.connect(self._normalize_all_dock_parents)
+                area.viewToggled.connect(self._normalize_all_dock_parents)
+
+    def _normalize_all_dock_parents(self, *_args) -> None:
+        """
+        Ensure each dock has a stable parent after tab switches, re-docking, or restore.
+        """
+        self._connect_dock_area_parent_guards()
+        for dock in self.dock_list():
+            if dock is None or not isValid(dock):
+                continue
+            area_widget = dock.dockAreaWidget()
+            target_parent = area_widget if area_widget is not None else self.dock_manager
+            if dock.parent() is not target_parent:
+                dock.setParent(target_parent)
+
     def _make_dock(
         self,
         widget: QWidget,
@@ -356,6 +405,7 @@ class DockAreaWidget(BECWidget, QWidget):
                 self._apply_floating_state_to_dock(dock, floating_state)
         if resolved_icon is not None:
             dock.setIcon(resolved_icon)
+        self._normalize_all_dock_parents()
         return dock
 
     def _delete_dock(self, dock: CDockWidget) -> None:
@@ -1334,29 +1384,13 @@ class DockAreaWidget(BECWidget, QWidget):
         dock = self._create_dock_from_spec(spec)
         return dock if return_dock else widget
 
-    def _iter_all_docks(self) -> list[CDockWidget]:
-        """Return all docks, including those hosted in floating containers."""
-        docks = list(self.dock_manager.dockWidgets())
-        seen = {id(d) for d in docks}
-        for container in self.dock_manager.floatingWidgets():
-            if container is None:
-                continue
-            for dock in container.dockWidgets():
-                if dock is None:
-                    continue
-                if id(dock) in seen:
-                    continue
-                docks.append(dock)
-                seen.add(id(dock))
-        return docks
-
     def dock_map(self) -> dict[str, CDockWidget]:
         """Return the dock widgets map as dictionary with names as keys."""
-        return {dock.objectName(): dock for dock in self._iter_all_docks() if dock.objectName()}
+        return self.dock_manager.dockWidgetsMap()
 
     def dock_list(self) -> list[CDockWidget]:
         """Return the list of dock widgets."""
-        return self._iter_all_docks()
+        return list(self.dock_map().values())
 
     def widget_map(self) -> dict[str, QWidget]:
         """Return a dictionary mapping widget names to their corresponding widgets."""
