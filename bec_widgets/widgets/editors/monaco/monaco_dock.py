@@ -6,7 +6,7 @@ from typing import Any, cast
 
 from bec_lib.logger import bec_logger
 from bec_lib.macro_update_handler import has_executable_code
-from qtpy.QtCore import QEvent, QTimer, Signal
+from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QFileDialog, QMessageBox, QToolButton, QWidget
 
 from bec_widgets.widgets.containers.dock_area.basic_dock_area import DockAreaWidget
@@ -36,12 +36,12 @@ class MonacoDock(DockAreaWidget):
             **kwargs,
         )
         self.dock_manager.focusedDockWidgetChanged.connect(self._on_focus_event)
-        self.dock_manager.installEventFilter(self)
         self._last_focused_editor: CDockWidget | None = None
         self.focused_editor.connect(self._on_last_focused_editor_changed)
         initial_editor = self.add_editor()
         if isinstance(initial_editor, CDockWidget):
             self.last_focused_editor = initial_editor
+        self._install_manager_scan_and_fix_guards()
 
     def _create_editor_widget(self) -> MonacoWidget:
         """Create a configured Monaco editor widget."""
@@ -73,7 +73,8 @@ class MonacoDock(DockAreaWidget):
             logger.info(f"Editor '{widget.current_file}' has unsaved changes: {widget.get_text()}")
         self.save_enabled.emit(widget.modified)
 
-    def _update_tab_title_for_modification(self, dock: CDockWidget, modified: bool):
+    @staticmethod
+    def _update_tab_title_for_modification(dock: CDockWidget, modified: bool):
         """Update the tab title to show modification status with a dot indicator."""
         current_title = dock.windowTitle()
 
@@ -98,14 +99,12 @@ class MonacoDock(DockAreaWidget):
             return
 
         active_sig = signatures[signature.get("activeSignature", 0)]
-        active_param = signature.get("activeParameter", 0)  # TODO: Add highlight for active_param
-
         # Get signature label and documentation
         label = active_sig.get("label", "")
         doc_obj = active_sig.get("documentation", {})
         documentation = doc_obj.get("value", "") if isinstance(doc_obj, dict) else str(doc_obj)
 
-        # Format the markdown output
+        # Format the Markdown output
         markdown = f"```python\n{label}\n```\n\n{documentation}"
         self.signature_help.emit(markdown)
 
@@ -156,9 +155,10 @@ class MonacoDock(DockAreaWidget):
         if self.last_focused_editor is dock:
             self.last_focused_editor = None
         # After topology changes, make sure single-tab areas get a plus button
-        QTimer.singleShot(0, self._scan_and_fix_areas)
+        self._scan_and_fix_areas()
 
-    def reset_widget(self, widget: MonacoWidget):
+    @staticmethod
+    def reset_widget(widget: MonacoWidget):
         """
         Reset the given Monaco editor widget to its initial state.
 
@@ -193,22 +193,22 @@ class MonacoDock(DockAreaWidget):
             # pylint: disable=protected-access
             area._monaco_plus_btn = plus_btn
 
-    def _scan_and_fix_areas(self):
+    def _install_manager_scan_and_fix_guards(self) -> None:
+        """
+        Track ADS structural changes to trigger scan and fix of dock areas for plus button injection.
+        """
+        self.dock_manager.dockAreaCreated.connect(self._scan_and_fix_areas)
+        self.dock_manager.dockWidgetAdded.connect(self._scan_and_fix_areas)
+        self.dock_manager.stateRestored.connect(self._scan_and_fix_areas)
+        self.dock_manager.restoringState.connect(self._scan_and_fix_areas)
+        self.dock_manager.focusedDockWidgetChanged.connect(self._scan_and_fix_areas)
+        self._scan_and_fix_areas()
+
+    def _scan_and_fix_areas(self, *_arg):
         # Find all dock areas under this manager and ensure each single-tab area has a plus button
         areas = self.dock_manager.findChildren(CDockAreaWidget)
         for a in areas:
             self._ensure_area_plus(a)
-
-    def eventFilter(self, obj, event):
-        # Track dock manager events
-        if obj is self.dock_manager and event.type() in (
-            QEvent.Type.ChildAdded,
-            QEvent.Type.ChildRemoved,
-            QEvent.Type.LayoutRequest,
-        ):
-            QTimer.singleShot(0, self._scan_and_fix_areas)
-
-        return super().eventFilter(obj, event)
 
     def add_editor(
         self, area: Any | None = None, title: str | None = None, tooltip: str | None = None
@@ -258,7 +258,7 @@ class MonacoDock(DockAreaWidget):
         if area_widget is not None:
             self._ensure_area_plus(area_widget)
 
-        QTimer.singleShot(0, self._scan_and_fix_areas)
+        self._scan_and_fix_areas()
         self.last_focused_editor = dock
         return dock
 
