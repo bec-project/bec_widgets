@@ -152,6 +152,9 @@ class BECAtlasHTTPService(QWidget):
         # Logout to invalidate session on server side
         self.logout()
 
+        # Stop the authentication timer
+        self._auth_timer.stop()
+
         # Delete all cookies related to the base URL
         for cookie in self.network_manager.cookieJar().cookiesForUrl(QUrl(self._base_url)):
             self.network_manager.cookieJar().deleteCookie(cookie)
@@ -167,7 +170,7 @@ class BECAtlasHTTPService(QWidget):
         status = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute)
         raw_bytes = reply.readAll().data()
         request_url = reply.url().toString()
-        headers = dict(reply.rawHeaderPairs())
+        headers = dict([(i.data().decode(), j.data().decode()) for i, j in reply.rawHeaderPairs()])
         reply.deleteLater()
 
         # Any unsuccessful status code should raise here
