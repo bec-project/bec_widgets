@@ -32,6 +32,7 @@ dependencies = [
     "copier~=9.7",
     "typer~=0.15",
     "markdown~=3.9",
+    "PyJWT~=2.9",
 ]
 
 
