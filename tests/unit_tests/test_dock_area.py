@@ -39,6 +39,7 @@ from bec_widgets.widgets.containers.dock_area.settings.dialogs import (
     RestoreProfileDialog,
 )
 from bec_widgets.widgets.containers.dock_area.settings.workspace_manager import WorkSpaceManager
+from bec_widgets.widgets.plots.waveform.waveform import Waveform
 
 from .client_mocks import mocked_client
 
@@ -218,14 +219,24 @@ class TestBasicDockArea:
     """Focused coverage for the lightweight DockAreaWidget base."""
 
     def test_new_widget_instance_registers_in_maps(self, basic_dock_area):
-        panel = QWidget(parent=basic_dock_area)
-        panel.setObjectName("basic_panel")
+        panel_non_bec = QWidget(parent=basic_dock_area)
+        panel_non_bec.setObjectName("panel_non_bec")
 
-        dock = basic_dock_area.new(panel, return_dock=True)
+        panel_bec = Waveform(parent=basic_dock_area)
+        panel_bec.setObjectName("panel_bec")
 
-        assert dock.objectName() == "basic_panel"
-        assert basic_dock_area.dock_map()["basic_panel"] is dock
-        assert basic_dock_area.widget_map()["basic_panel"] is panel
+        dock_non_bec = basic_dock_area.new(panel_non_bec, return_dock=True)
+        dock_bec = basic_dock_area.new(panel_bec, return_dock=True)
+
+        assert dock_non_bec.objectName() == "panel_non_bec"
+        assert dock_bec.objectName() == "panel_bec"
+        assert len(basic_dock_area.dock_map()) == 2
+        assert basic_dock_area.dock_map()["panel_non_bec"] is dock_non_bec
+        assert basic_dock_area.dock_map()["panel_bec"] is dock_bec
+        assert len(basic_dock_area.widget_map(bec_widgets_only=False)) == 2
+        assert len(basic_dock_area.widget_map()) == 1
+        assert basic_dock_area.widget_map(bec_widgets_only=False)["panel_non_bec"] is panel_non_bec
+        assert basic_dock_area.widget_map(bec_widgets_only=False)["panel_bec"] is panel_bec
 
     def test_new_widget_string_creates_widget(self, basic_dock_area, qtbot):
         basic_dock_area.new("DarkModeButton")

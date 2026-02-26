@@ -199,15 +199,21 @@ class BECDockArea(RPCBase):
         """
 
     @rpc_call
-    def widget_map(self) -> "dict[str, QWidget]":
+    def widget_map(self, bec_widgets_only: "bool" = True) -> "dict[str, QWidget]":
         """
         Return a dictionary mapping widget names to their corresponding widgets.
+
+        Args:
+            bec_widgets_only(bool): If True, only include widgets that are BECConnector instances.
         """
 
     @rpc_call
-    def widget_list(self) -> "list[QWidget]":
+    def widget_list(self, bec_widgets_only: "bool" = True) -> "list[QWidget]":
         """
-        Return a list of all widgets contained in the dock area.
+        Return a list of widgets contained in the dock area.
+
+        Args:
+            bec_widgets_only(bool): If True, only include widgets that are BECConnector instances.
         """
 
     @property
@@ -1147,15 +1153,21 @@ class DockAreaWidget(RPCBase):
         """
 
     @rpc_call
-    def widget_map(self) -> "dict[str, QWidget]":
+    def widget_map(self, bec_widgets_only: "bool" = True) -> "dict[str, QWidget]":
         """
         Return a dictionary mapping widget names to their corresponding widgets.
+
+        Args:
+            bec_widgets_only(bool): If True, only include widgets that are BECConnector instances.
         """
 
     @rpc_call
-    def widget_list(self) -> "list[QWidget]":
+    def widget_list(self, bec_widgets_only: "bool" = True) -> "list[QWidget]":
         """
-        Return a list of all widgets contained in the dock area.
+        Return a list of widgets contained in the dock area.
+
+        Args:
+            bec_widgets_only(bool): If True, only include widgets that are BECConnector instances.
         """
 
     @rpc_call
@@ -2947,15 +2959,21 @@ class MonacoDock(RPCBase):
         """
 
     @rpc_call
-    def widget_map(self) -> "dict[str, QWidget]":
+    def widget_map(self, bec_widgets_only: "bool" = True) -> "dict[str, QWidget]":
         """
         Return a dictionary mapping widget names to their corresponding widgets.
+
+        Args:
+            bec_widgets_only(bool): If True, only include widgets that are BECConnector instances.
         """
 
     @rpc_call
-    def widget_list(self) -> "list[QWidget]":
+    def widget_list(self, bec_widgets_only: "bool" = True) -> "list[QWidget]":
         """
-        Return a list of all widgets contained in the dock area.
+        Return a list of widgets contained in the dock area.
+
+        Args:
+            bec_widgets_only(bool): If True, only include widgets that are BECConnector instances.
         """
 
     @rpc_call
