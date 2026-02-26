@@ -14,6 +14,7 @@ from shiboken6 import isValid
 import bec_widgets.widgets.containers.qt_ads as QtAds
 from bec_widgets import BECWidget, SafeSlot
 from bec_widgets.cli.rpc.rpc_widget_handler import widget_handler
+from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.utils.property_editor import PropertyEditor
 from bec_widgets.utils.toolbars.actions import MaterialIconAction
 from bec_widgets.widgets.containers.qt_ads import (
@@ -1358,13 +1359,32 @@ class DockAreaWidget(BECWidget, QWidget):
         """Return the list of dock widgets."""
         return self._iter_all_docks()
 
-    def widget_map(self) -> dict[str, QWidget]:
-        """Return a dictionary mapping widget names to their corresponding widgets."""
-        return {dock.objectName(): dock.widget() for dock in self.dock_list()}
+    def widget_map(self, bec_widgets_only: bool = True) -> dict[str, QWidget]:
+        """
+        Return a dictionary mapping widget names to their corresponding widgets.
 
-    def widget_list(self) -> list[QWidget]:
-        """Return a list of all widgets contained in the dock area."""
-        return [dock.widget() for dock in self.dock_list() if isinstance(dock.widget(), QWidget)]
+        Args:
+            bec_widgets_only(bool): If True, only include widgets that are BECConnector instances.
+        """
+
+        widgets: dict[str, QWidget] = {}
+        for dock in self.dock_list():
+            widget = dock.widget()
+            if not isinstance(widget, QWidget):
+                continue
+            if bec_widgets_only and not isinstance(widget, BECConnector):
+                continue
+            widgets[dock.objectName()] = widget
+        return widgets
+
+    def widget_list(self, bec_widgets_only: bool = True) -> list[QWidget]:
+        """
+        Return a list of widgets contained in the dock area.
+
+        Args:
+            bec_widgets_only(bool): If True, only include widgets that are BECConnector instances.
+        """
+        return list(self.widget_map(bec_widgets_only=bec_widgets_only).values())
 
     @SafeSlot()
     def attach_all(self):
