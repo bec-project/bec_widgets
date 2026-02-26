@@ -11,7 +11,6 @@ from qtpy.QtWidgets import (
     QHeaderView,
     QLabel,
     QLineEdit,
-    QPushButton,
     QSizePolicy,
     QTableWidget,
     QTableWidgetItem,
@@ -25,10 +24,6 @@ from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.widgets.services.bec_atlas_admin_view.experiment_selection.experiment_mat_card import (
     ExperimentMatCard,
 )
-
-# from bec_widgets.widgets.services.bec_atlas_admin_view.experiment_selection.material_push_button import (
-#     MaterialPushButton,
-# )
 from bec_widgets.widgets.services.bec_atlas_admin_view.experiment_selection.utils import (
     format_name,
     format_schedule,
@@ -185,19 +180,6 @@ class ExperimentSelection(QWidget):
 
         self._setup_search(layout)
 
-        # # Add filter section
-        # filter_layout = QHBoxLayout()
-        # self._with_proposals = QCheckBox("Show experiments with proposals", self)
-        # self._without_proposals = QCheckBox("Show experiments without proposals", self)
-        # self._with_proposals.setChecked(True)
-        # self._without_proposals.setChecked(True)
-        # self._with_proposals.toggled.connect(self._apply_table_filters)
-        # self._without_proposals.toggled.connect(self._apply_table_filters)
-        # filter_layout.addWidget(self._with_proposals)
-        # filter_layout.addWidget(self._without_proposals)
-        # filter_layout.addStretch(1)
-        # layout.addLayout(filter_layout)
-
         # Add table
         hor_layout = QHBoxLayout()
         self._table = QTableWidget(self._table_tab)
@@ -276,7 +258,6 @@ class ExperimentSelection(QWidget):
 
     @SafeSlot()
     def _update_selection_state(self):
-        has_selection = False
         if self._tabs.currentWidget() is not self._table_tab:
             return
         index = self._table.selectionModel().selectedRows()

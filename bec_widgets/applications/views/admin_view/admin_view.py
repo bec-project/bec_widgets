@@ -2,9 +2,9 @@
 
 from qtpy.QtWidgets import QWidget
 
-from bec_widgets.applications.views.admin_view.admin_widget import AdminWidget
 from bec_widgets.applications.views.view import ViewBase
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.widgets.services.bec_atlas_admin_view.bec_atlas_admin_view import BECAtlasAdminView
 
 
 class AdminView(ViewBase):
@@ -22,7 +22,7 @@ class AdminView(ViewBase):
         title: str | None = None,
     ):
         super().__init__(parent=parent, content=content, id=id, title=title)
-        self.admin_widget = AdminWidget(parent=self)
+        self.admin_widget = BECAtlasAdminView(parent=self)
         self.set_content(self.admin_widget)
 
     @SafeSlot()
@@ -31,7 +31,6 @@ class AdminView(ViewBase):
 
         Default implementation does nothing. Override in subclasses.
         """
-        self.admin_widget.on_enter()
 
     @SafeSlot()
     def on_exit(self) -> None:
@@ -39,4 +38,4 @@ class AdminView(ViewBase):
 
         Default implementation does nothing. Override in subclasses.
         """
-        self.admin_widget.on_exit()
+        self.admin_widget.logout()
