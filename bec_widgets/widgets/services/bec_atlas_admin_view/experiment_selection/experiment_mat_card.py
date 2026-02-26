@@ -36,6 +36,8 @@ class BorderLessLabel(QLabel):
 
 class ExperimentMatCard(BECWidget, QWidget):
 
+    RPC = False
+
     experiment_selected = Signal(dict)
 
     def __init__(

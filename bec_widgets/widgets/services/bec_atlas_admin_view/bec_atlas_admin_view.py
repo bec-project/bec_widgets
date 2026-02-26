@@ -228,6 +228,8 @@ class AtlasConnectionInfo(QWidget):
 
 class BECAtlasAdminView(BECWidget, QWidget):
 
+    RPC = False
+
     authenticated = Signal(bool)
 
     def __init__(
