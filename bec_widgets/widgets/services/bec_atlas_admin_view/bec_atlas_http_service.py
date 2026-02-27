@@ -1,6 +1,15 @@
 """
-This module is a QWidget-based HTTP service, responsible for interacting with the
-BEC Atlas API using a QNetworkAccessManager. It prov"""
+HTTP service widget for interacting with the BEC Atlas API.
+
+This module defines Qt-based classes that wrap ``QNetworkAccessManager`` to perform
+authenticated HTTP requests against the BEC Atlas backend, manage login and logout
+flows, and track authentication token expiry for the BEC Atlas Admin View.
+
+It also provides Pydantic models that describe HTTP responses and authenticated user
+information, as well as an ``AuthenticatedTimer`` helper used to signal when
+authentication tokens expire.
+
+"""
 
 import json
 import time
@@ -20,7 +29,7 @@ from bec_widgets.utils.error_popups import SafeSlot
 logger = bec_logger.logger
 
 
-class ATLAS_ENPOINTS(StrEnum):
+class ATLAS_ENDPOINTS(StrEnum):
     """Constants for BEC Atlas API endpoints."""
 
     LOGIN = "/user/login"
@@ -188,12 +197,12 @@ class BECAtlasHTTPService(QWidget):
             data = {}
             logger.warning(f"Received empty response for {request_url} with status code {status}.")
 
-        if not isinstance(data, dict):
+        if not isinstance(data, (dict, list, str)):
             raise BECAtlasHTTPError(
-                f"Expected response data to be a dict for {request_url}, but got {type(data)}. Response content: {data}"
+                f"Expected response data to be a dict, list, or str for {request_url}, but got {type(data)}. Response content: {data}"
             )
 
-        if ATLAS_ENPOINTS.LOGIN.value in request_url:
+        if ATLAS_ENDPOINTS.LOGIN.value in request_url:
             # If it's a login response, don't forward the token
             # but extract the expiration time and emit it
             token = data.get("access_token")
@@ -201,13 +210,12 @@ class BECAtlasHTTPService(QWidget):
             self.authentication_expires.emit(data.get("exp", 0))
             # Now we set the auth info, and then fetch the user info to get the groups
             self.__set_auth_info(data)
-            # Fetch information about the deployment info
             self.get_user_info()  # Fetch groups, then emit authenticated once groups are set on auth_user
-        elif ATLAS_ENPOINTS.LOGOUT.value in request_url:
+        elif ATLAS_ENDPOINTS.LOGOUT.value in request_url:
             self._auth_timer.stop()  # Stop the timer if it was running
             self.__clear_login_info(skip_logout=True)  # Skip calling logout again
             self.authenticated.emit({})
-        elif ATLAS_ENPOINTS.USER_INFO.value in request_url:
+        elif ATLAS_ENDPOINTS.USER_INFO.value in request_url:
             groups = data.get("groups", [])
             email = data.get("email", "")
             # Second step of authentication: We also have all groups now
@@ -221,7 +229,7 @@ class BECAtlasHTTPService(QWidget):
                     self.get_deployment_info(
                         deployment_id=self._current_deployment_info.deployment_id
                     )
-        elif ATLAS_ENPOINTS.DEPLOYMENT_INFO.value in request_url:
+        elif ATLAS_ENDPOINTS.DEPLOYMENT_INFO.value in request_url:
             owner_groups = data.get("owner_groups", [])
             if self.auth_user_info is not None and not self.auth_user_info.groups.isdisjoint(
                 owner_groups
@@ -256,7 +264,6 @@ class BECAtlasHTTPService(QWidget):
             endpoint (str): The API endpoint to send the GET request to.
             query_parameters (dict | None): Optional query parameters to include in the URL.
         """
-        logger.info(f"Sending GET request to {endpoint}.")
         url = QUrl(self._base_url + endpoint)
         if query_parameters:
             query = QUrlQuery()
@@ -279,7 +286,6 @@ class BECAtlasHTTPService(QWidget):
             payload (dict): The JSON payload to include in the POST request.
             query_parameters (dict | None): Optional query parameters to include in the URL.
         """
-        logger.info(f"Sending GET request to {endpoint}.")
         if payload is None:
             payload = {}
         url = QUrl(self._base_url + endpoint)
@@ -323,14 +329,14 @@ class BECAtlasHTTPService(QWidget):
             password (str): The password for authentication.
         """
         self._post_request(
-            endpoint=ATLAS_ENPOINTS.LOGIN.value,
+            endpoint=ATLAS_ENDPOINTS.LOGIN.value,
             payload={"username": username, "password": password},
         )
 
     @SafeSlot(popup_error=True)
     def logout(self):
         """Logout from BEC Atlas."""
-        self._post_request(endpoint=ATLAS_ENPOINTS.LOGOUT.value)
+        self._post_request(endpoint=ATLAS_ENDPOINTS.LOGOUT.value)
 
     @SafeSlot(str, popup_error=True)
     def get_experiments_for_realm(self, realm_id: str):
@@ -341,7 +347,7 @@ class BECAtlasHTTPService(QWidget):
             realm_id (str): The ID of the realm to retrieve experiments for.
         """
         self._get_request(
-            endpoint=ATLAS_ENPOINTS.REALMS_EXPERIMENTS.value,
+            endpoint=ATLAS_ENDPOINTS.REALMS_EXPERIMENTS.value,
             query_parameters={"realm_id": realm_id},
         )
 
@@ -355,14 +361,14 @@ class BECAtlasHTTPService(QWidget):
             deployment_id (str): The ID of the deployment associated with the experiment.
         """
         self._post_request(
-            endpoint=ATLAS_ENPOINTS.SET_EXPERIMENT.value,
+            endpoint=ATLAS_ENDPOINTS.SET_EXPERIMENT.value,
             query_parameters={"experiment_id": experiment_id, "deployment_id": deployment_id},
         )
 
     @SafeSlot(popup_error=True)
     def get_user_info(self):
         """Get the current user information from BEC Atlas. Requires authentication."""
-        self._get_request(endpoint=ATLAS_ENPOINTS.USER_INFO.value)
+        self._get_request(endpoint=ATLAS_ENDPOINTS.USER_INFO.value)
 
     @SafeSlot(str, popup_error=True)
     def get_deployment_info(self, deployment_id: str):
@@ -373,6 +379,6 @@ class BECAtlasHTTPService(QWidget):
             deployment_id (str): The ID of the deployment to retrieve information for.
         """
         self._get_request(
-            endpoint=ATLAS_ENPOINTS.DEPLOYMENT_INFO.value,
+            endpoint=ATLAS_ENDPOINTS.DEPLOYMENT_INFO.value,
             query_parameters={"deployment_id": deployment_id},
         )
