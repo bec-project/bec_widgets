@@ -306,7 +306,9 @@ class BECAtlasAdminView(BECWidget, QWidget):
         self.experiment_selection.experiment_selected.connect(self._on_experiment_selected)
         self.atlas_http_service.http_response.connect(self._on_http_response_received)
         self.atlas_http_service.authenticated.connect(self._on_authenticated)
+        self._connect_dispatcher()
 
+    def _connect_dispatcher(self):
         self.bec_dispatcher.connect_slot(
             slot=self._update_deployment_info,
             topics=MessageEndpoints.deployment_info(),

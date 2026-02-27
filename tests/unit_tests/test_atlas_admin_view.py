@@ -535,10 +535,13 @@ class TestBECAtlasAdminView:
     @pytest.fixture
     def admin_view(self, qtbot):
         """Fixture to create a BECAtlasAdminView instance."""
-        view = BECAtlasAdminView()
-        qtbot.addWidget(view)
-        qtbot.waitExposed(view)
-        return view
+        with mock.patch(
+            "bec_widgets.widgets.services.bec_atlas_admin_view.bec_atlas_admin_view.BECAtlasAdminView._connect_dispatcher"
+        ):
+            view = BECAtlasAdminView()
+            qtbot.addWidget(view)
+            qtbot.waitExposed(view)
+            return view
 
     def test_init_and_login(self, admin_view: BECAtlasAdminView, qtbot):
         """Test that the BECAtlasAdminView initializes correctly."""
