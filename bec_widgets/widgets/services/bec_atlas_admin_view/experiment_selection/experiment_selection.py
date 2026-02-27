@@ -266,9 +266,8 @@ class ExperimentSelection(QWidget):
             self._side_card.set_experiment_info(self._table_infos[index.row()])
 
     def _emit_selected_experiment(self):
-        if self._tabs.currentWidget() is self._card_tab:
+        if self._tabs.currentWidget() is self._card_tab and self._next_experiment:
             self.experiment_selected.emit(self._next_experiment)
-            logger.info(f"Emitting next experiment signal with info: {self._next_experiment}")
             return
         selected = self._table.selectionModel().selectedRows()
         if not selected:
@@ -297,7 +296,8 @@ class ExperimentSelection(QWidget):
     def _on_tab_changed(self, index):
         if self._tabs.widget(index) is self._table_tab:
             self._table.resizeRowsToContents()
-            self._side_card.set_experiment_info(self._next_experiment)
+            if self._next_experiment:
+                self._side_card.set_experiment_info(self._next_experiment)
         self._apply_table_filters()
 
     def _get_column_data(self, row) -> dict[str, str]:

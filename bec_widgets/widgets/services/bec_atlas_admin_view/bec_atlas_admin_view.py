@@ -31,7 +31,7 @@ from bec_widgets.utils.toolbars.actions import (
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.widgets.services.bec_atlas_admin_view.bec_atlas_http_service import (
-    ATLAS_ENPOINTS,
+    ATLAS_ENDPOINTS,
     AuthenticatedUserInfo,
     BECAtlasHTTPService,
     HTTPResponse,
@@ -471,12 +471,11 @@ class BECAtlasAdminView(BECWidget, QWidget):
         logger.debug(
             f"HTTP Response received: {response.request_url} with status {response.status}"
         )
-        if ATLAS_ENPOINTS.REALMS_EXPERIMENTS in response.request_url:
+        if ATLAS_ENDPOINTS.REALMS_EXPERIMENTS in response.request_url:
             experiments = response.data if isinstance(response.data, list) else []
-            # Filter experiments to only include those that the user has write access to
             self.experiment_selection.set_experiment_infos(experiments)
-        elif ATLAS_ENPOINTS.SET_EXPERIMENT in response.request_url:
-            self._on_overview_selected()  # Reconsider this as the overview is now the login.
+        elif ATLAS_ENDPOINTS.SET_EXPERIMENT in response.request_url:
+            self._on_overview_selected()
 
     @SafeSlot(dict)
     def _on_authenticated(self, auth_info: dict) -> None:
@@ -522,7 +521,7 @@ class BECAtlasAdminView(BECWidget, QWidget):
     ## API Methods
     ################
 
-    @SafeSlot(dict, popup_error=True)
+    @SafeSlot(str, str, popup_error=True)
     def set_experiment(self, experiment_id: str, deployment_id: str) -> None:
         """Set the experiment information for the current experiment."""
         self.atlas_http_service.set_experiment(experiment_id, deployment_id)
