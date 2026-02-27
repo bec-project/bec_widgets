@@ -35,16 +35,19 @@ logger = bec_logger.logger
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 
-def create_action_with_text(toolbar_action, toolbar: QToolBar):
+def create_action_with_text(toolbar_action, toolbar: QToolBar, min_size: QSize | None = None):
     """
     Helper function to create a toolbar button with text beside or under the icon.
 
     Args:
         toolbar_action(ToolBarAction): The toolbar action to create the button for.
         toolbar(ModularToolBar): The toolbar to add the button to.
+        min_size(QSize, optional): The minimum size for the button. Defaults to None.
     """
 
     btn = QToolButton(parent=toolbar)
+    if min_size is not None:
+        btn.setMinimumSize(min_size)
     if getattr(toolbar_action, "label_text", None):
         toolbar_action.action.setText(toolbar_action.label_text)
     if getattr(toolbar_action, "tooltip", None):
