@@ -175,7 +175,7 @@ class CustomLogoutAction(MaterialIconAction):
             toolbar(QToolBar): The toolbar to add the action to.
             target(QWidget): The target widget for the action.
         """
-        create_action_with_text(toolbar_action=self, toolbar=toolbar, min_size=QSize(100, 40))
+        create_action_with_text(toolbar_action=self, toolbar=toolbar, min_size=QSize(70, 40))
 
     def set_authenticated(self, auth_info: AuthenticatedUserInfo | None):
         """Enable or disable the logout action based on authentication state."""
@@ -202,7 +202,7 @@ class CustomLogoutAction(MaterialIconAction):
     def update_label(self):
         """Update the label text of the logout action."""
         if self._login_remaining_s > 0:
-            label_text = f"{self.label_text} ({self._login_remaining_s}s)"
+            label_text = f"{self.label_text}\n({self._login_remaining_s}s)"
         else:
             label_text = self.label_text
         self.action.setText(label_text)
@@ -220,7 +220,7 @@ class AtlasConnectionInfo(QWidget):
         layout = QVBoxLayout(self)
         layout.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setContentsMargins(6, 6, 6, 12)
         layout.setSpacing(8)
         self._bl_info_label = QLabel(self)
         self._atlas_url_label = QLabel(self)
@@ -251,8 +251,8 @@ class BECAtlasAdminView(BECWidget, QWidget):
     authenticated = Signal(bool)
 
     def __init__(
-        self, parent=None, atlas_url: str = "http://localhost/api/v1", client=None
-    ):  # https://bec-atlas-dev.psi.ch/api/v1
+        self, parent=None, atlas_url: str = "https://bec-atlas-dev.psi.ch/api/v1", client=None
+    ):
 
         super().__init__(parent=parent, client=client)
 
@@ -473,11 +473,8 @@ class BECAtlasAdminView(BECWidget, QWidget):
             experiments = response.data if isinstance(response.data, list) else []
             # Filter experiments to only include those that the user has write access to
             self.experiment_selection.set_experiment_infos(experiments)
-            # self._on_experiment_selection_selected()  # Stick to overview
         elif ATLAS_ENPOINTS.SET_EXPERIMENT in response.request_url:
             self._on_overview_selected()  # Reconsider this as the overview is now the login.
-        # Reconsider once queue is ready
-        # elif ATLAS_ENPOINTS.REALMS_EXPERIMENTS in response.request_url:
 
     @SafeSlot(dict)
     def _on_authenticated(self, auth_info: dict) -> None:
@@ -498,7 +495,7 @@ class BECAtlasAdminView(BECWidget, QWidget):
                     f"Authenticated user {info.email} does not have access to the current deployment {self._current_deployment_info.name if self._current_deployment_info else '<no deployment>'}."
                 )
         self._authenticated = authenticated
-        self.authenticated.emit(authenticated)
+
         if authenticated:
             self.toolbar.components.get_action("experiment_selection").action.setEnabled(True)
             self.toolbar.components.get_action("messaging_services").action.setEnabled(
@@ -517,6 +514,7 @@ class BECAtlasAdminView(BECWidget, QWidget):
             self._on_overview_selected()  # Switch back to overview on logout
             self._atlas_info_widget.clear_login()  # Clear login status in atlas info widget on logout
             self.toolbar.components.get_action("logout").set_authenticated(None)
+        self.authenticated.emit(authenticated)
 
     ################
     ## API Methods

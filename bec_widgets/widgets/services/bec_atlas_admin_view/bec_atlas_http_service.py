@@ -184,6 +184,15 @@ class BECAtlasHTTPService(QWidget):
         else:
             data = {}
 
+        if data is None:
+            data = {}
+            logger.warning(f"Received empty response for {request_url} with status code {status}.")
+
+        if not isinstance(data, dict):
+            raise BECAtlasHTTPError(
+                f"Expected response data to be a dict for {request_url}, but got {type(data)}. Response content: {data}"
+            )
+
         if ATLAS_ENPOINTS.LOGIN.value in request_url:
             # If it's a login response, don't forward the token
             # but extract the expiration time and emit it
@@ -214,14 +223,15 @@ class BECAtlasHTTPService(QWidget):
                     )
         elif ATLAS_ENPOINTS.DEPLOYMENT_INFO.value in request_url:
             owner_groups = data.get("owner_groups", [])
-            if self.auth_user_info is not None:
-                if not self.auth_user_info.groups.isdisjoint(owner_groups):
-                    self.authenticated.emit(self.auth_user_info.model_dump())
-                else:
-                    self._show_warning(
-                        text=f"User {self.auth_user_info.email} does not have access to the active deployment {data.get('name', '<unknown>')}."
-                    )
-                    self.logout()  # Logout to clear auth info and stop timer since user does not have access
+            if self.auth_user_info is not None and not self.auth_user_info.groups.isdisjoint(
+                owner_groups
+            ):
+                self.authenticated.emit(self.auth_user_info.model_dump())
+            else:
+                self._show_warning(
+                    text=f"User {self.auth_user_info.email} does not have access to the active deployment {data.get('name', '<unknown>')}."
+                )
+                self.logout()  # Logout to clear auth info and stop timer since user does not have access
 
         response = HTTPResponse(request_url=request_url, headers=headers, status=status, data=data)
         self.http_response.emit(response.model_dump())
