@@ -5,15 +5,23 @@ from unittest import mock
 
 import jwt
 import pytest
-from bec_lib.messages import ExperimentInfoMessage
+from bec_lib.messages import (
+    DeploymentInfoMessage,
+    ExperimentInfoMessage,
+    MessagingConfig,
+    MessagingServiceScopeConfig,
+    SessionInfoMessage,
+)
 from qtpy.QtCore import QByteArray, QUrl
 from qtpy.QtNetwork import QNetworkRequest
 
+from bec_widgets.widgets.services.bec_atlas_admin_view.bec_atlas_admin_view import BECAtlasAdminView
 from bec_widgets.widgets.services.bec_atlas_admin_view.bec_atlas_http_service import (
     ATLAS_ENPOINTS,
     AuthenticatedUserInfo,
     BECAtlasHTTPError,
     BECAtlasHTTPService,
+    HTTPResponse,
 )
 from bec_widgets.widgets.services.bec_atlas_admin_view.experiment_selection.experiment_mat_card import (
     ExperimentMatCard,
@@ -289,36 +297,71 @@ class TestBECAtlasHTTPService:
             http_service._handle_response(reply, _override_slot_params={"raise_error": True})
 
 
-class TestBECAtlasExperimentSelection:
+@pytest.fixture
+def experiment_info_message() -> ExperimentInfoMessage:
+    data = {
+        "_id": "p22622",
+        "owner_groups": ["admin"],
+        "access_groups": ["unx-sls_xda_bs", "p22622"],
+        "realm_id": "TestBeamline",
+        "proposal": "12345967",
+        "title": "Test Experiment for Mat Card Widget",
+        "firstname": "John",
+        "lastname": "Doe",
+        "email": "john.doe@psi.ch",
+        "account": "doe_j",
+        "pi_firstname": "Jane",
+        "pi_lastname": "Smith",
+        "pi_email": "jane.smith@psi.ch",
+        "pi_account": "smith_j",
+        "eaccount": "e22622",
+        "pgroup": "p22622",
+        "abstract": "This is a test abstract for the experiment mat card widget. It should be long enough to test text wrapping and display in the card. The abstract provides a brief overview of the experiment, its goals, and its significance. This text is meant to simulate a real abstract that might be associated with an experiment in the BEC Atlas system. The card should be able to handle abstracts of varying lengths without any issues, ensuring that the user can read the full abstract even if it is quite long.",
+        "schedule": [{"start": "01/01/2025 08:00:00", "end": "03/01/2025 18:00:00"}],
+        "proposal_submitted": "15/12/2024",
+        "proposal_expire": "31/12/2025",
+        "proposal_status": "Scheduled",
+        "delta_last_schedule": 30,
+        "mainproposal": "",
+    }
+    return ExperimentInfoMessage.model_validate(data)
 
-    @pytest.fixture
-    def experiment_info_message(self):
-        data = {
-            "_id": "p22622",
-            "owner_groups": ["admin"],
-            "access_groups": ["unx-sls_xda_bs", "p22622"],
-            "realm_id": "TestBeamline",
-            "proposal": "12345967",
-            "title": "Test Experiment for Mat Card Widget",
-            "firstname": "John",
-            "lastname": "Doe",
-            "email": "john.doe@psi.ch",
-            "account": "doe_j",
-            "pi_firstname": "Jane",
-            "pi_lastname": "Smith",
-            "pi_email": "jane.smith@psi.ch",
-            "pi_account": "smith_j",
-            "eaccount": "e22622",
-            "pgroup": "p22622",
-            "abstract": "This is a test abstract for the experiment mat card widget. It should be long enough to test text wrapping and display in the card. The abstract provides a brief overview of the experiment, its goals, and its significance. This text is meant to simulate a real abstract that might be associated with an experiment in the BEC Atlas system. The card should be able to handle abstracts of varying lengths without any issues, ensuring that the user can read the full abstract even if it is quite long.",
-            "schedule": [{"start": "01/01/2025 08:00:00", "end": "03/01/2025 18:00:00"}],
-            "proposal_submitted": "15/12/2024",
-            "proposal_expire": "31/12/2025",
-            "proposal_status": "Scheduled",
-            "delta_last_schedule": 30,
-            "mainproposal": "",
-        }
-        return ExperimentInfoMessage.model_validate(data)
+
+@pytest.fixture
+def experiment_info_list(experiment_info_message: ExperimentInfoMessage) -> list[dict]:
+    """Fixture to provide a list of experiment info dictionaries."""
+    another_experiment_info = {
+        "_id": "p22623",
+        "owner_groups": ["admin"],
+        "access_groups": ["unx-sls_xda_bs", "p22623"],
+        "realm_id": "TestBeamline",
+        "proposal": "",
+        "title": "Experiment without Proposal",
+        "firstname": "Alice",
+        "lastname": "Johnson",
+        "email": "alice.johnson@psi.ch",
+        "account": "johnson_a",
+        "pi_firstname": "Bob",
+        "pi_lastname": "Brown",
+        "pi_email": "bob.brown@psi.ch",
+        "pi_account": "brown_b",
+        "eaccount": "e22623",
+        "pgroup": "p22623",
+        "abstract": "",
+        "schedule": [],
+        "proposal_submitted": "",
+        "proposal_expire": "",
+        "proposal_status": "",
+        "delta_last_schedule": None,
+        "mainproposal": "",
+    }
+    return [
+        experiment_info_message.model_dump(),
+        ExperimentInfoMessage.model_validate(another_experiment_info).model_dump(),
+    ]
+
+
+class TestBECAtlasExperimentSelection:
 
     def test_format_name(self, experiment_info_message: ExperimentInfoMessage):
         """Test utils format name"""
@@ -404,39 +447,6 @@ class TestBECAtlasExperimentSelection:
         qtbot.waitExposed(selection)
         return selection
 
-    @pytest.fixture
-    def experiment_info_list(self, experiment_info_message: ExperimentInfoMessage):
-        """Fixture to provide a list of experiment info dictionaries."""
-        another_experiment_info = {
-            "_id": "p22623",
-            "owner_groups": ["admin"],
-            "access_groups": ["unx-sls_xda_bs", "p22623"],
-            "realm_id": "TestBeamline",
-            "proposal": "",
-            "title": "Experiment without Proposal",
-            "firstname": "Alice",
-            "lastname": "Johnson",
-            "email": "alice.johnson@psi.ch",
-            "account": "johnson_a",
-            "pi_firstname": "Bob",
-            "pi_lastname": "Brown",
-            "pi_email": "bob.brown@psi.ch",
-            "pi_account": "brown_b",
-            "eaccount": "e22623",
-            "pgroup": "p22623",
-            "abstract": "",
-            "schedule": [],
-            "proposal_submitted": "",
-            "proposal_expire": "",
-            "proposal_status": "",
-            "delta_last_schedule": None,
-            "mainproposal": "",
-        }
-        return [
-            experiment_info_message.model_dump(),
-            ExperimentInfoMessage.model_validate(another_experiment_info).model_dump(),
-        ]
-
     def test_set_experiments(
         self, experiment_selection: ExperimentSelection, experiment_info_list: list[dict]
     ):
@@ -518,3 +528,190 @@ class TestBECAtlasExperimentSelection:
         with qtbot.waitSignal(wid.experiment_selected, timeout=1000) as blocker:
             wid._side_card._activate_button.click()
         assert blocker.args == [exp]
+
+
+class TestBECAtlasAdminView:
+
+    @pytest.fixture
+    def admin_view(self, qtbot):
+        """Fixture to create a BECAtlasAdminView instance."""
+        view = BECAtlasAdminView()
+        qtbot.addWidget(view)
+        qtbot.waitExposed(view)
+        return view
+
+    def test_init_and_login(self, admin_view: BECAtlasAdminView, qtbot):
+        """Test that the BECAtlasAdminView initializes correctly."""
+        # Check that the atlas URL is set correctly
+        assert admin_view._atlas_url == "https://bec-atlas-dev.psi.ch/api/v1"
+
+        # Test that clicking the login button emits the credentials_entered signal with the correct username and password
+        with mock.patch.object(admin_view.atlas_http_service, "login") as mock_login:
+            with qtbot.waitSignal(admin_view.overview_widget.login_requested, timeout=1000):
+                admin_view.overview_widget._login.username.setText("alice")
+                admin_view.overview_widget._login.password.setText("password")
+                admin_view.overview_widget._login._emit_credentials()
+
+            mock_login.assert_called_once_with(username="alice", password="password")
+            mock_login.reset_mock()
+            admin_view._authenticated = True
+            with mock.patch.object(admin_view, "logout") as mock_logout:
+                with qtbot.waitSignal(admin_view.overview_widget.login_requested, timeout=1000):
+                    admin_view.overview_widget._login.password.setText("password")
+                    admin_view.overview_widget._login._emit_credentials()
+                mock_logout.assert_called_once()
+                mock_login.assert_called_once_with(username="alice", password="password")
+
+    def test_on_experiment_selected(
+        self, admin_view: BECAtlasAdminView, deployment_info: DeploymentInfoMessage, qtbot
+    ):
+        """Test that selecting an experiment in the overview widget correctly calls the HTTP service to set the experiment and updates the current experiment view."""
+        # First we need to simulate that we are authenticated and have deployment info
+        admin_view._update_deployment_info(deployment_info.model_dump(), {})
+        with mock.patch.object(
+            admin_view.atlas_http_service, "set_experiment"
+        ) as mock_set_experiment:
+            with qtbot.waitSignal(
+                admin_view.experiment_selection.experiment_selected, timeout=1000
+            ):
+                admin_view.experiment_selection.experiment_selected.emit(
+                    deployment_info.active_session.experiment.model_dump()
+                )
+            mock_set_experiment.assert_called_once_with(
+                deployment_info.active_session.experiment.pgroup, deployment_info.deployment_id
+            )
+
+    @pytest.fixture
+    def deployment_info(
+        self, experiment_info_message: ExperimentInfoMessage
+    ) -> DeploymentInfoMessage:
+        """Fixture to provide a DeploymentInfoMessage instance."""
+        return DeploymentInfoMessage(
+            deployment_id="dep-1",
+            name="Test Deployment",
+            messaging_config=MessagingConfig(
+                signal=MessagingServiceScopeConfig(enabled=False),
+                teams=MessagingServiceScopeConfig(enabled=False),
+                scilog=MessagingServiceScopeConfig(enabled=False),
+            ),
+            active_session=SessionInfoMessage(
+                experiment=experiment_info_message, name="Test Session"
+            ),
+        )
+
+    def test_on_authenticated(
+        self, admin_view: BECAtlasAdminView, deployment_info: DeploymentInfoMessage, qtbot
+    ):
+        """Test that the on_authenticated method correctly updates the UI based on authentication state."""
+        # Simulate successful authentication
+        auth_info = AuthenticatedUserInfo(
+            email="alice@example.com",
+            exp=time.time() + 300,
+            groups={"operators"},
+            deployment_id="dep-1",
+        )
+
+        # First check that deployment info updates all fields correctly
+        admin_view._update_deployment_info(deployment_info.model_dump(), {})
+
+        assert admin_view.atlas_http_service._current_deployment_info == deployment_info
+        assert (
+            admin_view._atlas_info_widget._bl_info_label.text()
+            == f"{deployment_info.active_session.experiment.realm_id} @ {deployment_info.name}"
+        )
+        assert admin_view._atlas_info_widget._atlas_url_label.text() == admin_view._atlas_url
+
+        # Now run on_authenticated, this enables all toolbar buttons
+        # and calls fetch experiments. It also switches the overview widget
+        # to the current experiment view.
+        # Default should be on the overview widget
+        assert admin_view.stacked_layout.currentWidget() == admin_view.overview_widget
+        with mock.patch.object(
+            admin_view, "_fetch_available_experiments"
+        ) as mock_fetch_experiments:
+            with qtbot.waitSignal(admin_view.authenticated, timeout=1000) as blocker:
+                admin_view._on_authenticated(auth_info.model_dump())
+            # Fetch experiments should be called
+            mock_fetch_experiments.assert_called_once()
+            assert blocker.args[0] is True
+            assert (
+                admin_view._atlas_info_widget._atlas_url_label.text()
+                == f"{admin_view._atlas_info_widget._atlas_url_text}  |  {auth_info.email}"
+            )
+            assert (
+                admin_view.toolbar.components.get_action("messaging_services").action.isEnabled()
+                is False
+            )
+
+            # Logout timer is running
+            logout_action = admin_view.toolbar.components.get_action("logout")
+            assert logout_action.action.isEnabled() is True
+            assert logout_action._tick_timer.isActive() is True
+
+            # Current Experiment widget should be visible in the overview
+            assert (
+                admin_view.overview_widget.stacked_layout.currentWidget()
+                == admin_view.overview_widget._experiment_overview_widget
+            )
+
+            # Click toolbar to switch to experiment selection
+            exp_select = admin_view.toolbar.components.get_action("experiment_selection")
+            assert exp_select.action.isEnabled() is True
+            with qtbot.waitSignal(exp_select.action.triggered, timeout=1000):
+                exp_select.action.trigger()
+
+            assert admin_view.stacked_layout.currentWidget() == admin_view.experiment_selection
+
+            # Now we simulate that the authentication expires
+            # This deactivates buttons, resets the overview widget
+            # and emits authenticated signal with False
+            with qtbot.waitSignal(admin_view.authenticated, timeout=1000) as blocker:
+                admin_view._on_authenticated({})  # Simulate not authenticated anymore
+            assert blocker.args[0] is False
+            assert logout_action._tick_timer.isActive() is False
+            assert admin_view._atlas_info_widget._atlas_url_label.text() == admin_view._atlas_url
+            assert (
+                admin_view.overview_widget.stacked_layout.currentWidget()
+                == admin_view.overview_widget._login_widget
+            )
+            # View should switch back to overview
+            assert admin_view.stacked_layout.currentWidget() == admin_view.overview_widget
+
+    def test_fetch_experiments(
+        self, admin_view: BECAtlasAdminView, deployment_info: DeploymentInfoMessage, qtbot
+    ):
+        """Test that _fetch_available_experiments correctly calls the HTTP service and updates the experiment selection widget."""
+        admin_view._update_deployment_info(deployment_info.model_dump(), {})
+        with mock.patch.object(
+            admin_view.atlas_http_service, "get_experiments_for_realm"
+        ) as mock_get_experiments:
+            admin_view._fetch_available_experiments()
+            mock_get_experiments.assert_called_once_with(
+                deployment_info.active_session.experiment.realm_id
+            )
+
+    def test_on_http_response_received(
+        self, experiment_info_list: list[dict], admin_view: BECAtlasAdminView, qtbot
+    ):
+        """Test that _on_http_response_received correctly handles HTTP responses and updates the UI accordingly."""
+        realms = HTTPResponse(
+            request_url=f"{admin_view._atlas_url}/{ATLAS_ENPOINTS.REALMS_EXPERIMENTS}/experiments?realm_id=TestBeamline",
+            status=200,
+            headers={"content-type": "application/json"},
+            data=experiment_info_list,
+        )
+        with mock.patch.object(
+            admin_view.experiment_selection, "set_experiment_infos"
+        ) as mock_set_experiment_infos:
+            admin_view._on_http_response_received(realms.model_dump())
+            mock_set_experiment_infos.assert_called_once_with(experiment_info_list)
+
+        set_experiment = HTTPResponse(
+            request_url=f"{admin_view._atlas_url}/{ATLAS_ENPOINTS.SET_EXPERIMENT}",
+            status=200,
+            headers={"content-type": "application/json"},
+            data={},
+        )
+        with mock.patch.object(admin_view, "_on_overview_selected") as mock_on_overview_selected:
+            admin_view._on_http_response_received(set_experiment.model_dump())
+            mock_on_overview_selected.assert_called_once()
