@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 
+from bec_lib import bec_logger
 from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtCore import QEvent, QSize, Qt, QTimer
 from qtpy.QtGui import QAction, QActionGroup, QIcon
@@ -39,6 +40,8 @@ MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 # Ensure the application does not use the native menu bar on macOS to be consistent with linux development.
 QApplication.setAttribute(Qt.ApplicationAttribute.AA_DontUseNativeMenuBar, True)
 
+logger = bec_logger.logger
+
 
 class BECMainWindow(BECWidget, QMainWindow):
     RPC = True
@@ -51,6 +54,7 @@ class BECMainWindow(BECWidget, QMainWindow):
 
         self.app = QApplication.instance()
         self.status_bar = self.statusBar()
+        self._launcher_window = None
         self.setWindowTitle(window_title)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
 
@@ -280,6 +284,16 @@ class BECMainWindow(BECWidget, QMainWindow):
         Show the launcher if it exists.
         """
         launcher = self._get_launcher_from_qapp()
+        if launcher is None:
+            from bec_widgets.applications.launch_window import LaunchWindow
+
+            cli_server = getattr(self.bec_dispatcher, "cli_server", None)
+            if cli_server is None:
+                logger.warning("Cannot open launcher: CLI server is not available.")
+                return
+            launcher = LaunchWindow(gui_id=f"{cli_server.gui_id}:launcher")
+            launcher.setAttribute(Qt.WA_ShowWithoutActivating)  # type: ignore[arg-type]
+            self._launcher_window = launcher
         if launcher:
             launcher.show()
             launcher.activateWindow()
