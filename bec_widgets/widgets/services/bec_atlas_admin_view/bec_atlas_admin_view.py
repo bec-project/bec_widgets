@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import time
+from typing import TYPE_CHECKING
 
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.messages import DeploymentInfoMessage, ExperimentInfoMessage
-from qtpy.QtCore import Qt, QTimer, Signal
+from qtpy.QtCore import QSize, Qt, QTimer, Signal
 from qtpy.QtWidgets import (
     QFrame,
     QGroupBox,
@@ -22,7 +23,11 @@ from qtpy.QtWidgets import (
 from bec_widgets.utils.bec_login import BECLogin
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
-from bec_widgets.utils.toolbars.actions import MaterialIconAction, WidgetAction
+from bec_widgets.utils.toolbars.actions import (
+    MaterialIconAction,
+    WidgetAction,
+    create_action_with_text,
+)
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.widgets.services.bec_atlas_admin_view.bec_atlas_http_service import (
@@ -37,6 +42,9 @@ from bec_widgets.widgets.services.bec_atlas_admin_view.experiment_selection.expe
 from bec_widgets.widgets.services.bec_atlas_admin_view.experiment_selection.experiment_selection import (
     ExperimentSelection,
 )
+
+if TYPE_CHECKING:  # pragma: no cover
+    from qtpy.QtWidgets import QToolBar
 
 logger = bec_logger.logger
 
@@ -159,6 +167,16 @@ class CustomLogoutAction(MaterialIconAction):
         self._tick_timer.timeout.connect(self._on_tick)
         self._login_remaining_s = 0
 
+    def add_to_toolbar(self, toolbar: QToolBar, target: QWidget):
+        """
+        Adds the action to the toolbar.
+
+        Args:
+            toolbar(QToolBar): The toolbar to add the action to.
+            target(QWidget): The target widget for the action.
+        """
+        create_action_with_text(toolbar_action=self, toolbar=toolbar, min_size=QSize(100, 40))
+
     def set_authenticated(self, auth_info: AuthenticatedUserInfo | None):
         """Enable or disable the logout action based on authentication state."""
         if not auth_info:
@@ -233,11 +251,8 @@ class BECAtlasAdminView(BECWidget, QWidget):
     authenticated = Signal(bool)
 
     def __init__(
-        self,
-        parent=None,
-        atlas_url: str = "http://localhost/api/v1",
-        client=None,  # "https://bec-atlas-dev.psi.ch/api/v1", client=None
-    ):
+        self, parent=None, atlas_url: str = "http://localhost/api/v1", client=None
+    ):  # https://bec-atlas-dev.psi.ch/api/v1
 
         super().__init__(parent=parent, client=client)
 
@@ -343,15 +358,6 @@ class BECAtlasAdminView(BECWidget, QWidget):
         atlas_info = WidgetAction(widget=self._atlas_info_widget, parent=self)
         self.toolbar.components.add_safe("atlas_info", atlas_info)
 
-        # Logout
-        # logout_action = MaterialIconAction(
-        #     icon_name="logout",
-        #     tooltip="Logout",
-        #     label_text="Logout",
-        #     text_position="under",
-        #     parent=self,
-        #     filled=True,
-        # )
         logout_action = CustomLogoutAction(parent=self)
         logout_action.action.triggered.connect(self.logout)
         logout_action.action.setEnabled(False)  # Initially disabled until authenticated
@@ -396,13 +402,7 @@ class BECAtlasAdminView(BECWidget, QWidget):
     def _on_messaging_services_selected(self):
         """Show the messaging services panel."""
         logger.info("Messaging services panel is not implemented yet.")
-        # TODO
         return
-        # if not self._authenticated:
-        #     logger.warning("Attempted to access messaging services without authentication.")
-        #     return
-        # self.overview_widget.setVisible(False)
-        # self.experiment_selection.setVisible(False)
 
     ########################
     ## Internal slots
@@ -501,7 +501,9 @@ class BECAtlasAdminView(BECWidget, QWidget):
         self.authenticated.emit(authenticated)
         if authenticated:
             self.toolbar.components.get_action("experiment_selection").action.setEnabled(True)
-            self.toolbar.components.get_action("messaging_services").action.setEnabled(True)
+            self.toolbar.components.get_action("messaging_services").action.setEnabled(
+                False
+            )  # TODO activate once messaging is added
             self.toolbar.components.get_action("logout").action.setEnabled(True)
             self._fetch_available_experiments()  # Fetch experiments upon successful authentication
             self._atlas_info_widget.set_logged_in(info.email)
