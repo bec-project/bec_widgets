@@ -355,17 +355,53 @@ class BECGuiClient(RPCBase):
             self.start(wait=True)
         if wait:
             with wait_for_server(self):
-                widget = self.launcher._run_rpc(
-                    "launch",
+                return self._new_impl(
+                    name=name,
+                    geometry=geometry,
                     launch_script=launch_script,
+                    profile=profile,
+                    start_empty=start_empty,
+                    **kwargs,
+                )
+        return self._new_impl(
+            name=name,
+            geometry=geometry,
+            launch_script=launch_script,
+            profile=profile,
+            start_empty=start_empty,
+            **kwargs,
+        )
+
+    def _new_impl(
+        self,
+        *,
+        name: str | None,
+        geometry: tuple[int, int, int, int] | None,
+        launch_script: str,
+        profile: str | None,
+        start_empty: bool,
+        **kwargs,
+    ):
+        if launch_script == "dock_area":
+            try:
+                return self.launcher._run_rpc(
+                    "system.launch_dock_area",
                     name=name,
                     geometry=geometry,
                     profile=profile,
                     start_empty=start_empty,
                     **kwargs,
-                )  # pylint: disable=protected-access
-                return widget
-        widget = self.launcher._run_rpc(
+                )
+            except ValueError as exc:
+                error = str(exc)
+                if (
+                    "Unknown system RPC method: system.launch_dock_area" not in error
+                    and "has no attribute 'system.launch_dock_area'" not in error
+                ):
+                    raise
+                logger.debug("Server does not support system.launch_dock_area; using launcher RPC")
+
+        return self.launcher._run_rpc(
             "launch",
             launch_script=launch_script,
             name=name,
@@ -374,7 +410,6 @@ class BECGuiClient(RPCBase):
             start_empty=start_empty,
             **kwargs,
         )  # pylint: disable=protected-access
-        return widget
 
     def delete(self, name: str) -> None:
         """Delete a dock area and its parent window.

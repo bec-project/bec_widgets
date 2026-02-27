@@ -11,13 +11,17 @@ from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import
 from qtpy.QtCore import Qt, QTimer
+from qtpy.QtWidgets import QWidget
 from redis.exceptions import RedisError
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.bec_connector import BECConnector
+from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import ErrorPopupUtility
-from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
+from bec_widgets.utils.screen_utils import apply_window_geometry
+from bec_widgets.widgets.containers.dock_area.dock_area import BECDockArea
+from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow, BECMainWindowNoRPC
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib import messages
@@ -114,11 +118,14 @@ class RPCServer:
         logger.debug(f"Received RPC instruction: {msg}, metadata: {metadata}")
         with rpc_exception_hook(functools.partial(self.send_response, request_id, False)):
             try:
-                obj = self.get_object_from_config(msg["parameter"])
                 method = msg["action"]
                 args = msg["parameter"].get("args", [])
                 kwargs = msg["parameter"].get("kwargs", {})
-                res = self.run_rpc(obj, method, args, kwargs)
+                if method.startswith("system."):
+                    res = self.run_system_rpc(method, args, kwargs)
+                else:
+                    obj = self.get_object_from_config(msg["parameter"])
+                    res = self.run_rpc(obj, method, args, kwargs)
             except Exception:
                 content = traceback.format_exc()
                 logger.error(f"Error while executing RPC instruction: {content}")
@@ -185,6 +192,47 @@ class RPCServer:
                 else:
                     res = method_obj(*args, **kwargs)
         return res
+
+    def run_system_rpc(self, method: str, args: list, kwargs: dict):
+        if method == "system.launch_dock_area":
+            return self._launch_dock_area(*args, **kwargs)
+        if method == "system.list_capabilities":
+            return {"system.launch_dock_area": True}
+        raise ValueError(f"Unknown system RPC method: {method}")
+
+    @staticmethod
+    def _launch_dock_area(
+        name: str | None = None,
+        geometry: tuple[int, int, int, int] | None = None,
+        profile: str | None = None,
+        start_empty: bool = False,
+    ) -> QWidget | None:
+        from bec_widgets.applications import bw_launch
+
+        with RPCRegister.delayed_broadcast() as rpc_register:
+            existing_dock_areas = rpc_register.get_names_of_rpc_by_class_type(BECDockArea)
+            if name is not None:
+                WidgetContainerUtils.raise_for_invalid_name(name)
+                if name in existing_dock_areas:
+                    name = WidgetContainerUtils.generate_unique_name(name, existing_dock_areas)
+            else:
+                name = WidgetContainerUtils.generate_unique_name("dock_area", existing_dock_areas)
+
+            result_widget = bw_launch.dock_area(
+                object_name=name, profile=profile, start_empty=start_empty
+            )
+            result_widget.window().setWindowTitle(f"BEC - {name}")
+
+            if isinstance(result_widget, BECMainWindow):
+                apply_window_geometry(result_widget, geometry)
+                result_widget.show()
+            else:
+                window = BECMainWindowNoRPC()
+                window.setCentralWidget(result_widget)
+                window.setWindowTitle(f"BEC - {result_widget.objectName()}")
+                apply_window_geometry(window, geometry)
+                window.show()
+            return result_widget
 
     def serialize_result_and_send(self, request_id: str, res: object):
         """
