@@ -4,7 +4,7 @@ import functools
 import traceback
 import types
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Callable, TypeVar
+from typing import TYPE_CHECKING, Callable, Literal, TypeVar
 
 from bec_lib.client import BECClient
 from bec_lib.endpoints import MessageEndpoints
@@ -204,8 +204,7 @@ class RPCServer:
     def _launch_dock_area(
         name: str | None = None,
         geometry: tuple[int, int, int, int] | None = None,
-        profile: str | None = None,
-        start_empty: bool = False,
+        startup_profile: str | Literal["restore", "skip"] | None = None,
     ) -> QWidget | None:
         from bec_widgets.applications import bw_launch
 
@@ -218,9 +217,7 @@ class RPCServer:
             else:
                 name = WidgetContainerUtils.generate_unique_name("dock_area", existing_dock_areas)
 
-            result_widget = bw_launch.dock_area(
-                object_name=name, profile=profile, start_empty=start_empty
-            )
+            result_widget = bw_launch.dock_area(object_name=name, startup_profile=startup_profile)
             result_widget.window().setWindowTitle(f"BEC - {name}")
 
             if isinstance(result_widget, BECMainWindow):

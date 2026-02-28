@@ -350,7 +350,7 @@ class BECDockArea(RPCBase):
 
     @rpc_timeout(None)
     @rpc_call
-    def load_profile(self, name: "str | None" = None, start_empty: "bool" = False):
+    def load_profile(self, name: "str | None" = None):
         """
         Load a workspace profile.
 
@@ -359,7 +359,6 @@ class BECDockArea(RPCBase):
 
         Args:
             name (str | None): The name of the profile to load. If None, prompts the user.
-            start_empty (bool): If True, load a profile without any widgets. Danger of overwriting the dynamic state of that profile.
         """
 
     @rpc_call
