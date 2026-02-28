@@ -43,6 +43,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 logger = bec_logger.logger
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
+START_EMPTY_PROFILE_OPTION = "Start Empty (No Profile)"
 
 
 class LaunchTile(RoundedFrame):
@@ -354,7 +355,7 @@ class LaunchWindow(BECMainWindow):
     def _refresh_dock_area_profiles(self, preserve_selection: bool = True) -> None:
         """
         Refresh the dock-area profile selector, optionally preserving the selection.
-        Sets the combobox to the last used profile or "general" if no selection preserved.
+        Defaults to Start Empty when no valid selection can be preserved.
 
         Args:
             preserve_selection(bool): Whether to preserve the current selection or not.
@@ -369,9 +370,10 @@ class LaunchWindow(BECMainWindow):
         )
 
         profiles = list_profiles("bec")
+        selector_items = [START_EMPTY_PROFILE_OPTION, *profiles]
         selector.blockSignals(True)
         selector.clear()
-        for profile in profiles:
+        for profile in selector_items:
             selector.addItem(profile)
 
         if selected_text:
@@ -380,32 +382,35 @@ class LaunchWindow(BECMainWindow):
             if idx >= 0:
                 selector.setCurrentIndex(idx)
             else:
-                # Selection no longer exists, fall back to last profile or "general"
+                # Selection no longer exists, fall back to default startup selection.
                 self._set_selector_to_default_profile(selector, profiles)
         else:
-            # No selection to preserve, use last profile or "general"
+            # No selection to preserve, use default startup selection.
             self._set_selector_to_default_profile(selector, profiles)
         selector.blockSignals(False)
 
     def _set_selector_to_default_profile(self, selector: QComboBox, profiles: list[str]) -> None:
         """
-        Set the selector to the last used profile or "general" as fallback.
+        Set the selector default.
+
+        Preference order:
+            1) Start Empty option (if available)
+            2) Last used profile
+            3) First available profile
 
         Args:
             selector(QComboBox): The combobox to set.
             profiles(list[str]): List of available profiles.
         """
+        start_empty_idx = selector.findText(START_EMPTY_PROFILE_OPTION, Qt.MatchFlag.MatchExactly)
+        if start_empty_idx >= 0:
+            selector.setCurrentIndex(start_empty_idx)
+            return
+
         # Try to get last used profile
         last_profile = get_last_profile(namespace="bec")
         if last_profile and last_profile in profiles:
             idx = selector.findText(last_profile, Qt.MatchFlag.MatchExactly)
-            if idx >= 0:
-                selector.setCurrentIndex(idx)
-                return
-
-        # Fall back to "general" profile
-        if "general" in profiles:
-            idx = selector.findText("general", Qt.MatchFlag.MatchExactly)
             if idx >= 0:
                 selector.setCurrentIndex(idx)
                 return
@@ -588,11 +593,14 @@ class LaunchWindow(BECMainWindow):
         """
         tile = self.tiles.get("dock_area")
         if tile is None or tile.selector is None:
-            profile = None
+            startup_profile = None
         else:
             selection = tile.selector.currentText().strip()
-            profile = selection if selection else None
-        return self.launch("dock_area", profile=profile)
+            if selection == START_EMPTY_PROFILE_OPTION:
+                startup_profile = None
+            else:
+                startup_profile = selection if selection else None
+        return self.launch("dock_area", startup_profile=startup_profile)
 
     def _open_widget(self):
         """

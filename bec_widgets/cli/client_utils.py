@@ -322,8 +322,7 @@ class BECGuiClient(RPCBase):
         wait: bool = True,
         geometry: tuple[int, int, int, int] | None = None,
         launch_script: str = "dock_area",
-        profile: str | None = None,
-        start_empty: bool = False,
+        startup_profile: str | Literal["restore", "skip"] | None = None,
         **kwargs,
     ) -> client.AdvancedDockArea:
         """Create a new top-level dock area.
@@ -333,24 +332,27 @@ class BECGuiClient(RPCBase):
             wait(bool, optional): Whether to wait for the server to start. Defaults to True.
             geometry(tuple[int, int, int, int] | None): The geometry of the dock area (pos_x, pos_y, w, h).
             launch_script(str): The launch script to use. Defaults to "dock_area".
-            profile(str | None): The profile name to load. If None, loads the "general" profile.
-                Use a profile name to load a specific saved profile.
-            start_empty(bool): If True, start with an empty dock area when loading specified profile.
+            startup_profile(str | Literal["restore", "skip"] | None): Startup mode for
+                the dock area:
+                  - None: start in transient empty workspace
+                  - "restore": restore last-used profile
+                  - "skip": skip profile initialization
+                  - "<name>": load the named profile
             **kwargs: Additional keyword arguments passed to the dock area.
 
         Returns:
             client.AdvancedDockArea: The new dock area.
 
-        Note:
-            The "general" profile is mandatory and will always exist. If manually deleted,
-            it will be automatically recreated.
-
         Examples:
-            >>> gui.new()  # Start with the "general" profile
-            >>> gui.new(profile="my_profile")  # Load specific profile, if profile does not exist, the new profile is created empty with specified name
-            >>> gui.new(start_empty=True)  # Start with "general" profile but empty dock area
-            >>> gui.new(profile="my_profile", start_empty=True)  # Start with "my_profile" profile but empty dock area
+            >>> gui.new()  # Start with an empty unsaved workspace
+            >>> gui.new(startup_profile="restore")  # Restore last profile
+            >>> gui.new(startup_profile="my_profile")  # Load explicit profile
         """
+        if "profile" in kwargs or "start_empty" in kwargs:
+            raise TypeError(
+                "gui.new() no longer accepts 'profile' or 'start_empty'. Use 'startup_profile' instead."
+            )
+
         if not self._check_if_server_is_alive():
             self.start(wait=True)
         if wait:
@@ -359,16 +361,14 @@ class BECGuiClient(RPCBase):
                     name=name,
                     geometry=geometry,
                     launch_script=launch_script,
-                    profile=profile,
-                    start_empty=start_empty,
+                    startup_profile=startup_profile,
                     **kwargs,
                 )
         return self._new_impl(
             name=name,
             geometry=geometry,
             launch_script=launch_script,
-            profile=profile,
-            start_empty=start_empty,
+            startup_profile=startup_profile,
             **kwargs,
         )
 
@@ -378,8 +378,7 @@ class BECGuiClient(RPCBase):
         name: str | None,
         geometry: tuple[int, int, int, int] | None,
         launch_script: str,
-        profile: str | None,
-        start_empty: bool,
+        startup_profile: str | Literal["restore", "skip"] | None,
         **kwargs,
     ):
         if launch_script == "dock_area":
@@ -388,8 +387,7 @@ class BECGuiClient(RPCBase):
                     "system.launch_dock_area",
                     name=name,
                     geometry=geometry,
-                    profile=profile,
-                    start_empty=start_empty,
+                    startup_profile=startup_profile,
                     **kwargs,
                 )
             except ValueError as exc:
@@ -406,8 +404,7 @@ class BECGuiClient(RPCBase):
             launch_script=launch_script,
             name=name,
             geometry=geometry,
-            profile=profile,
-            start_empty=start_empty,
+            startup_profile=startup_profile,
             **kwargs,
         )  # pylint: disable=protected-access
 

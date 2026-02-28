@@ -7,7 +7,7 @@ import pytest
 from qtpy.QtGui import QFontMetrics
 
 import bec_widgets
-from bec_widgets.applications.launch_window import LaunchWindow
+from bec_widgets.applications.launch_window import START_EMPTY_PROFILE_OPTION, LaunchWindow
 from bec_widgets.widgets.containers.auto_update.auto_updates import AutoUpdates
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 
@@ -82,6 +82,29 @@ def test_launch_window_launch_plugin_auto_update(bec_launch_window):
     # In real usage, the GUIServer would handle this in the sigint handler in case of a ctrl-c initiated shutdown.
     res.close()
     res.deleteLater()
+
+
+def test_launch_window_dock_area_selector_has_start_empty_option(bec_launch_window):
+    selector = bec_launch_window.tiles["dock_area"].selector
+    assert selector is not None
+    assert selector.findText(START_EMPTY_PROFILE_OPTION) >= 0
+
+
+def test_launch_window_dock_area_selector_defaults_to_start_empty(bec_launch_window):
+    selector = bec_launch_window.tiles["dock_area"].selector
+    assert selector is not None
+    assert selector.currentText() == START_EMPTY_PROFILE_OPTION
+
+
+def test_open_dock_area_with_start_empty_option_calls_launch(bec_launch_window):
+    selector = bec_launch_window.tiles["dock_area"].selector
+    assert selector is not None
+    selector.setCurrentText(START_EMPTY_PROFILE_OPTION)
+
+    with mock.patch.object(bec_launch_window, "launch") as mock_launch:
+        bec_launch_window._open_dock_area()
+
+    mock_launch.assert_called_once_with("dock_area", startup_profile=None)
 
 
 @pytest.mark.parametrize(

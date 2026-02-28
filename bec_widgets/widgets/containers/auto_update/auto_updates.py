@@ -41,7 +41,7 @@ class AutoUpdates(BECMainWindow):
             parent=self,
             object_name="dock_area",
             enable_profile_management=False,
-            restore_initial_profile=False,
+            startup_profile="skip",
         )
         self.setCentralWidget(self.dock_area)
         self._auto_update_selected_device: str | None = None

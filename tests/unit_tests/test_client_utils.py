@@ -127,3 +127,133 @@ def test_client_utils_apply_theme_toggles_when_none(current_theme, expected_them
         mock.call("fetch_theme"),
         mock.call("change_theme", theme=expected_theme),
     ]
+
+
+def test_client_utils_new_passes_startup_profile():
+    gui = BECGuiClient()
+    launcher = mock.MagicMock()
+
+    with mock.patch.object(
+        BECGuiClient, "launcher", new_callable=mock.PropertyMock
+    ) as launcher_prop:
+        launcher_prop.return_value = launcher
+        with mock.patch("bec_widgets.cli.client_utils.wait_for_server", _no_wait_for_server):
+            with mock.patch.object(gui, "_check_if_server_is_alive", return_value=True):
+                gui.new(startup_profile="saved_profile")
+
+    launcher._run_rpc.assert_called_once_with(
+        "system.launch_dock_area", name=None, geometry=None, startup_profile="saved_profile"
+    )
+
+
+def test_client_utils_new_defaults_to_empty_startup_profile():
+    gui = BECGuiClient()
+    launcher = mock.MagicMock()
+
+    with mock.patch.object(
+        BECGuiClient, "launcher", new_callable=mock.PropertyMock
+    ) as launcher_prop:
+        launcher_prop.return_value = launcher
+        with mock.patch("bec_widgets.cli.client_utils.wait_for_server", _no_wait_for_server):
+            with mock.patch.object(gui, "_check_if_server_is_alive", return_value=True):
+                gui.new()
+
+    launcher._run_rpc.assert_called_once_with(
+        "system.launch_dock_area", name=None, geometry=None, startup_profile=None
+    )
+
+
+def test_client_utils_new_rejects_legacy_profile_kwargs():
+    gui = BECGuiClient()
+    with pytest.raises(TypeError, match="startup_profile"):
+        gui.new(profile="saved_profile")
+
+
+def test_client_utils_new_falls_back_when_system_rpc_not_supported():
+    gui = BECGuiClient()
+    launcher = mock.MagicMock()
+    launcher._run_rpc.side_effect = [
+        ValueError("Unknown system RPC method: system.launch_dock_area"),
+        "fallback_widget",
+    ]
+
+    with mock.patch.object(
+        BECGuiClient, "launcher", new_callable=mock.PropertyMock
+    ) as launcher_prop:
+        launcher_prop.return_value = launcher
+        with mock.patch("bec_widgets.cli.client_utils.wait_for_server", _no_wait_for_server):
+            with mock.patch.object(gui, "_check_if_server_is_alive", return_value=True):
+                result = gui.new(startup_profile="restore")
+
+    assert result == "fallback_widget"
+    assert launcher._run_rpc.call_args_list == [
+        mock.call("system.launch_dock_area", name=None, geometry=None, startup_profile="restore"),
+        mock.call(
+            "launch", launch_script="dock_area", name=None, geometry=None, startup_profile="restore"
+        ),
+    ]
+
+
+def test_client_utils_new_reraises_unexpected_system_rpc_error():
+    gui = BECGuiClient()
+    launcher = mock.MagicMock()
+    launcher._run_rpc.side_effect = ValueError("Some other RPC error")
+
+    with mock.patch.object(
+        BECGuiClient, "launcher", new_callable=mock.PropertyMock
+    ) as launcher_prop:
+        launcher_prop.return_value = launcher
+        with mock.patch("bec_widgets.cli.client_utils.wait_for_server", _no_wait_for_server):
+            with mock.patch.object(gui, "_check_if_server_is_alive", return_value=True):
+                with pytest.raises(ValueError, match="Some other RPC error"):
+                    gui.new(startup_profile="restore")
+
+
+def test_client_utils_new_starts_server_when_not_alive():
+    gui = BECGuiClient()
+    launcher = mock.MagicMock()
+
+    with mock.patch.object(
+        BECGuiClient, "launcher", new_callable=mock.PropertyMock
+    ) as launcher_prop:
+        launcher_prop.return_value = launcher
+        with mock.patch("bec_widgets.cli.client_utils.wait_for_server", _no_wait_for_server):
+            with (
+                mock.patch.object(gui, "_check_if_server_is_alive", return_value=False),
+                mock.patch.object(gui, "start") as mock_start,
+            ):
+                gui.new(wait=False, startup_profile=None)
+
+    mock_start.assert_called_once_with(wait=True)
+
+
+def test_client_utils_delete_uses_container_proxy():
+    gui = BECGuiClient()
+    widget = mock.MagicMock()
+    widget._gui_id = "widget-id"
+
+    with (
+        mock.patch.object(BECGuiClient, "windows", new_callable=mock.PropertyMock) as windows_prop,
+        mock.patch.dict(
+            gui._server_registry, {"widget-id": {"container_proxy": "container-id"}}, clear=True
+        ),
+    ):
+        windows_prop.return_value = {"dock": widget}
+        gui.delete("dock")
+
+    widget._run_rpc.assert_called_once_with("close", gui_id="container-id")
+
+
+def test_client_utils_delete_falls_back_to_direct_close():
+    gui = BECGuiClient()
+    widget = mock.MagicMock()
+    widget._gui_id = "widget-id"
+
+    with (
+        mock.patch.object(BECGuiClient, "windows", new_callable=mock.PropertyMock) as windows_prop,
+        mock.patch.dict(gui._server_registry, {"widget-id": {"container_proxy": None}}, clear=True),
+    ):
+        windows_prop.return_value = {"dock": widget}
+        gui.delete("dock")
+
+    widget._run_rpc.assert_called_once_with("close")

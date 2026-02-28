@@ -24,12 +24,15 @@ class ProfileComboBox(QComboBox):
     def set_quick_profile_provider(self, provider: Callable[[], list[str]]) -> None:
         self._quick_provider = provider
 
-    def refresh_profiles(self, active_profile: str | None = None):
+    def refresh_profiles(
+        self, active_profile: str | None = None, show_empty_profile: bool = False
+    ) -> None:
         """
         Refresh the profile list and ensure the active profile is visible.
 
         Args:
             active_profile(str | None): The currently active profile name.
+            show_empty_profile(bool): If True, show an explicit empty unsaved workspace entry.
         """
 
         current_text = active_profile or self.currentText()
@@ -39,9 +42,22 @@ class ProfileComboBox(QComboBox):
         quick_profiles = self._quick_provider()
         quick_set = set(quick_profiles)
 
-        items = list(quick_profiles)
+        items: list[str] = []
+        if show_empty_profile:
+            items.append("")
+
         if active_profile and active_profile not in quick_set:
-            items.insert(0, active_profile)
+            items.append(active_profile)
+
+        for profile in quick_profiles:
+            if profile not in items:
+                items.append(profile)
+
+        if active_profile and active_profile not in quick_set:
+            # keep active profile at the top when not in quick list
+            items.remove(active_profile)
+            insert_pos = 1 if show_empty_profile else 0
+            items.insert(insert_pos, active_profile)
 
         for profile in items:
             self.addItem(profile)
@@ -51,6 +67,15 @@ class ProfileComboBox(QComboBox):
             self.setItemData(idx, None, Qt.ItemDataRole.FontRole)
             self.setItemData(idx, None, Qt.ItemDataRole.ToolTipRole)
             self.setItemData(idx, None, Qt.ItemDataRole.ForegroundRole)
+
+            if profile == "":
+                self.setItemData(idx, "Unsaved empty workspace", Qt.ItemDataRole.ToolTipRole)
+                if active_profile is None:
+                    font = QFont(self.font())
+                    font.setItalic(True)
+                    self.setItemData(idx, font, Qt.ItemDataRole.FontRole)
+                    self.setCurrentIndex(idx)
+                continue
 
             if active_profile and profile == active_profile:
                 tooltip = "Active workspace profile"
@@ -69,16 +94,23 @@ class ProfileComboBox(QComboBox):
                 self.setItemData(idx, "Not in quick select", Qt.ItemDataRole.ToolTipRole)
 
         # Restore selection if possible
-        index = self.findText(current_text)
-        if index >= 0:
-            self.setCurrentIndex(index)
+        if show_empty_profile and active_profile is None:
+            empty_idx = self.findText("")
+            if empty_idx >= 0:
+                self.setCurrentIndex(empty_idx)
+        else:
+            index = self.findText(current_text)
+            if index >= 0:
+                self.setCurrentIndex(index)
 
         self.blockSignals(False)
         if active_profile and self.currentText() != active_profile:
             idx = self.findText(active_profile)
             if idx >= 0:
                 self.setCurrentIndex(idx)
-        if active_profile and active_profile not in quick_set:
+        if show_empty_profile and self.currentText() == "":
+            self.setToolTip("Unsaved empty workspace")
+        elif active_profile and active_profile not in quick_set:
             self.setToolTip("Active profile is not in quick select")
         else:
             self.setToolTip("")
