@@ -87,6 +87,7 @@ logger = bec_logger.logger
 _PROFILE_NAMESPACE_UNSET = object()
 
 PROFILE_STATE_KEYS = {key: SETTINGS_KEYS[key] for key in ("geom", "state", "ads_state")}
+StartupProfile = Literal["restore", "skip"] | str | None
 
 
 class BECDockArea(DockAreaWidget):
@@ -124,9 +125,7 @@ class BECDockArea(DockAreaWidget):
         instance_id: str | None = None,
         auto_save_upon_exit: bool = True,
         enable_profile_management: bool = True,
-        restore_initial_profile: bool = True,
-        init_profile: str | None = None,
-        start_empty: bool = False,
+        startup_profile: StartupProfile = "restore",
         **kwargs,
     ):
         self._profile_namespace_hint = profile_namespace
@@ -135,9 +134,7 @@ class BECDockArea(DockAreaWidget):
         self._instance_id = slugify.slugify(instance_id, separator="_") if instance_id else None
         self._auto_save_upon_exit = auto_save_upon_exit
         self._profile_management_enabled = enable_profile_management
-        self._restore_initial_profile = restore_initial_profile
-        self._init_profile = init_profile
-        self._start_empty = start_empty
+        self._startup_profile = self._normalize_startup_profile(startup_profile)
         super().__init__(
             parent,
             default_add_direction=default_add_direction,
@@ -162,10 +159,12 @@ class BECDockArea(DockAreaWidget):
         self._root_layout.insertWidget(0, self.toolbar)
 
         # Populate and hook the workspace combo
-        self._refresh_workspace_list()
         self._current_profile_name = None
+        self._empty_profile_active = False
+        self._empty_profile_consumed = False
         self._pending_autosave_skip: tuple[str, str] | None = None
         self._exit_snapshot_written = False
+        self._refresh_workspace_list()
 
         # State manager
         self.state_manager = WidgetStateManager(
@@ -177,83 +176,84 @@ class BECDockArea(DockAreaWidget):
         # Initialize default editable state based on current lock
         self._set_editable(True)  # default to editable; will sync toolbar toggle below
 
-        if self._ensure_initial_profile():
-            self._refresh_workspace_list()
-
         # Apply the requested mode after everything is set up
         self.mode = mode
-        if self._restore_initial_profile:
-            self._fetch_initial_profile()
+        self._fetch_initial_profile()
 
-    def _ensure_initial_profile(self) -> bool:
+    @staticmethod
+    def _normalize_startup_profile(startup_profile: StartupProfile) -> StartupProfile:
         """
-        Ensure the "general" workspace profile always exists for the current namespace.
-        The "general" profile is mandatory and will be recreated if deleted.
-        If list_profile fails due to file permission or corrupted profiles, no action taken.
-
-        Returns:
-            bool: True if a profile was created, False otherwise.
+        Normalize startup profile values.
         """
-        namespace = self.profile_namespace
-        try:
-            existing_profiles = list_profiles(namespace)
-        except Exception as exc:  # pragma: no cover - defensive guard
-            logger.warning(f"Unable to enumerate profiles for namespace '{namespace}': {exc}")
-            return False
+        if startup_profile == "":
+            return None
+        return startup_profile
 
-        # Always ensure "general" profile exists
-        name = "general"
-        if name in existing_profiles:
-            return False
-
-        logger.info(
-            f"Profile '{name}' not found in namespace '{namespace}'. Creating mandatory '{name}' workspace."
-        )
-
-        self._write_profile_settings(name, namespace, save_preview=False)
-        set_quick_select(name, True, namespace=namespace)
-        set_last_profile(name, namespace=namespace, instance=self._last_profile_instance_id())
-        return True
-
-    def _fetch_initial_profile(self):
-        # Restore last-used profile if available; otherwise fall back to combo selection
+    def _resolve_restore_startup_profile(self) -> str | None:
+        """
+        Resolve the profile name when startup profile is set to "restore".
+        """
         combo = self.toolbar.components.get_action("workspace_combo").widget
         namespace = self.profile_namespace
-        init_profile = None
 
-        # First priority: use init_profile if explicitly provided
-        if self._init_profile:
-            init_profile = self._init_profile
-        else:
-            # Try to restore from last used profile
-            instance_id = self._last_profile_instance_id()
-            if instance_id:
-                inst_profile = get_last_profile(
-                    namespace=namespace, instance=instance_id, allow_namespace_fallback=False
-                )
-                if inst_profile and self._profile_exists(inst_profile, namespace):
-                    init_profile = inst_profile
-            if not init_profile:
-                last = get_last_profile(namespace=namespace)
-                if last and self._profile_exists(last, namespace):
-                    init_profile = last
-                else:
-                    text = combo.currentText()
-                    init_profile = text if text else None
-            if not init_profile:
-                # Fall back to "general" profile which is guaranteed to exist
-                if self._profile_exists("general", namespace):
-                    init_profile = "general"
-        if init_profile:
-            self._load_initial_profile(init_profile)
+        instance_id = self._last_profile_instance_id()
+        if instance_id:
+            inst_profile = get_last_profile(
+                namespace=namespace, instance=instance_id, allow_namespace_fallback=False
+            )
+            if inst_profile and self._profile_exists(inst_profile, namespace):
+                return inst_profile
+
+        last = get_last_profile(namespace=namespace)
+        if last and self._profile_exists(last, namespace):
+            return last
+
+        combo_text = combo.currentText().strip()
+        if combo_text and self._profile_exists(combo_text, namespace):
+            return combo_text
+
+        return None
+
+    def _fetch_initial_profile(self):
+        startup_profile = self._startup_profile
+
+        if startup_profile == "skip":
+            logger.debug("Skipping startup profile initialization.")
+            return
+
+        if startup_profile == "restore":
+            restored = self._resolve_restore_startup_profile()
+            if restored:
+                self._load_initial_profile(restored)
+                return
+            self._start_empty_workspace()
+            return
+
+        if startup_profile is None:
+            self._start_empty_workspace()
+            return
+
+        self._load_initial_profile(startup_profile)
 
     def _load_initial_profile(self, name: str) -> None:
         """Load the initial profile."""
-        self.load_profile(name, start_empty=self._start_empty)
+        self.load_profile(name)
         combo = self.toolbar.components.get_action("workspace_combo").widget
         combo.blockSignals(True)
-        combo.setCurrentText(name)
+        if not self._empty_profile_active:
+            combo.setCurrentText(name)
         combo.blockSignals(False)
+
+    def _start_empty_workspace(self) -> None:
+        """
+        Initialize the dock area in transient empty-profile mode.
+        """
+        if (
+            getattr(self, "_current_profile_name", None) is None
+            and not self._empty_profile_consumed
+        ):
+            self.delete_all()
+            self._enter_empty_profile_state()
 
     def _customize_dock(self, dock: CDockWidget, widget: QWidget) -> None:
         prefs = getattr(dock, "_dock_preferences", {}) or {}
@@ -601,13 +601,6 @@ class BECDockArea(DockAreaWidget):
         """Namespace used to scope user/default profile files for this dock area."""
         return self._resolve_profile_namespace()
 
-    def _active_profile_name_or_default(self) -> str:
-        name = getattr(self, "_current_profile_name", None)
-        if not name:
-            name = "general"
-            self._current_profile_name = name
-        return name
-
     def _profile_exists(self, name: str, namespace: str | None) -> bool:
         return any(
             os.path.exists(path) for path in user_profile_candidates(name, namespace)
@@ -675,11 +668,25 @@ class BECDockArea(DockAreaWidget):
             name: The profile name.
             namespace: The profile namespace.
         """
+        self._empty_profile_active = False
+        self._empty_profile_consumed = True
         self._current_profile_name = name
         self.profile_changed.emit(name)
         set_last_profile(name, namespace=namespace, instance=self._last_profile_instance_id())
         combo = self.toolbar.components.get_action("workspace_combo").widget
         combo.refresh_profiles(active_profile=name)
+
+    def _enter_empty_profile_state(self) -> None:
+        """
+        Switch to the transient empty workspace state.
+
+        In this mode there is no active profile name, the toolbar shows an
+        explicit blank profile entry, and no autosave on shutdown is performed.
+        """
+        self._empty_profile_active = True
+        self._current_profile_name = None
+        self._pending_autosave_skip = None
+        self._refresh_workspace_list()
 
     @SafeSlot()
     def list_profiles(self) -> list[str]:
@@ -814,10 +821,10 @@ class BECDockArea(DockAreaWidget):
         """
         self.save_profile(name, show_dialog=True)
 
+    @SafeSlot()
     @SafeSlot(str)
-    @SafeSlot(str, bool)
     @rpc_timeout(None)
-    def load_profile(self, name: str | None = None, start_empty: bool = False):
+    def load_profile(self, name: str | None = None):
         """
         Load a workspace profile.
 
@@ -826,8 +833,10 @@ class BECDockArea(DockAreaWidget):
 
         Args:
             name (str | None): The name of the profile to load. If None, prompts the user.
-            start_empty (bool): If True, load a profile without any widgets. Danger of overwriting the dynamic state of that profile.
         """
+        if name == "":
+            return
+
         if not name:  # Gui fallback if the name is not provided
             name, ok = QInputDialog.getText(
                 self, "Load Workspace", "Enter the name of the workspace profile to load:"
@@ -858,10 +867,6 @@ class BECDockArea(DockAreaWidget):
 
         # Clear existing docks and remove all widgets
         self.delete_all()
-
-        if start_empty:
-            self._finalize_profile_change(name, namespace)
-            return
 
         # Rebuild widgets and restore states
         for item in read_manifest(settings):
@@ -1008,25 +1013,36 @@ class BECDockArea(DockAreaWidget):
         """
         combo = self.toolbar.components.get_action("workspace_combo").widget
         active_profile = getattr(self, "_current_profile_name", None)
+        empty_profile_active = bool(getattr(self, "_empty_profile_active", False))
         namespace = self.profile_namespace
         if hasattr(combo, "set_quick_profile_provider"):
             combo.set_quick_profile_provider(lambda ns=namespace: list_quick_profiles(namespace=ns))
         if hasattr(combo, "refresh_profiles"):
-            combo.refresh_profiles(active_profile)
+            if empty_profile_active:
+                combo.refresh_profiles(active_profile, show_empty_profile=True)
+            else:
+                combo.refresh_profiles(active_profile)
         else:
             # Fallback for regular QComboBox
             combo.blockSignals(True)
             combo.clear()
             quick_profiles = list_quick_profiles(namespace=namespace)
-            items = list(quick_profiles)
+            items = [""] if empty_profile_active else []
+            items.extend(quick_profiles)
             if active_profile and active_profile not in items:
                 items.insert(0, active_profile)
             combo.addItems(items)
-            if active_profile:
+            if empty_profile_active:
+                idx = combo.findText("")
+                if idx >= 0:
+                    combo.setCurrentIndex(idx)
+            elif active_profile:
                 idx = combo.findText(active_profile)
                 if idx >= 0:
                     combo.setCurrentIndex(idx)
-            if active_profile and active_profile not in quick_profiles:
+            if empty_profile_active:
+                combo.setToolTip("Unsaved empty workspace")
+            elif active_profile and active_profile not in quick_profiles:
                 combo.setToolTip("Active profile is not in quick select")
             else:
                 combo.setToolTip("")
@@ -1131,7 +1147,16 @@ class BECDockArea(DockAreaWidget):
             logger.info("ADS prepare_for_shutdown: skipping (already handled or destroyed)")
             return
 
-        name = self._active_profile_name_or_default()
+        if getattr(self, "_empty_profile_active", False):
+            logger.info("ADS prepare_for_shutdown: skipping autosave for unsaved empty workspace")
+            self._exit_snapshot_written = True
+            return
+
+        name = getattr(self, "_current_profile_name", None)
+        if not name:
+            logger.info("ADS prepare_for_shutdown: skipping autosave (no active profile)")
+            self._exit_snapshot_written = True
+            return
 
         namespace = self.profile_namespace
         settings = open_user_settings(name, namespace=namespace)

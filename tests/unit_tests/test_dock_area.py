@@ -1518,6 +1518,8 @@ class TestAdvancedDockAreaRestoreAndDialogs:
         profile_name = "refresh_profile"
         helper = profile_helper(advanced_dock_area)
         helper.open_user(profile_name).sync()
+        # Simulate a normal named-profile state (not transient empty startup mode).
+        advanced_dock_area._empty_profile_active = False
         advanced_dock_area._current_profile_name = profile_name
         combo = advanced_dock_area.toolbar.components.get_action("workspace_combo").widget
         combo.refresh_profiles = MagicMock()
@@ -1525,6 +1527,16 @@ class TestAdvancedDockAreaRestoreAndDialogs:
         advanced_dock_area._refresh_workspace_list()
 
         combo.refresh_profiles.assert_called_once_with(profile_name)
+
+    def test_refresh_workspace_list_with_empty_workspace_state(self, advanced_dock_area):
+        combo = advanced_dock_area.toolbar.components.get_action("workspace_combo").widget
+        combo.refresh_profiles = MagicMock()
+        advanced_dock_area._current_profile_name = None
+        advanced_dock_area._empty_profile_active = True
+
+        advanced_dock_area._refresh_workspace_list()
+
+        combo.refresh_profiles.assert_called_once_with(None, show_empty_profile=True)
 
     def test_refresh_workspace_list_fallback(self, advanced_dock_area):
         class ComboStub:
@@ -1573,6 +1585,8 @@ class TestAdvancedDockAreaRestoreAndDialogs:
         with patch.object(
             advanced_dock_area.toolbar.components, "get_action", return_value=StubAction(combo_stub)
         ):
+            # Simulate a normal named-profile state (not transient empty startup mode).
+            advanced_dock_area._empty_profile_active = False
             advanced_dock_area._current_profile_name = active
             advanced_dock_area._refresh_workspace_list()
 
@@ -1727,6 +1741,29 @@ class TestProfileManagement:
 
 class TestWorkspaceProfileOperations:
     """Test workspace profile save/load/delete operations."""
+
+    def test_empty_startup_profile_creates_transient_unsaved_workspace(self, qtbot, mocked_client):
+        widget = BECDockArea(client=mocked_client, startup_profile=None)
+        qtbot.addWidget(widget)
+        qtbot.waitExposed(widget)
+        helper = profile_helper(widget)
+
+        assert widget._empty_profile_active is True
+        assert widget._empty_profile_consumed is False
+        assert widget._current_profile_name is None
+        combo = widget.toolbar.components.get_action("workspace_combo").widget
+        assert combo.currentText() == ""
+
+        with patch.object(widget, "_write_snapshot_to_settings") as mock_write:
+            widget.prepare_for_shutdown()
+        mock_write.assert_not_called()
+
+        helper.open_user("real_profile").sync()
+        widget.load_profile("real_profile")
+        assert widget._empty_profile_active is False
+        assert widget._empty_profile_consumed is True
+        assert widget._current_profile_name == "real_profile"
+        assert combo.currentText() == "real_profile"
 
     def test_save_profile_readonly_conflict(
         self, advanced_dock_area, temp_profile_dir, module_profile_factory

@@ -1,4 +1,6 @@
 import webbrowser
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
 import pytest
 from qtpy.QtCore import QEvent, QPoint, QPointF
@@ -53,6 +55,58 @@ def test_status_bar_has_separator(bec_main_window):
     status_bar = bec_main_window.statusBar()
     separators = [w for w in status_bar.findChildren(QFrame) if w.frameShape() == QFrame.VLine]
     assert separators, "Expected at least one QFrame separator in the status bar."
+
+
+def test_display_app_id_not_connected(bec_main_window):
+    with patch.object(bec_main_window.bec_dispatcher, "cli_server", None):
+        bec_main_window.display_app_id()
+        assert bec_main_window._app_id_label.text() == "Not connected"
+
+
+def test_display_app_id_connected(bec_main_window):
+    with patch.object(bec_main_window.bec_dispatcher, "cli_server", MagicMock(gui_id="gui_123")):
+        bec_main_window.display_app_id()
+        assert bec_main_window._app_id_label.text() == "App ID: gui_123"
+
+
+def test_event_consumes_status_tip(bec_main_window):
+    status_tip_event = QEvent(QEvent.Type.StatusTip)
+    assert bec_main_window.event(status_tip_event) is True
+
+
+def test_get_launcher_from_qapp_returns_none_when_absent(bec_main_window):
+    with patch.object(
+        QApplication, "instance", return_value=SimpleNamespace(topLevelWidgets=lambda: [])
+    ):
+        assert bec_main_window._get_launcher_from_qapp() is None
+
+
+def test_show_launcher_warns_when_cli_server_missing(bec_main_window):
+    with (
+        patch.object(bec_main_window.bec_dispatcher, "cli_server", None),
+        patch.object(bec_main_window, "_get_launcher_from_qapp", return_value=None),
+        patch("bec_widgets.widgets.containers.main_window.main_window.logger.warning") as mock_warn,
+    ):
+        bec_main_window._show_launcher()
+        mock_warn.assert_called_once()
+
+
+def test_show_launcher_creates_launcher_when_missing(bec_main_window):
+    launcher = MagicMock()
+
+    with (
+        patch.object(bec_main_window.bec_dispatcher, "cli_server", MagicMock(gui_id="server_id")),
+        patch.object(bec_main_window, "_get_launcher_from_qapp", return_value=None),
+        patch("bec_widgets.applications.launch_window.LaunchWindow", return_value=launcher) as cls,
+    ):
+        bec_main_window._show_launcher()
+
+    cls.assert_called_once_with(gui_id="server_id:launcher")
+    launcher.setAttribute.assert_called_once()
+    launcher.show.assert_called_once()
+    launcher.activateWindow.assert_called_once()
+    launcher.raise_.assert_called_once()
+    assert bec_main_window._launcher_window is launcher
 
 
 #################################################################
