@@ -292,6 +292,11 @@ class RPCBase:
                 return {
                     key: self._create_widget_from_msg_result(val) for key, val in msg_result.items()
                 }
+            rpc_enabled = msg_result.get("__rpc__", True)
+            if rpc_enabled is False:
+                return None
+
+            msg_result = dict(msg_result)
             cls = msg_result.pop("widget_class", None)
             msg_result.pop("__rpc__", None)
 
