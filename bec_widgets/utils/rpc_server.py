@@ -300,6 +300,9 @@ class RPCServer:
         # Respect RPC = False
         if getattr(obj, "RPC", True) is False:
             return None
+        # Respect rpc_exposed = False
+        if getattr(obj, "rpc_exposed", True) is False:
+            return None
         return self._serialize_bec_connector(obj, wait=True)
 
     def emit_heartbeat(self) -> None:
