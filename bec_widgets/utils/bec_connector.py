@@ -89,6 +89,7 @@ class BECConnector:
         object_name: str | None = None,
         root_widget: bool = False,
         rpc_exposed: bool = True,
+        rpc_passthrough_children: bool = True,
         **kwargs,
     ):
         """
@@ -101,6 +102,9 @@ class BECConnector:
             object_name(str, optional): The object name.
             root_widget(bool, optional): If set to True, the parent_id will be always set to None, thus enforcing that the widget is accessible as a root widget of the BECGuiClient object.
             rpc_exposed(bool, optional): If set to False, this instance is excluded from RPC registry broadcast and CLI namespace discovery.
+            rpc_passthrough_children(bool, optional): Only relevant when ``rpc_exposed=False``.
+                If True, RPC-visible children rebind to the next visible ancestor.
+                If False (default), children stay hidden behind this widget.
             **kwargs:
         """
         # Extract object_name from kwargs to not pass it to Qt class
@@ -193,6 +197,9 @@ class BECConnector:
         self.root_widget = root_widget
         # If set to False, this instance is not exposed through RPC at all.
         self.rpc_exposed = bool(rpc_exposed)
+        # If True on a hidden parent (rpc_exposed=False), children can bubble up to
+        # the next visible RPC ancestor.
+        self.rpc_passthrough_children = bool(rpc_passthrough_children)
 
         self._update_object_name()
 
@@ -201,10 +208,40 @@ class BECConnector:
         try:
             if self.root_widget:
                 return None
-            connector_parent = WidgetHierarchy.get_becwidget_ancestor(self)
+            connector_parent = self._get_rpc_parent_ancestor()
             return connector_parent.gui_id if connector_parent else None
         except:
             logger.error(f"Error getting parent_id for {self.__class__.__name__}")
+
+    def _get_rpc_parent_ancestor(self) -> BECConnector | None:
+        """
+        Find the nearest ancestor that is RPC-addressable.
+
+        Rules:
+          - If an ancestor has ``rpc_exposed=False``, it is an explicit visibility
+            boundary unless ``rpc_passthrough_children=True``.
+          - If an ancestor has ``RPC=False`` (but remains rpc_exposed), it is treated
+            as structural and children continue to the next ancestor.
+          - Lookup always happens through ``WidgetHierarchy.get_becwidget_ancestor``
+            so plain ``QWidget`` nodes between connectors are ignored.
+        """
+        current = self
+        while True:
+            parent = WidgetHierarchy.get_becwidget_ancestor(current)
+            if parent is None:
+                return None
+
+            if not getattr(parent, "rpc_exposed", True):
+                if getattr(parent, "rpc_passthrough_children", False):
+                    current = parent
+                    continue
+                return parent
+
+            if getattr(parent, "RPC", True):
+                return parent
+
+            current = parent
+        return None
 
     def change_object_name(self, name: str) -> None:
         """
