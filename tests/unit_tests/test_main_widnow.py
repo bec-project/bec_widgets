@@ -109,6 +109,14 @@ def test_show_launcher_creates_launcher_when_missing(bec_main_window):
     assert bec_main_window._launcher_window is launcher
 
 
+def test_hidden_scan_progress_parent_blocks_children_namespace(bec_main_window):
+    hidden_progress = bec_main_window._scan_progress_bar_full
+    nested_progress = hidden_progress.progressbar
+
+    assert hidden_progress.rpc_exposed is False
+    assert nested_progress.parent_id == hidden_progress.gui_id
+
+
 #################################################################
 # Tests for BECMainWindow Addons
 #################################################################

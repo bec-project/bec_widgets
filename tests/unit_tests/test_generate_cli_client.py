@@ -34,6 +34,31 @@ class MockBECFigure:
         """Remove a plot from the figure."""
 
 
+class MockContentWidget:
+    USER_ACCESS = ["list_profiles", "mode", "mode.setter"]
+
+    def list_profiles(self) -> list[str]:
+        """List profiles."""
+        return []
+
+    @property
+    def mode(self) -> str:
+        """Current mode."""
+        return "creator"
+
+    @mode.setter
+    def mode(self, value: str) -> None:
+        _ = value
+
+
+class MockViewWithContent:
+    USER_ACCESS = ["activate"]
+    RPC_CONTENT_CLASS = MockContentWidget
+
+    def activate(self):
+        """Activate view."""
+
+
 def test_client_generator_with_black_formatting():
     generator = ClientGenerator(base=True)
     container = BECClassContainer()
@@ -226,6 +251,16 @@ def test_generate_content_for_class():
     assert "class TestClass(RPCBase):" in generator.content
     assert "def method1(self):" in generator.content
     assert "Test method" in generator.content
+
+
+def test_generate_content_for_class_uses_rpc_content_class_user_access():
+    generator = ClientGenerator()
+    generator.generate_content_for_class(MockViewWithContent)
+
+    assert "def activate(self):" in generator.content
+    assert "def list_profiles(self) -> list[str]:" in generator.content
+    assert "def mode(self) -> str:" in generator.content
+    assert "@mode.setter" in generator.content
 
 
 def test_write_is_black_formatted(tmp_path):

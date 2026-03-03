@@ -164,17 +164,13 @@ class {class_name}(RPCBase):"""
             self.content += f"""
     \"\"\"{class_docs}\"\"\"
     """
-        if not cls.USER_ACCESS:
+        user_access_entries = self._get_user_access_entries(cls)
+        if not user_access_entries:
             self.content += """...
     """
 
-        for method in cls.USER_ACCESS:
-            is_property_setter = False
-            obj = getattr(cls, method, None)
-            if obj is None:
-                obj = getattr(cls, method.split(".setter")[0], None)
-                is_property_setter = True
-                method = method.split(".setter")[0]
+        for method_entry in user_access_entries:
+            method, obj, is_property_setter = self._resolve_method_object(cls, method_entry)
             if obj is None:
                 raise AttributeError(
                     f"Method {method} not found in class {cls.__name__}. "
@@ -215,6 +211,34 @@ class {class_name}(RPCBase):"""
         \"\"\"
 {doc}
         \"\"\""""
+
+    @staticmethod
+    def _get_user_access_entries(cls) -> list[str]:
+        entries = list(getattr(cls, "USER_ACCESS", []))
+        content_cls = getattr(cls, "RPC_CONTENT_CLASS", None)
+        if content_cls is not None:
+            entries.extend(getattr(content_cls, "USER_ACCESS", []))
+        return list(dict.fromkeys(entries))
+
+    @staticmethod
+    def _resolve_method_object(cls, method_entry: str):
+        method_name = method_entry
+        is_property_setter = False
+
+        if method_entry.endswith(".setter"):
+            is_property_setter = True
+            method_name = method_entry.split(".setter")[0]
+
+        candidate_classes = [cls]
+        content_cls = getattr(cls, "RPC_CONTENT_CLASS", None)
+        if content_cls is not None:
+            candidate_classes.append(content_cls)
+
+        for candidate_cls in candidate_classes:
+            obj = getattr(candidate_cls, method_name, None)
+            if obj is not None:
+                return method_name, obj, is_property_setter
+        return method_name, None, is_property_setter
 
     def _rpc_call(self, timeout_info: dict[str, float | None]):
         """

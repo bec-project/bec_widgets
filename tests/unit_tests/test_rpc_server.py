@@ -138,3 +138,36 @@ def test_serialize_result_and_send_max_delay_exceeded(rpc_server, qtbot, dummy_w
             assert args[1] is False  # accepted=False
             assert "error" in args[2]
             assert "Max delay exceeded" in args[2]["error"]
+
+
+def test_run_rpc_delegates_to_rpc_content_class(rpc_server):
+    class Content:
+        USER_ACCESS = ["foo", "mode", "mode.setter"]
+
+        def __init__(self):
+            self._mode = "initial"
+
+        def foo(self):
+            return "ok"
+
+        @property
+        def mode(self):
+            return self._mode
+
+        @mode.setter
+        def mode(self, value):
+            self._mode = value
+
+    class View:
+        RPC_CONTENT_CLASS = Content
+        RPC_CONTENT_ATTR = "content"
+
+        def __init__(self):
+            self.content = Content()
+
+    view = View()
+
+    assert rpc_server.run_rpc(view, "foo", [], {}) == "ok"
+    assert rpc_server.run_rpc(view, "mode", [], {}) == "initial"
+    assert rpc_server.run_rpc(view, "mode", ["creator"], {}) is None
+    assert view.content.mode == "creator"
