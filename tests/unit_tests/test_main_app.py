@@ -4,6 +4,7 @@ from qtpy.QtWidgets import QWidget
 
 from bec_widgets.applications.main_app import BECMainApp
 from bec_widgets.applications.views.view import ViewBase
+from bec_widgets.utils.bec_widget import BECWidget
 
 from .client_mocks import mocked_client
 
@@ -133,7 +134,28 @@ def test_view_switch_method_switches_to_target(app_with_spies, qtbot):
 def test_view_content_widget_is_hidden_from_namespace(app_with_spies):
     app, _, _, _ = app_with_spies
     assert app.dock_area.content is app.dock_area.dock_area
-    assert app.dock_area.content.skip_rpc_namespace is True
+
+
+def test_developer_plotting_area_parent_id_uses_view_namespace(app_with_spies):
+    app, _, _, _ = app_with_spies
+    plotting_area = app.developer_view.developer_widget.plotting_ads
+
+    assert plotting_area.parent_id == app.developer_view.gui_id
+
+
+def test_parent_id_ignores_plain_qwidget_between_connectors(qtbot, mocked_client):
+    class RootConnector(BECWidget, QWidget):
+        RPC = True
+
+    class ChildConnector(BECWidget, QWidget):
+        RPC = True
+
+    root = RootConnector(client=mocked_client)
+    qtbot.addWidget(root)
+    spacer = QWidget(root)
+    child = ChildConnector(parent=spacer, client=mocked_client)
+
+    assert child.parent_id == root.gui_id
 
 
 def test_guided_tour_is_initialized(app_with_spies):

@@ -181,17 +181,57 @@ class RPCServer:
                 obj.show()
                 res = None
             else:
-                method_obj = getattr(obj, method)
+                target_obj, method_obj = self._resolve_rpc_target(obj, method)
                 # check if the method accepts args and kwargs
                 if not callable(method_obj):
                     if not args:
                         res = method_obj
                     else:
-                        setattr(obj, method, args[0])
+                        setattr(target_obj, method, args[0])
                         res = None
                 else:
                     res = method_obj(*args, **kwargs)
         return res
+
+    def _resolve_rpc_target(self, obj, method: str) -> tuple[object, object]:
+        """
+        Resolve a method/property access target for RPC execution.
+
+        Primary target is the object itself. If not found there and the class defines
+        ``RPC_CONTENT_CLASS``, unresolved method names can be delegated to the content
+        widget referenced by ``RPC_CONTENT_ATTR`` (default ``content``), but only when
+        the method is explicitly listed in the content class ``USER_ACCESS``.
+        """
+        if hasattr(obj, method):
+            return obj, getattr(obj, method)
+
+        content_cls = getattr(type(obj), "RPC_CONTENT_CLASS", None)
+        if content_cls is None:
+            raise AttributeError(f"{type(obj).__name__} has no attribute '{method}'")
+
+        content_user_access = set()
+        for entry in getattr(content_cls, "USER_ACCESS", []):
+            if entry.endswith(".setter"):
+                content_user_access.add(entry.split(".setter")[0])
+            else:
+                content_user_access.add(entry)
+
+        if method not in content_user_access:
+            raise AttributeError(f"{type(obj).__name__} has no attribute '{method}'")
+
+        content_attr = getattr(type(obj), "RPC_CONTENT_ATTR", "content")
+        target_obj = getattr(obj, content_attr, None)
+        if target_obj is None:
+            raise AttributeError(
+                f"{type(obj).__name__} has no content target '{content_attr}' for RPC delegation"
+            )
+        if not isinstance(target_obj, content_cls):
+            raise AttributeError(
+                f"{type(obj).__name__}.{content_attr} is not instance of {content_cls.__name__}"
+            )
+        if not hasattr(target_obj, method):
+            raise AttributeError(f"{content_cls.__name__} has no attribute '{method}'")
+        return target_obj, getattr(target_obj, method)
 
     def run_system_rpc(self, method: str, args: list, kwargs: dict):
         if method == "system.launch_dock_area":

@@ -51,6 +51,8 @@ class ViewBase(BECWidget, QWidget):
     RPC = True
     PLUGIN = False
     USER_ACCESS = ["activate"]
+    RPC_CONTENT_CLASS: type[QWidget] | None = None
+    RPC_CONTENT_ATTR = "content"
 
     def __init__(
         self,
