@@ -94,11 +94,11 @@ class DeveloperWidget(DockAreaWidget):
         self.explorer = IDEExplorer(self)
         self.explorer.setObjectName("Explorer")
 
-        self.console = BECShell(self)
+        self.console = BECShell(self, rpc_exposed=False)
         self.console.setObjectName("BEC Shell")
-        self.terminal = WebConsole(self)
+        self.terminal = WebConsole(self, rpc_exposed=False)
         self.terminal.setObjectName("Terminal")
-        self.monaco = MonacoDock(self)
+        self.monaco = MonacoDock(self, rpc_exposed=False, rpc_passthrough_children=False)
         self.monaco.setObjectName("MonacoEditor")
         self.monaco.save_enabled.connect(self._on_save_enabled_update)
         self.plotting_ads = BECDockArea(
