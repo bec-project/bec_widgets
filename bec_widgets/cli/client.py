@@ -1005,6 +1005,16 @@ class DapComboBox(RPCBase):
         """
 
 
+class DeveloperView(RPCBase):
+    """A view for users to write scripts and macros and execute them within the application."""
+
+    @rpc_call
+    def activate(self) -> "None":
+        """
+        Switch the parent application to this view.
+        """
+
+
 class DeviceBrowser(RPCBase):
     """DeviceBrowser is a widget that displays all available devices in the current BEC session."""
 
@@ -1088,6 +1098,239 @@ class DockAreaView(RPCBase):
     def activate(self) -> "None":
         """
         Switch the parent application to this view.
+        """
+
+    @rpc_call
+    def new(
+        self,
+        widget: "QWidget | str",
+        *,
+        closable: "bool" = True,
+        floatable: "bool" = True,
+        movable: "bool" = True,
+        start_floating: "bool" = False,
+        where: "Literal['left', 'right', 'top', 'bottom'] | None" = None,
+        tab_with: "CDockWidget | QWidget | str | None" = None,
+        relative_to: "CDockWidget | QWidget | str | None" = None,
+        show_title_bar: "bool | None" = None,
+        title_buttons: "Mapping[str, bool] | Sequence[str] | str | None" = None,
+        show_settings_action: "bool | None" = None,
+        promote_central: "bool" = False,
+        object_name: "str | None" = None,
+        **widget_kwargs,
+    ) -> "QWidget | BECWidget":
+        """
+        Create a new widget (or reuse an instance) and add it as a dock.
+
+        Args:
+            widget(QWidget | str): Instance or registered widget type string.
+            closable(bool): Whether the dock is closable.
+            floatable(bool): Whether the dock is floatable.
+            movable(bool): Whether the dock is movable.
+            start_floating(bool): Whether to start the dock floating.
+            where(Literal["left", "right", "top", "bottom"] | None): Dock placement hint relative to the dock area (ignored when
+                ``relative_to`` is provided without an explicit value).
+            tab_with(CDockWidget | QWidget | str | None): Existing dock (or widget/name) to tab the new dock alongside.
+            relative_to(CDockWidget | QWidget | str | None): Existing dock (or widget/name) used as the positional anchor.
+                When supplied and ``where`` is ``None``, the new dock inherits the
+                anchor's current dock area.
+            show_title_bar(bool | None): Explicitly show or hide the dock area's title bar.
+            title_buttons(Mapping[str, bool] | Sequence[str] | str | None): Mapping or iterable describing which title bar buttons should
+                remain visible. Provide a mapping of button names (``"float"``,
+                ``"close"``, ``"menu"``, ``"auto_hide"``, ``"minimize"``) to booleans,
+                or a sequence of button names to hide.
+            show_settings_action(bool | None): Control whether a dock settings/property action should
+                be installed. Defaults to ``False`` for the basic dock area; subclasses
+                such as `AdvancedDockArea` override the default to ``True``.
+            promote_central(bool): When True, promote the created dock to be the dock manager's
+                central widget (useful for editor stacks or other root content).
+            object_name(str | None): Optional object name to assign to the created widget.
+            **widget_kwargs: Additional keyword arguments passed to the widget constructor
+                when creating by type name.
+
+        Returns:
+            BECWidget: The created or reused widget instance.
+        """
+
+    @rpc_call
+    def widget_map(self, bec_widgets_only: "bool" = True) -> "dict[str, QWidget]":
+        """
+        Return a dictionary mapping widget names to their corresponding widgets.
+
+        Args:
+            bec_widgets_only(bool): If True, only include widgets that are BECConnector instances.
+        """
+
+    @rpc_call
+    def widget_list(self, bec_widgets_only: "bool" = True) -> "list[QWidget]":
+        """
+        Return a list of widgets contained in the dock area.
+
+        Args:
+            bec_widgets_only(bool): If True, only include widgets that are BECConnector instances.
+        """
+
+    @property
+    @rpc_call
+    def workspace_is_locked(self) -> "bool":
+        """
+        Get or set the lock state of the workspace.
+
+        Returns:
+            bool: True if the workspace is locked, False otherwise.
+        """
+
+    @rpc_call
+    def attach_all(self):
+        """
+        Re-attach floating docks back into the dock manager.
+        """
+
+    @rpc_call
+    def delete_all(self):
+        """
+        Delete all docks and their associated widgets.
+        """
+
+    @rpc_call
+    def delete(self, object_name: "str") -> "bool":
+        """
+        Remove a widget from the dock area by its object name.
+
+        Args:
+            object_name: The object name of the widget to remove.
+
+        Returns:
+            bool: True if the widget was found and removed, False otherwise.
+
+        Raises:
+            ValueError: If no widget with the given object name is found.
+
+        Example:
+            >>> dock_area.delete("my_widget")
+            True
+        """
+
+    @rpc_call
+    def set_layout_ratios(
+        self,
+        *,
+        horizontal: "Sequence[float] | Mapping[int | str, float] | None" = None,
+        vertical: "Sequence[float] | Mapping[int | str, float] | None" = None,
+        splitter_overrides: "Mapping[int | str | Sequence[int], Sequence[float] | Mapping[int | str, float]] | None" = None,
+    ) -> "None":
+        """
+        Adjust splitter ratios in the dock layout.
+
+        Args:
+            horizontal: Weights applied to every horizontal splitter encountered.
+            vertical: Weights applied to every vertical splitter encountered.
+            splitter_overrides: Optional overrides targeting specific splitters identified
+                by their index path (e.g. ``{0: [1, 2], (1, 0): [3, 5]}``). Paths are zero-based
+                indices following the splitter hierarchy, starting from the root splitter.
+
+        Example:
+            To build three columns with custom per-column ratios::
+
+                area.set_layout_ratios(
+                    horizontal=[1, 2, 1],             # column widths
+                    splitter_overrides={
+                        0: [1, 2],                    # column 0 (two rows)
+                        1: [3, 2, 1],                 # column 1 (three rows)
+                        2: [1],                       # column 2 (single row)
+                    },
+                )
+        """
+
+    @rpc_call
+    def describe_layout(self) -> "list[dict[str, Any]]":
+        """
+        Return metadata describing splitter paths, orientations, and contained docks.
+
+        Useful for determining the keys to use in `set_layout_ratios(splitter_overrides=...)`.
+        """
+
+    @property
+    @rpc_call
+    def mode(self) -> "str":
+        """
+        None
+        """
+
+    @mode.setter
+    @rpc_call
+    def mode(self) -> "str":
+        """
+        None
+        """
+
+    @rpc_call
+    def list_profiles(self) -> "list[str]":
+        """
+        List available workspace profiles in the current namespace.
+
+        Returns:
+            list[str]: List of profile names.
+        """
+
+    @rpc_timeout(None)
+    @rpc_call
+    def save_profile(
+        self,
+        name: "str | None" = None,
+        *,
+        show_dialog: "bool" = False,
+        quick_select: "bool | None" = None,
+    ):
+        """
+        Save the current workspace profile.
+
+        On first save of a given name:
+          - writes a default copy to states/default/<name>.ini with tag=default and created_at
+          - writes a user copy   to states/user/<name>.ini    with tag=user    and created_at
+        On subsequent saves of user-owned profiles:
+          - updates both the default and user copies so restore uses the latest snapshot.
+        Read-only bundled profiles cannot be overwritten.
+
+        Args:
+            name (str | None): The name of the profile to save. If None and show_dialog is True,
+                prompts the user.
+            show_dialog (bool): If True, shows the SaveProfileDialog for user interaction.
+                If False (default), saves directly without user interaction (useful for CLI usage).
+            quick_select (bool | None): Whether to include the profile in quick selection.
+                If None (default), uses the existing value or True for new profiles.
+                Only used when show_dialog is False; otherwise the dialog provides the value.
+        """
+
+    @rpc_timeout(None)
+    @rpc_call
+    def load_profile(self, name: "str | None" = None):
+        """
+        Load a workspace profile.
+
+        Before switching, persist the current profile to the user copy.
+        Prefer loading the user copy; fall back to the default copy.
+
+        Args:
+            name (str | None): The name of the profile to load. If None, prompts the user.
+        """
+
+    @rpc_call
+    def delete_profile(self, name: "str | None" = None, show_dialog: "bool" = False) -> "bool":
+        """
+        Delete a workspace profile.
+
+        Args:
+            name: The name of the profile to delete. If None, uses the currently
+                selected profile from the toolbar combo box (for UI usage).
+            show_dialog: If True, show confirmation dialog before deletion.
+                Defaults to False for CLI/programmatic usage.
+
+        Returns:
+            bool: True if the profile was deleted, False otherwise.
+
+        Raises:
+            ValueError: If the profile is read-only or doesn't exist (when show_dialog=False).
         """
 
 

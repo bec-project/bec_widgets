@@ -9,6 +9,8 @@ class DockAreaView(ViewBase):
     Modular dock area view for arranging and managing multiple dockable widgets.
     """
 
+    RPC_CONTENT_CLASS = BECDockArea
+
     def __init__(
         self,
         parent: QWidget | None = None,
@@ -20,6 +22,10 @@ class DockAreaView(ViewBase):
     ):
         super().__init__(parent=parent, content=content, view_id=view_id, title=title, **kwargs)
         self.dock_area = BECDockArea(
-            self, profile_namespace="bec", auto_profile_namespace=False, object_name="DockArea"
+            self,
+            profile_namespace="bec",
+            auto_profile_namespace=False,
+            object_name="DockArea",
+            rpc_exposed=False,
         )
         self.set_content(self.dock_area)
