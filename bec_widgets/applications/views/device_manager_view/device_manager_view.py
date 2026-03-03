@@ -24,8 +24,17 @@ class DeviceManagerView(ViewBase):
         title: str | None = None,
         **kwargs,
     ):
-        super().__init__(parent=parent, content=content, view_id=view_id, title=title, **kwargs)
-        self.device_manager_widget = DeviceManagerWidget(parent=self)
+        super().__init__(
+            parent=parent,
+            content=content,
+            view_id=view_id,
+            title=title,
+            rpc_passthrough_children=False,
+            **kwargs,
+        )
+        self.device_manager_widget = DeviceManagerWidget(
+            parent=self, rpc_exposed=False, rpc_passthrough_children=False
+        )
         self.set_content(self.device_manager_widget)
 
     @SafeSlot()

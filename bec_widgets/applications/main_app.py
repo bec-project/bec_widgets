@@ -10,8 +10,8 @@ from bec_widgets.applications.views.device_manager_view.device_manager_view impo
 from bec_widgets.applications.views.dock_area_view.dock_area_view import DockAreaView
 from bec_widgets.applications.views.view import ViewBase, WaveformViewInline, WaveformViewPopup
 from bec_widgets.utils.colors import apply_theme
-from bec_widgets.utils.name_utils import sanitize_namespace
 from bec_widgets.utils.guided_tour import GuidedTour
+from bec_widgets.utils.name_utils import sanitize_namespace
 from bec_widgets.utils.screen_utils import (
     apply_centered_size,
     available_screen_geometry,

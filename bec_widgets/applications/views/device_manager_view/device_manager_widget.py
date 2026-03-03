@@ -22,8 +22,8 @@ class DeviceManagerWidget(BECWidget, QtWidgets.QWidget):
 
     RPC = False
 
-    def __init__(self, parent=None, client=None):
-        super().__init__(parent=parent, client=client)
+    def __init__(self, parent=None, client=None, **kwargs):
+        super().__init__(parent=parent, client=client, **kwargs)
         self.stacked_layout = QtWidgets.QStackedLayout()
         self.stacked_layout.setContentsMargins(0, 0, 0, 0)
         self.stacked_layout.setSpacing(0)
