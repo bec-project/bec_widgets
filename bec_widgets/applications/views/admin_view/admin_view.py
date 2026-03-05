@@ -18,10 +18,10 @@ class AdminView(ViewBase):
         parent: QWidget | None = None,
         content: QWidget | None = None,
         *,
-        id: str | None = None,
+        view_id: str | None = None,
         title: str | None = None,
     ):
-        super().__init__(parent=parent, content=content, id=id, title=title)
+        super().__init__(parent=parent, content=content, view_id=view_id, title=title)
         self.admin_widget = BECAtlasAdminView(parent=self)
         self.set_content(self.admin_widget)
 

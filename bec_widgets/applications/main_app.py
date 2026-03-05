@@ -85,7 +85,6 @@ class BECMainApp(BECMainWindow):
             icon="admin_panel_settings",
             title="Admin View",
             widget=self.admin_view,
-            id="admin_view",
             mini_text="Admin",
             from_top=False,
         )
