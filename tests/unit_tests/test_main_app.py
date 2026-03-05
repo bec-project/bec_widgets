@@ -136,11 +136,11 @@ def test_view_content_widget_is_hidden_from_namespace(app_with_spies):
     assert app.dock_area.content is app.dock_area.dock_area
 
 
-def test_developer_plotting_area_parent_id_uses_view_namespace(app_with_spies):
-    app, _, _, _ = app_with_spies
-    plotting_area = app.developer_view.developer_widget.plotting_ads
-
-    assert plotting_area.parent_id == app.developer_view.gui_id
+# def test_developer_plotting_area_parent_id_uses_view_namespace(app_with_spies): #TODO temp disabled due to disabled IDE view
+#     app, _, _, _ = app_with_spies
+#     plotting_area = app.developer_view.developer_widget.plotting_ads
+#
+#     assert plotting_area.parent_id == app.developer_view.gui_id
 
 
 def test_parent_id_ignores_plain_qwidget_between_connectors(qtbot, mocked_client):
@@ -193,9 +193,9 @@ def test_views_can_extend_guided_tour(app_with_spies):
     assert hasattr(app.device_manager, "register_tour_steps")
     assert callable(app.device_manager.register_tour_steps)
 
-    # Check that developer view has register_tour_steps method
-    assert hasattr(app.developer_view, "register_tour_steps")
-    assert callable(app.developer_view.register_tour_steps)
+    # Check that developer view has register_tour_steps method #TODO temp disabled due to disabled IDE view
+    # assert hasattr(app.developer_view, "register_tour_steps")
+    # assert callable(app.developer_view.register_tour_steps)
 
     # Verify that calling register_tour_steps returns ViewTourSteps or None
     dm_tour = app.device_manager.register_tour_steps(app.guided_tour, app)
@@ -204,29 +204,29 @@ def test_views_can_extend_guided_tour(app_with_spies):
         assert hasattr(dm_tour, "step_ids")
         assert isinstance(dm_tour.step_ids, list)
 
-    ide_tour = app.developer_view.register_tour_steps(app.guided_tour, app)
-    if ide_tour is not None:
-        assert hasattr(ide_tour, "view_title")
-        assert hasattr(ide_tour, "step_ids")
-        assert isinstance(ide_tour.step_ids, list)
+    # ide_tour = app.developer_view.register_tour_steps(app.guided_tour, app)  #TODO temp disabled due to disabled IDE view
+    # if ide_tour is not None:
+    #     assert hasattr(ide_tour, "view_title")
+    #     assert hasattr(ide_tour, "step_ids")
+    #     assert isinstance(ide_tour.step_ids, list)
 
     # Get all registered widgets
     widgets = app.guided_tour.get_registered_widgets()
 
     # pylint: disable=protected-access
-    # Test that ide_tour has valid steps and targets
-    for step_id in ide_tour.step_ids:
-        assert step_id in widgets
-        tour_step = widgets.get(step_id)
-        target, text = app.guided_tour._resolve_step_target(tour_step)
-        assert isinstance(text, str)
-        assert text != ""
-        if target is not None:  # If step should be skipped
-            highlighted_rect = app.guided_tour._get_highlight_rect(app, target, tour_step["title"])
-            if (
-                highlighted_rect is not None
-            ):  # If widget is not visible, it will be skipped and return None
-                assert isinstance(highlighted_rect, QRect)
+    # Test that ide_tour has valid steps and targets #TODO temp disabled due to disabled IDE view
+    # for step_id in ide_tour.step_ids:
+    #     assert step_id in widgets
+    #     tour_step = widgets.get(step_id)
+    #     target, text = app.guided_tour._resolve_step_target(tour_step)
+    #     assert isinstance(text, str)
+    #     assert text != ""
+    #     if target is not None:  # If step should be skipped
+    #         highlighted_rect = app.guided_tour._get_highlight_rect(app, target, tour_step["title"])
+    #         if (
+    #             highlighted_rect is not None
+    #         ):  # If widget is not visible, it will be skipped and return None
+    #             assert isinstance(highlighted_rect, QRect)
 
     # Test that dm_tour has valid steps and targets, test it once
     # with _initialized = True and False. This leads to different tour paths.
