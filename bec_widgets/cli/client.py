@@ -89,6 +89,16 @@ except ImportError as e:
     logger.error(f"Failed loading plugins: \n{reduce(add, traceback.format_exception(e))}")
 
 
+class AdminView(RPCBase):
+    """A view for administrators to change the current active experiment, manage messaging"""
+
+    @rpc_call
+    def activate(self) -> "None":
+        """
+        Switch the parent application to this view.
+        """
+
+
 class AutoUpdates(RPCBase):
     @property
     @rpc_call
