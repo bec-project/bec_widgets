@@ -62,8 +62,7 @@ class BECMainApp(BECMainWindow):
         self.add_section("BEC Applications", "bec_apps")
         self.dock_area = DockAreaView(self)
         self.device_manager = DeviceManagerView(self)
-        self.developer_view = DeveloperView(self)
-
+        # self.developer_view = DeveloperView(self) #TODO temporary disable until the bugs with BECShell are resolved
         self.add_view(icon="widgets", title="Dock Area", widget=self.dock_area, mini_text="Docks")
         self.add_view(
             icon="display_settings",
@@ -71,13 +70,14 @@ class BECMainApp(BECMainWindow):
             widget=self.device_manager,
             mini_text="DM",
         )
-        self.add_view(
-            icon="code_blocks",
-            title="IDE",
-            widget=self.developer_view,
-            mini_text="IDE",
-            exclusive=True,
-        )
+        # TODO temporary disable until the bugs with BECShell are resolved
+        # self.add_view(
+        #     icon="code_blocks",
+        #     title="IDE",
+        #     widget=self.developer_view,
+        #     mini_text="IDE",
+        #     exclusive=True,
+        # )
 
         if self._show_examples:
             self.add_section("Examples", "examples")
