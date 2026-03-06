@@ -1,7 +1,7 @@
 import json
 from typing import Any, Callable, Generator, Iterable, TypeVar
 
-from bec_lib.utils.json import ExtendedEncoder
+from bec_lib.utils.json_extended import ExtendedEncoder
 from qtpy.QtCore import QByteArray, QMimeData, QObject, Signal  # type: ignore
 from qtpy.QtWidgets import QListWidgetItem
 
