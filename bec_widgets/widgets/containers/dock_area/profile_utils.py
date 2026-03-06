@@ -1,5 +1,5 @@
 """
-Utilities for managing AdvancedDockArea profiles stored in INI files.
+Utilities for managing BECDockArea profiles stored in INI files.
 
 Policy:
 - All created/modified profiles are stored under the BEC settings root: <base_path>/profiles/{default,user}
@@ -36,12 +36,12 @@ ProfileOrigin = Literal["module", "plugin", "settings", "unknown"]
 
 def module_profiles_dir() -> str:
     """
-    Return the built-in AdvancedDockArea profiles directory bundled with the module.
+    Return the built-in BECDockArea profiles directory bundled with the module.
 
     Returns:
         str: Absolute path of the read-only module profiles directory.
     """
-    return os.path.join(MODULE_PATH, "containers", "advanced_dock_area", "profiles")
+    return os.path.join(MODULE_PATH, "containers", "dock_area", "profiles")
 
 
 @lru_cache(maxsize=1)

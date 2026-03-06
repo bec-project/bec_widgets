@@ -136,10 +136,7 @@ class BECDockArea(DockAreaWidget):
         self._profile_management_enabled = enable_profile_management
         self._startup_profile = self._normalize_startup_profile(startup_profile)
         super().__init__(
-            parent,
-            default_add_direction=default_add_direction,
-            title="Advanced Dock Area",
-            **kwargs,
+            parent, default_add_direction=default_add_direction, title="BEC Dock Area", **kwargs
         )
 
         # Initialize mode property first (before toolbar setup)
@@ -168,7 +165,7 @@ class BECDockArea(DockAreaWidget):
 
         # State manager
         self.state_manager = WidgetStateManager(
-            self, serialize_from_root=True, root_id="AdvancedDockArea"
+            self, serialize_from_root=True, root_id="BECDockArea"
         )
 
         # Developer mode state
@@ -304,7 +301,7 @@ class BECDockArea(DockAreaWidget):
                 or a sequence of button names to hide.
             show_settings_action(bool | None): Control whether a dock settings/property action should
                 be installed. Defaults to ``False`` for the basic dock area; subclasses
-                such as `AdvancedDockArea` override the default to ``True``.
+                such as `BECDockArea` override the default to ``True``.
             promote_central(bool): When True, promote the created dock to be the dock manager's
                 central widget (useful for editor stacks or other root content).
             object_name(str | None): Optional object name to assign to the created widget.
