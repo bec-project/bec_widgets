@@ -1,6 +1,598 @@
 # CHANGELOG
 
 
+## v3.0.0 (2026-03-06)
+
+### Bug Fixes
+
+- 'any' type annotations
+  ([`9c4a544`](https://github.com/bec-project/bec_widgets/commit/9c4a54493adc94afe5d43db5e8cbb8d565670af2))
+
+- Add metadata to scan control export
+  ([`17e678b`](https://github.com/bec-project/bec_widgets/commit/17e678b0ad1739490e901f3dbf7180d99c96950c))
+
+- Address copilot review
+  ([`a1a400f`](https://github.com/bec-project/bec_widgets/commit/a1a400f5409213ee1ab2f7cc9f8da7a2b612972d))
+
+- Adjust ring progress bar to ads
+  ([`7fd7f67`](https://github.com/bec-project/bec_widgets/commit/7fd7f67857e23b04759cf23993a99f4701121f95))
+
+- Don't wait forever
+  ([`c1d0e43`](https://github.com/bec-project/bec_widgets/commit/c1d0e435d5dd9965dbafd5bf469327c7f7620cfd))
+
+- Removal of old BECDock import
+  ([`92ae5fc`](https://github.com/bec-project/bec_widgets/commit/92ae5fc7fbf3a55068e2b42d3f66134baeb71766))
+
+- Remove manual stylesheet deletion/override
+  ([`8bbd519`](https://github.com/bec-project/bec_widgets/commit/8bbd519559c857cdc9f51e9507994e7aa4b07af1))
+
+- Remove singleShots from BECConnector and adjustments of dock area logic
+  ([`e26a90c`](https://github.com/bec-project/bec_widgets/commit/e26a90c62fa6c176bf4425867d1cb895a6fad7cd))
+
+- Sanitize name space util for bec connector and ads
+  ([`beca23e`](https://github.com/bec-project/bec_widgets/commit/beca23e14e18445f6ee440e8c55b57f4180a36c9))
+
+- Tooltip logic and disable button on running scan
+  ([`fa56fc8`](https://github.com/bec-project/bec_widgets/commit/fa56fc88026521f6f13690c4ec621c79e318f434))
+
+- **_OverlayEventFilter**: Fix typo
+  ([`a9f92cf`](https://github.com/bec-project/bec_widgets/commit/a9f92cf15547d207a614a1ed08b5d763a569fe59))
+
+- **advanced_dock_area**: Cli API adjustments docs + names
+  ([`6883982`](https://github.com/bec-project/bec_widgets/commit/6883982bf67c5fff02d72fbe39425af39bc3a65e))
+
+- **advanced_dock_area**: Empty profile is always empty
+  ([`aba67d3`](https://github.com/bec-project/bec_widgets/commit/aba67d3129581c85467ddd83211a03ea51c157a3))
+
+- **advanced_dock_area**: Ensure the general profile exists when launched first time
+  ([`7d2760e`](https://github.com/bec-project/bec_widgets/commit/7d2760eab8e5494992adb1452705f58619842d30))
+
+- **advanced_dock_area**: New profiles are saved with quickselect as default
+  ([`0d6b94a`](https://github.com/bec-project/bec_widgets/commit/0d6b94aaecb56e51bdc1ff930079b6c5535798de))
+
+- **advanced_dock_area**: Profile behaviour adjusted, cleanup of the codebase
+  ([`22df7bb`](https://github.com/bec-project/bec_widgets/commit/22df7bb5320c3b1808ab21e6354350838f5acb63))
+
+- **advanced_dock_area**: Remove all widgets when loading new profiles
+  ([`b841cfb`](https://github.com/bec-project/bec_widgets/commit/b841cfbc5f5021c1f9bea03e7fe88713506f66a7))
+
+- **advanced_dock_area**: Remove widget from dock area by object name
+  ([`8f44213`](https://github.com/bec-project/bec_widgets/commit/8f44213ecccca882f22b8738baef28b68d99c381))
+
+- **advanced_dock_area**: Removed non-functional dock_list and dock_map from RPC
+  ([`88b6e01`](https://github.com/bec-project/bec_widgets/commit/88b6e015bf1ab3b56db843ec13a6473ad67c4acc))
+
+- **advanced_dock_area**: Removed the singleShot for load_initial_profile
+  ([`3236dfb`](https://github.com/bec-project/bec_widgets/commit/3236dfb07f477fb87bcbcd0ee983781d5281beb6))
+
+- **advanced_dock_area**: Replace sanitize_namespace with slugify
+  ([`013b916`](https://github.com/bec-project/bec_widgets/commit/013b916ca3beb7a47db9009b9e07250ae52979b1))
+
+- **basic_dock_area**: Delete_all will also delete floating docks
+  ([`6b2b42f`](https://github.com/bec-project/bec_widgets/commit/6b2b42f21afa98d4ee5cb9d969aaa21cfc633f4e))
+
+- **basic_dock_area**: Removed the singleShot usage
+  ([`6cff8d7`](https://github.com/bec-project/bec_widgets/commit/6cff8d7a41f6f08908c3dd20fd563ab2612976e3))
+
+- **bec_connector**: Use RPC register to fetch all connections
+  ([`56b1e66`](https://github.com/bec-project/bec_widgets/commit/56b1e6687f4ce56e7c836678d397d1ca0fbec459))
+
+- **bec_connector**: Widget_removed and name_established signals added
+  ([`389a93f`](https://github.com/bec-project/bec_widgets/commit/389a93f8d07d44c17772e6183ee129db7692bd89))
+
+- **bec_widget**: Improved qt enums; grab safeguard
+  ([`f38cd3e`](https://github.com/bec-project/bec_widgets/commit/f38cd3e3a043151ce25f91d9a6b325a6c6ac5103))
+
+- **bec_widgets**: Adapt to bec_qthemes 1.0; themes can be only applied on living Qt objects
+  ([`b0cd619`](https://github.com/bec-project/bec_widgets/commit/b0cd619d7dff8f7ce7bc37ea6acea9473b2273d8))
+
+- **becconnector**: Ophyd thread killer on exit + in conftest
+  ([`0b9e5c1`](https://github.com/bec-project/bec_widgets/commit/0b9e5c15afb8b6f271992cb70c235c2be44c24a8))
+
+- **becconnector**: Sanitize the setObjectName from qobject inheritance
+  ([`7507f27`](https://github.com/bec-project/bec_widgets/commit/7507f27d686300a2b42c80dc06f3c78142c7ef84))
+
+- **busy-loader**: Adjust busy loader and tests
+  ([`94faaba`](https://github.com/bec-project/bec_widgets/commit/94faaba24d45a1ff971879486fa044fce49d2d5c))
+
+- **CLI**: Change the default behavior of launching the profiles in CLI
+  ([`b43b6e8`](https://github.com/bec-project/bec_widgets/commit/b43b6e844b4f178f9636b325aee0ce4fa2152199))
+
+- **CLI**: Dock_area can be created from CLI with specific profile or empty
+  ([`9c66dd5`](https://github.com/bec-project/bec_widgets/commit/9c66dd59914e2c8964f811f4e7e522fd3ae75633))
+
+- **cli**: Rpc API from any folder
+  ([`b29648e`](https://github.com/bec-project/bec_widgets/commit/b29648e10b0ea7931ad216221f231b77ab8998d8))
+
+- **client**: Abort, reset, stop button removed from RPC access
+  ([`c923f79`](https://github.com/bec-project/bec_widgets/commit/c923f7929370c3ac721dfa84d7cafcd0aa406c92))
+
+- **client**: Client API regenerated
+  ([`7083f94`](https://github.com/bec-project/bec_widgets/commit/7083f94f467ad4d40bea57dcdc96c75aa3690910))
+
+- **client_utils**: Delete is deleting window and its content
+  ([`be55bf2`](https://github.com/bec-project/bec_widgets/commit/be55bf20c1295c1e710457638c1bc7154b23011e))
+
+- **client_utils**: Safeguard for accessing gui.new and launcher if GUIServer not running
+  ([`4d41be6`](https://github.com/bec-project/bec_widgets/commit/4d41be61b546931c728b584f190aa4de3f418dd3))
+
+- **colors**: Added logger to the apply theme
+  ([`1f363d9`](https://github.com/bec-project/bec_widgets/commit/1f363d9bd4e6f7a01edcbe5d0049560459d184d0))
+
+- **colors**: More benevolent fetching of colormap names, avoid hardcoded wrong colormap mapping
+  from GradientWidget from pg
+  ([`cd9c7ab`](https://github.com/bec-project/bec_widgets/commit/cd9c7ab079bee1623a93ff63142cac8ebf61facd))
+
+- **dark_mode_button**: Rpc access disabled
+  ([`4fc2522`](https://github.com/bec-project/bec_widgets/commit/4fc252220d3a22f52b1148ba64045f5884d59182))
+
+- **dark_mode_button**: Skip settings added
+  ([`1c18810`](https://github.com/bec-project/bec_widgets/commit/1c18810e5faf0de96bb7381db3d8c4bcd2596596))
+
+- **developer widget**: Save before executing a scripts
+  ([`d085f65`](https://github.com/bec-project/bec_widgets/commit/d085f651532f84e720506745dbd44b80fb05a4be))
+
+- **device-form-dialog**: Adapt device-form-dialog ophyd validation test
+  ([`36be529`](https://github.com/bec-project/bec_widgets/commit/36be5292da1a2c30ef9a8493ad49f361d878c23a))
+
+- **device-form-dialog**: Adapt DeviceFormDialog to run validation of config upon editing/adding a
+  config, and forward validation results
+  ([`7c28364`](https://github.com/bec-project/bec_widgets/commit/7c283645948999f6a6b2e480418e5c8c7f158fb5))
+
+- **device-init-progress-bar**: Fix ui format for device init progressbar
+  ([`caba3a5`](https://github.com/bec-project/bec_widgets/commit/caba3a55f3a7a62a74f8f36b14a960e9c0fe0981))
+
+- **device-manager**: Fix minor icon synchronization bugs
+  ([`1d654bd`](https://github.com/bec-project/bec_widgets/commit/1d654bd8bdaac581a934cb9bab5a64a9021b4972))
+
+- **device-manager-display-widget**: Fix error message popup on cancelling upload
+  ([`fa49322`](https://github.com/bec-project/bec_widgets/commit/fa49322d1fd94ec4235c435dd6ca5e5234cd6bcc))
+
+- **device-manager-display-widget**: Remove devices from ophyd validation after upload to BEC
+  ([`7805c7a`](https://github.com/bec-project/bec_widgets/commit/7805c7a1916d8d153881eaf6b96825a010ad6a9c))
+
+- **device-progress-bar**: Remove stretch in content layout
+  ([`3fe6a00`](https://github.com/bec-project/bec_widgets/commit/3fe6a00708c459595b2eedb2a902c4ca5cae7171))
+
+- **device_combobox**: Public flag for valid input
+  ([`6c73307`](https://github.com/bec-project/bec_widgets/commit/6c73307bb43dfc2ae6181bd4be3854b7e198eb1d))
+
+- **device_input_widgets**: Removed RPC access
+  ([`940face`](https://github.com/bec-project/bec_widgets/commit/940face1187a0d3480ca3d64c061550271ff54e4))
+
+- **dock_area**: Profile management with empty profile, applied across the whole repo
+  ([`963941a`](https://github.com/bec-project/bec_widgets/commit/963941a788c1ce8a5def15b9a9d930ef9c62f41e))
+
+- **dock_area**: Tabbed dock have correct parent
+  ([`a632f35`](https://github.com/bec-project/bec_widgets/commit/a632f35c40e8323378f2464a6a82a484edf4ff33))
+
+- **dock_area**: The old BECDockArea(pg) removed and replaces by AdvancedDockArea(ADS)
+  ([`a6583ad`](https://github.com/bec-project/bec_widgets/commit/a6583ad53f6a1004af1a87904517d97a52801116))
+
+- **dock_area**: Widget_map and widget_list by default returns only becconnector based widgets
+  ([`3a5317b`](https://github.com/bec-project/bec_widgets/commit/3a5317be53d21130203a534b0dbf6bbef2d1a1c8))
+
+- **editors**: Vscode widget removed
+  ([`48387c0`](https://github.com/bec-project/bec_widgets/commit/48387c0ad9234f5f7600644eb12fa12c6d29efa7))
+
+- **FakeDevice**: Add _info dict
+  ([`2992939`](https://github.com/bec-project/bec_widgets/commit/2992939b0fa504418fe06173c11702e9dd4f3ce2))
+
+- **general_app**: Old general app example removed
+  ([`3ebac55`](https://github.com/bec-project/bec_widgets/commit/3ebac55e2d6aabf971d818fddb53430a690a7392))
+
+- **guided-tour**: Fix skip past invalid step for 'prev' step
+  ([`7bcdc31`](https://github.com/bec-project/bec_widgets/commit/7bcdc31f119b7b0996c7eac75008cef0b6e880ff))
+
+- **heatmap**: Devices are saved as SafeProperties
+  ([`6baf196`](https://github.com/bec-project/bec_widgets/commit/6baf1962faa0628ba872790e6cb34565bc7d0d7c))
+
+- **heatmap**: Interpolation of the image moved to separate thread
+  ([`323c8d5`](https://github.com/bec-project/bec_widgets/commit/323c8d5bc00f12b2d032f3da5daa47ef3e4774bc))
+
+- **heatmap**: Interpolation thread is killed only on exit, logger for dandling thread
+  ([`6fc524c`](https://github.com/bec-project/bec_widgets/commit/6fc524c819903eedd690adcb09f7aa70ee4d2248))
+
+- **launch_window**: Argument to start with the gui class
+  ([`3c16909`](https://github.com/bec-project/bec_widgets/commit/3c16909a875337efdec9e984f952c390ce99cfb4))
+
+- **launch_window**: Launch geometry for widgets launched from launcher to 80% of the primary screen
+  as default
+  ([`6459281`](https://github.com/bec-project/bec_widgets/commit/6459281387c8f1287347b9569a77aa1e9444013c))
+
+- **launch_window**: Logic for showing launcher
+  ([`d9b7285`](https://github.com/bec-project/bec_widgets/commit/d9b728584fb7e96ebac1c0f29f713290c0092556))
+
+- **launch_window**: Processevents removed
+  ([`c61d00e`](https://github.com/bec-project/bec_widgets/commit/c61d00e761851a67003921c2ad689238e360ad77))
+
+- **main_app**: Center the application window on the screen
+  ([`96a52a0`](https://github.com/bec-project/bec_widgets/commit/96a52a0cb0fb248e83303ee89182fe4ebeb29e75))
+
+- **main_app**: Dock area from main app shares the workspace name with the CLI one to reuse the
+  profiles created in the cli companion window
+  ([`06745e0`](https://github.com/bec-project/bec_widgets/commit/06745e0511d3ad4e261119118c7767f92bd884a5))
+
+- **main_app**: Refactor main function and update script entry point in pyproject.toml
+  ([`7ccfcc9`](https://github.com/bec-project/bec_widgets/commit/7ccfcc9f52c6ddaf65c350d474bac7260e3dd059))
+
+- **main_app**: Rpc access refined
+  ([`5bcf440`](https://github.com/bec-project/bec_widgets/commit/5bcf440be7172f8c3cadc7cd1d95251c176d33d1))
+
+- **main_app**: Temporarily disable IDE view
+  ([`bfc9f19`](https://github.com/bec-project/bec_widgets/commit/bfc9f1947234b87835d2cde87f961a00b1a0990d))
+
+- **main_app**: The dock area view implemented as a viewBase
+  ([`ab9688d`](https://github.com/bec-project/bec_widgets/commit/ab9688d2b551e4b3525fe9aed76afd772b835b05))
+
+- **main_window**: Cleanup adjusted with shiboken6
+  ([`06cb187`](https://github.com/bec-project/bec_widgets/commit/06cb187d1a030e24d62c5a8e01978ba68f4812df))
+
+- **main_window**: Delete on close
+  ([`522934f`](https://github.com/bec-project/bec_widgets/commit/522934f8cd814c07fde8c62635f2f63ed716e00e))
+
+- **main_window**: Parent fixed for notification broker
+  ([`947bf63`](https://github.com/bec-project/bec_widgets/commit/947bf63e03b3cbdfe2fd8ab803c83175c7bc599b))
+
+- **main_window**: Removed general forced cleanup
+  ([`cab4227`](https://github.com/bec-project/bec_widgets/commit/cab422777c50151b94da71a45a9bda0e1ce2804d))
+
+- **main_window**: Safeguard of fetching the launcher from the main window if GUIServer is not
+  running
+  ([`f8be437`](https://github.com/bec-project/bec_widgets/commit/f8be43741a5c100a976d2f84c3dc7607938c847e))
+
+- **main_window**: Scan progress bar rpc not exposed
+  ([`04b448e`](https://github.com/bec-project/bec_widgets/commit/04b448e1832796616002a1ea26028e3d42aca9b1))
+
+- **monaco dock**: Update last focused editor when closing
+  ([`3631fc2`](https://github.com/bec-project/bec_widgets/commit/3631fc26499853015ff58283c2b8913aa9a36334))
+
+- **monaco widget**: Reset current_file
+  ([`c53d4c0`](https://github.com/bec-project/bec_widgets/commit/c53d4c0ad7b4c423eaa13828e2b38a04751f148e))
+
+- **monaco_dock**: Update editor metadata handling and improve open_file method
+  ([`3136477`](https://github.com/bec-project/bec_widgets/commit/31364772bd7fcccbc118061d0b601a9f1121bcb0))
+
+- **motor_map**: X/y motor are saved in properties
+  ([`96060fc`](https://github.com/bec-project/bec_widgets/commit/96060fca53f3426dbc43f1ae5d8ebdd7acc39100))
+
+- **ophyd-validation**: Add device_manager_ds argument if available for ophyd validation
+  ([`338ff45`](https://github.com/bec-project/bec_widgets/commit/338ff455cccfc1e8a3b0638fdcc4f1d807f0b6ca))
+
+- **positioner_box**: Layout HV centered and size taken from the ui file
+  ([`6113deb`](https://github.com/bec-project/bec_widgets/commit/6113debc6c1d95a50b7522144fdc820380ae2e28))
+
+- **qt_ads**: Pythons stubs match structure of PySide6QtAds
+  ([`2f9d6d5`](https://github.com/bec-project/bec_widgets/commit/2f9d6d59eee32e373acc0df8a38b426d8142562b))
+
+- **rpc**: Rpc flags adjustment for MainApp and DeveloperWidget
+  ([`5b15c75`](https://github.com/bec-project/bec_widgets/commit/5b15c75b88707f450bfa194d9eed3d726e101981))
+
+- **rpc_register**: Listing only valid connections
+  ([`38eb244`](https://github.com/bec-project/bec_widgets/commit/38eb2441cdf677939354c7066f854c22cf261932))
+
+- **rpc_server**: Add check for rpc_exposed to serialize_object
+  ([`0eabd0f`](https://github.com/bec-project/bec_widgets/commit/0eabd0f72be6247073382d0df02776d30c35a1aa))
+
+- **rpc_server**: Removed unused get _get_becwidget_ancestor
+  ([`047ff2b`](https://github.com/bec-project/bec_widgets/commit/047ff2bef77ca14f060b3b0bc21f78b880535faa))
+
+- **rpc_server**: Use single shot instead of processEvents to avoid dead locks
+  ([`84d6653`](https://github.com/bec-project/bec_widgets/commit/84d6653d1993dd4bebb98fcbf0d1a0dd94119502))
+
+- **scatter waveform**: Fix tab order for settings panel
+  ([`08e1985`](https://github.com/bec-project/bec_widgets/commit/08e19858eadb738358465c9f2a202529d1ccbe45))
+
+- **scatter_waveform**: Devices and entries saved as properties
+  ([`7ab8e0c`](https://github.com/bec-project/bec_widgets/commit/7ab8e0c2ed4f1b49e943f7ec64d3984ede6e134a))
+
+- **scatter_waveform**: Modernization of scatter waveform settings dialog
+  ([`dea73a9`](https://github.com/bec-project/bec_widgets/commit/dea73a97c9f78560e9f11290ba442152cc955057))
+
+- **scatter_waveform**: Remove curve_json from the properties
+  ([`f6712e8`](https://github.com/bec-project/bec_widgets/commit/f6712e8bb855566ca0f308ae3d5bf5109d98d792))
+
+- **screen_utils**: Screen utilities added and fixed sizing for widgets from launch window and main
+  app
+  ([`fb55e72`](https://github.com/bec-project/bec_widgets/commit/fb55e72713a2209575c555c9dd8c025a0349e795))
+
+- **server**: Gui server can reach shutdown, logic moved to becconnector
+  ([`0d05839`](https://github.com/bec-project/bec_widgets/commit/0d05839e9e3f4c61fc318aa44721436afcebf06f))
+
+- **signal-label**: Fix signal label cleanup, missing parent in constructors
+  ([`72639e7`](https://github.com/bec-project/bec_widgets/commit/72639e7e5fa01ceac6cc864c01cea73f4ddca441))
+
+- **signal_combo_box**: Get_signal_name added; remove duplicates from heatmap and scatter waveform
+  settings;
+  ([`66a9510`](https://github.com/bec-project/bec_widgets/commit/66a95102dd33dbac5575a3b0d99c4c99c42cce4a))
+
+- **signal_label**: Dispatcher unsubscribed in the cleanup
+  ([`90ba505`](https://github.com/bec-project/bec_widgets/commit/90ba505c10e7ee60d82abb578c7f691cf1125e9a))
+
+- **toggle**: Move toggle to theme colors
+  ([`375d131`](https://github.com/bec-project/bec_widgets/commit/375d131109d37ea7b49aa354b624b0dd8fea89ee))
+
+- **view**: Based on BECWidgets
+  ([`3d049d6`](https://github.com/bec-project/bec_widgets/commit/3d049d67a9303b20862150b3622c4121d4a72b32))
+
+- **web_console**: Added startup kwarg
+  ([`55c8a57`](https://github.com/bec-project/bec_widgets/commit/55c8a57e71653299f3fd66ca7aafca8f32c7aacc))
+
+- **widget_state_manager**: Added shiboken check
+  ([`338b9e1`](https://github.com/bec-project/bec_widgets/commit/338b9e1aa7216d9d38449633fe9d4fffce13ee90))
+
+- **widget_state_manager**: Filtering of not wanted properties
+  ([`7ea4352`](https://github.com/bec-project/bec_widgets/commit/7ea4352a09349e606c97edb72eccf6e683684cf8))
+
+- **widget_state_manager**: Properties_to_skip are not restored even if in ini file
+  ([`84c7360`](https://github.com/bec-project/bec_widgets/commit/84c7360bb8a63426d584a522d6a8969810536d2a))
+
+- **widget_state_manager**: State manager can save all properties recursively to already existing
+  settings
+  ([`98e2979`](https://github.com/bec-project/bec_widgets/commit/98e29792a2620a9e88c770cd69d7cad88cc94252))
+
+- **widgets**: Processevent removed from widgets using it
+  ([`a56bd57`](https://github.com/bec-project/bec_widgets/commit/a56bd572a000e47dd7d1d2a458dac676e67ec21e))
+
+- **widgets**: Removed isVisible from all SafeProperties
+  ([`b72bf4a`](https://github.com/bec-project/bec_widgets/commit/b72bf4a0f9a67c104cd86c66e9160ab9f0a40c01))
+
+### Build System
+
+- Pyside6-qtads; bec_qtheme V1; dependencies updated and adjusted
+  ([`562001c`](https://github.com/bec-project/bec_widgets/commit/562001c08cdc3ca9fbe28aaed8b6a83921426f97))
+
+- **deps**: Update bec-qthemes requirement
+  ([`4a44ede`](https://github.com/bec-project/bec_widgets/commit/4a44ede8fe02b4c513ec419f85cb447f58dfdf86))
+
+Updates the requirements on [bec-qthemes](https://github.com/bec-project/bec_qthemes) to permit the
+  latest version. - [Release notes](https://github.com/bec-project/bec_qthemes/releases) -
+  [Changelog](https://github.com/bec-project/bec_qthemes/blob/main/CHANGELOG.md) -
+  [Commits](https://github.com/bec-project/bec_qthemes/compare/v0.7.0...v1.3.3)
+
+--- updated-dependencies: - dependency-name: bec-qthemes dependency-version: 1.3.3
+
+dependency-type: direct:production ...
+
+Signed-off-by: dependabot[bot] <support@github.com>
+
+### Code Style
+
+- Wrap progress bar in widget to fix background
+  ([`793779d`](https://github.com/bec-project/bec_widgets/commit/793779db68c9725fae767d6cd0096c89a4caa700))
+
+### Continuous Integration
+
+- Add artifact upload
+  ([`d301fdf`](https://github.com/bec-project/bec_widgets/commit/d301fdfeb237acd61fd579a0e8147f2037df62d5))
+
+- Cancel previous CI run for PR or branch
+  ([`37298c2`](https://github.com/bec-project/bec_widgets/commit/37298c21c3b76667459f2a62453692e99ff8191e))
+
+- Install ttyd
+  ([`b6d70c3`](https://github.com/bec-project/bec_widgets/commit/b6d70c34df29d2f44e7f5da88cb0daaef39ceed1))
+
+- Use shared issue sync action instead of local version
+  ([`c9a8e64`](https://github.com/bec-project/bec_widgets/commit/c9a8e64217d3c2047a4a8f5e2348c0a725a0066a))
+
+### Features
+
+- Add export and load settings methods to BECConnector; add SafeProperty safe getter flag
+  ([`5435fec`](https://github.com/bec-project/bec_widgets/commit/5435fec68a11caa83e8566cde21ad382729e6792))
+
+- Add guided tour docs to device-manager-view
+  ([`fcb4306`](https://github.com/bec-project/bec_widgets/commit/fcb43066e4abe469e0f06163b4abcce6e0d9250b))
+
+- Add SafeConnect
+  ([`4b5a45c`](https://github.com/bec-project/bec_widgets/commit/4b5a45c320d701e6878d6af7259c530596118053))
+
+- Attach config cancellation to closeEvent
+  ([`c1443fa`](https://github.com/bec-project/bec_widgets/commit/c1443fa27afc63c69c4b56cf8be7eb2792704784))
+
+- Guided tour for main app
+  ([`3ffdf11`](https://github.com/bec-project/bec_widgets/commit/3ffdf11c3e419d71e22c484c618eec51e9168f9d))
+
+- **actions**: Actions can be created with label text with beside or under alignment
+  ([`9c3a6e1`](https://github.com/bec-project/bec_widgets/commit/9c3a6e1691fd02230651a4d871911f365d4a3129))
+
+- **ads**: Add pyi stub file to provide type hints for ads
+  ([`4c4fc25`](https://github.com/bec-project/bec_widgets/commit/4c4fc25a42be9bc8ecce6f550c4f357372233289))
+
+- **advanced_dock_area**: Added ads based dock area with profiles
+  ([`d25314e`](https://github.com/bec-project/bec_widgets/commit/d25314e6eeb6323a6ffcde3c119f7b1bc0ebed16))
+
+- **advanced_dock_area**: Created DockAreaWidget base class; profile management through namespaces;
+  dock area variants
+  ([`58b88ef`](https://github.com/bec-project/bec_widgets/commit/58b88efcb66627f9e9c3c9de65366d55465e1e44))
+
+- **advanced_dock_area**: Floating docks restore with relative geometry
+  ([`440cecd`](https://github.com/bec-project/bec_widgets/commit/440cecddf740a5f320f53771b93a148fb3be544b))
+
+- **advanced_dock_area**: Instance lock for multiple ads in same session
+  ([`bcaf013`](https://github.com/bec-project/bec_widgets/commit/bcaf013d2b5b45830cc37079b7d0f388ead98bc1))
+
+- **advanced_dock_area**: Ui/ux for profile management improved, saving directories logic adjusted
+  ([`7305498`](https://github.com/bec-project/bec_widgets/commit/730549847563b552887a5529b2b0fed308ed8b98))
+
+- **bec-login**: Add login widget in material design style
+  ([`b798ea2`](https://github.com/bec-project/bec_widgets/commit/b798ea2340a6aa8c0325a1cd1995eba028279816))
+
+- **bec_widget**: Attach/detach method for all widgets + client regenerated
+  ([`82dbf31`](https://github.com/bec-project/bec_widgets/commit/82dbf31da54288b7228bc5c7bdc271a8178f8d02))
+
+- **bec_widget**: Save screenshot to bytes
+  ([`ed2651a`](https://github.com/bec-project/bec_widgets/commit/ed2651a914a283dc7cc45a9bf185d2a4e053d307))
+
+- **becconnector**: Added rpc_passthrough_children flag in addition to rpc_exposed
+  ([`010373f`](https://github.com/bec-project/bec_widgets/commit/010373fd5b334c6616efce467608356b36c2130b))
+
+- **becconnector**: Exposed rpc flag added to the BECConnector
+  ([`de6c628`](https://github.com/bec-project/bec_widgets/commit/de6c6284ad6d73b40137e9bba56e748c59a4ade9))
+
+- **busy_loader**: Busy loader added to bec widget base class
+  ([`92c15a7`](https://github.com/bec-project/bec_widgets/commit/92c15a7f829fa3f0b69cf5584ac45a21dce0b01d))
+
+- **client_utils**: Theme can be changed from the CLI
+  ([`c1d4758`](https://github.com/bec-project/bec_widgets/commit/c1d4758e4ca33d094fabdfbd4e024a2836f2fa9a))
+
+- **color**: Add relative luminance calculation
+  ([`a84b924`](https://github.com/bec-project/bec_widgets/commit/a84b924162280fc6b6ca31af511b78c4f5baafc9))
+
+- **developer_view**: Add developer view
+  ([`bdef594`](https://github.com/bec-project/bec_widgets/commit/bdef594b5885b5fab60ef94addbce1ab771c4244))
+
+- **developer_widget**: Add signal connection for focused editor changes to disable run button for
+  macro files
+  ([`fa79179`](https://github.com/bec-project/bec_widgets/commit/fa79179f89f048aeee0a3947350f3a7bc2169d9f))
+
+- **device-initialization-progress-bar**: Add progress bar for device initialization
+  ([`5deafb9`](https://github.com/bec-project/bec_widgets/commit/5deafb97979eb1a2e8bcba3321dfd1a15553a5da))
+
+- **device-manager**: Add DeviceManager Widget for BEC Widget main applications
+  ([`a6357af`](https://github.com/bec-project/bec_widgets/commit/a6357af8ffda640eaee1c1c75c3a4bdf0c5de068))
+
+- **device_combobox**: Device filter added based on its signal classes
+  ([`fbddf4a`](https://github.com/bec-project/bec_widgets/commit/fbddf4a28442dab6e9e4585aa0c3a0131d6bdf7b))
+
+- **dm-view**: Initial device manager view added
+  ([`9e4be38`](https://github.com/bec-project/bec_widgets/commit/9e4be38c0b8b6e654313bf232a597d09978d2436))
+
+- **generate_cli**: Rpc API from content widget can be merged with the RPC API of the container
+  widget statically
+  ([`758956b`](https://github.com/bec-project/bec_widgets/commit/758956be098d6629a0cd641b1525965ebfe19345))
+
+- **guided_tour**: Add guided tour
+  ([`9b753c1`](https://github.com/bec-project/bec_widgets/commit/9b753c1f24419292790ca60e4bd55bb1aa5e1a70))
+
+- **help-inspector**: Add help inspector widget
+  ([`5ac629d`](https://github.com/bec-project/bec_widgets/commit/5ac629de8c7bbdf0e2c07c9a7cf25e430cd031c1))
+
+- **image**: Modernization of image widget
+  ([`80c0dfa`](https://github.com/bec-project/bec_widgets/commit/80c0dfa4f28e3eb2c6f944a517c92f822f51266d))
+
+- **jupyter_console_window**: Adjustment for general usage
+  ([`66f3e51`](https://github.com/bec-project/bec_widgets/commit/66f3e517f0fb8fa1ea678ec09ef852d5b8a63d51))
+
+- **main_app**: Main app with interactive app switcher
+  ([`b30e1e4`](https://github.com/bec-project/bec_widgets/commit/b30e1e4c5e182903721fe7c16a8069f2c95704d3))
+
+- **motor_map**: Motor selection adopted to splitter action
+  ([`168bb3c`](https://github.com/bec-project/bec_widgets/commit/168bb3cb77ca3a270a958f4f941445383c8bec99))
+
+- **plot_base**: Plot_base, image and heatmap widget adopted to property-toolbar sync
+  ([`dd69578`](https://github.com/bec-project/bec_widgets/commit/dd69578b912b44130d33427fa8d5d948889e8c07))
+
+- **SafeProperty**: Safeproperty emits property_changed signal
+  ([`7cce3bd`](https://github.com/bec-project/bec_widgets/commit/7cce3bd54210f82a5cf68e6219ea073e972234d6))
+
+- **signal_combobox**: Extended that can filter by signal class and dimension of the signal
+  ([`cfd6bde`](https://github.com/bec-project/bec_widgets/commit/cfd6bde268cea5bd119354db8b6ab1661b575293))
+
+- **toolbar**: Splitter action added
+  ([`0752f3d`](https://github.com/bec-project/bec_widgets/commit/0752f3d6a9cd9b080bf87464eac9eb05f99f108f))
+
+- **toolbar**: Toolbar can be synced with the property_changed for toggle actions
+  ([`4357d98`](https://github.com/bec-project/bec_widgets/commit/4357d984c8f89fa51bc0c8d9a217b2a2028e3ca9))
+
+- **web console**: Add support for shared web console sessions
+  ([`5e111cf`](https://github.com/bec-project/bec_widgets/commit/5e111cfc54f2771a0ff5080a77bb4ac5b491bc8f))
+
+- **widget_hierarchy_tree**: Widget displaying parent child hierarchy from the app widgets
+  ([`5f46fa0`](https://github.com/bec-project/bec_widgets/commit/5f46fa09943017fdadbe12522b38a2733d5b6001))
+
+- **widget_highlighter**: Reusable separate widget highlighter
+  ([`8b782ac`](https://github.com/bec-project/bec_widgets/commit/8b782ac302b4ccbfe768c066c3c9fbe31fdace75))
+
+- **widget_io**: Widget hierarchy can grap all bec connectors from the widget recursively
+  ([`db83576`](https://github.com/bec-project/bec_widgets/commit/db83576346980eef59b5366bc07258edcbf6333b))
+
+### Performance Improvements
+
+- **heatmap**: Thread worker optimization
+  ([`f98a5de`](https://github.com/bec-project/bec_widgets/commit/f98a5de7e9f154e6e9fc65a257776c9dec74eb84))
+
+### Refactoring
+
+- Add extra tour steps, add enter button
+  ([`2826919`](https://github.com/bec-project/bec_widgets/commit/2826919c5a330e2ba9666cfec1f9561b4cfd4bcf))
+
+- Global refactoring to use device-signal pair names
+  ([`b93fbc5`](https://github.com/bec-project/bec_widgets/commit/b93fbc5cd31dbaa1bf4b18b9d30e3463ea539f72))
+
+- Improvements to enum access
+  ([`19b7310`](https://github.com/bec-project/bec_widgets/commit/19b73104337a100cef39936dd7ec5c32c346f99b))
+
+- **advanced_dock_area**: Change remove_widget to delete
+  ([`eda30e3`](https://github.com/bec-project/bec_widgets/commit/eda30e31396ec1e34c13be047564de334d9a5c6f))
+
+- **bec_main_window**: Main app theme renamed to View
+  ([`37bfad7`](https://github.com/bec-project/bec_widgets/commit/37bfad7174982f7c3489e38cf715615719b34862))
+
+- **busy-loader**: Refactor busy loader to use custom widget
+  ([`332ca20`](https://github.com/bec-project/bec_widgets/commit/332ca205c12c445513472a25366699e870e5a879))
+
+- **busy-loager**: Improve eventFilter to avoid crashs if target or overlay is None.
+  ([`229da62`](https://github.com/bec-project/bec_widgets/commit/229da6244ae2bb2521ff0257db1772e5cceeee59))
+
+- **developer_view**: Changed to use DockAreaWidget
+  ([`4d40918`](https://github.com/bec-project/bec_widgets/commit/4d40918b7c84c833d46287fec365d1810683adec))
+
+- **developer_widget**: Enhance documentation and add missing imports
+  ([`5e0c376`](https://github.com/bec-project/bec_widgets/commit/5e0c3767742bcac8b39972d0972db0580c1863cd))
+
+- **device-form-dialog**: Use native QDialogButtonBox instead of GroupBox layout
+  ([`12b4d3a`](https://github.com/bec-project/bec_widgets/commit/12b4d3a9e0ffe0539d5884bbedf4f14349a5e117))
+
+- **dock_area**: Change name to BECDockArea
+  ([`71ed2d3`](https://github.com/bec-project/bec_widgets/commit/71ed2d353acc0e68eaef1fa55474db0b8e1f1eb9))
+
+- **guided-tour**: Add support for QTableWidgetItem
+  ([`83489b7`](https://github.com/bec-project/bec_widgets/commit/83489b7519f41b75f2d3f2cdcf31b0075e41d52d))
+
+- **main_app**: Adapted for DockAreaWidget changes
+  ([`ac850ec`](https://github.com/bec-project/bec_widgets/commit/ac850ec650695c12a77e0e8e598094d740312a89))
+
+- **main_app**: Simpler id and object name management
+  ([`654aeb7`](https://github.com/bec-project/bec_widgets/commit/654aeb711626f0f85d288cd3c0a85d69ad2826d8))
+
+- **monaco_dock**: Changed to use DockAreaWidget
+  ([`ed0d34a`](https://github.com/bec-project/bec_widgets/commit/ed0d34a60f8348a970da71d77801154ea70c24c6))
+
+- **ophyd-validation**: Allow option to keep device visible after successful validation
+  ([`89d5c5a`](https://github.com/bec-project/bec_widgets/commit/89d5c5abdb0081e29d2c31ae6ded75a3f9abe0ff))
+
+- **widget_io**: Hierarchy logic generalized
+  ([`00bf01c`](https://github.com/bec-project/bec_widgets/commit/00bf01c1290c4ead6d8270942fbfda2cbd7e9873))
+
+### Testing
+
+- Fix test
+  ([`de835e8`](https://github.com/bec-project/bec_widgets/commit/de835e81d8cf0ec6d3bca9d07ac21d4737666e31))
+
+- **config-communicator**: Add test for cancel action
+  ([`24701c2`](https://github.com/bec-project/bec_widgets/commit/24701c2a270520de739e4615d0f52a6386bbadc0))
+
+- **device-form-dialog**: Adapt tests
+  ([`f827e77`](https://github.com/bec-project/bec_widgets/commit/f827e77e870109b21e10b4cc28d6c09b8f77b2a6))
+
+- **device-manager**: Use mocked client for tests
+  ([`836fedd`](https://github.com/bec-project/bec_widgets/commit/836fedd50e4fdb66bd7614a55c8e0f95a14c3fac))
+
+- **device-manager-view**: Improve test coverage for device-manager-view
+  ([`4edc571`](https://github.com/bec-project/bec_widgets/commit/4edc57158be30d2500ad04d1b015bc8627cfb873))
+
+- **e2e**: Raise with widget name
+  ([`3f76ade`](https://github.com/bec-project/bec_widgets/commit/3f76ade6289a75b76d7a5f67e9d72175378bedbe))
+
+- **script_tree**: Improve hover event handling with waitUntil
+  ([`6296055`](https://github.com/bec-project/bec_widgets/commit/6296055c664070b8caeffda3c7047774bd692691))
+
+- **widget_io**: Add dedicated unit tests for iter_widget_tree and helper methods
+  ([`041afc6`](https://github.com/bec-project/bec_widgets/commit/041afc68b1c7202a4609149e6f0e212fca629c87))
+
+Co-authored-by: wyzula-jan <133381102+wyzula-jan@users.noreply.github.com>
+
+
 ## v2.45.14 (2026-01-23)
 
 ### Bug Fixes
