@@ -377,7 +377,9 @@ def test_run_line_scan_with_parameters(scan_control, mocked_client):
     expected_device = mocked_client.device_manager.devices.samx
     expected_args_list = [expected_device, args["start"], args["stop"]]
     assert called_args == tuple(expected_args_list)
-    assert called_kwargs == kwargs | {"metadata": {"sample_name": ""}}
+    assert called_kwargs == kwargs | {
+        "metadata": {"sample_name": "", "comment": "", "scan_name": "line_scan"}
+    }
 
     # Check the emitted signal
     mock_slot.assert_called_once()
@@ -453,7 +455,10 @@ def test_run_grid_scan_with_parameters(scan_control, mocked_client):
         args_row2["steps"],
     ]
     assert called_args == tuple(expected_args_list)
-    assert called_kwargs == kwargs | {"metadata": {"sample_name": ""}, "optim_trajectory": None}
+    assert called_kwargs == kwargs | {
+        "metadata": {"sample_name": "", "comment": "", "scan_name": "grid_scan"},
+        "optim_trajectory": None,
+    }
 
     # Check the emitted signal
     mock_slot.assert_called_once()
@@ -510,11 +515,17 @@ def test_get_scan_parameters_from_redis(scan_control, mocked_client):
         "relative": False,
         "exp_time": 2.0,
         "burst_at_each_point": 1,
-        "metadata": {"sample_name": ""},
+        "metadata": {"comment": "", "sample_name": "", "scan_name": "line_scan"},
     }
 
 
-TEST_MD = {"sample_name": "Test Sample", "test key 1": "test value 1", "test key 2": "test value 2"}
+TEST_MD = {
+    "comment": "",
+    "sample_name": "Test Sample",
+    "scan_name": "grid_scan",
+    "test key 1": "test value 1",
+    "test key 2": "test value 2",
+}
 TEST_TABLE_ENTRY = [["test key 1", "test value 1"], ["test key 2", "test value 2"]]
 
 
@@ -534,14 +545,19 @@ def test_scan_metadata_is_updated_even_without_default_form_changes(
     assert scan_control._metadata_form._additional_metadata.dump_dict() == {
         "test key 1": "test value 1"
     }
-    assert scan_control._scan_metadata == {"sample_name": "", "test key 1": "test value 1"}
+    assert scan_control._scan_metadata == {
+        "comment": "",
+        "sample_name": "",
+        "scan_name": "grid_scan",
+        "test key 1": "test value 1",
+    }
 
 
 def test_scan_metadata_is_connected(scan_control):
     assert scan_control._metadata_form._scan_name == "line_scan"
     scan_control.comboBox_scan_selection.setCurrentText("grid_scan")
     assert scan_control._metadata_form._scan_name == "grid_scan"
-    sample_name = scan_control._metadata_form._form_grid.layout().itemAtPosition(0, 1).widget()
+    sample_name = scan_control._metadata_form._form_grid.layout().itemAtPosition(2, 1).widget()
     assert isinstance(sample_name, StrFormItem)
     sample_name._main_widget.setText("Test Sample")
 
@@ -553,7 +569,7 @@ def test_scan_metadata_is_connected(scan_control):
 def test_scan_metadata_is_passed_to_scan_function(scan_control: ScanControl):
     scan_control.comboBox_scan_selection.setCurrentText("grid_scan")
 
-    sample_name = scan_control._metadata_form._form_grid.layout().itemAtPosition(0, 1).widget()
+    sample_name = scan_control._metadata_form._form_grid.layout().itemAtPosition(2, 1).widget()
     sample_name._main_widget.setText("Test Sample")
     scan_control._metadata_form._additional_metadata._table_model._data = TEST_TABLE_ENTRY
     scan_control._metadata_form.validate_form()
