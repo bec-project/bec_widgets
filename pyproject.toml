@@ -21,7 +21,7 @@ dependencies = [
     "ophyd_devices~=1.29, >=1.29.1",
     "pydantic~=2.0",
     "pyqtgraph==0.13.7",
-    "PySide6==6.9.0",
+    "PySide6==6.10.2",
     "qtconsole~=5.5, >=5.5.1",       # needed for jupyter console
     "qtpy~=2.4",
     "thefuzz~=0.22",
