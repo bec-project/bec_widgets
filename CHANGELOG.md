@@ -1,6 +1,39 @@
 # CHANGELOG
 
 
+## v3.1.0 (2026-03-06)
+
+### Bug Fixes
+
+- **forms**: Use FieldInfo title for label text in _add_griditem method
+  ([`5e34c8a`](https://github.com/bec-project/bec_widgets/commit/5e34c8a3518f24722267b3cde2dd9d3494e350b0))
+
+- **scan metadata**: Set scan_name to current scan if empty in form data
+  ([`72e66cf`](https://github.com/bec-project/bec_widgets/commit/72e66cf57f1d47851728448e2e0f776cd8e278f2))
+
+### Features
+
+- **bec_queue**: Add tooltip support for user metadata in queue display
+  ([`56f16b6`](https://github.com/bec-project/bec_widgets/commit/56f16b63528b5a50f5a2e2d2e9dd93f3993e50e4))
+
+- **scan control**: Wrap metadata form in a group box for better organization
+  ([`e6b41b4`](https://github.com/bec-project/bec_widgets/commit/e6b41b4e92a1ffd0494c2bde6a782347c2364114))
+
+- **scan queue**: Add scan name to queue
+  ([`ab3efdb`](https://github.com/bec-project/bec_widgets/commit/ab3efdbd0a0a80293ba2121e78ea319ddbbd8f82))
+
+- **StrFormItem**: Set placeholder text from spec description
+  ([`ac824f6`](https://github.com/bec-project/bec_widgets/commit/ac824f6b83178e34f015c296008d7a1e21c70878))
+
+### Testing
+
+- Adjust metadata assertions to new schema defaults
+  ([`75697f5`](https://github.com/bec-project/bec_widgets/commit/75697f5b1faefb5cfcbc1b753d3f505d69339559))
+
+- Adjust metadata assertions to new schema defaults
+  ([`2697496`](https://github.com/bec-project/bec_widgets/commit/26974965151748c57334f350e21f3b610f92e011))
+
+
 ## v3.0.0 (2026-03-06)
 
 ### Bug Fixes
