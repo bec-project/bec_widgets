@@ -330,7 +330,7 @@ class WorkSpaceManager(BECWidget, QWidget):
             return
 
         self.target_widget.save_profile_dialog()
-        # AdvancedDockArea will emit profile_changed which will trigger table refresh,
+        # BECDockArea will emit profile_changed which will trigger table refresh,
         # but ensure the UI stays in sync even if the signal is delayed.
         self.render_table()
         current = getattr(self.target_widget, "_current_profile_name", None)

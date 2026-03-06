@@ -118,7 +118,7 @@ class ProfileComboBox(QComboBox):
 
 def workspace_bundle(components: ToolbarComponents, enable_tools: bool = True) -> ToolbarBundle:
     """
-    Creates a workspace toolbar bundle for AdvancedDockArea.
+    Creates a workspace toolbar bundle for BECDockArea.
 
     Args:
         components (ToolbarComponents): The components to be added to the bundle.
@@ -171,7 +171,7 @@ def workspace_bundle(components: ToolbarComponents, enable_tools: bool = True) -
 
 class WorkspaceConnection(BundleConnection):
     """
-    Connection class for workspace actions in AdvancedDockArea.
+    Connection class for workspace actions in BECDockArea.
     """
 
     def __init__(self, components: ToolbarComponents, target_widget=None):
