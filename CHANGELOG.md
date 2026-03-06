@@ -1,6 +1,32 @@
 # CHANGELOG
 
 
+## v3.1.1 (2026-03-06)
+
+### Bug Fixes
+
+- **positioner box**: Include username in scan queue request
+  ([`419c01b`](https://github.com/bec-project/bec_widgets/commit/419c01bdd4e80d927761634b03723319b0a58694))
+
+### Build System
+
+- Update min bec dependency to 3.106
+  ([`e2daf2e`](https://github.com/bec-project/bec_widgets/commit/e2daf2e89cd25d4dcedd4895299dbbdc6b7e354f))
+
+- **deps**: Upgrade to black 26
+  ([`e157f0d`](https://github.com/bec-project/bec_widgets/commit/e157f0d7c9bb5b4d93f63ebe6f9a715a314aa1f4))
+
+### Refactoring
+
+- **black**: Black 26 applied
+  ([`d4e037f`](https://github.com/bec-project/bec_widgets/commit/d4e037f3384765e7bb8fb020cecbf3db24fc7494))
+
+### Testing
+
+- Fix import of bec_lib json extended
+  ([`ef12331`](https://github.com/bec-project/bec_widgets/commit/ef1233163cb7c3229630543fe88dbceaccd09297))
+
+
 ## v3.1.0 (2026-03-06)
 
 ### Bug Fixes
