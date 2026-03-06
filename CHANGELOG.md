@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v3.1.2 (2026-03-06)
+
+### Bug Fixes
+
+- **dock_area**: Remove old AdvancedDockArea references
+  ([`4382d5c`](https://github.com/bec-project/bec_widgets/commit/4382d5c9b1fdac4048692eec53dd43127d67467b))
+
+### Build System
+
+- **deps**: Update isort requirement
+  ([`8463b32`](https://github.com/bec-project/bec_widgets/commit/8463b327923f853cfa1462bc22be1e83d4fd9a75))
+
+
 ## v3.1.1 (2026-03-06)
 
 ### Bug Fixes
