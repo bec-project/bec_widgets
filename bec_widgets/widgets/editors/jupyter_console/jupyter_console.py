@@ -47,15 +47,13 @@ class BECJupyterConsole(RichJupyterWidget):  # pragma: no cover:
         )
 
     def _init_bec_kernel(self):
-        self.execute(
-            """
+        self.execute("""
             from bec_ipython_client.main import BECIPythonClient
             bec = BECIPythonClient()
             bec.start()
             dev = bec.device_manager.devices if bec else None
             scans = bec.scans if bec else None
-            """
-        )
+            """)
 
     def _cleanup_bec(self):
         if getattr(self, "ipyclient", None) is not None and self.inprocess is True:

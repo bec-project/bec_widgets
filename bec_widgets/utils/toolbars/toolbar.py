@@ -291,8 +291,7 @@ class ModularToolBar(QToolBar):
         menu = QMenu(self)
         theme = get_theme_name()
         if theme == "dark":
-            menu.setStyleSheet(
-                """
+            menu.setStyleSheet("""
                 QMenu {
                     background-color: rgba(50, 50, 50, 0.9);
                     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -300,12 +299,10 @@ class ModularToolBar(QToolBar):
                 QMenu::item:selected {
                     background-color: rgba(0, 0, 255, 0.2);
                 }
-            """
-            )
+            """)
         else:
             # Light theme styling
-            menu.setStyleSheet(
-                """
+            menu.setStyleSheet("""
                 QMenu {
                     background-color: rgba(255, 255, 255, 0.9);
                     border: 1px solid rgba(0, 0, 0, 0.2);
@@ -313,8 +310,7 @@ class ModularToolBar(QToolBar):
                 QMenu::item:selected {
                     background-color: rgba(0, 0, 255, 0.2);
                 }
-            """
-            )
+            """)
         for ii, bundle in enumerate(self.shown_bundles):
             self.handle_bundle_context_menu(menu, bundle)
             if ii < len(self.shown_bundles) - 1:

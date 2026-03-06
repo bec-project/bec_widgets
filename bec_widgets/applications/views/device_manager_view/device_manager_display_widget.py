@@ -103,16 +103,14 @@ class CustomBusyWidget(QWidget):
         button_width = int(button_height * aspect_ratio)
         self.cancel_button.setFixedSize(button_width, button_height)
         color = get_accent_colors()
-        self.cancel_button.setStyleSheet(
-            f"""
+        self.cancel_button.setStyleSheet(f"""
             QPushButton {{
                 background-color: {color.emergency.name()};
                 color: white;
                 font-weight: 600;
                 border-radius: 6px;
             }}
-            """
-        )
+            """)
 
         # Layout
         content_layout = QVBoxLayout(self)
@@ -128,12 +126,10 @@ class CustomBusyWidget(QWidget):
             bg_color = color._colors.get("BG", None)
         if bg_color is None:  # Fallback if missing
             bg_color = QColor(50, 50, 50, 255)
-        self.setStyleSheet(
-            f"""
+        self.setStyleSheet(f"""
             background-color: {bg_color.name()};
             border-radius: 12px;
-            """
-        )
+            """)
 
     def _ui_scale(self) -> int:
         parent = self.parent()

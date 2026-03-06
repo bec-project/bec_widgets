@@ -51,8 +51,7 @@ class _DeviceEntryWidget(QFrame):
         self.setToolTip(self._rich_text())
 
     def _rich_text(self):
-        return dedent(
-            f"""
+        return dedent(f"""
         <b><u><h2> {self._device_spec.name}: </h2></u></b>
         <table>
         <tr><td> description: </td><td><i> {self._device_spec.description}  </i></td></tr>
@@ -60,8 +59,7 @@ class _DeviceEntryWidget(QFrame):
         <tr><td> enabled:     </td><td><i> {self._device_spec.enabled}      </i></td></tr>
         <tr><td> read only:   </td><td><i> {self._device_spec.readOnly}     </i></td></tr>
         </table>
-        """
-        )
+        """)
 
     def setup_title_layout(self, device_spec: HashableDevice):
         self._title_layout = QHBoxLayout()

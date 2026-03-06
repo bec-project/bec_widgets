@@ -20,15 +20,13 @@ class BECLogin(QWidget):
 
         title = QLabel("Sign in", parent=self)
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title.setStyleSheet(
-            """
+        title.setStyleSheet("""
             #QLabel
                 {
                     font-size: 18px;
                     font-weight: 600;
                 }
-            """
-        )
+            """)
 
         self.username = QLineEdit(parent=self)
         self.username.setPlaceholderText("Username")
@@ -57,13 +55,11 @@ class BECLogin(QWidget):
 
         self.username.setFocus()
 
-        self.setStyleSheet(
-            """
+        self.setStyleSheet("""
             QLineEdit {
                 padding: 8px;
             }
-            """
-        )
+            """)
 
     def _clear_password(self):
         """Clear the password field."""

@@ -38,8 +38,7 @@ def developer_view(qtbot, mocked_client):
 def temp_python_file():
     """Create a temporary Python file for testing."""
     with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-        f.write(
-            """# Test Python file
+        f.write("""# Test Python file
 import os
 import sys
 
@@ -48,8 +47,7 @@ def test_function():
 
 if __name__ == "__main__":
     print(test_function())
-"""
-        )
+""")
         temp_file_path = f.name
 
     yield temp_file_path

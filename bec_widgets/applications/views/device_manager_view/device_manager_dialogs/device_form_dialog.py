@@ -31,7 +31,7 @@ logger = bec_logger.logger
 class DeviceManagerOphydValidationDialog(QtWidgets.QDialog):
     """Popup dialog to test Ophyd device configurations interactively."""
 
-    def __init__(self, parent=None, config: dict | None = None):  # type:ignore
+    def __init__(self, parent=None, config: dict | None = None):  # type: ignore
         super().__init__(parent)
         self.setWindowTitle("Device Manager Ophyd Test")
         self._config_status = ConfigStatus.UNKNOWN.value
@@ -133,7 +133,7 @@ class DeviceFormDialog(QtWidgets.QDialog):
     # validated: config_status, connection_status
     accepted_data = QtCore.Signal(dict, int, int, str, str)
 
-    def __init__(self, parent=None, add_btn_text: str = "Add Device"):  # type:ignore
+    def __init__(self, parent=None, add_btn_text: str = "Add Device"):  # type: ignore
         super().__init__(parent)
         # Track old device name if config is edited
         self._old_device_name: str = ""

@@ -68,21 +68,17 @@ def test_shared_macros_section_with_files(ide_explorer, tmpdir):
     """Test that shared macros section is created when plugin directory has files"""
     # Create dummy shared macro files
     shared_macros_dir = tmpdir.mkdir("shared_macros")
-    shared_macros_dir.join("shared_macro1.py").write(
-        """
+    shared_macros_dir.join("shared_macro1.py").write("""
 def shared_function1():
     return "shared1"
 
 def shared_function2():
     return "shared2"
-"""
-    )
-    shared_macros_dir.join("utilities.py").write(
-        """
+""")
+    shared_macros_dir.join("utilities.py").write("""
 def utility_function():
     return "utility"
-"""
-    )
+""")
 
     with mock.patch.object(ide_explorer, "_get_plugin_dir") as mock_get_plugin_dir:
         mock_get_plugin_dir.return_value = str(shared_macros_dir)

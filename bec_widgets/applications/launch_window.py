@@ -147,8 +147,7 @@ class LaunchTile(RoundedFrame):
 
         # Action button
         self.action_button = QPushButton("Open")
-        self.action_button.setStyleSheet(
-            """
+        self.action_button.setStyleSheet("""
         QPushButton {
             background-color: #007AFF;
             border: none;
@@ -160,8 +159,7 @@ class LaunchTile(RoundedFrame):
         QPushButton:hover {
             background-color: #005BB5;
         }
-        """
-        )
+        """)
         self.layout.addWidget(self.action_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
     def _fit_label_to_width(self, label: QLabel, max_width: int, min_pt: int = 10):
