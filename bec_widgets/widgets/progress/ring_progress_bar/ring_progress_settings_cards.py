@@ -44,14 +44,12 @@ class RingCardWidget(QFrame):
         self.setObjectName("RingCardWidget")
 
         bg = self._get_theme_color("BORDER")
-        self.setStyleSheet(
-            f"""
+        self.setStyleSheet(f"""
             #RingCardWidget {{
                 border: 1px solid {bg.name() if bg else '#CCCCCC'};
                 border-radius: 4px;
             }}
-            """
-        )
+            """)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)

@@ -127,12 +127,10 @@ class NavigationItem(QWidget):
         self._icon_size_expanded = QtCore.QSize(26, 26)
         self.icon_btn.setIconSize(self._icon_size_collapsed)
         # Remove QToolButton hover/pressed background/outline
-        self.icon_btn.setStyleSheet(
-            """
+        self.icon_btn.setStyleSheet("""
             QToolButton:hover { background: transparent; border: none; }
             QToolButton:pressed { background: transparent; border: none; }
-            """
-        )
+            """)
 
         # Mini label below icon
         self.mini_lbl = QLabel(self._mini_text, self)

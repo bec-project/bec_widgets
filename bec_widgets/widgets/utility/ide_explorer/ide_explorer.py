@@ -227,13 +227,11 @@ class IDEExplorer(BECWidget, QWidget):
         try:
             # Create the file with a basic template
             with open(file_path, "w", encoding="utf-8") as f:
-                f.write(
-                    f"""
+                f.write(f"""
 \"\"\"
 {filename} - Created at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 \"\"\"
-"""
-                )
+""")
 
         except Exception as e:
             # Show error if file creation failed
@@ -281,8 +279,7 @@ class IDEExplorer(BECWidget, QWidget):
         try:
             # Create the file with a macro function template
             with open(file_path, "w", encoding="utf-8") as f:
-                f.write(
-                    f'''"""
+                f.write(f'''"""
 {function_name} macro - Created at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 """
 
@@ -296,8 +293,7 @@ def {function_name}():
     print("Executing macro: {function_name}")
     # TODO: Add your macro code here
     pass
-'''
-                )
+''')
 
             # Refresh the macro tree to show the new function
             macro_dir_section.content_widget.refresh()

@@ -134,15 +134,13 @@ class NotificationToast(QFrame):
         bg.setAlphaF(0.30)
         icon_bg = bg.name(QtGui.QColor.HexArgb)
         icon_btn.setFixedSize(40, 40)
-        icon_btn.setStyleSheet(
-            f"""
+        icon_btn.setStyleSheet(f"""
             QToolButton {{
                 background: {icon_bg};
                 border: none;
                 border-radius: 20px;   /* perfect circle */
             }}
-            """
-        )
+            """)
 
         title_lbl = QtWidgets.QLabel(self._title)
 
@@ -327,15 +325,13 @@ class NotificationToast(QFrame):
         bg = QtGui.QColor(SEVERITY[value.value]["color"])
         bg.setAlphaF(0.30)
         icon_bg = bg.name(QtGui.QColor.HexArgb)
-        self._icon_btn.setStyleSheet(
-            f"""
+        self._icon_btn.setStyleSheet(f"""
             QToolButton {{
                 background: {icon_bg};
                 border: none;
                 border-radius: 20px;
             }}
-            """
-        )
+            """)
         self.apply_theme(self._theme)
         # keep injected gradient in sync
         if getattr(self, "_hg_enabled", False):
@@ -391,8 +387,7 @@ class NotificationToast(QFrame):
             card_bg.setAlphaF(0.88)
             btn_hover = self._accent_color.name()
 
-        self.setStyleSheet(
-            f"""
+        self.setStyleSheet(f"""
             #NotificationToast {{
                 background: {card_bg.name(QtGui.QColor.HexArgb)};
                 border-radius: 12px;
@@ -406,18 +401,15 @@ class NotificationToast(QFrame):
                 font-size: 14px;
             }}
             #NotificationToast QPushButton:hover {{ color: {btn_hover}; }}
-            """
-        )
+            """)
         # traceback panel colours
         trace_bg = "#1e1e1e" if theme == "dark" else "#f0f0f0"
-        self.trace_view.setStyleSheet(
-            f"""
+        self.trace_view.setStyleSheet(f"""
             background:{trace_bg};
             color:{palette['body']};
             border:none;
             border-radius:8px;
-            """
-        )
+            """)
 
         # icon glyph vs badge background: darker badge, lighter icon in light mode
         icon_fg = "#ffffff" if theme == "light" else self._accent_color.name()
@@ -438,15 +430,13 @@ class NotificationToast(QFrame):
         else:
             badge_bg.setAlphaF(0.30)
         icon_bg = badge_bg.name(QtGui.QColor.HexArgb)
-        self._icon_btn.setStyleSheet(
-            f"""
+        self._icon_btn.setStyleSheet(f"""
             QToolButton {{
                 background: {icon_bg};
                 border: none;
                 border-radius: 20px;
             }}
-            """
-        )
+            """)
 
         # stronger accent wash in light mode, slightly stronger in dark too
         self._accent_alpha = 110 if theme == "light" else 60
@@ -593,8 +583,7 @@ class NotificationCentre(QScrollArea):
         self.setWidgetResizable(True)
         # transparent background so only the toast cards are visible
         self.setAttribute(QtCore.Qt.WA_TranslucentBackground, True)
-        self.setStyleSheet(
-            """
+        self.setStyleSheet("""
             #NotificationCentre { background: transparent; }
             #NotificationCentre QScrollBar:vertical {
                 background: transparent;
@@ -610,8 +599,7 @@ class NotificationCentre(QScrollArea):
             #NotificationCentre QScrollBar::sub-line:vertical { height: 0; }
             #NotificationCentre QScrollBar::add-page:vertical,
             #NotificationCentre QScrollBar::sub-page:vertical { background: transparent; }
-            """
-        )
+            """)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.setFixedWidth(fixed_width)
@@ -958,8 +946,7 @@ class NotificationIndicator(QWidget):
         self._group.buttonToggled.connect(self._button_toggled)
 
         # minimalistic look: no frames or backgrounds on the buttons
-        self.setStyleSheet(
-            """
+        self.setStyleSheet("""
             QToolButton {
                 border: none;
                 background: transparent;
@@ -970,8 +957,7 @@ class NotificationIndicator(QWidget):
                 background: rgba(255, 255, 255, 40);
                 font-weight: 600;
             }
-            """
-        )
+            """)
 
         # initial state: none checked (auto‑dismiss behaviour)
         for k in kinds:

@@ -599,16 +599,14 @@ class ExpandableMenuAction(ToolBarAction):
             button.setIcon(QIcon(self.icon_path))
         button.setText(self.tooltip)
         button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        button.setStyleSheet(
-            """
+        button.setStyleSheet("""
                    QToolButton {
                        font-size: 14px;
                    }
                    QMenu {
                        font-size: 14px;
                    }
-               """
-        )
+               """)
         menu = QMenu(button)
         for action_container in self.actions.values():
             action: QAction = action_container.action

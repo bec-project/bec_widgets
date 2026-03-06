@@ -67,15 +67,13 @@ class TutorialOverlay(QWidget):
         box = QFrame(self)
         app = QApplication.instance()
         bg_color = app.palette().window().color()
-        box.setStyleSheet(
-            f"""
+        box.setStyleSheet(f"""
             QFrame {{
                 background-color: {bg_color.name()};
                 border-radius: 8px;
                 padding: 8px;
             }}
-        """
-        )
+        """)
         layout = QVBoxLayout(box)
 
         # Top layout with close button (left) and step indicator (right)

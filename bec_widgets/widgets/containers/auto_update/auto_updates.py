@@ -46,7 +46,7 @@ class AutoUpdates(BECMainWindow):
         self.setCentralWidget(self.dock_area)
         self._auto_update_selected_device: str | None = None
 
-        self._default_dock = None  # type:ignore
+        self._default_dock = None  # type: ignore
         self.current_widget: BECWidget | None = None
         self.dock_name = None
         self._enabled = True
@@ -63,7 +63,7 @@ class AutoUpdates(BECMainWindow):
         Disconnect all connections for the auto updates.
         """
         self.bec_dispatcher.disconnect_slot(
-            self._on_scan_status, MessageEndpoints.scan_status()  # type:ignore
+            self._on_scan_status, MessageEndpoints.scan_status()  # type: ignore
         )
 
     @property
@@ -244,10 +244,10 @@ class AutoUpdates(BECMainWindow):
         wf = self.set_dock_to_widget("Waveform")
 
         # Get the scan report devices reported by the scan
-        dev_x = info.scan_report_devices[0]  # type:ignore
+        dev_x = info.scan_report_devices[0]  # type: ignore
 
         # For the y axis, get the selected device
-        dev_y = self.get_selected_device(info.readout_priority["monitored"])  # type:ignore
+        dev_y = self.get_selected_device(info.readout_priority["monitored"])  # type: ignore
         if not dev_y:
             return
 
@@ -279,8 +279,8 @@ class AutoUpdates(BECMainWindow):
         scatter = self.set_dock_to_widget("ScatterWaveform")
 
         # Get the scan report devices reported by the scan
-        dev_x, dev_y = info.scan_report_devices[0], info.scan_report_devices[1]  # type:ignore
-        dev_z = self.get_selected_device(info.readout_priority["monitored"])  # type:ignore
+        dev_x, dev_y = info.scan_report_devices[0], info.scan_report_devices[1]  # type: ignore
+        dev_z = self.get_selected_device(info.readout_priority["monitored"])  # type: ignore
 
         if None in (dev_x, dev_y, dev_z):
             return
@@ -309,8 +309,8 @@ class AutoUpdates(BECMainWindow):
         # If the scan report devices are empty, there is nothing we can do
         if not info.scan_report_devices:
             return
-        dev_x = info.scan_report_devices[0]  # type:ignore
-        dev_y = self.get_selected_device(info.readout_priority["monitored"])  # type:ignore
+        dev_x = info.scan_report_devices[0]  # type: ignore
+        dev_y = self.get_selected_device(info.readout_priority["monitored"])  # type: ignore
         if not dev_y:
             return
 

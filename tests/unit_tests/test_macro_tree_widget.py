@@ -20,8 +20,7 @@ def temp_macro_files(tmpdir):
 
     # Create a simple macro file with functions
     macro_file1 = macro_dir / "test_macros.py"
-    macro_file1.write_text(
-        '''
+    macro_file1.write_text('''
 def test_macro_function():
     """A test macro function."""
     return "test"
@@ -34,13 +33,11 @@ class TestClass:
     """This class should be ignored."""
     def method(self):
         pass
-'''
-    )
+''')
 
     # Create another macro file
     macro_file2 = macro_dir / "utils_macros.py"
-    macro_file2.write_text(
-        '''
+    macro_file2.write_text('''
 def utility_function():
     """A utility function."""
     pass
@@ -48,37 +45,30 @@ def utility_function():
 def deprecated_function():
     """Old function."""
     return None
-'''
-    )
+''')
 
     # Create a file with no functions (should be ignored)
     empty_file = macro_dir / "empty.py"
-    empty_file.write_text(
-        """
+    empty_file.write_text("""
 # Just a comment
 x = 1
 y = 2
-"""
-    )
+""")
 
     # Create a file starting with underscore (should be ignored)
     private_file = macro_dir / "_private.py"
-    private_file.write_text(
-        """
+    private_file.write_text("""
 def private_function():
     return "private"
-"""
-    )
+""")
 
     # Create a file with syntax errors
     error_file = macro_dir / "error_file.py"
-    error_file.write_text(
-        """
+    error_file.write_text("""
 def broken_function(
     # Missing closing parenthesis and colon
     pass
-"""
-    )
+""")
 
     return macro_dir
 
@@ -406,13 +396,11 @@ class TestMacroTreeRefresh:
 
         # Add a new macro file
         new_file = temp_macro_files / "new_macros.py"
-        new_file.write_text(
-            '''
+        new_file.write_text('''
 def new_function():
     """A new function."""
     return "new"
-'''
-        )
+''')
 
         # Refresh the tree
         macro_tree.refresh()
@@ -439,14 +427,12 @@ def new_function():
 
         # Modify the file to add a new function
         with open(test_file_path, "a") as f:
-            f.write(
-                '''
+            f.write('''
 
 def newly_added_function():
     """A newly added function."""
     return "added"
-'''
-            )
+''')
 
         # Refresh just this file
         macro_tree.refresh_file_item(test_file_path)

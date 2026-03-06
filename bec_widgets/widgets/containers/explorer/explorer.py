@@ -101,14 +101,12 @@ class Explorer(BECWidget, QWidget):
         palette = get_theme_palette()
         separator_color = palette.mid().color()
 
-        self.splitter.setStyleSheet(
-            f"""
+        self.splitter.setStyleSheet(f"""
             QSplitter::handle {{
                 height: 0.1px;
                 background-color: rgba({separator_color.red()}, {separator_color.green()}, {separator_color.blue()}, 60);
             }}
-        """
-        )
+        """)
 
     def _update_spacer(self) -> None:
         """Update the spacer size based on section states"""

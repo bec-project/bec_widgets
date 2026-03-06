@@ -275,12 +275,10 @@ class LMFitDialog(BECWidget, QWidget):
                     button.setEnabled(True)
                 else:
                     button.setEnabled(False)
-                button.setStyleSheet(
-                    f"""
+                button.setStyleSheet(f"""
                     QPushButton:enabled {{ background-color: {self._accent_colors.success.name()};color: white; }} 
                     QPushButton:disabled {{ background-color: grey;color: white; }}
-                    """
-                )
+                    """)
                 self.action_buttons[param_name] = button
                 layout = QVBoxLayout()
                 layout.addWidget(self.action_buttons[param_name])

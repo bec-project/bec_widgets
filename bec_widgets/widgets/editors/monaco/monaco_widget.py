@@ -362,8 +362,7 @@ if __name__ == "__main__":  # pragma: no cover
     widget.set_language("python")
     widget.set_theme("vs-dark")
     widget.editor.set_minimap_enabled(False)
-    widget.set_text(
-        """
+    widget.set_text("""
 import numpy as np
 from typing import TYPE_CHECKING
 
@@ -380,8 +379,7 @@ if TYPE_CHECKING:
 # This is a comment
 def hello_world():
     print("Hello, world!")
-            """
-    )
+            """)
     widget.set_highlighted_lines(1, 3)
     widget.show()
     qapp.exec_()

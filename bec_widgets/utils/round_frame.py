@@ -69,13 +69,11 @@ class RoundedFrame(QFrame):
         """
         Update the style of the frame based on the background color.
         """
-        self.setStyleSheet(
-            f"""
+        self.setStyleSheet(f"""
                 QFrame#roundedFrame {{
                     border-radius: {self._radius}px;
                 }}
-            """
-        )
+            """)
         self.apply_plot_widget_style()
 
     def apply_plot_widget_style(self, border: str = "none"):

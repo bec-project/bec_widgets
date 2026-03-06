@@ -106,8 +106,7 @@ class ResizableSpacer(QWidget):
 
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
-        self.setStyleSheet(
-            """
+        self.setStyleSheet("""
             ResizableSpacer {
                 background-color: transparent;
                 margin: 0px;
@@ -117,8 +116,7 @@ class ResizableSpacer(QWidget):
             ResizableSpacer:hover {
                 background-color: rgba(100, 100, 200, 80);
             }
-        """
-        )
+        """)
 
         self.setContentsMargins(0, 0, 0, 0)
 
