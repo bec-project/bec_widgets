@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.1.3 (2026-03-09)
+
+### Bug Fixes
+
+- **monaco_dock**: Optimization, removal of QTimer, eventFilter replaced by signal/slot
+  ([`278d8de`](https://github.com/bec-project/bec_widgets/commit/278d8de058c2f5c6c9aa7317e1026651d7a4acd3))
+
+
 ## v3.1.2 (2026-03-06)
 
 ### Bug Fixes
