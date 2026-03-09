@@ -68,7 +68,7 @@ class ExperimentSelection(QWidget):
         self._enable_fuzzy_search: bool = True
         self._hidden_rows: set[int] = set()
         self._headers: dict[str, str] = {
-            "pgroup": "P-group",
+            "pgroup": "pgroup",
             "title": "Title",
             "name": "Name",
             "schedule_start": "Schedule (start)",
@@ -87,7 +87,7 @@ class ExperimentSelection(QWidget):
         main_layout.addWidget(self._tabs, stretch=1)
 
         self._card_tab = ExperimentMatCard(
-            parent=self, show_activate_button=True, button_text="Activate Next Experiment"
+            parent=self, show_activate_button=True, button_text="Activate"
         )
         self._card_tab.experiment_selected.connect(self._emit_selected_experiment)
         if self._next_experiment:
@@ -206,7 +206,7 @@ class ExperimentSelection(QWidget):
 
         # Add side card for experiment details
         self._side_card = ExperimentMatCard(
-            parent=self, show_activate_button=True, button_text="Activate Next Experiment"
+            parent=self, show_activate_button=True, button_text="Activate"
         )
         self._side_card.experiment_selected.connect(self._emit_selected_experiment)
         hor_layout.addWidget(self._side_card, stretch=2)  # Ratio 5:2 between table and card

@@ -60,10 +60,14 @@ class ExperimentMatCard(BECWidget, QWidget):
         layout = QVBoxLayout(self._card_frame)
         self._card_frame.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         palette = get_theme_palette()
-        self._card_frame.setStyleSheet(f"""
-                border: 1px solid {palette.mid().color().name()};
-                background: {palette.base().color().name()};
-            """)
+        self._card_frame.setStyleSheet(
+            f"""
+                QFrame {{
+                    border: 1px solid {palette.mid().color().name()};
+                    background: {palette.base().color().name()};
+                }}
+            """
+        )
         shadow = QGraphicsDropShadowEffect(self._card_frame)
         shadow.setBlurRadius(18)
         shadow.setOffset(0, 4)
@@ -81,10 +85,14 @@ class ExperimentMatCard(BECWidget, QWidget):
 
     def apply_theme(self, theme: str):
         palette = get_theme_palette()
-        self._card_frame.setStyleSheet(f"""
-                border: 1px solid {palette.mid().color().name()};
-                background: {palette.base().color().name()};
-             """)
+        self._card_frame.setStyleSheet(
+            f"""
+                QFrame {{
+                    border: 1px solid {palette.mid().color().name()};
+                    background: {palette.base().color().name()};
+                }}
+            """
+        )
         shadow = self._card_frame.graphicsEffect()
         if isinstance(shadow, QGraphicsDropShadowEffect):
             shadow.setColor(palette.shadow().color())
@@ -98,11 +106,13 @@ class ExperimentMatCard(BECWidget, QWidget):
 
         title_row = QHBoxLayout()
         self._card_title = BorderLessLabel(title, self._group_box)
-        self._card_title.setStyleSheet("""
+        self._card_title.setStyleSheet(
+            """
             border: none;
             font-size: 14px;
             font-weight: 600;
-            """)
+            """
+        )
 
         # Add title row and info button to QH layout, then add it to QV layout
         title_row.addWidget(self._card_title)
