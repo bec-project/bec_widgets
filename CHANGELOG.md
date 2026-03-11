@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v3.2.0 (2026-03-11)
+
+### Features
+
+- **curve, waveform**: Add dap_parameters for lmfit customization in DAP requests
+  ([`14d51b8`](https://github.com/bec-project/bec_widgets/commit/14d51b80169f5a060dd24287f3a6db9a4b41275a))
+
+- **waveform**: Composite DAP with multiple models
+  ([`b4f6f5a`](https://github.com/bec-project/bec_widgets/commit/b4f6f5aa8bcd0f6091610e8f839ea265c87575e0))
+
+
 ## v3.1.4 (2026-03-11)
 
 ### Bug Fixes
