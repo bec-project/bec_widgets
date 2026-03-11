@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v3.1.4 (2026-03-11)
+
+### Bug Fixes
+
+- **profile_utils**: Renamed to fetch widgets settings
+  ([`53e5ec4`](https://github.com/bec-project/bec_widgets/commit/53e5ec42b8b33397af777f418fbd8601628226a6))
+
+### Build System
+
+- Increased minimal version of bec and bec qthemes
+  ([`7e0e391`](https://github.com/bec-project/bec_widgets/commit/7e0e391888f2ee4e8528ccb3938e36da4c32f146))
+
+
 ## v3.1.3 (2026-03-09)
 
 ### Bug Fixes
