@@ -115,12 +115,12 @@ def _settings_profiles_root() -> str:
         str: Absolute path to the profiles root. The directory is created if missing.
     """
     client = BECClient()
-    bec_widgets_settings = client._service_config.config.get("bec_widgets_settings")
+    bec_widgets_settings = client._service_config.config.get("widgets_settings")
     bec_widgets_setting_path = (
         bec_widgets_settings.get("base_path") if bec_widgets_settings else None
     )
     default_path = os.path.join(bec_widgets_setting_path, "profiles")
-    root = os.environ.get("BECWIDGETS_PROFILE_DIR", default_path)
+    root = os.path.expanduser(os.environ.get("BECWIDGETS_PROFILE_DIR", default_path))
     os.makedirs(root, exist_ok=True)
     return root
 
@@ -138,7 +138,7 @@ def _profiles_dir(segment: str, namespace: str | None) -> str:
     """
     base = os.path.join(_settings_profiles_root(), segment)
     ns = slugify.slugify(namespace, separator="_") if namespace else None
-    path = os.path.join(base, ns) if ns else base
+    path = os.path.expanduser(os.path.join(base, ns) if ns else base)
     os.makedirs(path, exist_ok=True)
     return path
 
