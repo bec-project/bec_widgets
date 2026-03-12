@@ -197,6 +197,62 @@ def test_image_setup_preview_signal_2d(qtbot, mocked_client):
     np.testing.assert_array_equal(view.main_image.image, test_data)
 
 
+def test_switching_device_disconnects_previous_preview_endpoint(qtbot, mocked_client, monkeypatch):
+    view = create_widget(qtbot, Image, client=mocked_client)
+    _set_signal_config(mocked_client, "eiger", "img", signal_class="PreviewSignal", ndim=2)
+    _set_signal_config(mocked_client, "waveform1d", "img", signal_class="PreviewSignal", ndim=2)
+
+    connected = []
+    disconnected = []
+    monkeypatch.setattr(
+        view.bec_dispatcher,
+        "connect_slot",
+        lambda slot, endpoint, *args, **kwargs: connected.append(endpoint),
+    )
+    monkeypatch.setattr(
+        view.bec_dispatcher,
+        "disconnect_slot",
+        lambda slot, endpoint, *args, **kwargs: disconnected.append(endpoint),
+    )
+
+    view.image(device="eiger", signal="img")
+    connected.clear()
+    disconnected.clear()
+
+    view.device = "waveform1d"
+
+    assert MessageEndpoints.device_preview("eiger", "img") in disconnected
+    assert MessageEndpoints.device_preview("waveform1d", "img") in connected
+
+
+def test_switching_signal_disconnects_previous_preview_endpoint(qtbot, mocked_client, monkeypatch):
+    view = create_widget(qtbot, Image, client=mocked_client)
+    _set_signal_config(mocked_client, "eiger", "img_a", signal_class="PreviewSignal", ndim=2)
+    _set_signal_config(mocked_client, "eiger", "img_b", signal_class="PreviewSignal", ndim=2)
+
+    connected = []
+    disconnected = []
+    monkeypatch.setattr(
+        view.bec_dispatcher,
+        "connect_slot",
+        lambda slot, endpoint, *args, **kwargs: connected.append(endpoint),
+    )
+    monkeypatch.setattr(
+        view.bec_dispatcher,
+        "disconnect_slot",
+        lambda slot, endpoint, *args, **kwargs: disconnected.append(endpoint),
+    )
+
+    view.image(device="eiger", signal="img_a")
+    connected.clear()
+    disconnected.clear()
+
+    view.signal = "img_b"
+
+    assert MessageEndpoints.device_preview("eiger", "img_a") in disconnected
+    assert MessageEndpoints.device_preview("eiger", "img_b") in connected
+
+
 def test_preview_signals_skip_0d_entries(qtbot, mocked_client, monkeypatch):
     """
     Preview/async combobox should omit 0‑D signals.
