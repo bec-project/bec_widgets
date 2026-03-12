@@ -253,6 +253,56 @@ def test_switching_signal_disconnects_previous_preview_endpoint(qtbot, mocked_cl
     assert MessageEndpoints.device_preview("eiger", "img_b") in connected
 
 
+def test_switching_signal_disconnects_previous_async_endpoint(qtbot, mocked_client, monkeypatch):
+    """
+    When the current monitor is an async signal, switching to a different signal must
+    disconnect the previous async endpoint (based on scan_id/async_signal_name) before
+    reconnecting with the new signal's async endpoint.
+    """
+    view = create_widget(qtbot, Image, client=mocked_client)
+    _set_signal_config(
+        mocked_client, "eiger", "img_a", signal_class="AsyncSignal", ndim=2, obj_name="async_obj_a"
+    )
+    _set_signal_config(
+        mocked_client, "eiger", "img_b", signal_class="AsyncSignal", ndim=2, obj_name="async_obj_b"
+    )
+
+    connected = []
+    disconnected = []
+    monkeypatch.setattr(
+        view.bec_dispatcher,
+        "connect_slot",
+        lambda slot, endpoint, *args, **kwargs: connected.append(endpoint),
+    )
+    monkeypatch.setattr(
+        view.bec_dispatcher,
+        "disconnect_slot",
+        lambda slot, endpoint, *args, **kwargs: disconnected.append(endpoint),
+    )
+
+    # Connect to img_a as an async signal; scan_id is None so no actual subscription is made
+    view.image(device="eiger", signal="img_a")
+    assert view.async_update is True
+    assert view.subscriptions["main"].async_signal_name == "async_obj_a"
+    assert view.subscriptions["main"].source == "device_monitor_2d"
+
+    # Simulate an active scan so that the async endpoint is real
+    view.scan_id = "scan_123"
+    connected.clear()
+    disconnected.clear()
+
+    # Switch to a different signal
+    view.signal = "img_b"
+
+    # The previous async endpoint for img_a must have been disconnected
+    expected_disconnect = MessageEndpoints.device_async_signal("scan_123", "eiger", "async_obj_a")
+    assert expected_disconnect in disconnected
+
+    # The new async endpoint for img_b must have been connected
+    expected_connect = MessageEndpoints.device_async_signal("scan_123", "eiger", "async_obj_b")
+    assert expected_connect in connected
+
+
 def test_preview_signals_skip_0d_entries(qtbot, mocked_client, monkeypatch):
     """
     Preview/async combobox should omit 0‑D signals.
