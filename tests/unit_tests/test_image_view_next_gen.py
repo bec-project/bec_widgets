@@ -225,6 +225,63 @@ def test_switching_device_disconnects_previous_preview_endpoint(qtbot, mocked_cl
     assert MessageEndpoints.device_preview("waveform1d", "img") in connected
 
 
+def test_switching_device_disconnects_previous_async_endpoint(qtbot, mocked_client, monkeypatch):
+    """
+    Verify that switching device while async_update=True disconnects device_async_signal
+    endpoints for both scan_id and old_scan_id on the old device before reconnecting to
+    the new device.
+    """
+    view = create_widget(qtbot, Image, client=mocked_client)
+    _set_signal_config(
+        mocked_client, "eiger", "img", signal_class="AsyncSignal", ndim=2, obj_name="async_obj"
+    )
+    _set_signal_config(
+        mocked_client,
+        "waveform1d",
+        "img",
+        signal_class="AsyncSignal",
+        ndim=2,
+        obj_name="async_obj",
+    )
+
+    connected = []
+    disconnected = []
+    monkeypatch.setattr(
+        view.bec_dispatcher,
+        "connect_slot",
+        lambda slot, endpoint, *args, **kwargs: connected.append(endpoint),
+    )
+    monkeypatch.setattr(
+        view.bec_dispatcher,
+        "disconnect_slot",
+        lambda slot, endpoint, *args, **kwargs: disconnected.append(endpoint),
+    )
+
+    view.image(device="eiger", signal="img")
+    assert view.async_update is True
+    assert view.subscriptions["main"].async_signal_name == "async_obj"
+
+    view.scan_id = "scan_current"
+    view.old_scan_id = "scan_previous"
+    connected.clear()
+    disconnected.clear()
+
+    view.device = "waveform1d"
+
+    # Both scan_id and old_scan_id endpoints for the old device must be disconnected
+    assert (
+        MessageEndpoints.device_async_signal("scan_current", "eiger", "async_obj") in disconnected
+    )
+    assert (
+        MessageEndpoints.device_async_signal("scan_previous", "eiger", "async_obj") in disconnected
+    )
+    # The new device's async endpoint for the current scan must be connected
+    assert (
+        MessageEndpoints.device_async_signal("scan_current", "waveform1d", "async_obj")
+        in connected
+    )
+
+
 def test_switching_signal_disconnects_previous_preview_endpoint(qtbot, mocked_client, monkeypatch):
     view = create_widget(qtbot, Image, client=mocked_client)
     _set_signal_config(mocked_client, "eiger", "img_a", signal_class="PreviewSignal", ndim=2)
