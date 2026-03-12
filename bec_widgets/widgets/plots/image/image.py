@@ -270,6 +270,16 @@ class Image(ImageBase):
             return
 
         old_device = self._config.device
+        old_signal = self._config.signal
+        old_config = self.subscriptions["main"]
+        if old_device and old_signal and old_device != value:
+            self._disconnect_monitor_subscription(
+                device=old_device,
+                signal=old_signal,
+                source=old_config.source,
+                async_update=self.async_update,
+                async_signal_name=old_config.async_signal_name,
+            )
         self._config.device = value
 
         # If we have a signal, reconnect with the new device
@@ -325,6 +335,16 @@ class Image(ImageBase):
                 self._set_connection_status("disconnected")
             return
 
+        old_signal = self._config.signal
+        old_config = self.subscriptions["main"]
+        if self._config.device and old_signal and old_signal != value:
+            self._disconnect_monitor_subscription(
+                device=self._config.device,
+                signal=old_signal,
+                source=old_config.source,
+                async_update=self.async_update,
+                async_signal_name=old_config.async_signal_name,
+            )
         self._config.signal = value
 
         # If we have a device, try to connect
@@ -447,6 +467,61 @@ class Image(ImageBase):
         )
         self._autorange_on_next_update = True
 
+    def _disconnect_monitor_subscription(
+        self,
+        *,
+        device: str,
+        signal: str,
+        source: Literal["device_monitor_1d", "device_monitor_2d"] | None,
+        async_update: bool,
+        async_signal_name: str | None,
+    ) -> None:
+        if not device or not signal:
+            return
+
+        if async_update:
+            async_signal_name = async_signal_name or signal
+            ids_to_check = [self.scan_id, self.old_scan_id]
+
+            if source == "device_monitor_1d":
+                for scan_id in ids_to_check:
+                    if scan_id is None:
+                        continue
+                    self.bec_dispatcher.disconnect_slot(
+                        self.on_image_update_1d,
+                        MessageEndpoints.device_async_signal(scan_id, device, async_signal_name),
+                    )
+                    logger.info(
+                        f"Disconnecting 1d update ScanID:{scan_id}, Device Name:{device},Device Entry:{async_signal_name}"
+                    )
+            elif source == "device_monitor_2d":
+                for scan_id in ids_to_check:
+                    if scan_id is None:
+                        continue
+                    self.bec_dispatcher.disconnect_slot(
+                        self.on_image_update_2d,
+                        MessageEndpoints.device_async_signal(scan_id, device, async_signal_name),
+                    )
+                    logger.info(
+                        f"Disconnecting 2d update ScanID:{scan_id}, Device Name:{device},Device Entry:{async_signal_name}"
+                    )
+            return
+
+        if source == "device_monitor_1d":
+            self.bec_dispatcher.disconnect_slot(
+                self.on_image_update_1d, MessageEndpoints.device_preview(device, signal)
+            )
+            logger.info(
+                f"Disconnecting preview 1d update Device Name:{device}, Device Entry:{signal}"
+            )
+        elif source == "device_monitor_2d":
+            self.bec_dispatcher.disconnect_slot(
+                self.on_image_update_2d, MessageEndpoints.device_preview(device, signal)
+            )
+            logger.info(
+                f"Disconnecting preview 2d update Device Name:{device}, Device Entry:{signal}"
+            )
+
     def _disconnect_current_monitor(self):
         """
         Internal method to disconnect the current monitor subscriptions.
@@ -455,55 +530,13 @@ class Image(ImageBase):
             return
 
         config = self.subscriptions["main"]
-
-        if self.async_update:
-            async_signal_name = config.async_signal_name or self._config.signal
-            ids_to_check = [self.scan_id, self.old_scan_id]
-
-            if config.source == "device_monitor_1d":
-                for scan_id in ids_to_check:
-                    if scan_id is None:
-                        continue
-                    self.bec_dispatcher.disconnect_slot(
-                        self.on_image_update_1d,
-                        MessageEndpoints.device_async_signal(
-                            scan_id, self._config.device, async_signal_name
-                        ),
-                    )
-                    logger.info(
-                        f"Disconnecting 1d update ScanID:{scan_id}, Device Name:{self._config.device},Device Entry:{async_signal_name}"
-                    )
-            elif config.source == "device_monitor_2d":
-                for scan_id in ids_to_check:
-                    if scan_id is None:
-                        continue
-                    self.bec_dispatcher.disconnect_slot(
-                        self.on_image_update_2d,
-                        MessageEndpoints.device_async_signal(
-                            scan_id, self._config.device, async_signal_name
-                        ),
-                    )
-                    logger.info(
-                        f"Disconnecting 2d update ScanID:{scan_id}, Device Name:{self._config.device},Device Entry:{async_signal_name}"
-                    )
-
-        else:
-            if config.source == "device_monitor_1d":
-                self.bec_dispatcher.disconnect_slot(
-                    self.on_image_update_1d,
-                    MessageEndpoints.device_preview(self._config.device, self._config.signal),
-                )
-                logger.info(
-                    f"Disconnecting preview 1d update Device Name:{self._config.device}, Device Entry:{self._config.signal}"
-                )
-            elif config.source == "device_monitor_2d":
-                self.bec_dispatcher.disconnect_slot(
-                    self.on_image_update_2d,
-                    MessageEndpoints.device_preview(self._config.device, self._config.signal),
-                )
-                logger.info(
-                    f"Disconnecting preview 2d update Device Name:{self._config.device}, Device Entry:{self._config.signal}"
-                )
+        self._disconnect_monitor_subscription(
+            device=self._config.device,
+            signal=self._config.signal,
+            source=config.source,
+            async_update=self.async_update,
+            async_signal_name=config.async_signal_name,
+        )
 
         # Reset async state
         self.async_update = False
@@ -860,45 +893,19 @@ class Image(ImageBase):
             logger.warning("Cannot disconnect monitor without both device and signal")
             return
 
-        if self.async_update:
-            async_signal_name = config.async_signal_name or target_entry
-            ids_to_check = [self.scan_id, self.old_scan_id]
-            if config.source == "device_monitor_1d":
-                for scan_id in ids_to_check:
-                    if scan_id is None:
-                        continue
-                    self.bec_dispatcher.disconnect_slot(
-                        self.on_image_update_1d,
-                        MessageEndpoints.device_async_signal(
-                            scan_id, target_device, async_signal_name
-                        ),
-                    )
-            elif config.source == "device_monitor_2d":
-                for scan_id in ids_to_check:
-                    if scan_id is None:
-                        continue
-                    self.bec_dispatcher.disconnect_slot(
-                        self.on_image_update_2d,
-                        MessageEndpoints.device_async_signal(
-                            scan_id, target_device, async_signal_name
-                        ),
-                    )
-        else:
-            if config.source == "device_monitor_1d":
-                self.bec_dispatcher.disconnect_slot(
-                    self.on_image_update_1d,
-                    MessageEndpoints.device_preview(target_device, target_entry),
-                )
-            elif config.source == "device_monitor_2d":
-                self.bec_dispatcher.disconnect_slot(
-                    self.on_image_update_2d,
-                    MessageEndpoints.device_preview(target_device, target_entry),
-                )
-            else:
-                logger.warning(
-                    f"Cannot disconnect monitor {target_device}.{target_entry} with source {self.subscriptions['main'].source}"
-                )
-                return
+        if config.source not in {"device_monitor_1d", "device_monitor_2d"}:
+            logger.warning(
+                f"Cannot disconnect monitor {target_device}.{target_entry} with source {self.subscriptions['main'].source}"
+            )
+            return
+
+        self._disconnect_monitor_subscription(
+            device=target_device,
+            signal=target_entry,
+            source=config.source,
+            async_update=self.async_update,
+            async_signal_name=config.async_signal_name,
+        )
 
         self.subscriptions["main"].async_signal_name = None
         self.async_update = False
