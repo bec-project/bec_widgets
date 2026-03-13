@@ -7,6 +7,7 @@ from qtpy.QtWidgets import QWidget
 
 from bec_widgets.cli.server import GUIServer
 from bec_widgets.utils.bec_connector import BECConnector
+from bec_widgets.widgets.containers.main_window.main_window import BECMainWindowNoRPC
 from bec_widgets.utils.rpc_server import RegistryNotReadyError, RPCServer, SingleshotRPCRepeat
 
 from .client_mocks import mocked_client
@@ -171,3 +172,27 @@ def test_run_rpc_delegates_to_rpc_content_class(rpc_server):
     assert rpc_server.run_rpc(view, "mode", [], {}) == "initial"
     assert rpc_server.run_rpc(view, "mode", ["creator"], {}) is None
     assert view.content.mode == "creator"
+
+
+def test_launch_dock_area_keeps_strong_references(rpc_server, qtbot):
+    class DummyDockArea(BECConnector, QWidget):
+        def __init__(self, parent=None, client=None, **kwargs):
+            super().__init__(parent=parent, client=client, root_widget=True, **kwargs)
+
+    with patch("bec_widgets.applications.bw_launch.dock_area") as mock_launch_dock_area:
+        mock_launch_dock_area.return_value = DummyDockArea(
+            client=rpc_server.client, object_name="dock_area"
+        )
+
+        result = rpc_server._launch_dock_area(name="dock_area")
+        assert result is mock_launch_dock_area.return_value
+
+        gui_id = result.gui_id
+        assert rpc_server._top_level_rpc_widgets[gui_id] is result
+        assert isinstance(rpc_server._top_level_rpc_windows[gui_id], BECMainWindowNoRPC)
+
+        window = rpc_server._top_level_rpc_windows[gui_id]
+        window.close()
+        window.deleteLater()
+        qtbot.waitUntil(lambda: gui_id not in rpc_server._top_level_rpc_windows, timeout=3000)
+        assert gui_id not in rpc_server._top_level_rpc_widgets

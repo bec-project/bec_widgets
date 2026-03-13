@@ -106,6 +106,8 @@ class RPCServer:
         self._registry_update_callbacks = []
         self._broadcasted_data = {}
         self._rpc_singleshot_repeats: dict[str, SingleshotRPCRepeat] = {}
+        self._top_level_rpc_windows: dict[str, QWidget] = {}
+        self._top_level_rpc_widgets: dict[str, QWidget] = {}
 
         self.status = messages.BECStatus.RUNNING
         logger.success(f"Server started with gui_id: {self.gui_id}")
@@ -240,8 +242,25 @@ class RPCServer:
             return {"system.launch_dock_area": True}
         raise ValueError(f"Unknown system RPC method: {method}")
 
-    @staticmethod
+    def _track_top_level_rpc_widget(self, widget: QWidget, window: QWidget | None = None) -> None:
+        gui_id = getattr(widget, "gui_id", None)
+        if not gui_id:
+            return
+
+        self._top_level_rpc_widgets[gui_id] = widget
+        if window is not None:
+            self._top_level_rpc_windows[gui_id] = window
+
+        def _cleanup_refs(*_args, tracked_gui_id=gui_id):
+            self._top_level_rpc_widgets.pop(tracked_gui_id, None)
+            self._top_level_rpc_windows.pop(tracked_gui_id, None)
+
+        widget.destroyed.connect(_cleanup_refs)
+        if window is not None and window is not widget:
+            window.destroyed.connect(_cleanup_refs)
+
     def _launch_dock_area(
+        self,
         name: str | None = None,
         geometry: tuple[int, int, int, int] | None = None,
         startup_profile: str | Literal["restore", "skip"] | None = None,
@@ -263,12 +282,14 @@ class RPCServer:
             if isinstance(result_widget, BECMainWindow):
                 apply_window_geometry(result_widget, geometry)
                 result_widget.show()
+                self._track_top_level_rpc_widget(result_widget, result_widget)
             else:
                 window = BECMainWindowNoRPC()
                 window.setCentralWidget(result_widget)
                 window.setWindowTitle(f"BEC - {result_widget.objectName()}")
                 apply_window_geometry(window, geometry)
                 window.show()
+                self._track_top_level_rpc_widget(result_widget, window)
             return result_widget
 
     def serialize_result_and_send(self, request_id: str, res: object):
