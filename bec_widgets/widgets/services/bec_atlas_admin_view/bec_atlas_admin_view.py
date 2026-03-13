@@ -42,6 +42,9 @@ from bec_widgets.widgets.services.bec_atlas_admin_view.experiment_selection.expe
 from bec_widgets.widgets.services.bec_atlas_admin_view.experiment_selection.experiment_selection import (
     ExperimentSelection,
 )
+from bec_widgets.widgets.services.bec_messaging_config.bec_messaging_config_widget import (
+    BECMessagingConfigWidget,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     from qtpy.QtWidgets import QToolBar
@@ -104,7 +107,8 @@ class OverviewWidget(QGroupBox):
         content_layout = QVBoxLayout(content)
         content.setFrameShape(QFrame.Shape.StyledPanel)
         content.setFrameShadow(QFrame.Shadow.Raised)
-        content.setStyleSheet("""
+        content.setStyleSheet(
+            """
             QFrame
                 {
                     border: 1px solid #cccccc;
@@ -113,7 +117,8 @@ class OverviewWidget(QGroupBox):
                 {
                     border: none;
                 }
-            """)
+            """
+        )
         content_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         content.setFixedSize(400, 280)
 
@@ -299,6 +304,11 @@ class BECAtlasAdminView(BECWidget, QWidget):
         self.experiment_selection.setVisible(False)
         self.stacked_layout.addWidget(self.experiment_selection)
 
+        # Messaging Services widget
+        self.messaging_config_widget = BECMessagingConfigWidget(parent=self)
+        self.messaging_config_widget.setVisible(False)
+        self.stacked_layout.addWidget(self.messaging_config_widget)
+
         # Connect signals
         self.overview_widget.login_requested.connect(self._on_login_requested)
         self.overview_widget.change_experiment_requested.connect(
@@ -392,6 +402,7 @@ class BECAtlasAdminView(BECWidget, QWidget):
         """Show the overview panel."""
         self.overview_widget.setVisible(True)
         self.experiment_selection.setVisible(False)
+        self.messaging_config_widget.setVisible(False)
         self.stacked_layout.setCurrentWidget(self.overview_widget)
 
     def _on_experiment_selection_selected(self):
@@ -401,12 +412,20 @@ class BECAtlasAdminView(BECWidget, QWidget):
             return
         self.overview_widget.setVisible(False)
         self.experiment_selection.setVisible(True)
+        self.messaging_config_widget.setVisible(False)
         self.stacked_layout.setCurrentWidget(self.experiment_selection)
 
     def _on_messaging_services_selected(self):
         """Show the messaging services panel."""
-        logger.info("Messaging services panel is not implemented yet.")
-        return
+        if not self._authenticated:
+            logger.warning("Attempted to access messaging services without authentication.")
+            return
+        self.overview_widget.setVisible(False)
+        self.experiment_selection.setVisible(False)
+        self.messaging_config_widget.setVisible(True)
+        if self._current_deployment_info is not None:
+            self.messaging_config_widget.populate_from_deployment(self._current_deployment_info)
+        self.stacked_layout.setCurrentWidget(self.messaging_config_widget)
 
     ########################
     ## Internal slots
@@ -446,6 +465,7 @@ class BECAtlasAdminView(BECWidget, QWidget):
             atlas_url=self._atlas_url,
         )
         self.atlas_http_service._set_current_deployment_info(deployment)
+        self.messaging_config_widget.populate_from_deployment(deployment)
 
     def _fetch_available_experiments(self):
         """Fetch the list of available experiments for the authenticated user."""
@@ -501,9 +521,7 @@ class BECAtlasAdminView(BECWidget, QWidget):
 
         if authenticated:
             self.toolbar.components.get_action("experiment_selection").action.setEnabled(True)
-            self.toolbar.components.get_action("messaging_services").action.setEnabled(
-                False
-            )  # TODO activate once messaging is added
+            self.toolbar.components.get_action("messaging_services").action.setEnabled(True)
             self.toolbar.components.get_action("logout").action.setEnabled(True)
             self._fetch_available_experiments()  # Fetch experiments upon successful authentication
             self._atlas_info_widget.set_logged_in(info.email)
