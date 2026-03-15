@@ -150,7 +150,9 @@ def test_rpc_gui_obj(connected_client_gui_obj, qtbot):
     # communication should work, main dock area should have same id and be visible
 
     yw = gui.new("Y")
+    qtbot.waitUntil(lambda: len(gui.windows) == 2, timeout=3000)
     yw.delete_all()
     assert len(gui.windows) == 2
     yw.remove()
-    assert len(gui.windows) == 1  # only bec is left
+    qtbot.waitUntil(lambda: len(gui.windows) == 1, timeout=3000)
+    assert len(gui.windows) == 1
