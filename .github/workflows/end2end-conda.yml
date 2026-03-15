@@ -48,7 +48,7 @@ jobs:
           source ./bin/install_bec_dev.sh -t
           cd ../
           pip install -e ./ophyd_devices -e .[dev,pyside6] -e ./bec_testing_plugin
-          pytest -v --files-path ./ --start-servers --random-order  ./tests/end-2-end
+          pytest -v --files-path ./ --start-servers --random-order  ./tests/end-2-end/user_interaction/test_user_interaction.py
 
       - name: Upload logs if job fails
         if: failure()

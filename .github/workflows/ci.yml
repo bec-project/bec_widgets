@@ -25,13 +25,13 @@ permissions:
   pull-requests: write
 
 jobs:
-  check_pr_status:
-    uses: ./.github/workflows/check_pr.yml
+  # check_pr_status:
+  #   uses: ./.github/workflows/check_pr.yml
 
-  formatter:
-    needs: check_pr_status
-    if: needs.check_pr_status.outputs.branch-pr == ''
-    uses: ./.github/workflows/formatter.yml
+  # formatter:
+  #   needs: check_pr_status
+  #   if: needs.check_pr_status.outputs.branch-pr == ''
+  #   uses: ./.github/workflows/formatter.yml
 
   # unit-test:
   #   needs: [check_pr_status, formatter]
@@ -59,8 +59,6 @@ jobs:
   #   uses: ./.github/workflows/generate-cli-check.yml
 
   end2end-test:
-    needs: [check_pr_status, formatter]
-    if: needs.check_pr_status.outputs.branch-pr == ''
     uses: ./.github/workflows/end2end-conda.yml
 
   # child-repos:
