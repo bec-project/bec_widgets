@@ -50,10 +50,10 @@ jobs:
           pip install -e ./ophyd_devices -e .[dev,pyside6] -e ./bec_testing_plugin
           pip install pytest-repeat
 
-
           collect_logs() {
             mkdir -p logs
-            find . -type f -name "*.log" -exec cp --parents {} logs/ +
+            find . -type f -name "*.log"
+            find . -type f -name "*.log" -exec cp --parents {} logs/ \+
           }
 
           trap collect_logs EXIT
