@@ -135,6 +135,7 @@ def maybe_remove_dock_area(qtbot, gui: BECGuiClient, random_int_gen: random.Rand
         wait_for_namespace_change(
             qtbot, gui=gui, parent_widget=gui, object_name=name, widget_gui_id=gui_id, exists=False
         )
+        qtbot.waitUntil(lambda: hasattr(gui, "dock_area") is False, timeout=5000)
 
 
 # @pytest.mark.timeout(PYTEST_TIMEOUT)
