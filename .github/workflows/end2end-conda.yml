@@ -50,14 +50,6 @@ jobs:
           pip install -e ./ophyd_devices -e .[dev,pyside6] -e ./bec_testing_plugin
           pip install pytest-repeat
 
-          collect_logs() {
-            mkdir -p logs
-            find . -type f -name "*.log"
-            find . -type f -name "*.log" -exec cp --parents {} logs/ \+
-          }
-
-          trap collect_logs EXIT
-
           pytest -v --files-path ./ --start-servers --random-order  ./tests/end-2-end/user_interaction/test_user_interaction_e2e.py
 
       - name: Upload logs if job fails
@@ -65,5 +57,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pytest-logs
-          path: ./logs/*.log
+          path: ./bec/logs/*.log
           retention-days: 7
