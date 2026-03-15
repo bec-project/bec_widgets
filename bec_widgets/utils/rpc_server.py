@@ -257,6 +257,10 @@ class RPCServer:
             else:
                 name = WidgetContainerUtils.generate_unique_name("dock_area", existing_dock_areas)
 
+            logger.info(
+                f"Launching new dock area with name: {name} and startup_profile: {startup_profile}"
+            )
+
             result_widget = bw_launch.dock_area(object_name=name, startup_profile=startup_profile)
             result_widget.window().setWindowTitle(f"BEC - {name}")
 
@@ -296,6 +300,9 @@ class RPCServer:
             else:
                 res = self.serialize_object(res)
         except RegistryNotReadyError:
+            logger.info(
+                f"Object not registered yet for RPC request {request_id}, retrying serialization after {retry_delay} ms"
+            )
             try:
                 self._rpc_singleshot_repeats[request_id] += retry_delay
                 QTimer.singleShot(
