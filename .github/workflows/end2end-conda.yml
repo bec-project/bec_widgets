@@ -51,6 +51,10 @@ jobs:
           pip install pytest-repeat
           pytest -v --files-path ./ --start-servers --random-order  ./tests/end-2-end/user_interaction/test_user_interaction_e2e.py
 
+          # find the logs and upload them as artifacts
+          mkdir -p logs
+          find . -type f -name "*.log" -exec cp --parents {} logs/ \;
+
       - name: Upload logs if job fails
         if: failure()
         uses: actions/upload-artifact@v4
