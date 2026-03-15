@@ -49,11 +49,16 @@ jobs:
           cd ../
           pip install -e ./ophyd_devices -e .[dev,pyside6] -e ./bec_testing_plugin
           pip install pytest-repeat
-          pytest -v --files-path ./ --start-servers --random-order  ./tests/end-2-end/user_interaction/test_user_interaction_e2e.py
 
-          # find the logs and upload them as artifacts
-          mkdir -p logs
-          find . -type f -name "*.log" -exec cp --parents {} logs/ \;
+
+          collect_logs() {
+            mkdir -p logs
+            find . -type f -name "*.log" -exec cp --parents {} logs/ +
+          }
+
+          trap collect_logs EXIT
+
+          pytest -v --files-path ./ --start-servers --random-order  ./tests/end-2-end/user_interaction/test_user_interaction_e2e.py
 
       - name: Upload logs if job fails
         if: failure()
