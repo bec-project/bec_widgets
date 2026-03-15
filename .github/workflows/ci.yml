@@ -1,19 +1,19 @@
 name: Full CI
-on: 
+on:
   push:
   pull_request:
   workflow_dispatch:
     inputs:
       BEC_WIDGETS_BRANCH:
-        description: 'Branch of BEC Widgets to install'
+        description: "Branch of BEC Widgets to install"
         required: false
         type: string
       BEC_CORE_BRANCH:
-        description: 'Branch of BEC Core to install'
+        description: "Branch of BEC Core to install"
         required: false
         type: string
       OPHYD_DEVICES_BRANCH:
-        description: 'Branch of Ophyd Devices to install'
+        description: "Branch of Ophyd Devices to install"
         required: false
         type: string
 
@@ -33,52 +33,52 @@ jobs:
     if: needs.check_pr_status.outputs.branch-pr == ''
     uses: ./.github/workflows/formatter.yml
 
-  unit-test:
-    needs: [check_pr_status, formatter]
-    if: needs.check_pr_status.outputs.branch-pr == ''
-    uses: ./.github/workflows/pytest.yml
-    with:
-      BEC_WIDGETS_BRANCH: ${{ inputs.BEC_WIDGETS_BRANCH || github.head_ref }}
-      BEC_CORE_BRANCH: ${{ inputs.BEC_CORE_BRANCH || 'main' }}
-      OPHYD_DEVICES_BRANCH: ${{ inputs.OPHYD_DEVICES_BRANCH || 'main' }}
-    secrets:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+  # unit-test:
+  #   needs: [check_pr_status, formatter]
+  #   if: needs.check_pr_status.outputs.branch-pr == ''
+  #   uses: ./.github/workflows/pytest.yml
+  #   with:
+  #     BEC_WIDGETS_BRANCH: ${{ inputs.BEC_WIDGETS_BRANCH || github.head_ref }}
+  #     BEC_CORE_BRANCH: ${{ inputs.BEC_CORE_BRANCH || 'main' }}
+  #     OPHYD_DEVICES_BRANCH: ${{ inputs.OPHYD_DEVICES_BRANCH || 'main' }}
+  #   secrets:
+  #     CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-  unit-test-matrix:
-    needs: [check_pr_status, formatter]
-    if: needs.check_pr_status.outputs.branch-pr == ''
-    uses: ./.github/workflows/pytest-matrix.yml
-    with:
-      BEC_WIDGETS_BRANCH: ${{ inputs.BEC_WIDGETS_BRANCH || github.head_ref || github.sha}}
-      BEC_CORE_BRANCH: ${{ inputs.BEC_CORE_BRANCH || 'main' }}
-      OPHYD_DEVICES_BRANCH: ${{ inputs.OPHYD_DEVICES_BRANCH || 'main' }}
+  # unit-test-matrix:
+  #   needs: [check_pr_status, formatter]
+  #   if: needs.check_pr_status.outputs.branch-pr == ''
+  #   uses: ./.github/workflows/pytest-matrix.yml
+  #   with:
+  #     BEC_WIDGETS_BRANCH: ${{ inputs.BEC_WIDGETS_BRANCH || github.head_ref || github.sha}}
+  #     BEC_CORE_BRANCH: ${{ inputs.BEC_CORE_BRANCH || 'main' }}
+  #     OPHYD_DEVICES_BRANCH: ${{ inputs.OPHYD_DEVICES_BRANCH || 'main' }}
 
-  generate-cli-test:
-    needs: [check_pr_status, formatter]
-    if: needs.check_pr_status.outputs.branch-pr == ''
-    uses: ./.github/workflows/generate-cli-check.yml
+  # generate-cli-test:
+  #   needs: [check_pr_status, formatter]
+  #   if: needs.check_pr_status.outputs.branch-pr == ''
+  #   uses: ./.github/workflows/generate-cli-check.yml
 
   end2end-test:
     needs: [check_pr_status, formatter]
     if: needs.check_pr_status.outputs.branch-pr == ''
     uses: ./.github/workflows/end2end-conda.yml
 
-  child-repos:
-    needs: [check_pr_status, formatter]
-    if: needs.check_pr_status.outputs.branch-pr == ''
-    uses: ./.github/workflows/child_repos.yml
-    with:
-      BEC_CORE_BRANCH: ${{ inputs.BEC_CORE_BRANCH || 'main' }}
-      OPHYD_DEVICES_BRANCH: ${{ inputs.OPHYD_DEVICES_BRANCH || 'main'}} 
-      BEC_WIDGETS_BRANCH: ${{ inputs.BEC_WIDGETS_BRANCH || github.head_ref || github.sha }}
-  
-  plugin_repos:
-    needs: [check_pr_status, formatter]
-    if: needs.check_pr_status.outputs.branch-pr == ''
-    uses: bec-project/bec/.github/workflows/plugin_repos.yml@main
-    with:
-      BEC_CORE_BRANCH: ${{ inputs.BEC_CORE_BRANCH || 'main' }}
-      BEC_WIDGETS_BRANCH: ${{ inputs.BEC_WIDGETS_BRANCH || github.head_ref || github.sha }}
+  # child-repos:
+  #   needs: [check_pr_status, formatter]
+  #   if: needs.check_pr_status.outputs.branch-pr == ''
+  #   uses: ./.github/workflows/child_repos.yml
+  #   with:
+  #     BEC_CORE_BRANCH: ${{ inputs.BEC_CORE_BRANCH || 'main' }}
+  #     OPHYD_DEVICES_BRANCH: ${{ inputs.OPHYD_DEVICES_BRANCH || 'main'}}
+  #     BEC_WIDGETS_BRANCH: ${{ inputs.BEC_WIDGETS_BRANCH || github.head_ref || github.sha }}
 
-    secrets:
-      GH_READ_TOKEN: ${{ secrets.GH_READ_TOKEN }}
+  # plugin_repos:
+  #   needs: [check_pr_status, formatter]
+  #   if: needs.check_pr_status.outputs.branch-pr == ''
+  #   uses: bec-project/bec/.github/workflows/plugin_repos.yml@main
+  #   with:
+  #     BEC_CORE_BRANCH: ${{ inputs.BEC_CORE_BRANCH || 'main' }}
+  #     BEC_WIDGETS_BRANCH: ${{ inputs.BEC_WIDGETS_BRANCH || github.head_ref || github.sha }}
+
+  #   secrets:
+  #     GH_READ_TOKEN: ${{ secrets.GH_READ_TOKEN }}

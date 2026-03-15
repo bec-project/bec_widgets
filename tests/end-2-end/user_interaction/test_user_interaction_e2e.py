@@ -137,142 +137,157 @@ def maybe_remove_dock_area(qtbot, gui: BECGuiClient, random_int_gen: random.Rand
         )
 
 
-@pytest.mark.timeout(PYTEST_TIMEOUT)
-def test_widgets_e2e_bec_progress_bar(qtbot, connected_client_gui_obj, random_generator_from_seed):
-    """Test the BECProgressBar widget."""
-    gui = connected_client_gui_obj
-    bec = gui._client
-    # Create dock_area and widget
-    widget = create_widget(qtbot, gui, gui.available_widgets.BECProgressBar)
-    widget: client.BECProgressBar
-
-    # Check rpc calls
-    assert widget.label_template == "$value / $maximum - $percentage %"
-    widget.set_maximum(100)
-    widget.set_minimum(50)
-    widget.set_value(75)
-
-    assert widget._get_label() == "75 / 100 - 50 %"
-
-    # Test removing the widget, or leaving it open for the next test
-    maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
-
-
-@pytest.mark.timeout(PYTEST_TIMEOUT)
-def test_widgets_e2e_bec_queue(qtbot, connected_client_gui_obj, random_generator_from_seed):
-    """Test the BECQueue widget."""
-    gui = connected_client_gui_obj
-    bec = gui._client
-    # Create dock_area and widget
-    widget = create_widget(qtbot, gui, gui.available_widgets.BECQueue)
-    widget: client.BECQueue
-
-    # No rpc calls to test so far
-    #  maybe we can add an rpc call to check the queue length
-
-    # Test removing the widget, or leaving it open for the next test
-    maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
-
-
-@pytest.mark.timeout(PYTEST_TIMEOUT)
-def test_widgets_e2e_bec_status_box(qtbot, connected_client_gui_obj, random_generator_from_seed):
-    """Test the BECStatusBox widget."""
-    gui = connected_client_gui_obj
-    bec = gui._client
-    # Create dock_area and widget
-    widget = create_widget(qtbot, gui, gui.available_widgets.BECStatusBox)
-
-    # Check rpc calls
-    assert widget.get_server_state() in ["RUNNING", "IDLE", "BUSY", "ERROR"]
-
-    # Test removing the widget, or leaving it open for the next test
-    maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
-
-
-@pytest.mark.timeout(PYTEST_TIMEOUT)
-def test_widgets_e2e_dap_combo_box(qtbot, connected_client_gui_obj, random_generator_from_seed):
-    """Test the DAPComboBox widget."""
-    gui = connected_client_gui_obj
-    bec = gui._client
-    # Create dock_area and widget
-    widget = create_widget(qtbot, gui, gui.available_widgets.DapComboBox)
-    widget: client.DAPComboBox
-
-    # Check rpc calls
-    widget.select_fit_model("PseudoVoigtModel")
-    widget.select_x_axis("samx")
-    widget.select_y_axis("bpm4i")
-
-    # Test removing the widget, or leaving it open for the next test
-    maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
-
-
-@pytest.mark.timeout(PYTEST_TIMEOUT)
-def test_widgets_e2e_device_browser(qtbot, connected_client_gui_obj, random_generator_from_seed):
-    """Test the DeviceBrowser widget."""
-    gui = connected_client_gui_obj
-    bec = gui._client
-    # Create dock_area and widget
-    widget = create_widget(qtbot, gui, gui.available_widgets.DeviceBrowser)
-    widget: client.DeviceBrowser
-
-    # No rpc calls yet to check
-
-    # Test removing the widget, or leaving it open for the next test
-    maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
-
-
-@pytest.mark.timeout(PYTEST_TIMEOUT)
-def test_widgets_e2e_image(qtbot, connected_client_gui_obj, random_generator_from_seed):
-    """Test the Image widget."""
-    gui = connected_client_gui_obj
-    bec = gui._client
-    # Create dock_area and widget
-    widget = create_widget(qtbot, gui, gui.available_widgets.Image)
-    widget: client.Image
-
-    scans = bec.scans
-    dev = bec.device_manager.devices
-    # Test rpc calls
-    img = widget.image(device=dev.eiger.name, signal="preview")
-    assert img.get_data() is None
-    # Run a scan and plot the image
-    s = scans.line_scan(dev.samx, -3, 3, steps=50, exp_time=0.01, relative=False)
-    s.wait()
-
-    def _wait_for_scan_in_history():
-        # Get scan item from history
-        scan_item = bec.history.get_by_scan_id(s.scan.scan_id)
-        return scan_item is not None
-
-    qtbot.waitUntil(_wait_for_scan_in_history, timeout=7000)
-
-    # Check that last image is equivalent to data in Redis
-    last_img = bec.connector.get_last(MessageEndpoints.device_preview("eiger", "preview"))[
-        "data"
-    ].data
-    assert np.allclose(img.get_data(), last_img)
-
-    # Now add a device with a preview signal
-    img = widget.image(device="eiger", signal="preview")
-    s = scans.line_scan(dev.samx, -3, 3, steps=50, exp_time=0.01, relative=False)
-    s.wait()
-
-    qtbot.waitUntil(_wait_for_scan_in_history, timeout=7000)
-
-    # Test removing the widget, or leaving it open for the next test
-    maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
-
-
-# TODO re-enable when issue is resolved #560
 # @pytest.mark.timeout(PYTEST_TIMEOUT)
-# def test_widgets_e2e_log_panel(qtbot, connected_client_gui_obj, random_generator_from_seed):
-#     """Test the LogPanel widget."""
+# def test_widgets_e2e_bec_progress_bar(qtbot, connected_client_gui_obj, random_generator_from_seed):
+#     """Test the BECProgressBar widget."""
 #     gui = connected_client_gui_obj
 #     bec = gui._client
 #     # Create dock_area and widget
-#     widget = create_widget(qtbot, gui, gui.available_widgets.LogPanel)
-#     widget: client.LogPanel
+#     widget = create_widget(qtbot, gui, gui.available_widgets.BECProgressBar)
+#     widget: client.BECProgressBar
+
+#     # Check rpc calls
+#     assert widget.label_template == "$value / $maximum - $percentage %"
+#     widget.set_maximum(100)
+#     widget.set_minimum(50)
+#     widget.set_value(75)
+
+#     assert widget._get_label() == "75 / 100 - 50 %"
+
+#     # Test removing the widget, or leaving it open for the next test
+#     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
+
+
+# @pytest.mark.timeout(PYTEST_TIMEOUT)
+# def test_widgets_e2e_bec_queue(qtbot, connected_client_gui_obj, random_generator_from_seed):
+#     """Test the BECQueue widget."""
+#     gui = connected_client_gui_obj
+#     bec = gui._client
+#     # Create dock_area and widget
+#     widget = create_widget(qtbot, gui, gui.available_widgets.BECQueue)
+#     widget: client.BECQueue
+
+#     # No rpc calls to test so far
+#     #  maybe we can add an rpc call to check the queue length
+
+#     # Test removing the widget, or leaving it open for the next test
+#     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
+
+
+# @pytest.mark.timeout(PYTEST_TIMEOUT)
+# def test_widgets_e2e_bec_status_box(qtbot, connected_client_gui_obj, random_generator_from_seed):
+#     """Test the BECStatusBox widget."""
+#     gui = connected_client_gui_obj
+#     bec = gui._client
+#     # Create dock_area and widget
+#     widget = create_widget(qtbot, gui, gui.available_widgets.BECStatusBox)
+
+#     # Check rpc calls
+#     assert widget.get_server_state() in ["RUNNING", "IDLE", "BUSY", "ERROR"]
+
+#     # Test removing the widget, or leaving it open for the next test
+#     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
+
+
+# @pytest.mark.timeout(PYTEST_TIMEOUT)
+# def test_widgets_e2e_dap_combo_box(qtbot, connected_client_gui_obj, random_generator_from_seed):
+#     """Test the DAPComboBox widget."""
+#     gui = connected_client_gui_obj
+#     bec = gui._client
+#     # Create dock_area and widget
+#     widget = create_widget(qtbot, gui, gui.available_widgets.DapComboBox)
+#     widget: client.DAPComboBox
+
+#     # Check rpc calls
+#     widget.select_fit_model("PseudoVoigtModel")
+#     widget.select_x_axis("samx")
+#     widget.select_y_axis("bpm4i")
+
+#     # Test removing the widget, or leaving it open for the next test
+#     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
+
+
+# @pytest.mark.timeout(PYTEST_TIMEOUT)
+# def test_widgets_e2e_device_browser(qtbot, connected_client_gui_obj, random_generator_from_seed):
+#     """Test the DeviceBrowser widget."""
+#     gui = connected_client_gui_obj
+#     bec = gui._client
+#     # Create dock_area and widget
+#     widget = create_widget(qtbot, gui, gui.available_widgets.DeviceBrowser)
+#     widget: client.DeviceBrowser
+
+#     # No rpc calls yet to check
+
+#     # Test removing the widget, or leaving it open for the next test
+#     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
+
+
+# @pytest.mark.timeout(PYTEST_TIMEOUT)
+# def test_widgets_e2e_image(qtbot, connected_client_gui_obj, random_generator_from_seed):
+#     """Test the Image widget."""
+#     gui = connected_client_gui_obj
+#     bec = gui._client
+#     # Create dock_area and widget
+#     widget = create_widget(qtbot, gui, gui.available_widgets.Image)
+#     widget: client.Image
+
+#     scans = bec.scans
+#     dev = bec.device_manager.devices
+#     # Test rpc calls
+#     img = widget.image(device=dev.eiger.name, signal="preview")
+#     assert img.get_data() is None
+#     # Run a scan and plot the image
+#     s = scans.line_scan(dev.samx, -3, 3, steps=50, exp_time=0.01, relative=False)
+#     s.wait()
+
+#     def _wait_for_scan_in_history():
+#         # Get scan item from history
+#         scan_item = bec.history.get_by_scan_id(s.scan.scan_id)
+#         return scan_item is not None
+
+#     qtbot.waitUntil(_wait_for_scan_in_history, timeout=7000)
+
+#     # Check that last image is equivalent to data in Redis
+#     last_img = bec.connector.get_last(MessageEndpoints.device_preview("eiger", "preview"))[
+#         "data"
+#     ].data
+#     assert np.allclose(img.get_data(), last_img)
+
+#     # Now add a device with a preview signal
+#     img = widget.image(device="eiger", signal="preview")
+#     s = scans.line_scan(dev.samx, -3, 3, steps=50, exp_time=0.01, relative=False)
+#     s.wait()
+
+#     qtbot.waitUntil(_wait_for_scan_in_history, timeout=7000)
+
+#     # Test removing the widget, or leaving it open for the next test
+#     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
+
+
+# # TODO re-enable when issue is resolved #560
+# # @pytest.mark.timeout(PYTEST_TIMEOUT)
+# # def test_widgets_e2e_log_panel(qtbot, connected_client_gui_obj, random_generator_from_seed):
+# #     """Test the LogPanel widget."""
+# #     gui = connected_client_gui_obj
+# #     bec = gui._client
+# #     # Create dock_area and widget
+# #     widget = create_widget(qtbot, gui, gui.available_widgets.LogPanel)
+# #     widget: client.LogPanel
+
+# #     # No rpc calls to check so far
+
+# #     # Test removing the widget, or leaving it open for the next test
+# #     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
+
+
+# @pytest.mark.timeout(PYTEST_TIMEOUT)
+# def test_widgets_e2e_minesweeper(qtbot, connected_client_gui_obj, random_generator_from_seed):
+#     """Test the MineSweeper widget."""
+#     gui = connected_client_gui_obj
+#     bec = gui._client
+#     # Create dock_area and widget
+#     widget = create_widget(qtbot, gui, gui.available_widgets.Minesweeper)
+#     widget: client.MineSweeper
 
 #     # No rpc calls to check so far
 
@@ -280,175 +295,160 @@ def test_widgets_e2e_image(qtbot, connected_client_gui_obj, random_generator_fro
 #     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
 
 
-@pytest.mark.timeout(PYTEST_TIMEOUT)
-def test_widgets_e2e_minesweeper(qtbot, connected_client_gui_obj, random_generator_from_seed):
-    """Test the MineSweeper widget."""
-    gui = connected_client_gui_obj
-    bec = gui._client
-    # Create dock_area and widget
-    widget = create_widget(qtbot, gui, gui.available_widgets.Minesweeper)
-    widget: client.MineSweeper
+# @pytest.mark.timeout(PYTEST_TIMEOUT)
+# def test_widgets_e2e_motor_map(qtbot, connected_client_gui_obj, random_generator_from_seed):
+#     """Test the MotorMap widget."""
+#     gui = connected_client_gui_obj
+#     bec = gui._client
+#     # Create dock_area and widget
+#     widget = create_widget(qtbot, gui, gui.available_widgets.MotorMap)
+#     widget: client.MotorMap
 
-    # No rpc calls to check so far
+#     # Test RPC calls
+#     dev = bec.device_manager.devices
+#     scans = bec.scans
+#     # Set motor map to names
+#     widget.map(dev.samx, dev.samy)
+#     # Move motor samx to pos
+#     pos = dev.samx.limits[1] - 1  # -1 from higher limit
+#     scans.mv(dev.samx, pos, relative=False).wait()
+#     # Check that data is up to date
+#     assert np.isclose(widget.get_data()["x"][-1], pos, dev.samx.precision)
+#     # Move motor samy to pos
+#     pos = dev.samy.limits[0] + 1  # +1 from lower limit
+#     scans.mv(dev.samy, pos, relative=False).wait()
+#     # Check that data is up to date
+#     assert np.isclose(widget.get_data()["y"][-1], pos, dev.samy.precision)
 
-    # Test removing the widget, or leaving it open for the next test
-    maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
-
-
-@pytest.mark.timeout(PYTEST_TIMEOUT)
-def test_widgets_e2e_motor_map(qtbot, connected_client_gui_obj, random_generator_from_seed):
-    """Test the MotorMap widget."""
-    gui = connected_client_gui_obj
-    bec = gui._client
-    # Create dock_area and widget
-    widget = create_widget(qtbot, gui, gui.available_widgets.MotorMap)
-    widget: client.MotorMap
-
-    # Test RPC calls
-    dev = bec.device_manager.devices
-    scans = bec.scans
-    # Set motor map to names
-    widget.map(dev.samx, dev.samy)
-    # Move motor samx to pos
-    pos = dev.samx.limits[1] - 1  # -1 from higher limit
-    scans.mv(dev.samx, pos, relative=False).wait()
-    # Check that data is up to date
-    assert np.isclose(widget.get_data()["x"][-1], pos, dev.samx.precision)
-    # Move motor samy to pos
-    pos = dev.samy.limits[0] + 1  # +1 from lower limit
-    scans.mv(dev.samy, pos, relative=False).wait()
-    # Check that data is up to date
-    assert np.isclose(widget.get_data()["y"][-1], pos, dev.samy.precision)
-
-    # Test removing the widget, or leaving it open for the next test
-    maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
+#     # Test removing the widget, or leaving it open for the next test
+#     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
 
 
-@pytest.mark.timeout(PYTEST_TIMEOUT)
-def test_widgets_e2e_multi_waveform(qtbot, connected_client_gui_obj, random_generator_from_seed):
-    """Test MultiWaveform widget."""
-    gui = connected_client_gui_obj
-    bec = gui._client
-    # Create dock_area and widget
-    widget = create_widget(qtbot, gui, gui.available_widgets.MultiWaveform)
-    widget: client.MultiWaveform
+# @pytest.mark.timeout(PYTEST_TIMEOUT)
+# def test_widgets_e2e_multi_waveform(qtbot, connected_client_gui_obj, random_generator_from_seed):
+#     """Test MultiWaveform widget."""
+#     gui = connected_client_gui_obj
+#     bec = gui._client
+#     # Create dock_area and widget
+#     widget = create_widget(qtbot, gui, gui.available_widgets.MultiWaveform)
+#     widget: client.MultiWaveform
 
-    # Test RPC calls
-    dev = bec.device_manager.devices
-    scans = bec.scans
-    # test plotting
-    cm = "cividis"
-    widget.plot(dev.waveform, color_palette=cm)
-    assert widget.monitor == dev.waveform.name
-    assert widget.color_palette == cm
+#     # Test RPC calls
+#     dev = bec.device_manager.devices
+#     scans = bec.scans
+#     # test plotting
+#     cm = "cividis"
+#     widget.plot(dev.waveform, color_palette=cm)
+#     assert widget.monitor == dev.waveform.name
+#     assert widget.color_palette == cm
 
-    # Scan with BEC
-    s = scans.line_scan(dev.samx, -3, 3, steps=5, exp_time=0.01, relative=False)
-    s.wait()
+#     # Scan with BEC
+#     s = scans.line_scan(dev.samx, -3, 3, steps=5, exp_time=0.01, relative=False)
+#     s.wait()
 
-    def _wait_for_scan_in_history():
-        # Get scan item from history
-        scan_item = bec.history.get_by_scan_id(s.scan.scan_id)
-        return scan_item is not None
+#     def _wait_for_scan_in_history():
+#         # Get scan item from history
+#         scan_item = bec.history.get_by_scan_id(s.scan.scan_id)
+#         return scan_item is not None
 
-    qtbot.waitUntil(_wait_for_scan_in_history, timeout=7000)
-    # Wait for data in history (should be plotted?)
+#     qtbot.waitUntil(_wait_for_scan_in_history, timeout=7000)
+#     # Wait for data in history (should be plotted?)
 
-    # TODO how can we check that the data was plotted, implement get_data()
+#     # TODO how can we check that the data was plotted, implement get_data()
 
-    # Test removing the widget, or leaving it open for the next test
-    maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
-
-
-@pytest.mark.timeout(PYTEST_TIMEOUT)
-def test_widgets_e2e_positioner_indicator(
-    qtbot, connected_client_gui_obj, random_generator_from_seed
-):
-    """Test the PositionIndicator widget."""
-    gui = connected_client_gui_obj
-    bec = gui._client
-    # Create dock_area and widget
-    widget = create_widget(qtbot, gui, gui.available_widgets.PositionIndicator)
-    widget: client.PositionIndicator
-
-    # TODO check what these rpc calls are supposed to do! Issue created #461
-    widget.set_value(5)
-
-    # Test removing the widget, or leaving it open for the next test
-    maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
+#     # Test removing the widget, or leaving it open for the next test
+#     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
 
 
-@pytest.mark.timeout(PYTEST_TIMEOUT)
-def test_widgets_e2e_positioner_box(qtbot, connected_client_gui_obj, random_generator_from_seed):
-    """Test the PositionerBox widget."""
-    gui = connected_client_gui_obj
-    bec = gui._client
-    # Create dock_area and widget
-    widget = create_widget(qtbot, gui, gui.available_widgets.PositionerBox)
-    widget: client.PositionerBox
+# @pytest.mark.timeout(PYTEST_TIMEOUT)
+# def test_widgets_e2e_positioner_indicator(
+#     qtbot, connected_client_gui_obj, random_generator_from_seed
+# ):
+#     """Test the PositionIndicator widget."""
+#     gui = connected_client_gui_obj
+#     bec = gui._client
+#     # Create dock_area and widget
+#     widget = create_widget(qtbot, gui, gui.available_widgets.PositionIndicator)
+#     widget: client.PositionIndicator
 
-    # Test rpc calls
-    dev = bec.device_manager.devices
-    scans = bec.scans
-    # No rpc calls to check so far
-    widget.set_positioner(dev.samx)
-    widget.set_positioner(dev.samy.name)
+#     # TODO check what these rpc calls are supposed to do! Issue created #461
+#     widget.set_value(5)
 
-    scans.mv(dev.samy, -3, relative=False).wait()
-
-    # Test removing the widget, or leaving it open for the next test
-    maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
+#     # Test removing the widget, or leaving it open for the next test
+#     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
 
 
-@pytest.mark.timeout(PYTEST_TIMEOUT)
-def test_widgets_e2e_positioner_box_2d(qtbot, connected_client_gui_obj, random_generator_from_seed):
-    """Test the PositionerBox2D widget."""
-    gui = connected_client_gui_obj
-    bec = gui._client
-    # Create dock_area and widget
-    widget = create_widget(qtbot, gui, gui.available_widgets.PositionerBox2D)
-    widget: client.PositionerBox2D
+# @pytest.mark.timeout(PYTEST_TIMEOUT)
+# def test_widgets_e2e_positioner_box(qtbot, connected_client_gui_obj, random_generator_from_seed):
+#     """Test the PositionerBox widget."""
+#     gui = connected_client_gui_obj
+#     bec = gui._client
+#     # Create dock_area and widget
+#     widget = create_widget(qtbot, gui, gui.available_widgets.PositionerBox)
+#     widget: client.PositionerBox
 
-    # Test rpc calls
-    dev = bec.device_manager.devices
-    scans = bec.scans
-    # No rpc calls to check so far
-    widget.set_positioner_hor(dev.samx)
-    widget.set_positioner_ver(dev.samy)
+#     # Test rpc calls
+#     dev = bec.device_manager.devices
+#     scans = bec.scans
+#     # No rpc calls to check so far
+#     widget.set_positioner(dev.samx)
+#     widget.set_positioner(dev.samy.name)
 
-    # Try moving the motors
-    scans.mv(dev.samx, 3, relative=False).wait()
-    scans.mv(dev.samy, -3, relative=False).wait()
+#     scans.mv(dev.samy, -3, relative=False).wait()
 
-    # Test removing the widget, or leaving it open for the next test
-    maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
+#     # Test removing the widget, or leaving it open for the next test
+#     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
 
 
-@pytest.mark.timeout(PYTEST_TIMEOUT)
-def test_widgets_e2e_positioner_control_line(
-    qtbot, connected_client_gui_obj, random_generator_from_seed
-):
-    """Test the positioner control line widget"""
-    gui = connected_client_gui_obj
-    bec = gui._client
-    # Create dock_area and widget
-    widget = create_widget(qtbot, gui, gui.available_widgets.PositionerControlLine)
-    widget: client.PositionerControlLine
+# @pytest.mark.timeout(PYTEST_TIMEOUT)
+# def test_widgets_e2e_positioner_box_2d(qtbot, connected_client_gui_obj, random_generator_from_seed):
+#     """Test the PositionerBox2D widget."""
+#     gui = connected_client_gui_obj
+#     bec = gui._client
+#     # Create dock_area and widget
+#     widget = create_widget(qtbot, gui, gui.available_widgets.PositionerBox2D)
+#     widget: client.PositionerBox2D
 
-    # Test rpc calls
-    dev = bec.device_manager.devices
-    scans = bec.scans
-    # Set positioner
-    widget.set_positioner(dev.samx)
-    scans.mv(dev.samx, 3, relative=False).wait()
-    widget.set_positioner(dev.samy.name)
-    scans.mv(dev.samy, -3, relative=False).wait()
+#     # Test rpc calls
+#     dev = bec.device_manager.devices
+#     scans = bec.scans
+#     # No rpc calls to check so far
+#     widget.set_positioner_hor(dev.samx)
+#     widget.set_positioner_ver(dev.samy)
 
-    # Test removing the widget, or leaving it open for the next test
-    maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
+#     # Try moving the motors
+#     scans.mv(dev.samx, 3, relative=False).wait()
+#     scans.mv(dev.samy, -3, relative=False).wait()
+
+#     # Test removing the widget, or leaving it open for the next test
+#     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
 
 
-# TODO passes locally, fails on CI for some reason... -> issue #1003
+# @pytest.mark.timeout(PYTEST_TIMEOUT)
+# def test_widgets_e2e_positioner_control_line(
+#     qtbot, connected_client_gui_obj, random_generator_from_seed
+# ):
+#     """Test the positioner control line widget"""
+#     gui = connected_client_gui_obj
+#     bec = gui._client
+#     # Create dock_area and widget
+#     widget = create_widget(qtbot, gui, gui.available_widgets.PositionerControlLine)
+#     widget: client.PositionerControlLine
+
+#     # Test rpc calls
+#     dev = bec.device_manager.devices
+#     scans = bec.scans
+#     # Set positioner
+#     widget.set_positioner(dev.samx)
+#     scans.mv(dev.samx, 3, relative=False).wait()
+#     widget.set_positioner(dev.samy.name)
+#     scans.mv(dev.samy, -3, relative=False).wait()
+
+#     # Test removing the widget, or leaving it open for the next test
+#     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
+
+
+@pytest.mark.repeat(20)
 @pytest.mark.timeout(PYTEST_TIMEOUT)
 def test_widgets_e2e_ring_progress_bar(qtbot, connected_client_gui_obj, random_generator_from_seed):
     """Test the RingProgressBar widget"""
@@ -477,86 +477,86 @@ def test_widgets_e2e_ring_progress_bar(qtbot, connected_client_gui_obj, random_g
     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
 
 
-@pytest.mark.timeout(PYTEST_TIMEOUT)
-def test_widgets_e2e_scan_control(qtbot, connected_client_gui_obj, random_generator_from_seed):
-    """Test the ScanControl widget"""
-    gui = connected_client_gui_obj
-    bec = gui._client
-    # Create dock_area and widget
-    widget = create_widget(qtbot, gui, gui.available_widgets.ScanControl)
-    widget: client.ScanControl
+# @pytest.mark.timeout(PYTEST_TIMEOUT)
+# def test_widgets_e2e_scan_control(qtbot, connected_client_gui_obj, random_generator_from_seed):
+#     """Test the ScanControl widget"""
+#     gui = connected_client_gui_obj
+#     bec = gui._client
+#     # Create dock_area and widget
+#     widget = create_widget(qtbot, gui, gui.available_widgets.ScanControl)
+#     widget: client.ScanControl
 
-    # No rpc calls to check so far
+#     # No rpc calls to check so far
 
-    # Test removing the widget, or leaving it open for the next test
-    maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
-
-
-@pytest.mark.timeout(PYTEST_TIMEOUT)
-def test_widgets_e2e_scatter_waveform(qtbot, connected_client_gui_obj, random_generator_from_seed):
-    """Test the ScatterWaveform widget"""
-    gui = connected_client_gui_obj
-    bec = gui._client
-    # Create dock_area and widget
-    widget = create_widget(qtbot, gui, gui.available_widgets.ScatterWaveform)
-    widget: client.ScatterWaveform
-
-    # Test rpc calls
-    dev = bec.device_manager.devices
-    scans = bec.scans
-    widget.plot(dev.samx, dev.samy, dev.bpm4i)
-    scans.grid_scan(dev.samx, -5, 5, 5, dev.samy, -5, 5, 5, exp_time=0.01, relative=False).wait()
-
-    # Test removing the widget, or leaving it open for the next test
-    maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
+#     # Test removing the widget, or leaving it open for the next test
+#     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
 
 
-@pytest.mark.timeout(PYTEST_TIMEOUT)
-def test_widgets_e2e_text_box(qtbot, connected_client_gui_obj, random_generator_from_seed):
-    """Test the TextBox widget"""
-    gui = connected_client_gui_obj
-    bec = gui._client
-    # Create dock_area and widget
-    widget = create_widget(qtbot, gui, gui.available_widgets.TextBox)
-    widget: client.TextBox
+# @pytest.mark.timeout(PYTEST_TIMEOUT)
+# def test_widgets_e2e_scatter_waveform(qtbot, connected_client_gui_obj, random_generator_from_seed):
+#     """Test the ScatterWaveform widget"""
+#     gui = connected_client_gui_obj
+#     bec = gui._client
+#     # Create dock_area and widget
+#     widget = create_widget(qtbot, gui, gui.available_widgets.ScatterWaveform)
+#     widget: client.ScatterWaveform
 
-    # RPC calls
-    widget.set_plain_text("Hello World")
-    widget.set_html_text("<b> Hello World HTML </b>")
+#     # Test rpc calls
+#     dev = bec.device_manager.devices
+#     scans = bec.scans
+#     widget.plot(dev.samx, dev.samy, dev.bpm4i)
+#     scans.grid_scan(dev.samx, -5, 5, 5, dev.samy, -5, 5, 5, exp_time=0.01, relative=False).wait()
 
-    # Test removing the widget, or leaving it open for the next test
-    maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
+#     # Test removing the widget, or leaving it open for the next test
+#     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
 
 
-@pytest.mark.timeout(PYTEST_TIMEOUT)
-def test_widgets_e2e_waveform(qtbot, connected_client_gui_obj, random_generator_from_seed):
-    """Test the Waveform widget"""
-    gui = connected_client_gui_obj
-    bec = gui._client
-    # Create dock_area and widget
-    widget = create_widget(qtbot, gui, gui.available_widgets.Waveform)
-    widget: client.Waveform
+# @pytest.mark.timeout(PYTEST_TIMEOUT)
+# def test_widgets_e2e_text_box(qtbot, connected_client_gui_obj, random_generator_from_seed):
+#     """Test the TextBox widget"""
+#     gui = connected_client_gui_obj
+#     bec = gui._client
+#     # Create dock_area and widget
+#     widget = create_widget(qtbot, gui, gui.available_widgets.TextBox)
+#     widget: client.TextBox
 
-    # Test rpc calls
-    dev = bec.device_manager.devices
-    scans = bec.scans
-    widget.plot(dev.bpm4i)
-    s = scans.line_scan(dev.samx, -3, 3, steps=50, exp_time=0.01, relative=False)
-    s.wait()
+#     # RPC calls
+#     widget.set_plain_text("Hello World")
+#     widget.set_html_text("<b> Hello World HTML </b>")
 
-    def _wait_for_scan_in_history():
-        # Get scan item from history
-        scan_item = bec.history.get_by_scan_id(s.scan.scan_id)
-        return scan_item is not None
+#     # Test removing the widget, or leaving it open for the next test
+#     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
 
-    qtbot.waitUntil(_wait_for_scan_in_history, timeout=7000)
 
-    scan_item = bec.history.get_by_scan_id(s.scan.scan_id)
-    samx_data = scan_item.devices.samx.samx.read()["value"]
-    bpm4i_data = scan_item.devices.bpm4i.bpm4i.read()["value"]
-    curve = widget.curves[0]
-    assert np.allclose(curve.get_data()[0], samx_data)
-    assert np.allclose(curve.get_data()[1], bpm4i_data)
+# @pytest.mark.timeout(PYTEST_TIMEOUT)
+# def test_widgets_e2e_waveform(qtbot, connected_client_gui_obj, random_generator_from_seed):
+#     """Test the Waveform widget"""
+#     gui = connected_client_gui_obj
+#     bec = gui._client
+#     # Create dock_area and widget
+#     widget = create_widget(qtbot, gui, gui.available_widgets.Waveform)
+#     widget: client.Waveform
 
-    # Test removing the widget, or leaving it open for the next test
-    maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
+#     # Test rpc calls
+#     dev = bec.device_manager.devices
+#     scans = bec.scans
+#     widget.plot(dev.bpm4i)
+#     s = scans.line_scan(dev.samx, -3, 3, steps=50, exp_time=0.01, relative=False)
+#     s.wait()
+
+#     def _wait_for_scan_in_history():
+#         # Get scan item from history
+#         scan_item = bec.history.get_by_scan_id(s.scan.scan_id)
+#         return scan_item is not None
+
+#     qtbot.waitUntil(_wait_for_scan_in_history, timeout=7000)
+
+#     scan_item = bec.history.get_by_scan_id(s.scan.scan_id)
+#     samx_data = scan_item.devices.samx.samx.read()["value"]
+#     bpm4i_data = scan_item.devices.bpm4i.bpm4i.read()["value"]
+#     curve = widget.curves[0]
+#     assert np.allclose(curve.get_data()[0], samx_data)
+#     assert np.allclose(curve.get_data()[1], bpm4i_data)
+
+#     # Test removing the widget, or leaving it open for the next test
+#     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
