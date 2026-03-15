@@ -118,6 +118,9 @@ class RPCServer:
         logger.debug(f"Received RPC instruction: {msg}, metadata: {metadata}")
         with rpc_exception_hook(functools.partial(self.send_response, request_id, False)):
             try:
+                logger.info(
+                    f"Processing RPC instruction: {msg['action']} with request_id: {request_id}. Parameters: {msg.get('parameter')}"
+                )
                 method = msg["action"]
                 args = msg["parameter"].get("args", [])
                 kwargs = msg["parameter"].get("kwargs", {})
