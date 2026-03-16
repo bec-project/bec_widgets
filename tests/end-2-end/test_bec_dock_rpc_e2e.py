@@ -75,6 +75,13 @@ def test_dock_manipulations_e2e(qtbot, connected_client_gui_obj):
     w1 = dock_area.new("Waveform")
     w2 = dock_area.new("Waveform")
 
+    qtbot.waitUntil(
+        lambda: all(
+            gui_id in gui._server_registry for gui_id in [w0._gui_id, w1._gui_id, w2._gui_id]
+        ),
+        timeout=5000,
+    )
+
     assert hasattr(gui.bec, "Waveform")
     assert hasattr(gui.bec, "Waveform_0")
     assert hasattr(gui.bec, "Waveform_1")
@@ -126,6 +133,7 @@ def test_rpc_gui_obj(connected_client_gui_obj, qtbot):
 
     xw = gui.new("X")
     xw.delete_all()
+    qtbot.waitUntil(lambda: len(gui.windows) == 2, timeout=3000)
     assert xw.__class__.__name__ == "RPCReference"
     assert gui._ipython_registry[xw._gui_id].__class__.__name__ == "BECDockArea"
     assert len(gui.windows) == 2
@@ -145,12 +153,15 @@ def test_rpc_gui_obj(connected_client_gui_obj, qtbot):
 
     qtbot.waitUntil(wait_for_gui_started, timeout=3000)
     # gui.windows should have bec with gui_id 'bec'
+    qtbot.waitUntil(lambda: len(gui.windows) == 1, timeout=3000)
     assert len(gui.windows) == 1
 
     # communication should work, main dock area should have same id and be visible
 
     yw = gui.new("Y")
     yw.delete_all()
+    qtbot.waitUntil(lambda: len(gui.windows) == 2, timeout=3000)
     assert len(gui.windows) == 2
     yw.remove()
+    qtbot.waitUntil(lambda: len(gui.windows) == 1, timeout=3000)
     assert len(gui.windows) == 1  # only bec is left
