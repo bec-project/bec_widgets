@@ -20,17 +20,11 @@ class AdminView(ViewBase):
         *,
         view_id: str | None = None,
         title: str | None = None,
+        **kwargs,
     ):
         super().__init__(parent=parent, content=content, view_id=view_id, title=title)
         self.admin_widget = BECAtlasAdminView(parent=self)
         self.set_content(self.admin_widget)
-
-    @SafeSlot()
-    def on_enter(self) -> None:
-        """Called after the view becomes current/visible.
-
-        Default implementation does nothing. Override in subclasses.
-        """
 
     @SafeSlot()
     def on_exit(self) -> None:

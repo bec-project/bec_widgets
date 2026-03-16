@@ -98,7 +98,6 @@ class ExperimentSelection(QWidget):
 
         self._build_table_tab()
         self._tabs.currentChanged.connect(self._on_tab_changed)
-        # main_layout.addStretch()
 
         button_layout = QHBoxLayout()
         main_layout.addLayout(button_layout)
@@ -110,10 +109,20 @@ class ExperimentSelection(QWidget):
         self._tabs.setCurrentWidget(self._card_tab)
 
     def set_experiment_infos(self, experiment_infos: list[dict]):
+        """
+        Update the experiment information displayed in the view. It will in addition determine
+        the next experiment to be shown in the card view. If no next experiment can be determined,
+        the card view will be cleared.
+
+        Args:
+            experiment_infos (list[dict]): A list of experiment information dictionaries.
+        """
         self._experiment_infos = experiment_infos
         self._next_experiment = self._select_next_experiment(self._experiment_infos)
         if self._next_experiment:
             self._card_tab.set_experiment_info(self._next_experiment)
+        else:
+            self._card_tab.clear_experiment_info()
         self._apply_table_filters()
 
     def _setup_search(self, layout: QVBoxLayout):
@@ -194,11 +203,11 @@ class ExperimentSelection(QWidget):
         self._table.setStyleSheet("QTableWidget::item { padding: 4px; }")
 
         header = self._table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(1, QHeaderView.Stretch)
-        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
 
         self._table.itemSelectionChanged.connect(self._update_selection_state)
         hor_layout.addWidget(self._table, stretch=5)
@@ -338,7 +347,7 @@ class ExperimentSelection(QWidget):
         self._apply_row_filter(current_text)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     from qtpy.QtWidgets import QApplication
 
     experiment_infos = [
