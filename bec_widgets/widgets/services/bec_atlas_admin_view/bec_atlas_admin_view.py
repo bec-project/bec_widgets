@@ -251,10 +251,14 @@ class BECAtlasAdminView(BECWidget, QWidget):
     authenticated = Signal(bool)
 
     def __init__(
-        self, parent=None, atlas_url: str = "https://bec-atlas-dev.psi.ch/api/v1", client=None
+        self,
+        parent=None,
+        atlas_url: str = "https://bec-atlas-dev.psi.ch/api/v1",
+        client=None,
+        **kwargs,
     ):
 
-        super().__init__(parent=parent, client=client)
+        super().__init__(parent=parent, client=client, **kwargs)
 
         # State variables
         self._current_deployment_info: DeploymentInfoMessage | None = None

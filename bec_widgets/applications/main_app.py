@@ -197,9 +197,6 @@ class BECMainApp(BECMainWindow):
         idx = self._view_index.get(vid)
         if idx is None or not (0 <= idx < self.stack.count()):
             return
-        # if vid == "dark_mode":
-        #     # Special handling for dark mode toggle item
-        #     return
         # Determine current view
         current_index = self.stack.currentIndex()
         current_view = (

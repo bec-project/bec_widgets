@@ -185,6 +185,20 @@ class ExperimentMatCard(BECWidget, QWidget):
     def _emit_next_experiment(self):
         self.experiment_selected.emit(self.experiment_info)
 
+    def clear_experiment_info(self):
+        """
+        Clear the experiment information displayed on the card and disable the activate button.
+        """
+        self._card_pgroup.setText("-")
+        self._card_title_value.setText("-")
+        self._card_name.setText("-")
+        self._card_start.setText("-")
+        self._card_end.setText("-")
+        self._abstract_text = ""
+        self._abstract_label.setText("")
+        self.experiment_info = {}
+        self._activate_button.setEnabled(False)
+
     def set_experiment_info(self, info: ExperimentInfoMessage | dict):
         """
         Set the experiment information to display on the card.
@@ -217,7 +231,7 @@ class ExperimentMatCard(BECWidget, QWidget):
         self._card_title.setText(title)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     import sys
 
     from bec_qthemes import apply_theme

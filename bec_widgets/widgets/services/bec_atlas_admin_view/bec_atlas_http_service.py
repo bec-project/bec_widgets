@@ -236,9 +236,11 @@ class BECAtlasHTTPService(QWidget):
             ):
                 self.authenticated.emit(self.auth_user_info.model_dump())
             else:
-                self._show_warning(
-                    text=f"User {self.auth_user_info.email} does not have access to the active deployment {data.get('name', '<unknown>')}."
-                )
+                if self.auth_user_info is not None:
+                    warning_text = f"User {self.auth_user_info.email} does not have access to the active deployment {data.get('name', '<unknown>')}."
+                else:
+                    warning_text = "Authenticated user information is missing. Cannot verify access to the active deployment."
+                self._show_warning(warning_text)
                 self.logout()  # Logout to clear auth info and stop timer since user does not have access
 
         response = HTTPResponse(request_url=request_url, headers=headers, status=status, data=data)
