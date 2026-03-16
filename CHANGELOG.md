@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.2.2 (2026-03-16)
+
+### Bug Fixes
+
+- **image**: Disconnecting of 2d monitor
+  ([`4c9d7fd`](https://github.com/bec-project/bec_widgets/commit/4c9d7fddce7aa5b7f13a00ac332bd54b301e3c28))
+
+
 ## v3.2.1 (2026-03-16)
 
 ### Bug Fixes
