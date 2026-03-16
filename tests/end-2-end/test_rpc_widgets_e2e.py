@@ -89,8 +89,8 @@ def test_available_widgets(qtbot, connected_client_gui_obj):
         # Skip private attributes
         if object_name.startswith("_"):
             continue
-        # Skip VSCode widget as Code server is not available in the Docker image
-        if object_name == "VSCodeEditor":
+        # Skip BECShell as ttyd is not installed
+        if object_name == "BECShell":
             continue
 
         # Skip WebConsole as ttyd is not installed
