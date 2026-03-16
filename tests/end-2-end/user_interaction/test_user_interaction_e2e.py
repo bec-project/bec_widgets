@@ -128,13 +128,9 @@ def maybe_remove_dock_area(qtbot, gui: BECGuiClient, random_int_gen: random.Rand
     random_int = random_int_gen.randint(0, 100)
     if random_int >= 50:
         # Needed, reference gets deleted in the gui
-        name = gui.dock_area.object_name
-        gui_id = gui.dock_area._gui_id
         gui.dock_area.delete_all()  # start fresh
         gui.delete("dock_area")
-        wait_for_namespace_change(
-            qtbot, gui=gui, parent_widget=gui, object_name=name, widget_gui_id=gui_id, exists=False
-        )
+        qtbot.waitUntil(lambda: hasattr(gui, "dock_area") is False, timeout=5000)
 
 
 @pytest.mark.timeout(PYTEST_TIMEOUT)
