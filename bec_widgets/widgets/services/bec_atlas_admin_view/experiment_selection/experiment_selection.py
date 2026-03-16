@@ -21,6 +21,7 @@ from qtpy.QtWidgets import (
 from thefuzz import fuzz
 
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.fuzzy_search import is_match
 from bec_widgets.widgets.services.bec_atlas_admin_view.experiment_selection.experiment_mat_card import (
     ExperimentMatCard,
 )
@@ -30,32 +31,6 @@ from bec_widgets.widgets.services.bec_atlas_admin_view.experiment_selection.util
 )
 
 logger = bec_logger.logger
-
-FUZZY_SEARCH_THRESHOLD = 80
-
-
-def is_match(text: str, data: dict[str, Any], relevant_keys: list[str], enable_fuzzy: bool) -> bool:
-    """
-    Check if the text matches any of the relevant keys in the row data.
-
-    Args:
-        text (str): The text to search for.
-        data (dict[str, Any]): The data to search in.
-        relevant_keys (list[str]): The keys to consider for searching.
-        enable_fuzzy (bool): Whether to use fuzzy matching.
-    Returns:
-        bool: True if a match is found, False otherwise.
-    """
-    for key in relevant_keys:
-        data_value = str(data.get(key, "") or "")
-        if enable_fuzzy:
-            match_ratio = fuzz.partial_ratio(text.lower(), data_value.lower())
-            if match_ratio >= FUZZY_SEARCH_THRESHOLD:
-                return True
-        else:
-            if text.lower() in data_value.lower():
-                return True
-    return False
 
 
 class ExperimentSelection(QWidget):
