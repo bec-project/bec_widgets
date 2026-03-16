@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v3.2.1 (2026-03-16)
+
+### Bug Fixes
+
+- **e2e**: Bec dock rpc fixed synchronization
+  ([`e061fa3`](https://github.com/bec-project/bec_widgets/commit/e061fa31a9a5e5c00e44337d7cc52c51d8e259b5))
+
+- **e2e**: Bec shell excluded from e2e testing
+  ([`974f259`](https://github.com/bec-project/bec_widgets/commit/974f25997d68d13ff1063026f9e5c4c8dd4d49f3))
+
+- **e2e**: Timeout for maybe_remove_dock_area
+  ([`718f995`](https://github.com/bec-project/bec_widgets/commit/718f99527c3bebb96845d3305aba69434eb83f77))
+
+
 ## v3.2.0 (2026-03-11)
 
 ### Features
