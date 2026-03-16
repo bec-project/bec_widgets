@@ -5,9 +5,8 @@ in DeviceTableRow entries.
 
 from __future__ import annotations
 
-import traceback
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Literal, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Tuple
 
 from bec_lib.atlas_models import Device as DeviceModel
 from bec_lib.callback_handler import EventType
@@ -19,6 +18,7 @@ from thefuzz import fuzz
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.fuzzy_search import is_match
 from bec_widgets.widgets.control.device_manager.components.device_table.device_table_row import (
     DeviceTableRow,
 )
@@ -36,34 +36,6 @@ logger = bec_logger.logger
 _DeviceCfgIter = Iterable[dict[str, Any]]
 # DeviceValidationResult: device_config, config_status, connection_status, error_message
 _ValidationResultIter = Iterable[Tuple[dict[str, Any], ConfigStatus, ConnectionStatus, str]]
-
-FUZZY_SEARCH_THRESHOLD = 80
-
-
-def is_match(
-    text: str, row_data: dict[str, Any], relevant_keys: list[str], enable_fuzzy: bool
-) -> bool:
-    """
-    Check if the text matches any of the relevant keys in the row data.
-
-    Args:
-        text (str): The text to search for.
-        row_data (dict[str, Any]): The row data to search in.
-        relevant_keys (list[str]): The keys to consider for searching.
-        enable_fuzzy (bool): Whether to use fuzzy matching.
-    Returns:
-        bool: True if a match is found, False otherwise.
-    """
-    for key in relevant_keys:
-        data = str(row_data.get(key, "") or "")
-        if enable_fuzzy:
-            match_ratio = fuzz.partial_ratio(text.lower(), data.lower())
-            if match_ratio >= FUZZY_SEARCH_THRESHOLD:
-                return True
-        else:
-            if text.lower() in data.lower():
-                return True
-    return False
 
 
 class TableSortOnHold:

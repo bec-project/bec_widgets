@@ -15,6 +15,7 @@ from bec_lib.messages import (
 from qtpy.QtCore import QByteArray, QUrl
 from qtpy.QtNetwork import QNetworkRequest
 
+from bec_widgets.utils.fuzzy_search import is_match
 from bec_widgets.widgets.services.bec_atlas_admin_view.bec_atlas_admin_view import BECAtlasAdminView
 from bec_widgets.widgets.services.bec_atlas_admin_view.bec_atlas_http_service import (
     AtlasEndpoints,
@@ -28,7 +29,6 @@ from bec_widgets.widgets.services.bec_atlas_admin_view.experiment_selection.expe
 )
 from bec_widgets.widgets.services.bec_atlas_admin_view.experiment_selection.experiment_selection import (
     ExperimentSelection,
-    is_match,
 )
 from bec_widgets.widgets.services.bec_atlas_admin_view.experiment_selection.utils import (
     format_datetime,
