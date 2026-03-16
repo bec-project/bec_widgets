@@ -1,5 +1,6 @@
 import json
 import time
+from typing import Callable
 
 import h5py
 import numpy as np

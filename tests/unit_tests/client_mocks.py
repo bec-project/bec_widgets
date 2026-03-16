@@ -6,10 +6,10 @@ import fakeredis
 import pytest
 from bec_lib.bec_service import messages
 from bec_lib.endpoints import MessageEndpoints
-from bec_lib.redis_connector import RedisConnector
 from bec_lib.scan_history import ScanHistory
 
 from bec_widgets.tests.utils import DEVICES, DMMock, FakePositioner, Positioner
+from bec_widgets.utils.bec_dispatcher import QtRedisConnector
 
 
 def fake_redis_server(host, port, **kwargs):
@@ -19,7 +19,7 @@ def fake_redis_server(host, port, **kwargs):
 
 @pytest.fixture(scope="function")
 def mocked_client(bec_dispatcher):
-    connector = RedisConnector("localhost:1", redis_cls=fake_redis_server)
+    connector = QtRedisConnector("localhost:1", redis_cls=fake_redis_server)
     # Create a MagicMock object
     client = MagicMock()  # TODO change to real BECClient
 
