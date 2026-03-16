@@ -29,7 +29,7 @@ from bec_widgets.utils.error_popups import SafeSlot
 logger = bec_logger.logger
 
 
-class ATLAS_ENDPOINTS(StrEnum):
+class AtlasEndpoints(StrEnum):
     """Constants for BEC Atlas API endpoints."""
 
     LOGIN = "/user/login"
@@ -202,7 +202,7 @@ class BECAtlasHTTPService(QWidget):
                 f"Expected response data to be a dict, list, or str for {request_url}, but got {type(data)}. Response content: {data}"
             )
 
-        if ATLAS_ENDPOINTS.LOGIN.value in request_url:
+        if AtlasEndpoints.LOGIN.value in request_url:
             # If it's a login response, don't forward the token
             # but extract the expiration time and emit it
             token = data.get("access_token")
@@ -211,11 +211,11 @@ class BECAtlasHTTPService(QWidget):
             # Now we set the auth info, and then fetch the user info to get the groups
             self.__set_auth_info(data)
             self.get_user_info()  # Fetch groups, then emit authenticated once groups are set on auth_user
-        elif ATLAS_ENDPOINTS.LOGOUT.value in request_url:
+        elif AtlasEndpoints.LOGOUT.value in request_url:
             self._auth_timer.stop()  # Stop the timer if it was running
             self.__clear_login_info(skip_logout=True)  # Skip calling logout again
             self.authenticated.emit({})
-        elif ATLAS_ENDPOINTS.USER_INFO.value in request_url:
+        elif AtlasEndpoints.USER_INFO.value in request_url:
             groups = data.get("groups", [])
             email = data.get("email", "")
             # Second step of authentication: We also have all groups now
@@ -229,7 +229,7 @@ class BECAtlasHTTPService(QWidget):
                     self.get_deployment_info(
                         deployment_id=self._current_deployment_info.deployment_id
                     )
-        elif ATLAS_ENDPOINTS.DEPLOYMENT_INFO.value in request_url:
+        elif AtlasEndpoints.DEPLOYMENT_INFO.value in request_url:
             owner_groups = data.get("owner_groups", [])
             if self.auth_user_info is not None and not self.auth_user_info.groups.isdisjoint(
                 owner_groups
@@ -331,14 +331,14 @@ class BECAtlasHTTPService(QWidget):
             password (str): The password for authentication.
         """
         self._post_request(
-            endpoint=ATLAS_ENDPOINTS.LOGIN.value,
+            endpoint=AtlasEndpoints.LOGIN.value,
             payload={"username": username, "password": password},
         )
 
     @SafeSlot(popup_error=True)
     def logout(self):
         """Logout from BEC Atlas."""
-        self._post_request(endpoint=ATLAS_ENDPOINTS.LOGOUT.value)
+        self._post_request(endpoint=AtlasEndpoints.LOGOUT.value)
 
     @SafeSlot(str, popup_error=True)
     def get_experiments_for_realm(self, realm_id: str):
@@ -349,7 +349,7 @@ class BECAtlasHTTPService(QWidget):
             realm_id (str): The ID of the realm to retrieve experiments for.
         """
         self._get_request(
-            endpoint=ATLAS_ENDPOINTS.REALMS_EXPERIMENTS.value,
+            endpoint=AtlasEndpoints.REALMS_EXPERIMENTS.value,
             query_parameters={"realm_id": realm_id},
         )
 
@@ -363,14 +363,14 @@ class BECAtlasHTTPService(QWidget):
             deployment_id (str): The ID of the deployment associated with the experiment.
         """
         self._post_request(
-            endpoint=ATLAS_ENDPOINTS.SET_EXPERIMENT.value,
+            endpoint=AtlasEndpoints.SET_EXPERIMENT.value,
             query_parameters={"experiment_id": experiment_id, "deployment_id": deployment_id},
         )
 
     @SafeSlot(popup_error=True)
     def get_user_info(self):
         """Get the current user information from BEC Atlas. Requires authentication."""
-        self._get_request(endpoint=ATLAS_ENDPOINTS.USER_INFO.value)
+        self._get_request(endpoint=AtlasEndpoints.USER_INFO.value)
 
     @SafeSlot(str, popup_error=True)
     def get_deployment_info(self, deployment_id: str):
@@ -381,6 +381,6 @@ class BECAtlasHTTPService(QWidget):
             deployment_id (str): The ID of the deployment to retrieve information for.
         """
         self._get_request(
-            endpoint=ATLAS_ENDPOINTS.DEPLOYMENT_INFO.value,
+            endpoint=AtlasEndpoints.DEPLOYMENT_INFO.value,
             query_parameters={"deployment_id": deployment_id},
         )
