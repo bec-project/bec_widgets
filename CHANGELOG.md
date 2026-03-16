@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v3.2.3 (2026-03-16)
+
+### Bug Fixes
+
+- Check adding parent for filesystemmodel
+  ([`b9145d7`](https://github.com/bec-project/bec_widgets/commit/b9145d762cdf946f184834928a6404f21b4802a9))
+
+- Refactor client mock with global fakeredis
+  ([`37a5dc2`](https://github.com/bec-project/bec_widgets/commit/37a5dc2e9eeb447d174f4d7087051672f308c84c))
+
+### Continuous Integration
+
+- Fix path for uploading logs on failure
+  ([`1351fcd`](https://github.com/bec-project/bec_widgets/commit/1351fcd47b909c1a33cb389c096041eb1449e3d3))
+
+
 ## v3.2.2 (2026-03-16)
 
 ### Bug Fixes
