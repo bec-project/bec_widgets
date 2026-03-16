@@ -17,7 +17,7 @@ from qtpy.QtNetwork import QNetworkRequest
 
 from bec_widgets.widgets.services.bec_atlas_admin_view.bec_atlas_admin_view import BECAtlasAdminView
 from bec_widgets.widgets.services.bec_atlas_admin_view.bec_atlas_http_service import (
-    ATLAS_ENDPOINTS,
+    AtlasEndpoints,
     AuthenticatedUserInfo,
     BECAtlasHTTPError,
     BECAtlasHTTPService,
@@ -102,7 +102,7 @@ class TestBECAtlasHTTPService:
 
         with mock.patch.object(http_service.network_manager, "get") as mock_get:
             http_service._get_request(
-                endpoint=ATLAS_ENDPOINTS.REALMS_EXPERIMENTS.value,
+                endpoint=AtlasEndpoints.REALMS_EXPERIMENTS.value,
                 query_parameters={"realm_id": "realm-1"},
             )
 
@@ -118,8 +118,7 @@ class TestBECAtlasHTTPService:
 
         with mock.patch.object(http_service.network_manager, "post") as mock_post:
             http_service._post_request(
-                endpoint=ATLAS_ENDPOINTS.LOGIN.value,
-                payload={"username": "alice", "password": "pw"},
+                endpoint=AtlasEndpoints.LOGIN.value, payload={"username": "alice", "password": "pw"}
             )
 
             mock_post.assert_called_once()
@@ -133,13 +132,13 @@ class TestBECAtlasHTTPService:
         with mock.patch.object(http_service, "_get_request") as mock_get:
             # User info
             http_service.get_user_info()
-            mock_get.assert_called_once_with(endpoint=ATLAS_ENDPOINTS.USER_INFO.value)
+            mock_get.assert_called_once_with(endpoint=AtlasEndpoints.USER_INFO.value)
 
             mock_get.reset_mock()
             # Deployment info
             http_service.get_deployment_info("dep-1")
             mock_get.assert_called_once_with(
-                endpoint=ATLAS_ENDPOINTS.DEPLOYMENT_INFO.value,
+                endpoint=AtlasEndpoints.DEPLOYMENT_INFO.value,
                 query_parameters={"deployment_id": "dep-1"},
             )
 
@@ -147,28 +146,27 @@ class TestBECAtlasHTTPService:
             # Realms experiments
             http_service.get_experiments_for_realm("realm-1")
             mock_get.assert_called_once_with(
-                endpoint=ATLAS_ENDPOINTS.REALMS_EXPERIMENTS.value,
+                endpoint=AtlasEndpoints.REALMS_EXPERIMENTS.value,
                 query_parameters={"realm_id": "realm-1"},
             )
 
         with mock.patch.object(http_service, "_post_request") as mock_post:
             # Logout
             http_service.logout()
-            mock_post.assert_called_once_with(endpoint=ATLAS_ENDPOINTS.LOGOUT.value)
+            mock_post.assert_called_once_with(endpoint=AtlasEndpoints.LOGOUT.value)
 
             mock_post.reset_mock()
             # Login
             http_service.login("alice", "pw")
             mock_post.assert_called_once_with(
-                endpoint=ATLAS_ENDPOINTS.LOGIN.value,
-                payload={"username": "alice", "password": "pw"},
+                endpoint=AtlasEndpoints.LOGIN.value, payload={"username": "alice", "password": "pw"}
             )
 
             mock_post.reset_mock()
             # Set experiment
             http_service.set_experiment("exp-1", "dep-1")
             mock_post.assert_called_once_with(
-                endpoint=ATLAS_ENDPOINTS.SET_EXPERIMENT.value,
+                endpoint=AtlasEndpoints.SET_EXPERIMENT.value,
                 query_parameters={"experiment_id": "exp-1", "deployment_id": "dep-1"},
             )
 
@@ -700,7 +698,7 @@ class TestBECAtlasAdminView:
     ):
         """Test that _on_http_response_received correctly handles HTTP responses and updates the UI accordingly."""
         realms = HTTPResponse(
-            request_url=f"{admin_view._atlas_url}/{ATLAS_ENDPOINTS.REALMS_EXPERIMENTS}/experiments?realm_id=TestBeamline",
+            request_url=f"{admin_view._atlas_url}/{AtlasEndpoints.REALMS_EXPERIMENTS}/experiments?realm_id=TestBeamline",
             status=200,
             headers={"content-type": "application/json"},
             data=experiment_info_list,
@@ -712,7 +710,7 @@ class TestBECAtlasAdminView:
             mock_set_experiment_infos.assert_called_once_with(experiment_info_list)
 
         set_experiment = HTTPResponse(
-            request_url=f"{admin_view._atlas_url}/{ATLAS_ENDPOINTS.SET_EXPERIMENT}",
+            request_url=f"{admin_view._atlas_url}/{AtlasEndpoints.SET_EXPERIMENT}",
             status=200,
             headers={"content-type": "application/json"},
             data={},

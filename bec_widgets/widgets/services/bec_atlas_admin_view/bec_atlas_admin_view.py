@@ -31,7 +31,7 @@ from bec_widgets.utils.toolbars.actions import (
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.widgets.services.bec_atlas_admin_view.bec_atlas_http_service import (
-    ATLAS_ENDPOINTS,
+    AtlasEndpoints,
     AuthenticatedUserInfo,
     BECAtlasHTTPService,
     HTTPResponse,
@@ -475,10 +475,10 @@ class BECAtlasAdminView(BECWidget, QWidget):
         logger.debug(
             f"HTTP Response received: {response.request_url} with status {response.status}"
         )
-        if ATLAS_ENDPOINTS.REALMS_EXPERIMENTS in response.request_url:
+        if AtlasEndpoints.REALMS_EXPERIMENTS in response.request_url:
             experiments = response.data if isinstance(response.data, list) else []
             self.experiment_selection.set_experiment_infos(experiments)
-        elif ATLAS_ENDPOINTS.SET_EXPERIMENT in response.request_url:
+        elif AtlasEndpoints.SET_EXPERIMENT in response.request_url:
             self._on_overview_selected()
 
     @SafeSlot(dict)
