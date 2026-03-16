@@ -175,12 +175,15 @@ class BECDispatcher:
             cb_info (dict | None): A dictionary containing information about the callback. Defaults to None.
         """
         qt_slot = QtThreadSafeCallback(cb=slot, cb_info=cb_info)
-        if qt_slot not in self._registered_slots:
-            self._registered_slots[qt_slot] = qt_slot
-        qt_slot = self._registered_slots[qt_slot]
-        self.client.connector.register(topics, cb=qt_slot, **kwargs)
-        topics_str, _ = self.client.connector._convert_endpointinfo(topics)
-        qt_slot.topics.update(set(topics_str))
+        if not self.client.connector.any_stream_is_registered(topics, qt_slot):
+            if qt_slot not in self._registered_slots:
+                self._registered_slots[qt_slot] = qt_slot
+            qt_slot = self._registered_slots[qt_slot]
+            self.client.connector.register(topics, cb=qt_slot, **kwargs)
+            topics_str, _ = self.client.connector._convert_endpointinfo(topics)
+            qt_slot.topics.update(set(topics_str))
+        else:
+            logger.warning(f"Attempted to create duplicate stream subscription for {topics=}")
 
     def disconnect_slot(
         self, slot: Callable, topics: EndpointInfo | str | list[EndpointInfo] | list[str]
