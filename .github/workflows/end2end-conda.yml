@@ -55,5 +55,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pytest-logs
-          path: ./logs/*.log
+          path: ./bec/logs/*.log
           retention-days: 7
