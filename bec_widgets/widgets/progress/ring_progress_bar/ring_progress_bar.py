@@ -282,7 +282,12 @@ class RingProgressContainerWidget(QWidget):
         return "\n".join(lines)
 
     def closeEvent(self, event):
-        self._hover_tooltip.hide()
+        # Ensure the hover tooltip is properly cleaned up when this widget closes
+        tooltip = getattr(self, "_hover_tooltip", None)
+        if tooltip is not None:
+            tooltip.close()
+            tooltip.deleteLater()
+            self._hover_tooltip = None
         super().closeEvent(event)
 
     def set_colors_from_map(self, colormap, color_format: Literal["RGB", "HEX"] = "RGB"):
