@@ -85,12 +85,21 @@ class Ring(BECWidget, QWidget):
         self._gap = 5
         self._hovered = False
         self._hover_progress = 0.0
+        # NOTE: b"hover_progress" must match the @SafeProperty(float) named 'hover_progress'
+        # defined on this class. QPropertyAnimation silently fails if the target property is
+        # absent or misnamed, so we verify registration immediately after construction.
         self._hover_animation = QtCore.QPropertyAnimation(self, b"hover_progress", parent=self)
+        if self.metaObject().indexOfProperty("hover_progress") == -1:  # pragma: no cover
+            logger.warning(
+                "Ring: 'hover_progress' is not registered as a Qt property; "
+                "the hover animation will not work. Ensure the 'hover_progress' "
+                "SafeProperty is defined on this class."
+            )
         self._hover_animation.setDuration(180)
         easing_curve = (
             QtCore.QEasingCurve.Type.OutCubic
             if hasattr(QtCore.QEasingCurve, "Type")
-            else QtCore.QEasingCurve.Type.OutCubic
+            else QtCore.QEasingCurve.OutCubic
         )
         self._hover_animation.setEasingCurve(easing_curve)
         self.set_start_angle(self.config.start_position)
