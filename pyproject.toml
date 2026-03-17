@@ -20,14 +20,14 @@ dependencies = [
     "isort>=5.13, <9.0",             # needed for bw-generate-cli
     "ophyd_devices~=1.29, >=1.29.1",
     "pydantic~=2.0",
-    "pyqtgraph==0.13.7",
-    "PySide6==6.9.0",
+    "pyqtgraph==0.14",
+    "PySide6==6.10.2",
     "qtconsole~=5.5, >=5.5.1",       # needed for jupyter console
     "qtpy~=2.4",
     "thefuzz~=0.22",
     "qtmonaco~=0.8, >=0.8.1",
     "darkdetect~=0.8",
-    "PySide6-QtAds==4.4.0",
+    "PySide6-QtAds~=4.5, >=4.5.0",
     "pylsp-bec~=1.2",
     "copier~=9.7",
     "typer~=0.15",
