@@ -256,7 +256,7 @@ def test_refresh_hover_tooltip_delegates_to_container(ring_widget):
     ring_widget.progress_container = MagicMock()
     ring_widget.progress_container.is_ring_hovered.return_value = True
 
-    ring_widget._refresh_hover_tooltip()
+    ring_widget._request_update()
 
     ring_widget.progress_container.refresh_hover_tooltip.assert_called_once_with(ring_widget)
 
@@ -265,7 +265,7 @@ def test_refresh_hover_tooltip_skips_when_ring_is_not_hovered(ring_widget):
     ring_widget.progress_container = MagicMock()
     ring_widget.progress_container.is_ring_hovered.return_value = False
 
-    ring_widget._refresh_hover_tooltip()
+    ring_widget._request_update()
 
     ring_widget.progress_container.refresh_hover_tooltip.assert_not_called()
 

@@ -95,9 +95,13 @@ class Ring(BECWidget, QWidget):
         self._hover_animation.setEasingCurve(easing_curve)
         self.set_start_angle(self.config.start_position)
 
-    def _refresh_hover_tooltip(self):
-        if self.progress_container and self.progress_container.is_ring_hovered(self):
-            self.progress_container.refresh_hover_tooltip(self)
+    def _request_update(self, *, refresh_tooltip: bool = True):
+        # NOTE why not just overwrite update() to always refresh the tooltip?
+        # Because in some cases (e.g. hover animation) we want to update the widget without refreshing the tooltip, to avoid performance issues.
+        if refresh_tooltip:
+            if self.progress_container and self.progress_container.is_ring_hovered(self):
+                self.progress_container.refresh_hover_tooltip(self)
+        self.update()
 
     def set_value(self, value: int | float):
         """
@@ -122,7 +126,7 @@ class Ring(BECWidget, QWidget):
         if self.config.link_colors:
             self._auto_set_background_color()
 
-        self.update()
+        self._request_update()
 
     def set_background(self, color: str | tuple | QColor):
         """
@@ -137,7 +141,7 @@ class Ring(BECWidget, QWidget):
 
         self._background_color = self.convert_color(color)
         self.config.background_color = self._background_color.name()
-        self.update()
+        self._request_update()
 
     def _auto_set_background_color(self):
         """
@@ -148,7 +152,7 @@ class Ring(BECWidget, QWidget):
         bg_color = Colors.subtle_background_color(self._color, bg)
         self.config.background_color = bg_color.name()
         self._background_color = bg_color
-        self.update()
+        self._request_update()
 
     def set_colors_linked(self, linked: bool):
         """
@@ -161,7 +165,7 @@ class Ring(BECWidget, QWidget):
         self.config.link_colors = linked
         if linked:
             self._auto_set_background_color()
-        self.update()
+        self._request_update()
 
     def set_line_width(self, width: int):
         """
@@ -171,8 +175,7 @@ class Ring(BECWidget, QWidget):
             width(int): Line width for the ring widget
         """
         self.config.line_width = width
-        self._refresh_hover_tooltip()
-        self.update()
+        self._request_update()
 
     def set_min_max_values(self, min_value: int | float, max_value: int | float):
         """
@@ -184,8 +187,7 @@ class Ring(BECWidget, QWidget):
         """
         self.config.min_value = min_value
         self.config.max_value = max_value
-        self._refresh_hover_tooltip()
-        self.update()
+        self._request_update()
 
     def set_start_angle(self, start_angle: int):
         """
@@ -195,7 +197,7 @@ class Ring(BECWidget, QWidget):
             start_angle(int): Start angle for the ring widget in degrees
         """
         self.config.start_position = start_angle
-        self.update()
+        self._request_update()
 
     def set_update(
         self, mode: Literal["manual", "scan", "device"], device: str = "", signal: str = ""
@@ -221,7 +223,6 @@ class Ring(BECWidget, QWidget):
                     self.bec_dispatcher.disconnect_slot(*self.registered_slot)
                 self.config.mode = "manual"
                 self.registered_slot = None
-                self._refresh_hover_tooltip()
             case "scan":
                 if self.config.mode == "scan":
                     return
@@ -232,20 +233,17 @@ class Ring(BECWidget, QWidget):
                     self.on_scan_progress, MessageEndpoints.scan_progress()
                 )
                 self.registered_slot = (self.on_scan_progress, MessageEndpoints.scan_progress())
-                self._refresh_hover_tooltip()
             case "device":
                 if self.registered_slot is not None:
                     self.bec_dispatcher.disconnect_slot(*self.registered_slot)
                 self.config.mode = "device"
                 if device == "":
                     self.registered_slot = None
-                    self._refresh_hover_tooltip()
                     return
                 self.config.device = device
                 # self.config.signal = self._get_signal_from_device(device, signal)
                 signal = self._update_device_connection(device, signal)
                 self.config.signal = signal
-                self._refresh_hover_tooltip()
 
             case _:
                 raise ValueError(f"Unsupported mode: {mode}")
@@ -258,8 +256,7 @@ class Ring(BECWidget, QWidget):
             precision(int): Precision for the ring widget
         """
         self.config.precision = precision
-        self._refresh_hover_tooltip()
-        self.update()
+        self._request_update()
 
     def set_direction(self, direction: int):
         """
@@ -269,8 +266,7 @@ class Ring(BECWidget, QWidget):
             direction(int): Direction for the ring widget. -1 for clockwise, 1 for counter-clockwise.
         """
         self.config.direction = direction
-        self._refresh_hover_tooltip()
-        self.update()
+        self._request_update()
 
     def _get_signals_for_device(self, device: str) -> dict[str, list[str]]:
         """
@@ -533,7 +529,7 @@ class Ring(BECWidget, QWidget):
     @gap.setter
     def gap(self, value: int):
         self._gap = value
-        self.update()
+        self._request_update()
 
     @SafeProperty(bool)
     def link_colors(self) -> bool:
@@ -570,8 +566,7 @@ class Ring(BECWidget, QWidget):
             float(max(self.config.min_value, min(self.config.max_value, value))),
             self.config.precision,
         )
-        self._refresh_hover_tooltip()
-        self.update()
+        self._request_update()
 
     @SafeProperty(float)
     def min_value(self) -> float:
@@ -580,8 +575,7 @@ class Ring(BECWidget, QWidget):
     @min_value.setter
     def min_value(self, value: float):
         self.config.min_value = value
-        self._refresh_hover_tooltip()
-        self.update()
+        self._request_update()
 
     @SafeProperty(float)
     def max_value(self) -> float:
@@ -590,8 +584,7 @@ class Ring(BECWidget, QWidget):
     @max_value.setter
     def max_value(self, value: float):
         self.config.max_value = value
-        self._refresh_hover_tooltip()
-        self.update()
+        self._request_update()
 
     @SafeProperty(str)
     def mode(self) -> str:
@@ -600,6 +593,7 @@ class Ring(BECWidget, QWidget):
     @mode.setter
     def mode(self, value: str):
         self.set_update(value)
+        self._request_update()
 
     @SafeProperty(str)
     def device(self) -> str:
@@ -608,7 +602,7 @@ class Ring(BECWidget, QWidget):
     @device.setter
     def device(self, value: str):
         self.config.device = value
-        self._refresh_hover_tooltip()
+        self._request_update()
 
     @SafeProperty(str)
     def signal(self) -> str:
@@ -617,7 +611,7 @@ class Ring(BECWidget, QWidget):
     @signal.setter
     def signal(self, value: str):
         self.config.signal = value
-        self._refresh_hover_tooltip()
+        self._request_update()
 
     @SafeProperty(int)
     def line_width(self) -> int:
@@ -626,8 +620,7 @@ class Ring(BECWidget, QWidget):
     @line_width.setter
     def line_width(self, value: int):
         self.config.line_width = value
-        self._refresh_hover_tooltip()
-        self.update()
+        self._request_update()
 
     @SafeProperty(int)
     def start_position(self) -> int:
@@ -636,7 +629,7 @@ class Ring(BECWidget, QWidget):
     @start_position.setter
     def start_position(self, value: int):
         self.config.start_position = value
-        self.update()
+        self._request_update()
 
     @SafeProperty(int)
     def precision(self) -> int:
@@ -645,8 +638,7 @@ class Ring(BECWidget, QWidget):
     @precision.setter
     def precision(self, value: int):
         self.config.precision = value
-        self._refresh_hover_tooltip()
-        self.update()
+        self._request_update()
 
     @SafeProperty(int)
     def direction(self) -> int:
@@ -655,7 +647,7 @@ class Ring(BECWidget, QWidget):
     @direction.setter
     def direction(self, value: int):
         self.config.direction = value
-        self.update()
+        self._request_update()
 
     @SafeProperty(float)
     def hover_progress(self) -> float:
@@ -664,7 +656,7 @@ class Ring(BECWidget, QWidget):
     @hover_progress.setter
     def hover_progress(self, value: float):
         self._hover_progress = value
-        self.update()
+        self._request_update(refresh_tooltip=False)
 
     def cleanup(self):
         """
