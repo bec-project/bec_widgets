@@ -1,14 +1,18 @@
 # pylint: disable=missing-function-docstring, missing-module-docstring, unused-import
 
 import json
+from unittest.mock import MagicMock
 
 import pytest
-from bec_lib.endpoints import MessageEndpoints
-from pydantic import ValidationError
-from qtpy.QtGui import QColor
+from qtpy.QtCore import QEvent, QPoint, QPointF, Qt
+from qtpy.QtGui import QColor, QMouseEvent
+from qtpy.QtWidgets import QApplication
 
 from bec_widgets.utils import Colors
-from bec_widgets.widgets.progress.ring_progress_bar.ring_progress_bar import RingProgressBar
+from bec_widgets.widgets.progress.ring_progress_bar.ring_progress_bar import (
+    RingProgressBar,
+    RingProgressContainerWidget,
+)
 
 from .client_mocks import mocked_client
 
@@ -432,8 +436,6 @@ def test_gap_affects_ring_positioning(ring_progress_bar):
     for _ in range(3):
         ring_progress_bar.add_ring()
 
-    initial_gap = ring_progress_bar.gap
-
     # Change gap
     new_gap = 30
     ring_progress_bar.set_gap(new_gap)
@@ -467,3 +469,275 @@ def test_rings_property_returns_correct_list(ring_progress_bar):
     # Should return the same list
     assert rings_via_property is rings_direct
     assert len(rings_via_property) == 3
+
+
+###################################
+# Hover behavior tests
+###################################
+
+
+@pytest.fixture
+def container(qtbot):
+    widget = RingProgressContainerWidget()
+    qtbot.addWidget(widget)
+    widget.resize(200, 200)
+    yield widget
+
+
+def _ring_center_pos(container):
+    """Return (center_x, center_y, base_radius) for a square container."""
+    size = min(container.width(), container.height())
+    center_x = container.width() / 2
+    center_y = container.height() / 2
+    max_ring_size = container.get_max_ring_size()
+    base_radius = (size - 2 * max_ring_size) / 2
+    return center_x, center_y, base_radius
+
+
+def _send_mouse_move(widget, pos: QPoint):
+    global_pos = widget.mapToGlobal(pos)
+    event = QMouseEvent(
+        QEvent.Type.MouseMove,
+        QPointF(pos),
+        QPointF(global_pos),
+        Qt.MouseButton.NoButton,
+        Qt.MouseButton.NoButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+    QApplication.sendEvent(widget, event)
+
+
+def test_ring_at_pos_no_rings(container):
+    assert container._ring_at_pos(QPointF(100, 100)) is None
+
+
+def test_ring_at_pos_center_is_inside_rings(container):
+    """The center of the widget is inside all rings; _ring_at_pos should return None."""
+    container.add_ring()
+    assert container._ring_at_pos(QPointF(100, 100)) is None
+
+
+def test_ring_at_pos_on_single_ring(container):
+    """A point on the ring arc should resolve to that ring."""
+    ring = container.add_ring()
+    cx, cy, base_radius = _ring_center_pos(container)
+    # Point exactly on the ring centerline
+    pos = QPointF(cx + base_radius, cy)
+    assert container._ring_at_pos(pos) is ring
+
+
+def test_ring_at_pos_outside_all_rings(container):
+    """A point well outside the outermost ring returns None."""
+    container.add_ring()
+    cx, cy, base_radius = _ring_center_pos(container)
+    line_width = container.rings[0].config.line_width
+    # Place point clearly beyond the outer edge
+    pos = QPointF(cx + base_radius + line_width + 5, cy)
+    assert container._ring_at_pos(pos) is None
+
+
+def test_ring_at_pos_selects_correct_ring_from_multiple(qtbot):
+    """With multiple rings, each position resolves to the right ring."""
+    container = RingProgressContainerWidget()
+    qtbot.addWidget(container)
+    container.resize(300, 300)
+
+    ring0 = container.add_ring()
+    ring1 = container.add_ring()
+
+    size = min(container.width(), container.height())
+    cx = container.width() / 2
+    cy = container.height() / 2
+    max_ring_size = container.get_max_ring_size()
+    base_radius = (size - 2 * max_ring_size) / 2
+
+    radius0 = base_radius - ring0.gap
+    radius1 = base_radius - ring1.gap
+
+    assert container._ring_at_pos(QPointF(cx + radius0, cy)) is ring0
+    assert container._ring_at_pos(QPointF(cx + radius1, cy)) is ring1
+
+
+def test_set_hovered_ring_sets_flag(container):
+    """_set_hovered_ring marks the ring as hovered and updates _hovered_ring."""
+    ring = container.add_ring()
+    assert container._hovered_ring is None
+    container._set_hovered_ring(ring)
+    assert container._hovered_ring is ring
+    assert ring._hovered is True
+
+
+def test_set_hovered_ring_to_none_clears_flag(container):
+    """Calling _set_hovered_ring(None) un-hovers the current ring."""
+    ring = container.add_ring()
+    container._set_hovered_ring(ring)
+    container._set_hovered_ring(None)
+    assert container._hovered_ring is None
+    assert ring._hovered is False
+
+
+def test_set_hovered_ring_switches_between_rings(qtbot):
+    """Switching hover from one ring to another correctly updates both flags."""
+    container = RingProgressContainerWidget()
+    qtbot.addWidget(container)
+    ring0 = container.add_ring()
+    ring1 = container.add_ring()
+
+    container._set_hovered_ring(ring0)
+    assert ring0._hovered is True
+    assert ring1._hovered is False
+
+    container._set_hovered_ring(ring1)
+    assert ring0._hovered is False
+    assert ring1._hovered is True
+    assert container._hovered_ring is ring1
+
+
+def test_build_tooltip_text_manual_mode(container):
+    """Manual mode tooltip contains mode label, value, max and percentage."""
+    ring = container.add_ring()
+    ring.set_value(50)
+    ring.set_min_max_values(0, 100)
+
+    text = RingProgressContainerWidget._build_tooltip_text(ring)
+    assert "Manual" in text
+    assert "50.0%" in text
+    assert "100" in text
+
+
+def test_build_tooltip_text_scan_mode(container):
+    """Scan mode tooltip labels the mode as 'Scan progress'."""
+    ring = container.add_ring()
+    ring.config.mode = "scan"
+    ring.set_value(25)
+
+    text = RingProgressContainerWidget._build_tooltip_text(ring)
+    assert "Scan progress" in text
+
+
+def test_build_tooltip_text_device_mode_with_signal(container):
+    """Device mode tooltip shows device:signal when both are set."""
+    ring = container.add_ring()
+    ring.config.mode = "device"
+    ring.config.device = "samx"
+    ring.config.signal = "readback"
+    ring.set_value(10)
+
+    text = RingProgressContainerWidget._build_tooltip_text(ring)
+    assert "Device" in text
+    assert "samx:readback" in text
+
+
+def test_build_tooltip_text_device_mode_without_signal(container):
+    """Device mode tooltip shows only device name when signal is absent."""
+    ring = container.add_ring()
+    ring.config.mode = "device"
+    ring.config.device = "samy"
+    ring.config.signal = None
+    ring.set_value(10)
+
+    text = RingProgressContainerWidget._build_tooltip_text(ring)
+    assert "samy" in text
+    assert ":" not in text.split("Device:")[-1].split("\n")[0]
+
+
+def test_build_tooltip_text_nonzero_min_shows_range(container):
+    """Tooltip includes Range line when min_value is not 0."""
+    ring = container.add_ring()
+    ring.set_min_max_values(10, 90)
+    ring.set_value(50)
+
+    text = RingProgressContainerWidget._build_tooltip_text(ring)
+    assert "Range" in text
+
+
+def test_build_tooltip_text_zero_min_no_range(container):
+    """Tooltip omits Range line when min_value is 0."""
+    ring = container.add_ring()
+    ring.set_min_max_values(0, 100)
+    ring.set_value(50)
+
+    text = RingProgressContainerWidget._build_tooltip_text(ring)
+    assert "Range" not in text
+
+
+def test_refresh_hover_tooltip_updates_label_on_value_change(container):
+    """refresh_hover_tooltip updates the label text after the ring value changes."""
+    ring = container.add_ring()
+    ring.set_value(30)
+    container._hovered_ring = ring
+    container._last_hover_global_pos = QPoint(100, 100)
+
+    container.refresh_hover_tooltip(ring)
+    text_before = container._hover_tooltip_label.text()
+
+    ring.set_value(70)
+    container.refresh_hover_tooltip(ring)
+    text_after = container._hover_tooltip_label.text()
+
+    assert text_before != text_after
+    assert "70" in text_after
+
+
+def test_refresh_hover_tooltip_no_pos_does_not_crash(container):
+    """refresh_hover_tooltip with no stored position should return without raising."""
+    ring = container.add_ring()
+    container._last_hover_global_pos = None
+    # Should not raise
+    container.refresh_hover_tooltip(ring)
+
+
+def test_mouse_move_sets_hovered_ring_and_updates_tooltip(qtbot, container):
+    ring = container.add_ring()
+    container._hover_tooltip.show_near = MagicMock()
+    container.show()
+    qtbot.waitExposed(container)
+
+    cx, cy, base_radius = _ring_center_pos(container)
+    _send_mouse_move(container, QPoint(int(cx + base_radius), int(cy)))
+
+    assert container._hovered_ring is ring
+    assert ring._hovered is True
+    assert "Mode: Manual" in container._hover_tooltip_label.text()
+    container._hover_tooltip.show_near.assert_called_once()
+
+
+def test_mouse_move_switches_hover_between_rings(qtbot):
+    container = RingProgressContainerWidget()
+    qtbot.addWidget(container)
+    container.resize(300, 300)
+    ring0 = container.add_ring()
+    ring1 = container.add_ring()
+    container._hover_tooltip.show_near = MagicMock()
+    container.show()
+    qtbot.waitExposed(container)
+
+    cx, cy, base_radius = _ring_center_pos(container)
+    radius0 = base_radius - ring0.gap
+    radius1 = base_radius - ring1.gap
+    _send_mouse_move(container, QPoint(int(cx + radius0), int(cy)))
+
+    assert container._hovered_ring is ring0
+
+    _send_mouse_move(container, QPoint(int(cx + radius1), int(cy)))
+
+    assert container._hovered_ring is ring1
+    assert ring0._hovered is False
+    assert ring1._hovered is True
+
+
+def test_leave_event_clears_hover_and_hides_tooltip(qtbot, container):
+    ring = container.add_ring()
+    container._hover_tooltip.hide = MagicMock()
+    container.show()
+    qtbot.waitExposed(container)
+
+    cx, cy, base_radius = _ring_center_pos(container)
+    _send_mouse_move(container, QPoint(int(cx + base_radius), int(cy)))
+
+    QApplication.sendEvent(container, QEvent(QEvent.Type.Leave))
+
+    assert container._hovered_ring is None
+    assert ring._hovered is False
+    assert container._last_hover_global_pos is None
+    container._hover_tooltip.hide.assert_called()
