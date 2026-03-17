@@ -9,7 +9,8 @@ from qtpy import QtCore, QtGui
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QWidget
 
-from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
+from bec_widgets import BECWidget
+from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.colors import Colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 
@@ -59,7 +60,7 @@ class ProgressbarConfig(ConnectionConfig):
     )
 
 
-class Ring(BECConnector, QWidget):
+class Ring(BECWidget, QWidget):
     USER_ACCESS = [
         "set_value",
         "set_color",
@@ -84,12 +85,12 @@ class Ring(BECConnector, QWidget):
         self._gap = 5
         self._hovered = False
         self._hover_progress = 0.0
-        self._hover_animation = QtCore.QPropertyAnimation(self, b"hover_progress")
+        self._hover_animation = QtCore.QPropertyAnimation(self, b"hover_progress", parent=self)
         self._hover_animation.setDuration(180)
         easing_curve = (
             QtCore.QEasingCurve.Type.OutCubic
             if hasattr(QtCore.QEasingCurve, "Type")
-            else QtCore.QEasingCurve.OutCubic
+            else QtCore.QEasingCurve.Type.OutCubic
         )
         self._hover_animation.setEasingCurve(easing_curve)
         self.set_start_angle(self.config.start_position)
@@ -664,6 +665,17 @@ class Ring(BECConnector, QWidget):
     def hover_progress(self, value: float):
         self._hover_progress = value
         self.update()
+
+    def cleanup(self):
+        """
+        Cleanup the ring widget.
+        Disconnect any registered slots.
+        """
+        if self.registered_slot is not None:
+            self.bec_dispatcher.disconnect_slot(*self.registered_slot)
+            self.registered_slot = None
+        self._hover_animation.stop()
+        super().cleanup()
 
 
 if __name__ == "__main__":  # pragma: no cover
