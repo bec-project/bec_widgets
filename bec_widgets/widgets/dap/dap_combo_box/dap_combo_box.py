@@ -2,22 +2,19 @@
 
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import Property, Signal, Slot
-from qtpy.QtWidgets import QComboBox, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QComboBox
 
 from bec_widgets.utils.bec_widget import BECWidget
 
 logger = bec_logger.logger
 
 
-class DapComboBox(BECWidget, QWidget):
+class DapComboBox(BECWidget, QComboBox):
     """
-    The DAPComboBox widget is an extension to the QComboBox with all avaialble DAP model from BEC.
+    Editable combobox listing the available DAP models.
 
-    Args:
-        parent: Parent widget.
-        client: BEC client object.
-        gui_id: GUI ID.
-        default: Default device name.
+    The widget behaves as a plain QComboBox and keeps ``fit_model_combobox`` as an alias to itself
+    for backwards compatibility with older call sites.
     """
 
     ICON_NAME = "data_exploration"
@@ -45,19 +42,20 @@ class DapComboBox(BECWidget, QWidget):
         **kwargs,
     ):
         super().__init__(parent=parent, client=client, gui_id=gui_id, **kwargs)
-        self.layout = QVBoxLayout(self)
-        self.fit_model_combobox = QComboBox(self)
-        self.layout.addWidget(self.fit_model_combobox)
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self._available_models = None
+        self.fit_model_combobox = self  # Just for backwards compatibility with older call sites, the widget itself is the combobox
+        self._available_models: list[str] = []
         self._x_axis = None
         self._y_axis = None
-        self.populate_fit_model_combobox()
-        self.fit_model_combobox.currentTextChanged.connect(self._update_current_fit)
-        # Set default fit model
-        self.select_default_fit(default_fit)
+        self._is_valid_input = False
 
-    def select_default_fit(self, default_fit: str | None):
+        self.setEditable(True)
+
+        self.populate_fit_model_combobox()
+        self.currentTextChanged.connect(self._on_text_changed)
+        self.select_default_fit(default_fit)
+        self.check_validity(self.currentText())
+
+    def select_default_fit(self, default_fit: str | None = "GaussianModel"):
         """Set the default fit model.
 
         Args:
@@ -65,8 +63,6 @@ class DapComboBox(BECWidget, QWidget):
         """
         if self._validate_dap_model(default_fit):
             self.select_fit_model(default_fit)
-        elif self._validate_dap_model("GaussianModel"):
-            self.select_fit_model("GaussianModel")
         elif self.available_models:
             self.select_fit_model(self.available_models[0])
 
@@ -116,11 +112,39 @@ class DapComboBox(BECWidget, QWidget):
         self._y_axis = y_axis
         self.y_axis_updated.emit(y_axis)
 
-    def _update_current_fit(self, fit_name: str):
-        """Update the current fit."""
+    @Slot(str)
+    def _on_text_changed(self, fit_name: str):
+        """
+        Validate and emit updates for the current text.
+
+        Args:
+            fit_name(str): The current text in the combobox, representing the selected fit model.
+        """
+        self.check_validity(fit_name)
+        if not self._is_valid_input:
+            return
+
         self.fit_model_updated.emit(fit_name)
         if self.x_axis is not None and self.y_axis is not None:
             self.new_dap_config.emit(self._x_axis, self._y_axis, fit_name)
+
+    @Slot(str)
+    def check_validity(self, fit_name: str):
+        """
+        Highlight invalid manual entries similarly to DeviceComboBox.
+
+        Args:
+            fit_name(str): The current text in the combobox, representing the selected fit model.
+        """
+        if self._validate_dap_model(fit_name):
+            self._is_valid_input = True
+            self.setStyleSheet("border: 1px solid transparent;")
+        else:
+            self._is_valid_input = False
+            if self.isEnabled():
+                self.setStyleSheet("border: 1px solid red;")
+            else:
+                self.setStyleSheet("border: 1px solid transparent;")
 
     @Slot(str)
     def select_x_axis(self, x_axis: str):
@@ -130,7 +154,7 @@ class DapComboBox(BECWidget, QWidget):
             x_axis(str): X axis.
         """
         self.x_axis = x_axis
-        self._update_current_fit(self.fit_model_combobox.currentText())
+        self._on_text_changed(self.currentText())
 
     @Slot(str)
     def select_y_axis(self, y_axis: str):
@@ -140,26 +164,26 @@ class DapComboBox(BECWidget, QWidget):
             y_axis(str): Y axis.
         """
         self.y_axis = y_axis
-        self._update_current_fit(self.fit_model_combobox.currentText())
+        self._on_text_changed(self.currentText())
 
     @Slot(str)
     def select_fit_model(self, fit_name: str | None):
         """Slot to update the fit model.
 
         Args:
-            default_device(str): Default device name.
+            fit_name(str): Fit model name.
         """
         if not self._validate_dap_model(fit_name):
             raise ValueError(f"Fit {fit_name} is not valid.")
-        self.fit_model_combobox.setCurrentText(fit_name)
+        self.setCurrentText(fit_name)
 
     def populate_fit_model_combobox(self):
         """Populate the fit_model_combobox with the devices."""
         # pylint: disable=protected-access
         available_plugins = getattr(getattr(self.client, "dap", None), "_available_dap_plugins", {})
         self.available_models = [model for model in available_plugins.keys()]
-        self.fit_model_combobox.clear()
-        self.fit_model_combobox.addItems(self.available_models)
+        self.clear()
+        self.addItems(self.available_models)
 
     def _validate_dap_model(self, model: str | None) -> bool:
         """Validate the DAP model.
@@ -169,23 +193,23 @@ class DapComboBox(BECWidget, QWidget):
         """
         if model is None:
             return False
-        if model not in self.available_models:
-            return False
-        return True
+        return model in self.available_models
+
+    @property
+    def is_valid_input(self) -> bool:
+        """Whether the current text matches an available DAP model."""
+        return self._is_valid_input
 
 
 if __name__ == "__main__":  # pragma: no cover
-    # pylint: disable=import-outside-toplevel
+    import sys
+
     from qtpy.QtWidgets import QApplication
 
     from bec_widgets.utils.colors import apply_theme
 
-    app = QApplication([])
+    app = QApplication(sys.argv)
     apply_theme("dark")
-    widget = QWidget()
-    widget.setFixedSize(200, 200)
-    layout = QVBoxLayout()
-    widget.setLayout(layout)
-    layout.addWidget(DapComboBox())
-    widget.show()
-    app.exec_()
+    dialog = DapComboBox()
+    dialog.show()
+    sys.exit(app.exec_())
