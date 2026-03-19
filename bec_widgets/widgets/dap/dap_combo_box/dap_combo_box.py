@@ -65,8 +65,10 @@ class DapComboBox(BECWidget, QWidget):
         """
         if self._validate_dap_model(default_fit):
             self.select_fit_model(default_fit)
-        else:
+        elif self._validate_dap_model("GaussianModel"):
             self.select_fit_model("GaussianModel")
+        elif self.available_models:
+            self.select_fit_model(self.available_models[0])
 
     @property
     def available_models(self):
@@ -154,7 +156,8 @@ class DapComboBox(BECWidget, QWidget):
     def populate_fit_model_combobox(self):
         """Populate the fit_model_combobox with the devices."""
         # pylint: disable=protected-access
-        self.available_models = [model for model in self.client.dap._available_dap_plugins.keys()]
+        available_plugins = getattr(getattr(self.client, "dap", None), "_available_dap_plugins", {})
+        self.available_models = [model for model in available_plugins.keys()]
         self.fit_model_combobox.clear()
         self.fit_model_combobox.addItems(self.available_models)
 
