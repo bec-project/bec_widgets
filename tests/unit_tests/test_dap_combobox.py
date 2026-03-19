@@ -71,3 +71,13 @@ def test_dap_combobox_currentTextchanged(dap_combobox):
     dap_combobox.fit_model_updated.connect(my_callback)
     dap_combobox.fit_model_combobox.setCurrentText("SineModel")
     assert container[0] == "SineModel"
+
+
+def test_dap_combobox_init_without_available_models(qtbot, mocked_client):
+    mocked_client.dap._available_dap_plugins = {}
+
+    widget = create_widget(qtbot, DapComboBox, client=mocked_client)
+
+    assert widget.available_models == []
+    assert widget.fit_model_combobox.count() == 0
+    assert widget.fit_model_combobox.currentText() == ""
