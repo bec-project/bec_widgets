@@ -1,5 +1,6 @@
 import os
 
+import shiboken6
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QPushButton, QTreeWidgetItem, QVBoxLayout, QWidget
@@ -77,8 +78,13 @@ class LMFitDialog(BECWidget, QWidget):
     @enable_actions.setter
     def enable_actions(self, enable: bool):
         self._enable_actions = enable
-        for button in self.action_buttons.values():
+        valid_buttons = {}
+        for name, button in self.action_buttons.items():
+            if button is None or not shiboken6.isValid(button):
+                continue
             button.setEnabled(enable)
+            valid_buttons[name] = button
+        self.action_buttons = valid_buttons
 
     @SafeProperty(list)
     def active_action_list(self) -> list[str]:
@@ -176,6 +182,11 @@ class LMFitDialog(BECWidget, QWidget):
             curve_id (str): The curve_id of the DAP data to be removed.
         """
         self.summary_data.pop(curve_id, None)
+        if self.fit_curve_id == curve_id:
+            self._fit_curve_id = None
+            self.action_buttons = {}
+            self.ui.summary_tree.clear()
+            self.ui.param_tree.clear()
         self.refresh_curve_list()
 
     @SafeSlot(str)
@@ -251,6 +262,7 @@ class LMFitDialog(BECWidget, QWidget):
             params (list): List of LMFit parameters for the fit curve.
         """
         self._move_buttons = []
+        self.action_buttons = {}
         self.ui.param_tree.clear()
         for param in params:
             param_name = param[0]
