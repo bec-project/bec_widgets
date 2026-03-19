@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Literal
 import numpy as np
 import pyqtgraph as pg
 from bec_lib import bec_logger, messages
+from bec_lib.device import Positioner
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.lmfit_serializer import serialize_lmfit_params, serialize_param_object
 from bec_lib.scan_data_container import ScanDataContainer
@@ -30,11 +31,18 @@ from bec_widgets.utils.colors import Colors, apply_theme
 from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.settings_dialog import SettingsDialog
+from bec_widgets.utils.side_panel import SidePanel
+from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import MaterialIconAction
 from bec_widgets.widgets.dap.lmfit_dialog.lmfit_dialog import LMFitDialog
 from bec_widgets.widgets.plots.plot_base import PlotBase
 from bec_widgets.widgets.plots.waveform.curve import Curve, CurveConfig, DeviceSignal
 from bec_widgets.widgets.plots.waveform.settings.curve_settings.curve_setting import CurveSetting
+from bec_widgets.widgets.plots.waveform.utils.alignment_controller import (
+    AlignmentContext,
+    WaveformAlignmentController,
+)
+from bec_widgets.widgets.plots.waveform.utils.alignment_panel import WaveformAlignmentPanel
 from bec_widgets.widgets.plots.waveform.utils.roi_manager import WaveformROIManager
 from bec_widgets.widgets.services.scan_history_browser.scan_history_browser import (
     ScanHistoryBrowser,
@@ -156,6 +164,12 @@ class Waveform(PlotBase):
             "label_suffix": "",
         }
         self._current_x_device: tuple[str, str] | None = None
+        self._alignment_panel_visible = False
+        self._alignment_side_panel: SidePanel | None = None
+        self._alignment_panel_index: int | None = None
+        self._alignment_panel: WaveformAlignmentPanel | None = None
+        self._alignment_controller: WaveformAlignmentController | None = None
+        self._alignment_positioner_name: str | None = None
 
         # Specific GUI elements
         self._init_roi_manager()
@@ -165,6 +179,7 @@ class Waveform(PlotBase):
         self._add_waveform_specific_popup()
         self._enable_roi_toolbar_action(False)  # default state where are no dap curves
         self._init_curve_dialog()
+        self._init_alignment_mode()
         self.curve_settings_dialog = None
 
         # Large‑dataset guard
@@ -195,7 +210,9 @@ class Waveform(PlotBase):
         # To fix the ViewAll action with clipToView activated
         self._connect_viewbox_menu_actions()
 
-        self.toolbar.show_bundles(["plot_export", "mouse_interaction", "roi", "axis_popup"])
+        self.toolbar.show_bundles(
+            ["plot_export", "mouse_interaction", "roi", "alignment_mode", "axis_popup"]
+        )
 
     def _connect_viewbox_menu_actions(self):
         """Connect the viewbox menu action ViewAll to the custom reset_view method."""
@@ -221,6 +238,12 @@ class Waveform(PlotBase):
             theme(str, optional): The theme to be applied.
         """
         self._refresh_colors()
+        alignment_panel = getattr(self, "_alignment_panel", None)
+        alignment_controller = getattr(self, "_alignment_controller", None)
+        if alignment_panel is not None:
+            alignment_panel.refresh_theme_colors()
+        if alignment_controller is not None:
+            alignment_controller.refresh_theme_colors()
         super().apply_theme(theme)
 
     def add_side_menus(self):
@@ -229,6 +252,153 @@ class Waveform(PlotBase):
         """
         super().add_side_menus()
         self._add_dap_summary_side_menu()
+
+    def _init_alignment_mode(self):
+        """
+        Initialize the top alignment panel.
+        """
+        self.toolbar.components.add_safe(
+            "alignment_mode",
+            MaterialIconAction(
+                icon_name="align_horizontal_center",
+                tooltip="Show Alignment Mode",
+                checkable=True,
+                parent=self,
+            ),
+        )
+        bundle = ToolbarBundle("alignment_mode", self.toolbar.components)
+        bundle.add_action("alignment_mode")
+        self.toolbar.add_bundle(bundle)
+        shown_bundles = list(self.toolbar.shown_bundles)
+        if "alignment_mode" not in shown_bundles:
+            shown_bundles.append("alignment_mode")
+            self.toolbar.show_bundles(shown_bundles)
+
+        self._alignment_side_panel = SidePanel(
+            parent=self, orientation="top", panel_max_width=320, show_toolbar=False
+        )
+        self.layout_manager.add_widget_relative(
+            self._alignment_side_panel,
+            self.round_plot_widget,
+            position="top",
+            shift_direction="down",
+        )
+
+        self._alignment_panel = WaveformAlignmentPanel(parent=self, client=self.client)
+        self._alignment_controller = WaveformAlignmentController(
+            self.plot_item, self._alignment_panel, parent=self
+        )
+        self._alignment_panel_index = self._alignment_side_panel.add_menu(
+            widget=self._alignment_panel
+        )
+        self._alignment_controller.move_absolute_requested.connect(self._move_alignment_positioner)
+        self.dap_summary_update.connect(self._alignment_controller.update_dap_summary)
+        self.toolbar.components.get_action("alignment_mode").action.toggled.connect(
+            self.toggle_alignment_mode
+        )
+
+        self._refresh_alignment_state()
+
+    @SafeSlot(bool)
+    def toggle_alignment_mode(self, checked: bool):
+        """
+        Show or hide the alignment panel.
+
+        Args:
+            checked(bool): Whether the panel should be visible.
+        """
+        if self._alignment_side_panel is None or self._alignment_panel_index is None:
+            return
+
+        self._alignment_panel_visible = checked
+        if checked:
+            self._alignment_side_panel.show_panel(self._alignment_panel_index)
+            self._refresh_alignment_state(force_readback=True)
+            self._refresh_dap_signals()
+        else:
+            self._alignment_side_panel.hide_panel()
+            self._refresh_alignment_state()
+
+    def _refresh_alignment_state(self, force_readback: bool = False):
+        """
+        Refresh the alignment panel state after waveform changes.
+
+        Args:
+            force_readback(bool): Force a positioner readback refresh.
+        """
+        if self._alignment_controller is None:
+            return
+
+        context = self._build_alignment_context(force_readback=force_readback)
+        self._alignment_positioner_name = context.positioner_name
+        self._alignment_controller.update_context(context)
+
+    def _resolve_alignment_positioner(self) -> str | None:
+        """
+        Resolve the active x-axis positioner for alignment mode.
+        """
+        if self.x_axis_mode["name"] in {"index", "timestamp"}:
+            return None
+
+        if self.x_axis_mode["name"] == "auto":
+            device_name = self._current_x_device[0] if self._current_x_device is not None else None
+        else:
+            device_name = self.x_axis_mode["name"]
+
+        if not device_name or device_name not in self.dev:
+            return None
+        if not isinstance(self.dev[device_name], Positioner):
+            return None
+        return device_name
+
+    def _build_alignment_context(self, force_readback: bool = False) -> AlignmentContext:
+        """Build controller-facing alignment context from waveform/device state."""
+        positioner_name = self._resolve_alignment_positioner()
+        if positioner_name is None:
+            return AlignmentContext(
+                visible=self._alignment_panel_visible,
+                positioner_name=None,
+                has_dap_curves=bool(self._dap_curves),
+                force_readback=force_readback,
+            )
+
+        precision = getattr(self.dev[positioner_name], "precision", 3)
+        try:
+            precision = int(precision)
+        except (TypeError, ValueError):
+            precision = 3
+
+        limits = getattr(self.dev[positioner_name], "limits", None)
+        parsed_limits: tuple[float, float] | None = None
+        if limits is not None and len(limits) == 2:
+            low, high = float(limits[0]), float(limits[1])
+            if low != 0 or high != 0:
+                if low > high:
+                    low, high = high, low
+                parsed_limits = (low, high)
+
+        data = self.dev[positioner_name].read(cached=True)
+        value = data.get(positioner_name, {}).get("value")
+        readback = None if value is None else float(value)
+
+        return AlignmentContext(
+            visible=self._alignment_panel_visible,
+            positioner_name=positioner_name,
+            precision=precision,
+            limits=parsed_limits,
+            readback=readback,
+            has_dap_curves=bool(self._dap_curves),
+            force_readback=force_readback,
+        )
+
+    @SafeSlot(float)
+    def _move_alignment_positioner(self, value: float):
+        """
+        Move the active alignment positioner to an absolute value requested by the controller.
+        """
+        if self._alignment_positioner_name is None:
+            return
+        self.dev[self._alignment_positioner_name].move(float(value), relative=False)
 
     def _add_waveform_specific_popup(self):
         """
@@ -266,7 +436,7 @@ class Waveform(PlotBase):
         Due to setting clipToView to True on the curves, the autoRange() method
         of the ViewBox does no longer work as expected. This method deactivates the
         setClipToView for all curves, calls autoRange() to circumvent that issue.
-        Afterwards, it re-enables the setClipToView for all curves again.
+        Afterward, it re-enables the setClipToView for all curves again.
 
         It is hooked to the ViewAll action in the right-click menu of the pg.PlotItem ViewBox.
         """
@@ -544,6 +714,7 @@ class Waveform(PlotBase):
         self.sync_signal_update.emit()
         self.plot_item.enableAutoRange(x=True)
         self.round_plot_widget.apply_plot_widget_style()  # To keep the correct theme
+        self._refresh_alignment_state(force_readback=True)
 
     @SafeProperty(str)
     def signal_x(self) -> str | None:
@@ -573,6 +744,7 @@ class Waveform(PlotBase):
         self.sync_signal_update.emit()
         self.plot_item.enableAutoRange(x=True)
         self.round_plot_widget.apply_plot_widget_style()
+        self._refresh_alignment_state(force_readback=True)
 
     @SafeProperty(str)
     def color_palette(self) -> str:
@@ -627,6 +799,8 @@ class Waveform(PlotBase):
                     continue
                 config = CurveConfig(**cfg_dict)
                 self._add_curve(config=config)
+            self._refresh_alignment_state(force_readback=self._alignment_panel_visible)
+            self._refresh_dap_signals()
         except json.JSONDecodeError as e:
             logger.error(f"Failed to decode JSON: {e}")
 
@@ -1002,6 +1176,7 @@ class Waveform(PlotBase):
         QTimer.singleShot(
             150, self.auto_range
         )  # autorange with a delay to ensure the plot is updated
+        self._refresh_alignment_state()
 
         return curve
 
@@ -1257,6 +1432,7 @@ class Waveform(PlotBase):
             self.remove_curve(curve.name())
         if self.crosshair is not None:
             self.crosshair.clear_markers()
+        self._refresh_alignment_state()
 
     def get_curve(self, curve: int | str) -> Curve | None:
         """
@@ -1292,6 +1468,7 @@ class Waveform(PlotBase):
 
         self._refresh_colors()
         self._categorise_device_curves()
+        self._refresh_alignment_state()
 
     def _remove_curve_by_name(self, name: str):
         """
@@ -1342,6 +1519,8 @@ class Waveform(PlotBase):
             and self.enable_side_panel is True
         ):
             self.dap_summary.remove_dap_data(curve.name())
+        if curve.config.source == "dap" and self._alignment_controller is not None:
+            self._alignment_controller.remove_dap_curve(curve.name())
 
         # find a corresponding dap curve and remove it
         for c in self.curves:
@@ -1983,6 +2162,7 @@ class Waveform(PlotBase):
         """
         x_data = None
         new_suffix = None
+        previous_x_device = self._current_x_device
         data, access_key = self._fetch_scan_data_and_access()
 
         # 1 User wants custom signal
@@ -2041,6 +2221,7 @@ class Waveform(PlotBase):
                 if not scan_report_devices:
                     x_data = None
                     new_suffix = " (auto: index)"
+                    self._current_x_device = None
                 else:
                     device_x = scan_report_devices[0]
                     signal_x = self.entry_validator.validate_signal(device_x, None)
@@ -2050,8 +2231,10 @@ class Waveform(PlotBase):
                         entry_obj = data.get(device_x, {}).get(signal_x)
                         x_data = entry_obj.read()["value"] if entry_obj else None
                     new_suffix = f" (auto: {device_x}-{signal_x})"
-                self._current_x_device = (device_x, signal_x)
+                    self._current_x_device = (device_x, signal_x)
         self._update_x_label_suffix(new_suffix)
+        if previous_x_device != self._current_x_device:
+            self._refresh_alignment_state(force_readback=True)
         return x_data
 
     def _update_x_label_suffix(self, new_suffix: str):
@@ -2096,7 +2279,7 @@ class Waveform(PlotBase):
 
     def _categorise_device_curves(self) -> str:
         """
-        Categorise the device curves into sync and async based on the readout priority.
+        Categorize the device curves into sync and async based on the readout priority.
         """
         if self.scan_item is None:
             self.update_with_scan_history(-1)
@@ -2453,6 +2636,8 @@ class Waveform(PlotBase):
         Cleanup the widget by disconnecting signals and closing dialogs.
         """
         self.proxy_dap_request.cleanup()
+        if self._alignment_controller is not None:
+            self._alignment_controller.cleanup()
         self.clear_all()
         if self.curve_settings_dialog is not None:
             self.curve_settings_dialog.reject()
