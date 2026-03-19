@@ -182,3 +182,18 @@ def test_update_summary_tree(lmfit_dialog, lmfit_message):
     assert lmfit_dialog.ui.param_tree.topLevelItemCount() == 4
     assert lmfit_dialog.ui.param_tree.topLevelItem(0).text(0) == "amplitude"
     assert lmfit_dialog.ui.param_tree.topLevelItem(0).text(1) == "1.582"
+
+
+def test_compact_ui_hides_curve_selection_and_keeps_action_column(
+    qtbot, mocked_client, lmfit_message
+):
+    dialog = create_widget(
+        qtbot, LMFitDialog, client=mocked_client, ui_file="lmfit_dialog_compact.ui"
+    )
+    dialog.hide_curve_selection = True
+    dialog.active_action_list = ["center"]
+    dialog.update_summary_tree(data=lmfit_message, metadata={"curve_id": "test_curve_id"})
+
+    assert dialog.ui.group_curve_selection.isHidden()
+    assert dialog.ui.param_tree.columnCount() == 4
+    assert "center" in dialog.action_buttons

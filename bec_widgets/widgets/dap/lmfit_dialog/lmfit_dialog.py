@@ -35,7 +35,7 @@ class LMFitDialog(BECWidget, QWidget):
         **kwargs,
     ):
         """
-        Initialises the LMFitDialog widget.
+        Initializes the LMFitDialog widget.
 
         Args:
             parent (QWidget): The parent widget.
@@ -80,7 +80,7 @@ class LMFitDialog(BECWidget, QWidget):
         self._enable_actions = enable
         valid_buttons = {}
         for name, button in self.action_buttons.items():
-            if button is None or not shiboken6.isValid(button):
+            if button is None or not shiboken6.isValid(button):  # to fix cpp object deleted
                 continue
             button.setEnabled(enable)
             valid_buttons[name] = button
@@ -94,16 +94,6 @@ class LMFitDialog(BECWidget, QWidget):
     @active_action_list.setter
     def active_action_list(self, actions: list[str]):
         self._active_actions = actions
-
-    # This SafeSlot needed?
-    @SafeSlot(bool)
-    def set_actions_enabled(self, enable: bool) -> bool:
-        """SafeSlot to enable the move to buttons.
-
-        Args:
-            enable (bool): Whether to enable the action buttons.
-        """
-        self.enable_actions = enable
 
     @SafeProperty(bool)
     def always_show_latest(self):
@@ -169,7 +159,7 @@ class LMFitDialog(BECWidget, QWidget):
         """Setter for the currently displayed fit curve_id.
 
         Args:
-            fit_curve_id (str): The curve_id of the fit curve to be displayed.
+            curve_id (str): The curve_id of the fit curve to be displayed.
         """
         self._fit_curve_id = curve_id
         self.selected_fit.emit(curve_id)
@@ -281,9 +271,9 @@ class LMFitDialog(BECWidget, QWidget):
             if param_name in self.active_action_list:  # pylint: disable=unsupported-membership-test
                 # Create a push button to move the motor to a specific position
                 widget = QWidget()
-                button = QPushButton(f"Move to {param_name}")
+                button = QPushButton("Move")
                 button.clicked.connect(self._create_move_action(param_name, param[1]))
-                if self.enable_actions is True:
+                if self.enable_actions:
                     button.setEnabled(True)
                 else:
                     button.setEnabled(False)
