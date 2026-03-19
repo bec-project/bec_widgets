@@ -378,6 +378,7 @@ def main():  # pragma: no cover
     args, qt_args = parser.parse_known_args(sys.argv[1:])
 
     app = QApplication([sys.argv[0], *qt_args])
+    app.setApplicationName("BEC")
     apply_theme("dark")
     w = BECMainApp(show_examples=args.examples)
 
