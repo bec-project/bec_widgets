@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.2.4 (2026-03-19)
+
+### Bug Fixes
+
+- **main_app**: Setapplicationname("bec")
+  ([`28be696`](https://github.com/bec-project/bec_widgets/commit/28be696f7c7d9762c742c6d5fb5b03867d5e92ea))
+
+
 ## v3.2.3 (2026-03-16)
 
 ### Bug Fixes
