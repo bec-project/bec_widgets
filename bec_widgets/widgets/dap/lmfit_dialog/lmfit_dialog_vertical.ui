@@ -95,6 +95,12 @@
           <height>0</height>
          </size>
         </property>
+           <property name="indentation">
+               <number>0</number>
+           </property>
+           <property name="rootIsDecorated">
+               <bool>false</bool>
+           </property>
         <property name="uniformRowHeights">
          <bool>false</bool>
         </property>
@@ -147,6 +153,12 @@
           <width>0</width>
           <height>0</height>
          </size>
+        </property>
+           <property name="indentation">
+               <number>0</number>
+           </property>
+           <property name="rootIsDecorated">
+               <bool>false</bool>
         </property>
         <property name="columnCount">
          <number>4</number>

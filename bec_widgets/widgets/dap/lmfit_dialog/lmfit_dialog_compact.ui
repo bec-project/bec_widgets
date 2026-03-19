@@ -14,6 +14,18 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
    <item row="0" column="0">
     <widget class="QSplitter" name="splitter_2">
      <property name="sizePolicy">
@@ -21,15 +33,6 @@
        <horstretch>1</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
-     </property>
-     <property name="frameShape">
-      <enum>QFrame::Shape::VLine</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Shadow::Plain</enum>
-     </property>
-     <property name="lineWidth">
-      <number>1</number>
      </property>
      <property name="orientation">
       <enum>Qt::Orientation::Horizontal</enum>
@@ -41,6 +44,12 @@
       <bool>true</bool>
      </property>
      <widget class="QGroupBox" name="group_curve_selection">
+      <property name="minimumSize">
+       <size>
+        <width>120</width>
+        <height>0</height>
+       </size>
+      </property>
       <property name="title">
        <string>Select Curve</string>
       </property>
@@ -58,18 +67,36 @@
        </sizepolicy>
       </property>
       <property name="orientation">
-       <enum>Qt::Orientation::Vertical</enum>
+       <enum>Qt::Orientation::Horizontal</enum>
       </property>
       <widget class="QGroupBox" name="group_summary">
+       <property name="minimumSize">
+        <size>
+         <width>180</width>
+         <height>0</height>
+        </size>
+       </property>
        <property name="title">
         <string>Fit Summary</string>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
          <widget class="QTreeWidget" name="summary_tree">
+          <property name="alternatingRowColors">
+           <bool>true</bool>
+          </property>
+             <property name="indentation">
+                 <number>0</number>
+             </property>
+             <property name="rootIsDecorated">
+                 <bool>false</bool>
+             </property>
           <property name="uniformRowHeights">
            <bool>false</bool>
           </property>
+          <attribute name="headerDefaultSectionSize">
+           <number>90</number>
+          </attribute>
           <column>
            <property name="text">
             <string>Property</string>
@@ -85,12 +112,33 @@
        </layout>
       </widget>
       <widget class="QGroupBox" name="group_parameters">
+       <property name="minimumSize">
+        <size>
+         <width>240</width>
+         <height>0</height>
+        </size>
+       </property>
        <property name="title">
         <string>Parameter Details</string>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_3">
         <item>
          <widget class="QTreeWidget" name="param_tree">
+          <property name="alternatingRowColors">
+           <bool>true</bool>
+          </property>
+             <property name="indentation">
+                 <number>0</number>
+             </property>
+             <property name="rootIsDecorated">
+                 <bool>false</bool>
+          </property>
+          <property name="columnCount">
+           <number>4</number>
+          </property>
+          <attribute name="headerDefaultSectionSize">
+           <number>80</number>
+          </attribute>
           <column>
            <property name="text">
             <string>Parameter</string>
@@ -104,6 +152,11 @@
           <column>
            <property name="text">
             <string>Std</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Action</string>
            </property>
           </column>
          </widget>
