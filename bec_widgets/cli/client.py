@@ -985,7 +985,7 @@ class Curve(RPCBase):
 
 
 class DapComboBox(RPCBase):
-    """The DAPComboBox widget is an extension to the QComboBox with all avaialble DAP model from BEC."""
+    """Editable combobox listing the available DAP models."""
 
     @rpc_call
     def select_y_axis(self, y_axis: str):
@@ -1011,7 +1011,7 @@ class DapComboBox(RPCBase):
         Slot to update the fit model.
 
         Args:
-            default_device(str): Default device name.
+            fit_name(str): Fit model name.
         """
 
 

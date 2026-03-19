@@ -17,6 +17,8 @@ def dap_combobox(qtbot, mocked_client):
 
 def test_dap_combobox_init(dap_combobox):
     """Test DapComboBox init."""
+    assert dap_combobox.fit_model_combobox is dap_combobox
+    assert dap_combobox.isEditable() is True
     assert dap_combobox.fit_model_combobox.currentText() == "GaussianModel"
     assert dap_combobox.available_models == ["GaussianModel", "LorentzModel", "SineModel"]
     assert dap_combobox._validate_dap_model("GaussianModel") is True
@@ -81,3 +83,15 @@ def test_dap_combobox_init_without_available_models(qtbot, mocked_client):
     assert widget.available_models == []
     assert widget.fit_model_combobox.count() == 0
     assert widget.fit_model_combobox.currentText() == ""
+
+
+def test_dap_combobox_invalid_manual_entry_highlighted(dap_combobox):
+    dap_combobox.setCurrentText("not-a-model")
+
+    assert dap_combobox.is_valid_input is False
+    assert "red" in dap_combobox.styleSheet()
+
+    dap_combobox.setCurrentText("GaussianModel")
+
+    assert dap_combobox.is_valid_input is True
+    assert "transparent" in dap_combobox.styleSheet()
