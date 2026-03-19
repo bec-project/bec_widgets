@@ -36,6 +36,22 @@ from .conftest import create_widget
 ##################################################
 
 
+def make_alignment_fit_summary(center: float | None = None) -> dict:
+    params = []
+    if center is not None:
+        params.append(["center", center, True, None, -np.inf, np.inf, None, 0.1, {}, 0.0, None])
+    params.append(["sigma", 0.5, True, None, 0.0, np.inf, None, 0.1, {}, 1.0, None])
+    return {
+        "model": "Model(test)",
+        "method": "leastsq",
+        "chisqr": 1.0,
+        "redchi": 1.0,
+        "rsquared": 0.99,
+        "message": "Fit succeeded.",
+        "params": params,
+    }
+
+
 def test_waveform_initialization(qtbot, mocked_client):
     """
     Test that a new Waveform widget initializes with the correct defaults.
@@ -494,6 +510,218 @@ def test_add_dap_curve_custom_source(qtbot, mocked_client_with_dap):
     assert dap_curve.config.signal.device == custom_curve.name()
     assert dap_curve.config.signal.signal == "custom"
     assert dap_curve.config.signal.dap == "GaussianModel"
+
+
+def test_alignment_mode_toggle_shows_bottom_panel(qtbot, mocked_client):
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+
+    action = wf.toolbar.components.get_action("alignment_mode").action
+    action.trigger()
+
+    assert wf._alignment_panel_visible is True
+    assert wf._alignment_side_panel.panel_visible is True
+    assert action.isChecked() is True
+
+    action.trigger()
+
+    assert wf._alignment_panel_visible is False
+    assert wf._alignment_side_panel.panel_visible is False
+    assert action.isChecked() is False
+
+
+def test_resolve_alignment_positioner(qtbot, mocked_client):
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+
+    wf.x_mode = "samx"
+    assert wf._resolve_alignment_positioner() == "samx"
+
+    wf.x_mode = "auto"
+    wf._current_x_device = ("samx", "samx")
+    assert wf._resolve_alignment_positioner() == "samx"
+
+    wf._current_x_device = ("bpm4i", "bpm4i")
+    assert wf._resolve_alignment_positioner() is None
+
+    wf.x_mode = "index"
+    assert wf._resolve_alignment_positioner() is None
+
+    wf.x_mode = "timestamp"
+    assert wf._resolve_alignment_positioner() is None
+
+
+def test_alignment_panel_updates_when_auto_x_motor_changes(
+    qtbot, mocked_client_with_dap, monkeypatch
+):
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    wf.plot(arg1="bpm4i", dap="GaussianModel")
+    wf.x_mode = "auto"
+    wf.toolbar.components.get_action("alignment_mode").action.trigger()
+
+    wf._current_x_device = ("samx", "samx")
+    wf._alignment_panel.set_positioner_device("samx")
+    wf.scan_item = create_dummy_scan_item()
+    wf.scan_item.metadata["bec"]["scan_report_devices"] = ["samy"]
+
+    data = {
+        "samy": {"samy": {"val": np.array([1.0, 2.0, 3.0])}},
+        "bpm4i": {"bpm4i": {"val": np.array([10.0, 20.0, 30.0])}},
+    }
+    monkeypatch.setattr(wf, "_fetch_scan_data_and_access", lambda: (data, "val"))
+
+    wf._get_x_data("bpm4i", "bpm4i")
+
+    assert wf._current_x_device == ("samy", "samy")
+    assert wf._alignment_positioner_name == "samy"
+    assert wf._alignment_panel.positioner.device == "samy"
+
+
+def test_alignment_panel_disables_without_positioner(qtbot, mocked_client_with_dap):
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    wf.plot(arg1="bpm4i")
+    wf.x_mode = "index"
+
+    wf.toolbar.components.get_action("alignment_mode").action.trigger()
+
+    assert wf._alignment_panel.positioner.isEnabled() is False
+    assert "positioner on the x axis" in wf._alignment_panel.status_label.text()
+
+
+def test_alignment_marker_updates_from_positioner_readback(qtbot, mocked_client_with_dap):
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    wf.plot(arg1="bpm4i", dap="GaussianModel")
+    wf.x_mode = "samx"
+
+    wf.toolbar.components.get_action("alignment_mode").action.trigger()
+    wf.dev["samx"].signals["samx"]["value"] = 4.2
+    wf._alignment_panel.positioner.force_update_readback()
+
+    assert wf._alignment_controller is not None
+    assert wf._alignment_controller.marker_line is not None
+    assert np.isclose(wf._alignment_controller.marker_line.value(), 4.2)
+    assert "samx" in wf._alignment_controller.marker_line.label.toPlainText()
+    assert "4.200" in wf._alignment_controller.marker_line.label.toPlainText()
+
+
+def test_alignment_panel_uses_existing_dap_curves_and_moves_positioner(
+    qtbot, mocked_client_with_dap
+):
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    source_curve = wf.plot(arg1="bpm4i")
+    dap_curve = wf.add_dap_curve(device_label=source_curve.name(), dap_name="GaussianModel")
+    wf.x_mode = "samx"
+
+    wf.toolbar.components.get_action("alignment_mode").action.trigger()
+    fit_summary = make_alignment_fit_summary(center=2.5)
+    wf.dap_summary_update.emit(fit_summary, {"curve_id": dap_curve.name()})
+    wf._alignment_panel.fit_dialog.select_curve(dap_curve.name())
+
+    move_spy = MagicMock()
+    wf.dev["samx"].move = move_spy
+
+    assert wf._alignment_panel.fit_dialog.fit_curve_id == dap_curve.name()
+    assert wf._alignment_panel.fit_dialog.action_buttons["center"].isEnabled() is True
+
+    wf._alignment_panel.fit_dialog.action_buttons["center"].click()
+
+    move_spy.assert_called_once_with(2.5, relative=False)
+
+
+def test_alignment_target_line_toggle_updates_target_value_label(qtbot, mocked_client_with_dap):
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    wf.plot(arg1="bpm4i", dap="GaussianModel")
+    wf.x_mode = "samx"
+
+    wf.toolbar.components.get_action("alignment_mode").action.trigger()
+    wf._alignment_panel.target_toggle.setChecked(True)
+
+    assert wf._alignment_controller is not None
+    assert wf._alignment_controller.target_line is not None
+    assert wf._alignment_panel.move_to_target_button.isEnabled() is True
+
+    wf._alignment_controller.target_line.setValue(1.5)
+
+    assert "1.500" in wf._alignment_panel.target_toggle.text()
+
+
+def test_alignment_move_to_target_uses_draggable_line_value(qtbot, mocked_client_with_dap):
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    wf.plot(arg1="bpm4i", dap="GaussianModel")
+    wf.x_mode = "samx"
+
+    wf.toolbar.components.get_action("alignment_mode").action.trigger()
+    wf._alignment_panel.target_toggle.setChecked(True)
+    wf._alignment_controller.target_line.setValue(1.25)
+
+    move_spy = MagicMock()
+    wf.dev["samx"].move = move_spy
+
+    wf._alignment_panel.move_to_target_button.click()
+
+    move_spy.assert_called_once_with(1.25, relative=False)
+
+
+def test_alignment_mode_toggle_off_keeps_user_dap_curve(qtbot, mocked_client_with_dap):
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    source_curve = wf.plot(arg1="bpm4i")
+    dap_curve = wf.add_dap_curve(device_label=source_curve.name(), dap_name="GaussianModel")
+    wf.x_mode = "samx"
+
+    action = wf.toolbar.components.get_action("alignment_mode").action
+    action.trigger()
+    action.trigger()
+
+    assert wf.get_curve(dap_curve.name()) is not None
+
+
+def test_alignment_mode_toggle_off_clears_controller_overlays(qtbot, mocked_client_with_dap):
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    wf.plot(arg1="bpm4i", dap="GaussianModel")
+    wf.x_mode = "samx"
+
+    action = wf.toolbar.components.get_action("alignment_mode").action
+    action.trigger()
+    wf._alignment_panel.target_toggle.setChecked(True)
+    wf.dev["samx"].signals["samx"]["value"] = 2.0
+    wf._alignment_panel.positioner.force_update_readback()
+
+    assert wf._alignment_controller.marker_line is not None
+    assert wf._alignment_controller.target_line is not None
+
+    action.trigger()
+
+    assert wf._alignment_controller.marker_line is None
+    assert wf._alignment_controller.target_line is None
+
+
+def test_alignment_panel_removes_deleted_dap_curve_from_fit_list(qtbot, mocked_client_with_dap):
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    source_curve = wf.plot(arg1="bpm4i")
+    dap_curve = wf.add_dap_curve(device_label=source_curve.name(), dap_name="GaussianModel")
+
+    wf.toolbar.components.get_action("alignment_mode").action.trigger()
+    wf.dap_summary_update.emit(
+        make_alignment_fit_summary(center=1.5), {"curve_id": dap_curve.name()}
+    )
+
+    assert dap_curve.name() in wf._alignment_panel.fit_dialog.summary_data
+
+    wf.remove_curve(dap_curve.name())
+
+    assert dap_curve.name() not in wf._alignment_panel.fit_dialog.summary_data
+
+
+def test_alignment_controller_move_request_moves_positioner(qtbot, mocked_client_with_dap):
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    wf.plot(arg1="bpm4i", dap="GaussianModel")
+    wf.x_mode = "samx"
+
+    move_spy = MagicMock()
+    wf.dev["samx"].move = move_spy
+
+    wf.toolbar.components.get_action("alignment_mode").action.trigger()
+    wf._alignment_controller.move_absolute_requested.emit(3.5)
+
+    move_spy.assert_called_once_with(3.5, relative=False)
 
 
 def test_curve_set_data_emits_dap_update(qtbot, mocked_client):
