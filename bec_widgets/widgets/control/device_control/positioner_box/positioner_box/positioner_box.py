@@ -14,9 +14,9 @@ from qtpy.QtWidgets import QDoubleSpinBox
 from bec_widgets.utils import UILoader
 from bec_widgets.utils.colors import apply_theme, get_accent_colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
-from bec_widgets.widgets.control.device_control.positioner_box._base import PositionerBoxBase
-from bec_widgets.widgets.control.device_control.positioner_box._base.positioner_box_base import (
+from bec_widgets.widgets.control.device_control.positioner_box.positioner_box_base import (
     DeviceUpdateUIComponents,
+    PositionerBoxBase,
 )
 
 logger = bec_logger.logger
@@ -63,10 +63,10 @@ class PositionerBox(PositionerBoxBase):
 
         self.ui = UILoader(self).loader(os.path.join(self.current_path, self.ui_file))
 
-        self.addWidget(self.ui)
-        self.layout.setSpacing(0)
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.layout.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignHCenter)
+        self.main_layout.addWidget(self.ui)
+        self.main_layout.setSpacing(0)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignHCenter)
         ui_min_size = self.ui.minimumSize()
         ui_min_hint = self.ui.minimumSizeHint()
         self.setMinimumSize(
@@ -115,8 +115,6 @@ class PositionerBox(PositionerBoxBase):
             return
         old_device = self._device
         self._device = value
-        if not self.label:
-            self.label = value
         self.device_changed.emit(old_device, value)
 
     @SafeProperty(bool)

@@ -15,9 +15,9 @@ from qtpy.QtWidgets import QDoubleSpinBox
 from bec_widgets.utils import UILoader
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
-from bec_widgets.widgets.control.device_control.positioner_box._base import PositionerBoxBase
-from bec_widgets.widgets.control.device_control.positioner_box._base.positioner_box_base import (
+from bec_widgets.widgets.control.device_control.positioner_box.positioner_box_base import (
     DeviceUpdateUIComponents,
+    PositionerBoxBase,
 )
 
 logger = bec_logger.logger
@@ -96,9 +96,9 @@ class PositionerBox2D(PositionerBoxBase):
 
     def connect_ui(self):
         """Connect the UI components to signals, data, or routines"""
-        self.addWidget(self.ui)
-        self.layout.setSpacing(0)
-        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.addWidget(self.ui)
+        self.main_layout.setSpacing(0)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
 
         def _init_ui(val: QDoubleValidator, device_id: DeviceId):
             ui = self._device_ui_components_hv(device_id)
@@ -200,7 +200,6 @@ class PositionerBox2D(PositionerBoxBase):
             return
         old_device = self._device_hor
         self._device_hor = value
-        self.label = f"{self._device_hor}, {self._device_ver}"
         self.device_changed_hor.emit(old_device, value)
         self._init_device(self.device_hor, self.position_update_hor.emit, self.update_limits_hor)
 
@@ -220,7 +219,6 @@ class PositionerBox2D(PositionerBoxBase):
             return
         old_device = self._device_ver
         self._device_ver = value
-        self.label = f"{self._device_hor}, {self._device_ver}"
         self.device_changed_ver.emit(old_device, value)
         self._init_device(self.device_ver, self.position_update_ver.emit, self.update_limits_ver)
 

@@ -14,10 +14,10 @@ from qtpy.QtWidgets import (
     QLineEdit,
     QPushButton,
     QVBoxLayout,
+    QWidget,
 )
 
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.compact_popup import CompactPopupWidget
 from bec_widgets.widgets.control.device_control.position_indicator.position_indicator import (
     PositionIndicator,
 )
@@ -43,7 +43,7 @@ class DeviceUpdateUIComponents(TypedDict):
     units: QLabel
 
 
-class PositionerBoxBase(BECWidget, CompactPopupWidget):
+class PositionerBoxBase(BECWidget, QWidget):
     """Contains some core logic for positioner box widgets"""
 
     current_path = ""
@@ -57,7 +57,10 @@ class PositionerBoxBase(BECWidget, CompactPopupWidget):
             parent: The parent widget.
             device (Positioner): The device to control.
         """
-        super().__init__(parent=parent, layout=QVBoxLayout, **kwargs)
+        super().__init__(parent=parent, **kwargs)
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.setSpacing(0)
         self._dialog = None
         self.get_bec_shortcuts()
 
@@ -173,11 +176,9 @@ class PositionerBoxBase(BECWidget, CompactPopupWidget):
             if is_moving:
                 spinner.start()
                 spinner.setToolTip("Device is moving")
-                self.set_global_state("warning")
             else:
                 spinner.stop()
                 spinner.setToolTip("Device is idle")
-                self.set_global_state("success")
         else:
             spinner.setVisible(False)
 
@@ -196,9 +197,8 @@ class PositionerBoxBase(BECWidget, CompactPopupWidget):
             pos = (readback_val - limits[0]) / (limits[1] - limits[0])
             position_indicator.set_value(pos)
 
-    def _update_limits_ui(
-        self, limits: tuple[float, float], position_indicator, setpoint_validator
-    ):
+    @staticmethod
+    def _update_limits_ui(limits: tuple[float, float], position_indicator, setpoint_validator):
         if limits is not None and limits[0] != limits[1]:
             position_indicator.setToolTip(f"Min: {limits[0]}, Max: {limits[1]}")
             setpoint_validator.setRange(limits[0], limits[1])
@@ -223,7 +223,8 @@ class PositionerBoxBase(BECWidget, CompactPopupWidget):
         self.bec_dispatcher.disconnect_slot(slot, MessageEndpoints.device_readback(old_device))
         self.bec_dispatcher.connect_slot(slot, MessageEndpoints.device_readback(new_device))
 
-    def _toggle_enable_buttons(self, ui: DeviceUpdateUIComponents, enable: bool) -> None:
+    @staticmethod
+    def _toggle_enable_buttons(ui: DeviceUpdateUIComponents, enable: bool) -> None:
         """Toggle enable/disable on available buttons
 
         Args:
