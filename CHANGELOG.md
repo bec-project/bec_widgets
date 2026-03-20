@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v3.3.1 (2026-03-20)
+
+### Bug Fixes
+
+- **dap_combobox**: Added safeguard for no DAP models
+  ([`79af15a`](https://github.com/bec-project/bec_widgets/commit/79af15a88b993cd5b6bf730796f995f20cf6f188))
+
+- **dap_combobox**: Rewritten as proper combobox
+  ([`90222f3`](https://github.com/bec-project/bec_widgets/commit/90222f30821f822eb24b0179401d4e43050e0156))
+
+
 ## v3.3.0 (2026-03-20)
 
 ### Bug Fixes
