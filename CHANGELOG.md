@@ -1,6 +1,90 @@
 # CHANGELOG
 
 
+## v3.3.0 (2026-03-20)
+
+### Bug Fixes
+
+- Fix black 2026 formatting
+  ([`d4ecefd`](https://github.com/bec-project/bec_widgets/commit/d4ecefd80a6ab944b4da51c1ee35e5dea67770f2))
+
+- **actions**: Allow minimum icon size for actions in toolbar
+  ([`de941d1`](https://github.com/bec-project/bec_widgets/commit/de941d1bc565e444f84696b1de046d50b62f3c1b))
+
+- **admin-view**: Generate RPC interface for AdminView
+  ([`137e572`](https://github.com/bec-project/bec_widgets/commit/137e572a942281a9c7478a6be83f815848917e26))
+
+- **admin-widget**: Cleanup and minor improvements
+  ([`0c6f3f8`](https://github.com/bec-project/bec_widgets/commit/0c6f3f8352e7318a4f0579c83066b5b433fd1144))
+
+- **admin_view**: Minor changes
+  ([`48c9c83`](https://github.com/bec-project/bec_widgets/commit/48c9c83bb0c9432905d347b2d2cf46c05e58c098))
+
+- **bec-atlas-admin-view**: Fix connect_slot for dispatcher
+  ([`23c146b`](https://github.com/bec-project/bec_widgets/commit/23c146b3e6bbbabfb35f1892bc8653a65652ae6a))
+
+- **login-dialog**: Remove login_dialog
+  ([`d1a1d85`](https://github.com/bec-project/bec_widgets/commit/d1a1d85abd3331ebab696580c692c69b71482f37))
+
+- **main-app**: Fix id for main-app init of AdminView
+  ([`b14b046`](https://github.com/bec-project/bec_widgets/commit/b14b04688284eb875ea4469765786834e74fceb3))
+
+- **main-app**: Skip on_enter/exit hooks if darkmodebutton clicked
+  ([`f565deb`](https://github.com/bec-project/bec_widgets/commit/f565deb71db8fa5206fa2b4eea436e5055030bbc))
+
+- **pyproject**: Add PyJWT as dependency
+  ([`889e9c0`](https://github.com/bec-project/bec_widgets/commit/889e9c0994a960b93c93143b6dc5845dc96f9f96))
+
+- **RPC**: Fix rpc access
+  ([`8e53ae2`](https://github.com/bec-project/bec_widgets/commit/8e53ae2d3938e9c0a4c11082300156994447faaf))
+
+### Features
+
+- **admin-view**: Add admin view to views
+  ([`63059a4`](https://github.com/bec-project/bec_widgets/commit/63059a4ef897a919f296c68ada066e0b228f8248))
+
+- **bec-atlas-admin-view**: Add http service through QNetworkAccessManager
+  ([`1770873`](https://github.com/bec-project/bec_widgets/commit/17708730fcff41713638c17d0cc1f5d9d0b75122))
+
+- **bec-atlas-admin-view**: Add initial admin view
+  ([`ec58fbd`](https://github.com/bec-project/bec_widgets/commit/ec58fbd6d859058f518b88ba15670a3a715c3cc3))
+
+- **bec-atlas-admin-view**: Add login dilaog
+  ([`1384a32`](https://github.com/bec-project/bec_widgets/commit/1384a329abf873b5496e540a542088c7f13b7270))
+
+- **experiment-selection**: Add experiment selection widget
+  ([`598c453`](https://github.com/bec-project/bec_widgets/commit/598c453a1876cebc2482d55bf6c2728ec247def0))
+
+### Refactoring
+
+- Address review comments
+  ([`a7a9458`](https://github.com/bec-project/bec_widgets/commit/a7a9458180c18bf2bba652c2ff8a68875af36a22))
+
+- Cleanup widgets
+  ([`895b318`](https://github.com/bec-project/bec_widgets/commit/895b3189904778c269200365b264a32ff15dda21))
+
+- Fix formatting, running black 2026.1
+  ([`ab223d5`](https://github.com/bec-project/bec_widgets/commit/ab223d5fdc00b1a7bc9fd61abce5fabe4409654b))
+
+- **admin-view**: Refactor experiment selection, http service, admin view, and add main view
+  ([`3a17a24`](https://github.com/bec-project/bec_widgets/commit/3a17a249ed179fb8a11591f948c7b6338e10a60d))
+
+- **atlas-http-service**: Rename AtlasEndpoints
+  ([`2b0f575`](https://github.com/bec-project/bec_widgets/commit/2b0f575733412a96e54dff2dca15082d64caf7ee))
+
+- **fuzzy-search**: Unify is_match for fuzzy search
+  ([`d4afcb6`](https://github.com/bec-project/bec_widgets/commit/d4afcb68324f63ac8aea7cc3b2c82e79d2e643ca))
+
+### Testing
+
+- **bec-atlas-admin-view**: Complement tests for BECAtlasAdminView, ExperimentSelection,
+  BECAtlasHTTPService
+  ([`df44d9b`](https://github.com/bec-project/bec_widgets/commit/df44d9b50eb289a7851579c64a2a8c0e2363b06a))
+
+- **bec-atlas-http-service**: Add tests for http service
+  ([`34e80ee`](https://github.com/bec-project/bec_widgets/commit/34e80ee8f9a2b2373c97ae7cde90690ab6fb37ce))
+
+
 ## v3.2.4 (2026-03-19)
 
 ### Bug Fixes
