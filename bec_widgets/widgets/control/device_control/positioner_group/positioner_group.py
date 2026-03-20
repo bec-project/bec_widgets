@@ -27,30 +27,13 @@ class PositionerGroupBox(QGroupBox):
         self.layout().setContentsMargins(0, 0, 0, 0)
         self.layout().setSpacing(0)
         self.widget = PositionerBox(self, dev_name)
-        self.widget.compact_view = True
-        self.widget.expand_popup = False
         self.layout().addWidget(self.widget)
         self.widget.position_update.connect(self._on_position_update)
-        self.widget.expand.connect(self._on_expand)
         self.setTitle(self.device_name)
         self.widget.force_update_readback()
 
-    def _on_expand(self, expand):
-        if expand:
-            self.setTitle("")
-            self.setFlat(True)
-        else:
-            self.setTitle(self.device_name)
-            self.setFlat(False)
-
     def _on_position_update(self, pos: float):
         self.position_update.emit(pos)
-        precision = getattr(self.widget.dev[self.widget.device], "precision", 8)
-        try:
-            precision = int(precision)
-        except (TypeError, ValueError):
-            precision = int(8)
-        self.widget.label = f"{pos:.{precision}f}"
 
     def close(self):
         self.widget.close()

@@ -2,12 +2,18 @@
 <ui version="4.0">
  <class>Form</class>
  <widget class="QWidget" name="Form">
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>612</width>
-    <height>91</height>
+    <width>592</width>
+    <height>76</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -26,8 +32,29 @@
    <string>Form</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
    <item>
     <widget class="QGroupBox" name="device_box">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="title">
       <string>Device Name</string>
      </property>
@@ -227,12 +254,12 @@
  <customwidgets>
   <customwidget>
    <class>PositionIndicator</class>
-   <extends>QWidget</extends>
+   <extends></extends>
    <header>position_indicator</header>
   </customwidget>
   <customwidget>
    <class>SpinnerWidget</class>
-   <extends>QWidget</extends>
+   <extends></extends>
    <header>spinner_widget</header>
   </customwidget>
  </customwidgets>
