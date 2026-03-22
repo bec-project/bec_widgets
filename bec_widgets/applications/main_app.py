@@ -263,7 +263,7 @@ class BECMainApp(BECMainWindow):
             developer_view_step = self.guided_tour.register_widget(
                 widget=sidebar_developer_view,
                 title="Developer View",
-                text="Click here to access the Developer view to write scripts and makros.",
+                text="Click here to access the Developer view to write scripts and macros.",
             )
             tour_steps.append(developer_view_step)
 

@@ -16,7 +16,7 @@ that the widgets are discoverable.
 - make sure that the widget class inherits from both `BECWidget` as well as `QWidget` or  a subclass
   of it, such as `QComboBox` or `QLineEdit`.
 - make sure it initialises each of these superclasses in its `__init__()` method, and passes the
-  `parent` keyword argumment on to `QWidget.__init__()`.
+  `parent` keyword argument on to `QWidget.__init__()`.
 - add `PLUGIN = True` as a class variable to the widget class
 - add `USER_ACCESS = [...]`, including any methods and properties which should be accessible in the
   client to the list, as strings.

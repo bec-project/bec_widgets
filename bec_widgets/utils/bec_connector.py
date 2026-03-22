@@ -167,7 +167,7 @@ class BECConnector:
             )
             self.config = ConnectionConfig(widget_class=self.__class__.__name__)
 
-        # If the gui_id is passed, it should be respected. However, this should be revisted since
+        # If the gui_id is passed, it should be respected. However, this should be revisited since
         # the gui_id has to be unique, and may no longer be.
         if gui_id:
             self.config.gui_id = gui_id
@@ -399,7 +399,7 @@ class BECConnector:
         """
         self.config = config
 
-    # FIXME some thoughts are required to decide how thhis should work with rpc registry
+    # FIXME some thoughts are required to decide how this should work with rpc registry
     def apply_config(self, config: dict, generate_new_id: bool = True) -> None:
         """
         Apply the configuration to the widget.
@@ -417,7 +417,7 @@ class BECConnector:
         else:
             self.gui_id = self.config.gui_id
 
-    # FIXME some thoughts are required to decide how thhis should work with rpc registry
+    # FIXME some thoughts are required to decide how this should work with rpc registry
     def load_config(self, path: str | None = None, gui: bool = False):
         """
         Load the configuration of the widget from YAML.

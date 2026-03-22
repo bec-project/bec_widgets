@@ -215,7 +215,7 @@ Display custom text or HTML content.
 Display website content.
 ```
 
-```{grid-item-card} Toogle Widget
+```{grid-item-card} Toggle Widget
 :link: user.widgets.toggle
 :link-type: ref
 :img-top: /assets/widget_screenshots/toggle.png
@@ -244,7 +244,7 @@ Modern progress bar for BEC.
 :link-type: ref
 :img-top: /assets/widget_screenshots/position_indicator.png
 
-Display position of motor withing its limits.
+Display position of motor within its limits.
 ```
 
 ```{grid-item-card} LMFit Dialog

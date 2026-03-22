@@ -32,7 +32,7 @@ def test_dap_combobox_set_axis(dap_combobox):
     container = []
 
     def my_callback(msg: str):
-        """Calback function to store the messages."""
+        """Callback function to store the messages."""
         container.append(msg)
 
     dap_combobox.x_axis_updated.connect(my_callback)
@@ -51,7 +51,7 @@ def test_dap_combobox_select_fit(dap_combobox):
     container = []
 
     def my_callback(msg: str):
-        """Calback function to store the messages."""
+        """Callback function to store the messages."""
         container.append(msg)
 
     dap_combobox.fit_model_updated.connect(my_callback)
@@ -66,7 +66,7 @@ def test_dap_combobox_currentTextchanged(dap_combobox):
     container = []
 
     def my_callback(msg: str):
-        """Calback function to store the messages."""
+        """Callback function to store the messages."""
         container.append(msg)
 
     assert dap_combobox.fit_model_combobox.currentText() == "GaussianModel"

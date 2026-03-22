@@ -305,7 +305,7 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
     def remove_scan(self, index: int):
         """
         Remove a scan entry from the tree widget.
-        We supoprt negative indexing where -1, -2, etc.
+        We support negative indexing where -1, -2, etc.
 
         Args:
             index (int): The index of the scan entry to remove.

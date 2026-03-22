@@ -43,7 +43,7 @@ class WidgetContainerUtils:
         if list_of_names is None:
             list_of_names = []
         ii = 0
-        while ii < 1000:  # 1000 is arbritrary!
+        while ii < 1000:  # 1000 is arbitrary!
             name_candidate = f"{name}_{ii}"
             if name_candidate not in list_of_names:
                 return name_candidate

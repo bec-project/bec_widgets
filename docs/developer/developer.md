@@ -31,7 +31,7 @@ api_reference/api_reference.md
 
 ## Introduction
 
-An introduction into the single-resposibility principle and the modular design of BEC Widgets.
+An introduction into the single-responsibility principle and the modular design of BEC Widgets.
 ```
 
 ```{grid-item-card}

@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from .available_device_group import AvailableDeviceGroup
 
 
-class _DeviceListWiget(QListWidget):
+class _DeviceListWidget(QListWidget):
 
     def _item_iter(self):
         return (self.item(i) for i in range(self.count()))
@@ -44,7 +44,7 @@ class Ui_AvailableDeviceGroup(object):
         self.n_included.setObjectName("n_included")
         title_layout.addWidget(self.n_included)
 
-        self.device_list = _DeviceListWiget(AvailableDeviceGroup)
+        self.device_list = _DeviceListWidget(AvailableDeviceGroup)
         self.device_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
         self.device_list.setObjectName("device_list")
         self.device_list.setFrameStyle(0)

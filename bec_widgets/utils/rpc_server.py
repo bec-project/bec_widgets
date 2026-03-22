@@ -156,7 +156,7 @@ class RPCServer:
             if method == "raise" and hasattr(
                 obj, "setWindowState"
             ):  # special case for raising windows, should work even if minimized
-                # this is a special case for raising windows for gnome on rethat 9 systems where changing focus is supressed by default
+                # this is a special case for raising windows for gnome on Red Hat (RHEL) 9 systems where changing focus is suppressed by default
                 # The procedure is as follows:
                 # 1. Get the current window state to check if the window is minimized and remove minimized flag
                 # 2. Then in order to force gnome to raise the window, we set the window to stay on top temporarily
@@ -442,5 +442,5 @@ class RPCServer:
         self.status = messages.BECStatus.IDLE
         self._heartbeat_timer.stop()
         self.emit_heartbeat()
-        logger.info("Succeded in shutting down CLI server")
+        logger.info("Succeeded in shutting down CLI server")
         self.client.shutdown()

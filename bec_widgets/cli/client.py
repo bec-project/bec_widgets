@@ -21,7 +21,7 @@ logger = bec_logger.logger
 
 
 class _WidgetsEnumType(str, enum.Enum):
-    """Enum for the available widgets, to be generated programatically"""
+    """Enum for the available widgets, to be generated programmatically"""
 
     ...
 

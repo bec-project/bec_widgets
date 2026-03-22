@@ -17,7 +17,7 @@
 ````
 
 ````{tab} Examples - CLI
-In the following examples, we will use `BECIPythonClient` as the main object to interact with the `BECDockArea`. These tutorials focus on how to work with the `BECDockArea` framework, such as adding and removing docks, saving and restoring layouts, and managing the docked widgets. By default the `BECDockArea` is refered as `gui` in `BECIPythonClient`. For more detailed examples of each individual component, please refer to the example sections of each individual [`widget`](user.widgets).
+In the following examples, we will use `BECIPythonClient` as the main object to interact with the `BECDockArea`. These tutorials focus on how to work with the `BECDockArea` framework, such as adding and removing docks, saving and restoring layouts, and managing the docked widgets. By default the `BECDockArea` is referred to as `gui` in `BECIPythonClient`. For more detailed examples of each individual component, please refer to the example sections of each individual [`widget`](user.widgets).
 
 ## Example 1 - Adding Docks to BECDockArea
 
@@ -62,7 +62,7 @@ dock_area.waveform_dock
 dock_area.motor_dock
 dock_area.image_dock
 
-# If objects were closed, we will keep a refernce that will indicate that the dock was deleted
+# If objects were closed, we will keep a reference that will indicate that the dock was deleted
 # Try closing the window with the dock_area via mouse click on x
 
 dock_area

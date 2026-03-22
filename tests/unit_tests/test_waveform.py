@@ -637,7 +637,7 @@ def test_fetch_scan_data_and_access(qtbot, mocked_client, monkeypatch):
     wf._fetch_scan_data_and_access()
     hist_mock.assert_called_once_with(-1)
 
-    # Ckeck live mode
+    # Check live mode
     dummy_scan = create_dummy_scan_item()
     wf.scan_item = dummy_scan
     data_dict, access_key = wf._fetch_scan_data_and_access()

@@ -1422,7 +1422,7 @@ class TestDeviceConfigTemplate:
         qtbot.waitExposed(template)
         yield template
 
-    def test_device_config_teamplate_default_init(
+    def test_device_config_template_default_init(
         self, device_config_template: DeviceConfigTemplate, qtbot
     ):
         """Test DeviceConfigTemplate default initialization."""

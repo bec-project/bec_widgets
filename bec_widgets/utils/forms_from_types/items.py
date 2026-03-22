@@ -71,7 +71,7 @@ class FormItemSpec(BaseModel):
     """
     The specification for an item in a dynamically generated form. Uses a pydantic FieldInfo
     to store most annotation info, since one of the main purposes is to store data for
-    forms genrated from pydantic models, but can also be composed from other sources or by hand.
+    forms generated from pydantic models, but can also be composed from other sources or by hand.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -192,7 +192,7 @@ class DynamicFormItem(QWidget):
     @abstractmethod
     def _add_main_widget(self) -> None:
         self._main_widget: QWidget
-        """Add the main data entry widget to self._main_widget and appply any
+        """Add the main data entry widget to self._main_widget and apply any
         constraints from the field info"""
 
     @SafeSlot()

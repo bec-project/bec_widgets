@@ -169,7 +169,7 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
         self._upload_redis_dialog: UploadRedisDialog | None = None
         self._dialog_validation_connection: QMetaObject.Connection | None = None
 
-        # NOTE: We need here a seperate config helper instance to avoid conflicts with
+        # NOTE: We need here a separate config helper instance to avoid conflicts with
         # other communications to REDIS as uploading a config through a CommunicationConfigAction
         # will block if we use the config_helper from self.client.config._config_helper
         self._config_helper = config_helper.ConfigHelper(self.client.connector)
@@ -607,8 +607,8 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
                 self.device_table_view._is_config_in_sync_with_redis()
             )
             validation_results = self.device_table_view.get_validation_results()
-            for config, config_status, connnection_status in validation_results.values():
-                if connnection_status == ConnectionStatus.CONNECTED.value:
+            for config, config_status, connection_status in validation_results.values():
+                if connection_status == ConnectionStatus.CONNECTED.value:
                     self.device_table_view.update_device_validation(
                         config, config_status, ConnectionStatus.CAN_CONNECT, ""
                     )
