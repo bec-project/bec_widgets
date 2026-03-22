@@ -94,7 +94,7 @@ logger = bec_logger.logger
         if self._base:
             self.content += """
 class _WidgetsEnumType(str, enum.Enum):
-    \"\"\" Enum for the available widgets, to be generated programatically  \"\"\"
+    \"\"\" Enum for the available widgets, to be generated programmatically  \"\"\"
     ...
     """
 

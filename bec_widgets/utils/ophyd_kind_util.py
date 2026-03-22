@@ -15,7 +15,7 @@ class Kind(IFBase):
     """
     This is used in the .kind attribute of all OphydObj (Signals, Devices).
 
-    A Device examines its components' .kind atttribute to decide whether to
+    A Device examines its components' .kind attribute to decide whether to
     traverse it in read(), read_configuration(), or neither. Additionally, if
     decides whether to include its name in `hints['fields']`.
     """

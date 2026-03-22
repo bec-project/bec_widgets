@@ -160,8 +160,8 @@ class ScanHistoryMetadataViewer(BECWidget, QtWidgets.QGroupBox):
         Clear the view by resetting the labels and values.
         """
         layout = self.layout()
-        lauout_counts = layout.count()
-        for i in range(lauout_counts):
+        layout_counts = layout.count()
+        for i in range(layout_counts):
             item = layout.itemAt(i)
             if item.widget():
                 item.widget().close()

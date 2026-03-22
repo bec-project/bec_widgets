@@ -224,7 +224,7 @@ class PositionerBoxBase(BECWidget, CompactPopupWidget):
         self.bec_dispatcher.connect_slot(slot, MessageEndpoints.device_readback(new_device))
 
     def _toggle_enable_buttons(self, ui: DeviceUpdateUIComponents, enable: bool) -> None:
-        """Toogle enable/disable on available buttons
+        """Toggle enable/disable on available buttons
 
         Args:
             enable (bool): Enable buttons

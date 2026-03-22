@@ -34,13 +34,13 @@ class HashModel(str, Enum):
 class DeviceResourceBackend(Protocol):
     @property
     def tag_groups(self) -> dict[str, set[HashableDevice]]:
-        """A dictionary of all availble devices separated by tag groups. The same device may
+        """A dictionary of all available devices separated by tag groups. The same device may
         appear more than once (in different groups)."""
         ...
 
     @property
     def all_devices(self) -> set[HashableDevice]:
-        """A set of all availble devices. The same device may not appear more than once."""
+        """A set of all available devices. The same device may not appear more than once."""
         ...
 
     @property

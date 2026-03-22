@@ -32,8 +32,8 @@ def threads_check_fixture(threads_check):
 
 @pytest.fixture
 def gui_id():
-    """New gui id each time, to ensure no 'gui is alive' zombie key can perturbate"""
-    return f"figure_{random.randint(0,100)}"  # make a new gui id each time, to ensure no 'gui is alive' zombie key can perturbate
+    """New gui id each time, to ensure no 'gui is alive' zombie key can perturb"""
+    return f"figure_{random.randint(0,100)}"  # make a new gui id each time, to ensure no 'gui is alive' zombie key can perturb
 
 
 @pytest.fixture(scope="function")

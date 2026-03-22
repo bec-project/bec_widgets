@@ -79,7 +79,7 @@ if __name__ == "__main__":
 
 ````
 
-````{tab} Examples - BEC desginer
+````{tab} Examples - BEC designer
 The various properties can also be set when the SignalLabel widget is added to a UI in BEC designer:
 
 ```{figure} ./designer_screenshot.png

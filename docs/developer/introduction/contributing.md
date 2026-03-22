@@ -19,7 +19,7 @@ cd bec_widgets
 ```
 **Install in Editable Mode**:
 
-Please install the package in editable mode into your BEC Python environemnt. 
+Please install the package in editable mode into your BEC Python environment. 
 ```bash
 pip install -e '.[dev,pyside6]'
 ```

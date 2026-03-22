@@ -347,14 +347,14 @@ class ScanGroupBox(QGroupBox):
 
     def get_parameters(self, device_object: bool = True):
         """
-        Returns the parameters from the widgets in the scan control layout formated to run scan from BEC.
+        Returns the parameters from the widgets in the scan control layout formatted to run scan from BEC.
         """
         if self.box_type == "args":
-            return self._get_arg_parameterts(device_object=device_object)
+            return self._get_arg_parameters(device_object=device_object)
         elif self.box_type == "kwargs":
             return self._get_kwarg_parameters(device_object=device_object)
 
-    def _get_arg_parameterts(self, device_object: bool = True):
+    def _get_arg_parameters(self, device_object: bool = True):
         args = []
         for i in range(1, self.layout.rowCount()):
             for j in range(self.layout.columnCount()):

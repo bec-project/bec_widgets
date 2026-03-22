@@ -1778,7 +1778,7 @@ class Waveform(PlotBase):
             if parent_curve is None:
                 logger.warning(
                     f"No device curve found for DAP curve '{dap_curve.name()}'!"
-                )  # TODO triggerd when DAP curve is removed from the curve dialog, why?
+                )  # TODO triggered when DAP curve is removed from the curve dialog, why?
                 continue
 
             x_data, y_data = parent_curve.get_data()

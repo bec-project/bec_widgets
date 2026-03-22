@@ -276,7 +276,7 @@ class Ring(BECConnector, QWidget):
             for obj in dev_obj._info["signals"].values()
             if obj["kind_str"] == "hinted"
             and obj["signal_class"]
-            not in ["ProgressSignal", "AyncSignal", "AsyncMultiSignal", "DynamicSignal"]
+            not in ["ProgressSignal", "AsyncSignal", "AsyncMultiSignal", "DynamicSignal"]
         ]
 
         normal_signals = [

@@ -113,7 +113,7 @@ def metadata_widget(empty_metadata_widget: ScanMetadata):
     )
 
 
-def fill_commponents(components: dict[str, DynamicFormItem]):
+def fill_components(components: dict[str, DynamicFormItem]):
     components["sample_name"].setValue("test name")
     components["str_optional"].setValue(None)
     components["str_required"].setValue("something")
@@ -147,7 +147,7 @@ def test_griditems_are_correct_class(
 
 def test_grid_to_dict(metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormItem]]):
     widget, components = metadata_widget = metadata_widget
-    fill_commponents(components)
+    fill_components(components)
 
     assert widget._dict_from_grid() == TEST_DICT
     assert widget.get_form_data() == TEST_DICT | {"extra_field": "extra_data"}
@@ -159,7 +159,7 @@ def test_validation(metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormIt
         widget._validity.compact_status.default_led[:114]
     )
 
-    fill_commponents(components)
+    fill_components(components)
     widget.validate_form()
     assert widget._validity_message.text() == "No errors!"
 
@@ -178,7 +178,7 @@ def test_numbers_clipped_to_limits(
     metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormItem]],
 ):
     widget, components = metadata_widget = metadata_widget
-    fill_commponents(components)
+    fill_components(components)
 
     components["decimal_dp_limits_nodefault"].setValue(-56)
     assert components["decimal_dp_limits_nodefault"].getValue() == pytest.approx(1.01)

@@ -88,7 +88,7 @@ class DeviceBrowser(BECWidget, QWidget):
         self.setLayout(layout)
 
     def init_warning_label(self):
-        self.ui.scan_running_warning.setText("Warning: editing diabled while scan is running!")
+        self.ui.scan_running_warning.setText("Warning: editing disabled while scan is running!")
         self.ui.scan_running_warning.setStyleSheet(
             "background-color: #fcba03; color: rgb(0, 0, 0);"
         )
