@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.3.2 (2026-03-22)
+
+### Bug Fixes
+
+- Typos
+  ([`3d29a67`](https://github.com/bec-project/bec_widgets/commit/3d29a67c0b2175f2f29b8e5a7befce55f3d28fd3))
+
+
 ## v3.3.1 (2026-03-20)
 
 ### Bug Fixes
