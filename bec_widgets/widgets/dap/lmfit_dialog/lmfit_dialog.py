@@ -80,7 +80,8 @@ class LMFitDialog(BECWidget, QWidget):
         self._enable_actions = enable
         valid_buttons = {}
         for name, button in self.action_buttons.items():
-            if button is None or not shiboken6.isValid(button):  # to fix cpp object deleted
+            # just to be sure we have a valid c++ object
+            if button is None or not shiboken6.isValid(button):
                 continue
             button.setEnabled(enable)
             valid_buttons[name] = button
@@ -150,19 +151,21 @@ class LMFitDialog(BECWidget, QWidget):
         self.ui.group_parameters.setVisible(not show)
 
     @property
-    def fit_curve_id(self) -> str:
+    def fit_curve_id(self) -> str | None:
         """SafeProperty for the currently displayed fit curve_id."""
         return self._fit_curve_id
 
     @fit_curve_id.setter
-    def fit_curve_id(self, curve_id: str):
+    def fit_curve_id(self, curve_id: str | None):
         """Setter for the currently displayed fit curve_id.
 
         Args:
-            curve_id (str): The curve_id of the fit curve to be displayed.
+            curve_id (str | None): The curve_id of the fit curve to be displayed,
+                or None to clear the selection.
         """
         self._fit_curve_id = curve_id
-        self.selected_fit.emit(curve_id)
+        if curve_id is not None:
+            self.selected_fit.emit(curve_id)
 
     @SafeSlot(str)
     def remove_dap_data(self, curve_id: str):
@@ -173,10 +176,14 @@ class LMFitDialog(BECWidget, QWidget):
         """
         self.summary_data.pop(curve_id, None)
         if self.fit_curve_id == curve_id:
-            self._fit_curve_id = None
             self.action_buttons = {}
             self.ui.summary_tree.clear()
             self.ui.param_tree.clear()
+            remaining = list(self.summary_data.keys())
+            if remaining:
+                self.fit_curve_id = remaining[0]
+            else:
+                self._fit_curve_id = None
         self.refresh_curve_list()
 
     @SafeSlot(str)
