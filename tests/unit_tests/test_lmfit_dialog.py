@@ -140,7 +140,7 @@ def lmfit_message():
 
 
 def test_fit_curve_id(lmfit_dialog):
-    """Test hide_curve_selection property"""
+    """Test fit_curve_id property and selected_fit signal"""
     my_callback = mock.MagicMock()
     lmfit_dialog.selected_fit.connect(my_callback)
     assert lmfit_dialog.fit_curve_id is None
@@ -148,6 +148,10 @@ def test_fit_curve_id(lmfit_dialog):
     assert lmfit_dialog.fit_curve_id == "test_curve_id"
     assert my_callback.call_count == 1
     assert my_callback.call_args == mock.call("test_curve_id")
+    # Setting to None should not emit selected_fit
+    lmfit_dialog.fit_curve_id = None
+    assert lmfit_dialog.fit_curve_id is None
+    assert my_callback.call_count == 1
 
 
 def test_remove_dap_data(lmfit_dialog):
@@ -164,6 +168,35 @@ def test_remove_dap_data(lmfit_dialog):
     lmfit_dialog.remove_dap_data("test_not_there")
     assert lmfit_dialog.summary_data == {"test2": "data2"}
     assert lmfit_dialog.ui.curve_list.count() == 1
+
+
+def test_remove_dap_data_selected_curve_switches_to_next(lmfit_dialog):
+    """Removing the currently selected curve should switch to the next available one"""
+    my_callback = mock.MagicMock()
+    lmfit_dialog.selected_fit.connect(my_callback)
+    lmfit_dialog.summary_data = {"curve_a": "data_a", "curve_b": "data_b"}
+    lmfit_dialog.fit_curve_id = "curve_a"
+    my_callback.reset_mock()
+
+    lmfit_dialog.remove_dap_data("curve_a")
+
+    assert lmfit_dialog.fit_curve_id == "curve_b"
+    assert my_callback.call_count == 1
+    assert my_callback.call_args == mock.call("curve_b")
+
+
+def test_remove_dap_data_selected_curve_clears_when_last(lmfit_dialog):
+    """Removing the only/last selected curve should clear the selection without emitting"""
+    my_callback = mock.MagicMock()
+    lmfit_dialog.selected_fit.connect(my_callback)
+    lmfit_dialog.summary_data = {"curve_a": "data_a"}
+    lmfit_dialog.fit_curve_id = "curve_a"
+    my_callback.reset_mock()
+
+    lmfit_dialog.remove_dap_data("curve_a")
+
+    assert lmfit_dialog.fit_curve_id is None
+    assert my_callback.call_count == 0
 
 
 def test_update_summary_tree(lmfit_dialog, lmfit_message):
