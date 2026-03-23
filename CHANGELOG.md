@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.3.3 (2026-03-23)
+
+### Bug Fixes
+
+- **positioner_box**: Remove CompactPopupWidget inheritance
+  ([`da400d2`](https://github.com/bec-project/bec_widgets/commit/da400d20b672236241ce3a4480481ac6a5df1b2e))
+
+
 ## v3.3.2 (2026-03-22)
 
 ### Bug Fixes
