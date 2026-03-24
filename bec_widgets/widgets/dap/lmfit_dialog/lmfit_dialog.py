@@ -3,7 +3,7 @@ import os
 import shiboken6
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import Signal
-from qtpy.QtWidgets import QPushButton, QTreeWidgetItem, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QPushButton, QSizePolicy, QTreeWidgetItem, QVBoxLayout, QWidget
 
 from bec_widgets.utils import UILoader
 from bec_widgets.utils.bec_widget import BECWidget
@@ -69,6 +69,27 @@ class LMFitDialog(BECWidget, QWidget):
         self._hide_curve_selection = False
         self._hide_summary = False
         self._hide_parameters = False
+        self._configure_embedded_size_policy()
+
+    def _configure_embedded_size_policy(self):
+        """Allow the compact dialog to shrink more gracefully in embedded layouts."""
+        if self._ui_file != "lmfit_dialog_compact.ui":
+            return
+
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.ui.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+
+        for group in (
+            self.ui.group_curve_selection,
+            self.ui.group_summary,
+            self.ui.group_parameters,
+        ):
+            group.setMinimumHeight(0)
+            group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+
+        for view in (self.ui.curve_list, self.ui.summary_tree, self.ui.param_tree):
+            view.setMinimumHeight(0)
+            view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Ignored)
 
     @property
     def enable_actions(self) -> bool:
