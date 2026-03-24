@@ -1,6 +1,25 @@
 # CHANGELOG
 
 
+## v3.3.4 (2026-03-24)
+
+### Bug Fixes
+
+- **lmfit_dialog**: Dialog compact adjustment and cleanup of stale methods
+  ([`f67b60a`](https://github.com/bec-project/bec_widgets/commit/f67b60ac98cd87ed8391fee8545eb8064a068e67))
+
+- **lmfit_dialog**: Fix cpp object deleted
+  ([`5ec59d5`](https://github.com/bec-project/bec_widgets/commit/5ec59d5dbb75e3a9deb488b0affaf8cb704242b9))
+
+- **lmfit_dialog**: Fix fit_curve_id type annotation and remove_dap_data selection behavior
+  ([`05c38d9`](https://github.com/bec-project/bec_widgets/commit/05c38d9b82cc6dfaec8f5abf8e0ececa5d001524))
+
+Co-authored-by: wyzula-jan <133381102+wyzula-jan@users.noreply.github.com>
+
+Agent-Logs-Url:
+  https://github.com/bec-project/bec_widgets/sessions/97395c0e-0271-4cdf-b39f-f3117d21bfa3
+
+
 ## v3.3.3 (2026-03-23)
 
 ### Bug Fixes
