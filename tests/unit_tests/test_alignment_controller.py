@@ -107,6 +107,20 @@ def test_alignment_controller_emits_move_request_for_fit_center(qtbot, mocked_cl
     move_callback.assert_called_once_with(2.5)
 
 
+def test_alignment_controller_requests_autoscale_for_marker_and_target(qtbot, mocked_client):
+    _, panel, controller = create_alignment_controller(qtbot, mocked_client)
+
+    autoscale_callback = MagicMock()
+    controller.autoscale_requested.connect(autoscale_callback)
+
+    controller.update_context(
+        AlignmentContext(visible=True, positioner_name="samx", precision=3, readback=1.0)
+    )
+    panel.target_toggle.setChecked(True)
+
+    assert autoscale_callback.call_count >= 2
+
+
 def test_alignment_controller_emits_move_request_for_target(qtbot, mocked_client):
     _, panel, controller = create_alignment_controller(qtbot, mocked_client)
 

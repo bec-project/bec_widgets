@@ -292,6 +292,7 @@ class Waveform(PlotBase):
             widget=self._alignment_panel
         )
         self._alignment_controller.move_absolute_requested.connect(self._move_alignment_positioner)
+        self._alignment_controller.autoscale_requested.connect(self._autoscale_alignment_indicators)
         self.dap_summary_update.connect(self._alignment_controller.update_dap_summary)
         self.toolbar.components.get_action("alignment_mode").action.toggled.connect(
             self.toggle_alignment_mode
@@ -399,6 +400,11 @@ class Waveform(PlotBase):
         if self._alignment_positioner_name is None:
             return
         self.dev[self._alignment_positioner_name].move(float(value), relative=False)
+
+    @SafeSlot()
+    def _autoscale_alignment_indicators(self):
+        """Autoscale the waveform view after alignment indicator updates."""
+        self._reset_view()
 
     def _add_waveform_specific_popup(self):
         """
