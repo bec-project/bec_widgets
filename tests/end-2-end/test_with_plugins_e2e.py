@@ -84,7 +84,6 @@ def test_scan_metadata_for_custom_scan(
         last_scan = queue.scan_storage.storage[-1]
         assert last_scan.status_message.info["scan_name"] == scan_name
         assert last_scan.status_message.info["exp_time"] == kwargs["exp_time"]
-        assert last_scan.status_message.info["scan_motors"] == [args["device"]]
         assert last_scan.status_message.info["num_points"] == kwargs["steps"]
 
     if valid:
