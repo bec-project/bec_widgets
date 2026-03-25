@@ -38,6 +38,7 @@ class WaveformAlignmentController(QObject):
     """Own the alignment plot overlays and synchronize them with the alignment panel."""
 
     move_absolute_requested = Signal(float)
+    autoscale_requested = Signal()
 
     def __init__(self, plot_item: pg.PlotItem, panel: WaveformAlignmentPanel, parent=None):
         super().__init__(parent=parent)
@@ -129,6 +130,7 @@ class WaveformAlignmentController(QObject):
         self._marker_line.label.setText(
             f"{self._positioner_name}: {self._readback:.{self._precision}f}"
         )
+        self.autoscale_requested.emit()
 
     @SafeSlot(dict, dict)
     def update_dap_summary(self, data: dict, metadata: dict):
@@ -219,7 +221,6 @@ class WaveformAlignmentController(QObject):
             label="",
             labelOpts={"position": 0.95, "color": warning},
         )
-        self._marker_line.skip_auto_range = True
         self._apply_marker_style()
         self._plot_item.addItem(self._marker_line)
 
@@ -254,6 +255,7 @@ class WaveformAlignmentController(QObject):
             value = min(max(value, self._limits[0]), self._limits[1])
         self._target_line.setValue(value)
         self._on_target_line_changed()
+        self.autoscale_requested.emit()
 
     def _refresh_target_line_metadata(self):
         if self._target_line is None or self._positioner_name is None:
@@ -326,6 +328,7 @@ class WaveformAlignmentController(QObject):
             return
         self._panel.set_target_value(float(self._target_line.value()), precision=self._precision)
         self._refresh_target_controls()
+        self.autoscale_requested.emit()
 
     @SafeSlot()
     def _on_target_move_requested(self):
