@@ -222,7 +222,7 @@ def create_history_file(file_path, data: dict, metadata: dict) -> messages.ScanH
     msg = messages.ScanHistoryMessage(
         scan_id=metadata["scan_id"],
         scan_name=metadata["scan_name"],
-        exit_status=metadata["exit_status"],
+        exit_status=metadata["status"],
         file_path=file_path,
         scan_number=metadata["scan_number"],
         dataset_number=metadata["dataset_number"],
@@ -269,7 +269,7 @@ def grid_scan_history_msg(tmpdir):
         "scan_id": "test_scan",
         "scan_name": "grid_scan",
         "scan_type": "step",
-        "exit_status": "closed",
+        "status": "closed",
         "scan_number": 1,
         "dataset_number": 1,
         "request_inputs": {
@@ -349,7 +349,7 @@ def scan_history_factory(tmpdir):
             "scan_id": scan_id,
             "scan_name": scan_name,
             "scan_type": scan_type,
-            "exit_status": "closed",
+            "status": "closed",
             "scan_number": scan_number,
             "dataset_number": dataset_number,
             "request_inputs": {

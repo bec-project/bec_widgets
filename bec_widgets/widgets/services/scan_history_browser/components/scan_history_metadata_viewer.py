@@ -50,7 +50,7 @@ class ScanHistoryMetadataViewer(BECWidget, QtWidgets.QGroupBox):
             "start_time": "Start Time",
             "end_time": "End Time",
             "elapsed_time": "Elapsed Time",
-            "exit_status": "Status",
+            "status": "Status",
             "scan_name": "Scan Name",
             "num_points": "Nr of Points",
         }
