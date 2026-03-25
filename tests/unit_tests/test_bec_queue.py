@@ -71,7 +71,6 @@ def bec_queue_msg_full():
                             },
                             "report_instructions": [{"scan_progress": 20}],
                             "scan_id": "2d704cc3-c172-404c-866d-608ce09fce40",
-                            "scan_motors": ["samx"],
                             "scan_number": 1289,
                         }
                     ],
