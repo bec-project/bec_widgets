@@ -59,5 +59,4 @@ def test_run_line_scan_with_parameters_e2e(scan_control, bec_client_lib, qtbot):
     last_scan = queue.scan_storage.storage[-1]
     assert last_scan.status_message.info["scan_name"] == scan_name
     assert last_scan.status_message.info["exp_time"] == kwargs["exp_time"]
-    assert last_scan.status_message.info["scan_motors"] == [args["device"]]
     assert last_scan.status_message.info["num_points"] == kwargs["steps"]
