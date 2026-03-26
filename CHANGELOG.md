@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v3.4.0 (2026-03-26)
+
+### Bug Fixes
+
+- **lmfit_dialog**: Compact layout size policy for better alignment panel UX
+  ([`31389a3`](https://github.com/bec-project/bec_widgets/commit/31389a3dd0c7b1c671acdf49ae50b08455f466a7))
+
+- **waveform**: Alignment panel indicators request autoscale if updated
+  ([`a292375`](https://github.com/bec-project/bec_widgets/commit/a2923752c27ad7b9749db3d309fe288747b85acb))
+
+### Features
+
+- **waveform**: 1d alignment mode panel
+  ([`a486c52`](https://github.com/bec-project/bec_widgets/commit/a486c52058b4edbea00ad7bb018f1fa2822fb9c6))
+
+
 ## v3.3.4 (2026-03-24)
 
 ### Bug Fixes
