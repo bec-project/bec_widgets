@@ -81,12 +81,95 @@ class _FakeReply:
         self.deleted = True
 
 
+@pytest.fixture
+def experiment_info_message() -> ExperimentInfoMessage:
+    data = {
+        "_id": "p22622",
+        "owner_groups": ["admin"],
+        "access_groups": ["unx-sls_xda_bs", "p22622"],
+        "realm_id": "TestBeamline",
+        "proposal": "12345967",
+        "title": "Test Experiment for Mat Card Widget",
+        "firstname": "John",
+        "lastname": "Doe",
+        "email": "john.doe@psi.ch",
+        "account": "doe_j",
+        "pi_firstname": "Jane",
+        "pi_lastname": "Smith",
+        "pi_email": "jane.smith@psi.ch",
+        "pi_account": "smith_j",
+        "eaccount": "e22622",
+        "pgroup": "p22622",
+        "abstract": "This is a test abstract for the experiment mat card widget. It should be long enough to test text wrapping and display in the card. The abstract provides a brief overview of the experiment, its goals, and its significance. This text is meant to simulate a real abstract that might be associated with an experiment in the BEC Atlas system. The card should be able to handle abstracts of varying lengths without any issues, ensuring that the user can read the full abstract even if it is quite long.",
+        "schedule": [{"start": "01/01/2025 08:00:00", "end": "03/01/2025 18:00:00"}],
+        "proposal_submitted": "15/12/2024",
+        "proposal_expire": "31/12/2025",
+        "proposal_status": "Scheduled",
+        "delta_last_schedule": 30,
+        "mainproposal": "",
+    }
+    return ExperimentInfoMessage.model_validate(data)
+
+
+@pytest.fixture
+def experiment_info_list(experiment_info_message: ExperimentInfoMessage) -> list[dict]:
+    """Fixture to provide a list of experiment info dictionaries."""
+    another_experiment_info = {
+        "_id": "p22623",
+        "owner_groups": ["admin"],
+        "access_groups": ["unx-sls_xda_bs", "p22623"],
+        "realm_id": "TestBeamline",
+        "proposal": "",
+        "title": "Experiment without Proposal",
+        "firstname": "Alice",
+        "lastname": "Johnson",
+        "email": "alice.johnson@psi.ch",
+        "account": "johnson_a",
+        "pi_firstname": "Bob",
+        "pi_lastname": "Brown",
+        "pi_email": "bob.brown@psi.ch",
+        "pi_account": "brown_b",
+        "eaccount": "e22623",
+        "pgroup": "p22623",
+        "abstract": "",
+        "schedule": [],
+        "proposal_submitted": "",
+        "proposal_expire": "",
+        "proposal_status": "",
+        "delta_last_schedule": None,
+        "mainproposal": "",
+    }
+    return [
+        experiment_info_message.model_dump(),
+        ExperimentInfoMessage.model_validate(another_experiment_info).model_dump(),
+    ]
+
+
 class TestBECAtlasHTTPService:
 
     @pytest.fixture
-    def http_service(self, qtbot):
+    def deployment_info(
+        self, experiment_info_message: ExperimentInfoMessage
+    ) -> DeploymentInfoMessage:
+        """Fixture to provide a DeploymentInfoMessage instance."""
+        return DeploymentInfoMessage(
+            deployment_id="dep-1",
+            name="Test Deployment",
+            messaging_config=MessagingConfig(
+                signal=MessagingServiceScopeConfig(enabled=False),
+                teams=MessagingServiceScopeConfig(enabled=False),
+                scilog=MessagingServiceScopeConfig(enabled=False),
+            ),
+            active_session=SessionInfoMessage(
+                experiment=experiment_info_message, name="Test Session"
+            ),
+        )
+
+    @pytest.fixture
+    def http_service(self, deployment_info: DeploymentInfoMessage, qtbot):
         """Fixture to create a BECAtlasHTTPService instance."""
         service = BECAtlasHTTPService(base_url="http://localhost:8000")
+        service._set_current_deployment_info(deployment_info)
         qtbot.addWidget(service)
         qtbot.waitExposed(service)
         return service
@@ -224,7 +307,7 @@ class TestBECAtlasHTTPService:
             assert http_service.auth_user_info.groups == {"operators", "staff"}
             mock_get_deployment_info.assert_called_once_with(deployment_id="dep-1")
 
-    def test_handle_response_deployment_info(self, http_service, qtbot):
+    def test_handle_response_deployment_info(self, http_service: BECAtlasHTTPService, qtbot):
         """Test handling deployment info response"""
 
         # Groups match: should emit authenticated signal with user info
@@ -268,6 +351,25 @@ class TestBECAtlasHTTPService:
             mock_show_warning.assert_called_once()
             mock_logout.assert_called_once()
 
+    def test_handle_response_deployment_info_admin_access(self, http_service, qtbot):
+        http_service._auth_user_info = AuthenticatedUserInfo(
+            email="alice@example.org",
+            exp=time.time() + 60,
+            groups={"operators"},
+            deployment_id="dep-1",
+        )
+        # Admin user should authenticate regardless of group membership
+        reply = _FakeReply(
+            request_url="http://localhost:8000/deployments/id?deployment_id=dep-1",
+            status=200,
+            payload=b'{"owner_groups": ["admin", "atlas_func_account"], "name": "Beamline Deployment"}',
+        )
+
+        with qtbot.waitSignal(http_service.authenticated, timeout=1000) as blocker:
+            http_service._handle_response(reply)
+
+        assert blocker.args[0]["email"] == "alice@example.org"
+
     def test_handle_response_emits_http_response(self, http_service, qtbot):
         """Test that _handle_response emits the http_response signal with correct parameters for a generic response."""
         reply = _FakeReply(
@@ -295,70 +397,6 @@ class TestBECAtlasHTTPService:
 
         with pytest.raises(BECAtlasHTTPError):
             http_service._handle_response(reply, _override_slot_params={"raise_error": True})
-
-
-@pytest.fixture
-def experiment_info_message() -> ExperimentInfoMessage:
-    data = {
-        "_id": "p22622",
-        "owner_groups": ["admin"],
-        "access_groups": ["unx-sls_xda_bs", "p22622"],
-        "realm_id": "TestBeamline",
-        "proposal": "12345967",
-        "title": "Test Experiment for Mat Card Widget",
-        "firstname": "John",
-        "lastname": "Doe",
-        "email": "john.doe@psi.ch",
-        "account": "doe_j",
-        "pi_firstname": "Jane",
-        "pi_lastname": "Smith",
-        "pi_email": "jane.smith@psi.ch",
-        "pi_account": "smith_j",
-        "eaccount": "e22622",
-        "pgroup": "p22622",
-        "abstract": "This is a test abstract for the experiment mat card widget. It should be long enough to test text wrapping and display in the card. The abstract provides a brief overview of the experiment, its goals, and its significance. This text is meant to simulate a real abstract that might be associated with an experiment in the BEC Atlas system. The card should be able to handle abstracts of varying lengths without any issues, ensuring that the user can read the full abstract even if it is quite long.",
-        "schedule": [{"start": "01/01/2025 08:00:00", "end": "03/01/2025 18:00:00"}],
-        "proposal_submitted": "15/12/2024",
-        "proposal_expire": "31/12/2025",
-        "proposal_status": "Scheduled",
-        "delta_last_schedule": 30,
-        "mainproposal": "",
-    }
-    return ExperimentInfoMessage.model_validate(data)
-
-
-@pytest.fixture
-def experiment_info_list(experiment_info_message: ExperimentInfoMessage) -> list[dict]:
-    """Fixture to provide a list of experiment info dictionaries."""
-    another_experiment_info = {
-        "_id": "p22623",
-        "owner_groups": ["admin"],
-        "access_groups": ["unx-sls_xda_bs", "p22623"],
-        "realm_id": "TestBeamline",
-        "proposal": "",
-        "title": "Experiment without Proposal",
-        "firstname": "Alice",
-        "lastname": "Johnson",
-        "email": "alice.johnson@psi.ch",
-        "account": "johnson_a",
-        "pi_firstname": "Bob",
-        "pi_lastname": "Brown",
-        "pi_email": "bob.brown@psi.ch",
-        "pi_account": "brown_b",
-        "eaccount": "e22623",
-        "pgroup": "p22623",
-        "abstract": "",
-        "schedule": [],
-        "proposal_submitted": "",
-        "proposal_expire": "",
-        "proposal_status": "",
-        "delta_last_schedule": None,
-        "mainproposal": "",
-    }
-    return [
-        experiment_info_message.model_dump(),
-        ExperimentInfoMessage.model_validate(another_experiment_info).model_dump(),
-    ]
 
 
 class TestBECAtlasExperimentSelection:
@@ -546,7 +584,7 @@ class TestBECAtlasAdminView:
     def test_init_and_login(self, admin_view: BECAtlasAdminView, qtbot):
         """Test that the BECAtlasAdminView initializes correctly."""
         # Check that the atlas URL is set correctly
-        assert admin_view._atlas_url == "https://bec-atlas-dev.psi.ch/api/v1"
+        assert admin_view._atlas_url == "https://bec-atlas-prod.psi.ch/api/v1"
 
         # Test that clicking the login button emits the credentials_entered signal with the correct username and password
         with mock.patch.object(admin_view.atlas_http_service, "login") as mock_login:
