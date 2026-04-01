@@ -104,8 +104,7 @@ class OverviewWidget(QGroupBox):
         content_layout = QVBoxLayout(content)
         content.setFrameShape(QFrame.Shape.StyledPanel)
         content.setFrameShadow(QFrame.Shadow.Raised)
-        content.setStyleSheet(
-            """
+        content.setStyleSheet("""
             QFrame
                 {
                     border: 1px solid #cccccc;
@@ -114,8 +113,7 @@ class OverviewWidget(QGroupBox):
                 {
                     border: none;
                 }
-            """
-        )
+            """)
         content_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         content.setFixedSize(400, 280)
 
