@@ -1,6 +1,31 @@
 # CHANGELOG
 
 
+## v3.4.1 (2026-04-01)
+
+### Bug Fixes
+
+- **hover_widget**: Make it fancy + mouse tracking
+  ([`e25b660`](https://github.com/bec-project/bec_widgets/commit/e25b6604d195804bbd6ea6aac395d44dc00d6155))
+
+- **ring**: Changed inheritance to BECWidget and added cleanup
+  ([`2f75aae`](https://github.com/bec-project/bec_widgets/commit/2f75aaea16a178e180e68d702cd1bdf85a768bcf))
+
+- **ring**: Hook update hover to update method
+  ([`90ecd8e`](https://github.com/bec-project/bec_widgets/commit/90ecd8ea87faf06c3f545e3f9241f403b733d7eb))
+
+- **ring**: Minor general fixes
+  ([`6775509`](https://github.com/bec-project/bec_widgets/commit/677550931b28fbf35fd55880bf6e001f7351b99b))
+
+- **ring_progress_bar**: Added hover mouse effect
+  ([`96b5179`](https://github.com/bec-project/bec_widgets/commit/96b5179658c41fb39df7a40f4d96e82092605791))
+
+### Testing
+
+- **ring_progress_bar**: Add unit tests for hover behavior
+  ([`6e5f6e7`](https://github.com/bec-project/bec_widgets/commit/6e5f6e7fbb6f9680f6d026e105e6840d24c6591c))
+
+
 ## v3.4.0 (2026-03-26)
 
 ### Bug Fixes
