@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v3.4.2 (2026-04-01)
+
+### Bug Fixes
+
+- Allow admin user to pass deployment group check
+  ([`e6c8cd0`](https://github.com/bec-project/bec_widgets/commit/e6c8cd0b1a1162302071c93a2ac51880b3cf1b7d))
+
+- **bec-atlas-admin-view**: Fix atlas_url to bec-atlas-prod.psi.ch
+  ([`242f893`](https://github.com/bec-project/bec_widgets/commit/242f8933b246802f5f3a5b9df7de07901f151c82))
+
+### Testing
+
+- Add tests for admin access
+  ([`2dab16b`](https://github.com/bec-project/bec_widgets/commit/2dab16b68415806f3f291657f394bb2d8654229d))
+
+
 ## v3.4.1 (2026-04-01)
 
 ### Bug Fixes
