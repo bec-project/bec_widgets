@@ -104,7 +104,8 @@ class OverviewWidget(QGroupBox):
         content_layout = QVBoxLayout(content)
         content.setFrameShape(QFrame.Shape.StyledPanel)
         content.setFrameShadow(QFrame.Shadow.Raised)
-        content.setStyleSheet("""
+        content.setStyleSheet(
+            """
             QFrame
                 {
                     border: 1px solid #cccccc;
@@ -113,7 +114,8 @@ class OverviewWidget(QGroupBox):
                 {
                     border: none;
                 }
-            """)
+            """
+        )
         content_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         content.setFixedSize(400, 280)
 
@@ -251,7 +253,7 @@ class BECAtlasAdminView(BECWidget, QWidget):
     def __init__(
         self,
         parent=None,
-        atlas_url: str = "https://bec-atlas-dev.psi.ch/api/v1",
+        atlas_url: str = "https://bec-atlas-prod.psi.ch/api/v1",
         client=None,
         **kwargs,
     ):
