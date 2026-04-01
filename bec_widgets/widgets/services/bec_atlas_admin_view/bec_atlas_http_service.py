@@ -142,6 +142,17 @@ class BECAtlasHTTPService(QWidget):
         if self._auth_user_info is not None:
             self._auth_user_info.groups = set(groups)
 
+    def __check_access_for_auth_user_groups(self, groups: list[str]) -> bool:
+        """Check if the authenticated user has access to the current deployment based on their groups."""
+        if self._auth_user_info is None or self._current_deployment_info is None:
+            return False
+        # Admin user
+        has_both = {"admin", "atlas_func_account"}.issubset(self._auth_user_info.groups)
+        if has_both:
+            return True
+        # Regular user check with group intersection
+        return not self.auth_user_info.groups.isdisjoint(groups)
+
     def __clear_login_info(self, skip_logout: bool = False):
         """Clear the authenticated user information after logout."""
         self._auth_user_info = None
@@ -231,9 +242,7 @@ class BECAtlasHTTPService(QWidget):
                     )
         elif AtlasEndpoints.DEPLOYMENT_INFO.value in request_url:
             owner_groups = data.get("owner_groups", [])
-            if self.auth_user_info is not None and not self.auth_user_info.groups.isdisjoint(
-                owner_groups
-            ):
+            if self.__check_access_for_auth_user_groups(owner_groups):
                 self.authenticated.emit(self.auth_user_info.model_dump())
             else:
                 if self.auth_user_info is not None:
