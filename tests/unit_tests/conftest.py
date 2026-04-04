@@ -1,3 +1,8 @@
+# Force ophyd onto its dummy control layer in tests so importing it does not
+# try to create a real EPICS CA context.
+import os
+
+os.environ.setdefault("OPHYD_CONTROL_LAYER", "dummy")
 import json
 import time
 from unittest import mock
@@ -13,7 +18,7 @@ from bec_lib.client import BECClient
 from bec_lib.messages import _StoredDataInfo
 from bec_qthemes import apply_theme
 from bec_qthemes._theme import Theme
-from ophyd._pyepics_shim import _dispatcher
+from ophyd._dummy_shim import _dispatcher
 from pytestqt.exceptions import TimeoutError as QtBotTimeoutError
 from qtpy.QtCore import QEvent, QEventLoop
 from qtpy.QtWidgets import QApplication, QMessageBox
