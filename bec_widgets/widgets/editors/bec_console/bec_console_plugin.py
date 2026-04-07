@@ -5,38 +5,38 @@ from qtpy.QtDesigner import QDesignerCustomWidgetInterface
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.bec_designer import designer_material_icon
-from bec_widgets.widgets.editors.web_console.web_console import WebConsole
+from bec_widgets.widgets.editors.bec_console.bec_console import BecConsole
 
 DOM_XML = """
 <ui language='c++'>
-    <widget class='WebConsole' name='web_console'>
+    <widget class='BecConsole' name='bec_console'>
     </widget>
 </ui>
 """
 
 
-class WebConsolePlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
+class BecConsolePlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
     def __init__(self):
         super().__init__()
         self._form_editor = None
 
     def createWidget(self, parent):
         if parent is None:
-            return QWidget()
-        t = WebConsole(parent)
+           return QWidget()
+        t = BecConsole(parent)
         return t
 
     def domXml(self):
         return DOM_XML
 
     def group(self):
-        return "BEC Developer"
+        return ""
 
     def icon(self):
-        return designer_material_icon(WebConsole.ICON_NAME)
+        return designer_material_icon(BecConsole.ICON_NAME)
 
     def includeFile(self):
-        return "web_console"
+        return "bec_console"
 
     def initialize(self, form_editor):
         self._form_editor = form_editor
@@ -48,10 +48,10 @@ class WebConsolePlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return self._form_editor is not None
 
     def name(self):
-        return "WebConsole"
+        return "BecConsole"
 
     def toolTip(self):
-        return ""
+        return "A console widget with access to a shared registry of terminals, such that instances can be moved around."
 
     def whatsThis(self):
         return self.toolTip()

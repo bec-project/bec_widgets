@@ -93,8 +93,8 @@ def test_available_widgets(qtbot, connected_client_gui_obj):
         if object_name == "BECShell":
             continue
 
-        # Skip WebConsole as ttyd is not installed
-        if object_name == "WebConsole":
+        # Skip BecConsole as ttyd is not installed
+        if object_name == "BecConsole":
             continue
 
         #############################

@@ -16,9 +16,9 @@ from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.widgets.containers.dock_area.basic_dock_area import DockAreaWidget
 from bec_widgets.widgets.containers.dock_area.dock_area import BECDockArea
 from bec_widgets.widgets.containers.qt_ads import CDockWidget
+from bec_widgets.widgets.editors.bec_console.bec_console import BecConsole, BECShell
 from bec_widgets.widgets.editors.monaco.monaco_dock import MonacoDock
 from bec_widgets.widgets.editors.monaco.monaco_widget import MonacoWidget
-from bec_widgets.widgets.editors.web_console.web_console import BECShell, WebConsole
 from bec_widgets.widgets.utility.ide_explorer.ide_explorer import IDEExplorer
 
 
@@ -96,7 +96,7 @@ class DeveloperWidget(DockAreaWidget):
 
         self.console = BECShell(self, rpc_exposed=False)
         self.console.setObjectName("BEC Shell")
-        self.terminal = WebConsole(self, rpc_exposed=False)
+        self.terminal = BecConsole(self, rpc_exposed=False)
         self.terminal.setObjectName("Terminal")
         self.monaco = MonacoDock(self, rpc_exposed=False, rpc_passthrough_children=False)
         self.monaco.setObjectName("MonacoEditor")
@@ -410,23 +410,3 @@ class DeveloperWidget(DockAreaWidget):
         """Clean up resources used by the developer widget."""
         self.delete_all()
         return super().cleanup()
-
-
-if __name__ == "__main__":
-    import sys
-
-    from bec_qthemes import apply_theme
-    from qtpy.QtWidgets import QApplication
-
-    from bec_widgets.applications.main_app import BECMainApp
-
-    app = QApplication(sys.argv)
-    apply_theme("dark")
-
-    _app = BECMainApp()
-    _app.show()
-    # developer_view.show()
-    # developer_view.setWindowTitle("Developer View")
-    # developer_view.resize(1920, 1080)
-    # developer_view.set_stretch(horizontal=[1, 3, 2], vertical=[5, 5]) #can be set during runtime
-    sys.exit(app.exec_())
