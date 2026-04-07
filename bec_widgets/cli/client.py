@@ -32,6 +32,7 @@ _Widgets = {
     "BECQueue": "BECQueue",
     "BECShell": "BECShell",
     "BECStatusBox": "BECStatusBox",
+    "BecConsole": "BecConsole",
     "DapComboBox": "DapComboBox",
     "DeviceBrowser": "DeviceBrowser",
     "Heatmap": "Heatmap",
@@ -56,7 +57,6 @@ _Widgets = {
     "SignalLabel": "SignalLabel",
     "TextBox": "TextBox",
     "Waveform": "Waveform",
-    "WebConsole": "WebConsole",
     "WebsiteWidget": "WebsiteWidget",
 }
 
@@ -506,7 +506,7 @@ class BECQueue(RPCBase):
 
 
 class BECShell(RPCBase):
-    """A WebConsole pre-configured to run the BEC shell."""
+    """A BecConsole pre-configured to run the BEC shell."""
 
     @rpc_call
     def remove(self):
@@ -688,6 +688,28 @@ class BaseROI(RPCBase):
         Args:
             x (float): The x-coordinate of the new position.
             y (float): The y-coordinate of the new position.
+        """
+
+
+class BecConsole(RPCBase):
+    """A console widget with access to a shared registry of terminals, such that instances can be moved around."""
+
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
 
@@ -6414,28 +6436,6 @@ class WaveformViewPopup(RPCBase):
     def activate(self) -> "None":
         """
         Switch the parent application to this view.
-        """
-
-
-class WebConsole(RPCBase):
-    """A simple widget to display a website"""
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-    @rpc_call
-    def attach(self):
-        """
-        None
-        """
-
-    @rpc_call
-    def detach(self):
-        """
-        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
 

@@ -918,7 +918,7 @@ class TestToolbarFunctionality:
                 action.trigger()
                 if action_name == "terminal":
                     mock_new.assert_called_once_with(
-                        widget="WebConsole", closable=True, startup_cmd=None
+                        widget="BecConsole", closable=True, startup_cmd=None
                     )
                 else:
                     mock_new.assert_called_once_with(widget=widget_type)
@@ -2272,7 +2272,7 @@ class TestFlatToolbarActions:
             "flat_queue": "BECQueue",
             "flat_status": "BECStatusBox",
             "flat_progress_bar": "RingProgressBar",
-            "flat_terminal": "WebConsole",
+            "flat_terminal": "BecConsole",
             "flat_bec_shell": "BECShell",
             "flat_sbb_monitor": "SBBMonitor",
         }

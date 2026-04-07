@@ -69,7 +69,7 @@ from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 from bec_widgets.widgets.containers.qt_ads import CDockWidget
 from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox, PositionerBox2D
 from bec_widgets.widgets.control.scan_control import ScanControl
-from bec_widgets.widgets.editors.web_console.web_console import BECShell, WebConsole
+from bec_widgets.widgets.editors.bec_console.bec_console import BecConsole, BECShell
 from bec_widgets.widgets.plots.heatmap.heatmap import Heatmap
 from bec_widgets.widgets.plots.image.image import Image
 from bec_widgets.widgets.plots.motor_map.motor_map import MotorMap
@@ -372,7 +372,7 @@ class BECDockArea(DockAreaWidget):
                 "Add Circular ProgressBar",
                 "RingProgressBar",
             ),
-            "terminal": (WebConsole.ICON_NAME, "Add Terminal", "WebConsole"),
+            "terminal": (BecConsole.ICON_NAME, "Add Terminal", "BecConsole"),
             "bec_shell": (BECShell.ICON_NAME, "Add BEC Shell", "BECShell"),
             "log_panel": (LogPanel.ICON_NAME, "Add LogPanel - Disabled", "LogPanel"),
             "sbb_monitor": ("train", "Add SBB Monitor", "SBBMonitor"),
