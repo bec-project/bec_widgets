@@ -6,9 +6,9 @@ def main():  # pragma: no cover
         return
     from PySide6.QtDesigner import QPyDesignerCustomWidgetCollection
 
-    from bec_widgets.widgets.editors.web_console.web_console_plugin import WebConsolePlugin
+    from bec_widgets.widgets.editors.bec_console.bec_shell_plugin import BECShellPlugin
 
-    QPyDesignerCustomWidgetCollection.addCustomWidget(WebConsolePlugin())
+    QPyDesignerCustomWidgetCollection.addCustomWidget(BECShellPlugin())
 
 
 if __name__ == "__main__":  # pragma: no cover

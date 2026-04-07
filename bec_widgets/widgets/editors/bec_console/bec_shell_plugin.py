@@ -5,7 +5,7 @@ from qtpy.QtDesigner import QDesignerCustomWidgetInterface
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.bec_designer import designer_material_icon
-from bec_widgets.widgets.editors.web_console.web_console import BECShell
+from bec_widgets.widgets.editors.bec_console.bec_console import BECShell
 
 DOM_XML = """
 <ui language='c++'>
@@ -22,7 +22,7 @@ class BECShellPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
 
     def createWidget(self, parent):
         if parent is None:
-            return QWidget()
+           return QWidget()
         t = BECShell(parent)
         return t
 
