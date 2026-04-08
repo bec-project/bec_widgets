@@ -174,6 +174,7 @@ class ScanGroupBox(QGroupBox):
     }
 
     device_selected = Signal(str)
+    reference_units_changed = Signal(object, str, object)
 
     def __init__(
         self,
@@ -209,6 +210,8 @@ class ScanGroupBox(QGroupBox):
 
         self.labels = []
         self.widgets = []
+        self._widget_configs = {}
+        self._column_labels = {}
         self.selected_devices = {}
 
         self.init_box(self.config)
@@ -247,6 +250,7 @@ class ScanGroupBox(QGroupBox):
             label = QLabel(text=display_name)
             self.layout.addWidget(label, row, column_index)
             self.labels.append(label)
+            self._column_labels[column_index] = label
 
     def add_input_widgets(self, group_inputs: dict, row) -> None:
         """
@@ -281,20 +285,31 @@ class ScanGroupBox(QGroupBox):
                 )
             else:
                 widget = widget_class(parent=self.parent(), arg_name=arg_name, default=default)
+            self._apply_numeric_precision(widget, item)
+            self._apply_numeric_limits(widget, item)
             if isinstance(widget, DeviceComboBox):
                 self.selected_devices[widget] = ""
                 widget.device_selected.connect(self.emit_device_selected)
+                widget.currentTextChanged.connect(
+                    lambda text, device_widget=widget: self._handle_device_text_changed(
+                        device_widget, text
+                    )
+                )
             if isinstance(widget, ScanLiteralsComboBox):
                 widget.set_literals(item["type"].get("Literal", []))
-            tooltip = item.get("tooltip", None)
-            if tooltip is not None:
-                widget.setToolTip(item["tooltip"])
+            self._widget_configs[widget] = item
+            self._apply_unit_metadata(widget, item)
             self.layout.addWidget(widget, row, column_index)
             self.widgets.append(widget)
 
     @Slot(str)
     def emit_device_selected(self, device_name):
-        self.selected_devices[self.sender()] = device_name.strip()
+        sender = self.sender()
+        self.selected_devices[sender] = device_name.strip()
+        if isinstance(sender, DeviceComboBox):
+            units = self._device_units(sender.get_current_device())
+            self._update_reference_units(sender, units)
+            self._emit_reference_units_changed(sender, units)
         selected_devices_str = " ".join(self.selected_devices.values())
         self.device_selected.emit(selected_devices_str)
 
@@ -321,6 +336,7 @@ class ScanGroupBox(QGroupBox):
         for widget in self.widgets[-len(self.inputs) :]:
             if isinstance(widget, DeviceComboBox):
                 self.selected_devices[widget] = ""
+            self._widget_configs.pop(widget, None)
             widget.close()
             widget.deleteLater()
         self.widgets = self.widgets[: -len(self.inputs)]
@@ -333,6 +349,7 @@ class ScanGroupBox(QGroupBox):
         for widget in list(self.widgets):
             if isinstance(widget, DeviceComboBox):
                 self.selected_devices.pop(widget, None)
+            self._widget_configs.pop(widget, None)
             widget.close()
             widget.deleteLater()
             self.layout.removeWidget(widget)
@@ -435,3 +452,159 @@ class ScanGroupBox(QGroupBox):
                 if widget.arg_name == key:
                     WidgetIO.set_value(widget, value)
                     break
+
+    @staticmethod
+    def _unit_tooltip(item: dict, units: str | None = None) -> str | None:
+        tooltip = item.get("tooltip", None)
+        reference_units = item.get("reference_units", None)
+        units = units or item.get("units", None)
+        tooltip_parts = [tooltip] if tooltip else []
+        if units:
+            tooltip_parts.append(f"Units: {units}")
+        elif reference_units:
+            tooltip_parts.append(f"Units from: {reference_units}")
+        if tooltip_parts:
+            return "\n".join(tooltip_parts)
+        return None
+
+    def _apply_unit_metadata(self, widget, item: dict, units: str | None = None) -> None:
+        units = units or item.get("units", None)
+        tooltip = self._unit_tooltip(item, units)
+        existing_tooltip = widget.toolTip()
+
+        if existing_tooltip:
+            # strip the existing unit info from the tooltip if it exists
+            # to avoid tooltip bloat on multiple updates
+            existing_tooltip = "\n".join(
+                line
+                for line in existing_tooltip.splitlines()
+                if not (line.startswith("Units:") or line.startswith("Units from:"))
+            ).strip()
+        if tooltip:
+            if existing_tooltip:
+                widget.setToolTip(f"{existing_tooltip}\n{tooltip}")
+            else:
+                widget.setToolTip(tooltip)
+        if hasattr(widget, "setSuffix"):
+            widget.setSuffix(f" {units}" if units else "")
+
+    def _refresh_column_label(self, column: int, item: dict) -> None:
+        if column not in self._column_labels:
+            return
+        self._column_labels[column].setText(item.get("display_name", item.get("name", None)))
+
+    @staticmethod
+    def _device_units(device) -> str | None:
+        egu = getattr(device, "egu", None)
+        if not callable(egu):
+            return None
+        try:
+            return egu()
+        except Exception:
+            logger.exception("Failed to fetch engineering units from device %s", device)
+            return None
+
+    def _widget_position(self, widget) -> tuple[int, int] | None:
+        for row in range(self.layout.rowCount()):
+            for column in range(self.layout.columnCount()):
+                item = self.layout.itemAtPosition(row, column)
+                if item is not None and item.widget() is widget:
+                    return row, column
+        return None
+
+    def _update_reference_units(self, device_widget: DeviceComboBox, units: str | None) -> None:
+        position = self._widget_position(device_widget)
+        if position is None:
+            return
+        source_row, _ = position
+        source_name = device_widget.arg_name
+
+        for widget in self.widgets:
+            item = self._widget_configs.get(widget, {})
+            if item.get("reference_units") != source_name:
+                continue
+            widget_position = self._widget_position(widget)
+            if widget_position is None:
+                continue
+            row, column = widget_position
+            if self.box_type == "args" and row != source_row:
+                continue
+            self._apply_unit_metadata(widget, item, units)
+            self._refresh_column_label(column, item)
+
+    def apply_reference_units(self, reference_name: str, units: str | None) -> None:
+        """
+        Apply units to widgets that reference an argument owned by another group box.
+
+        Cross-box references only have one widget row, so row scoping is intentionally handled by
+        the source group before this method is called.
+        """
+        for widget in self.widgets:
+            item = self._widget_configs.get(widget, {})
+            if item.get("reference_units") != reference_name:
+                continue
+            self._apply_unit_metadata(widget, item, units)
+            position = self._widget_position(widget)
+            if position is not None:
+                _, column = position
+                self._refresh_column_label(column, item)
+
+    def _emit_reference_units_changed(
+        self, device_widget: DeviceComboBox, units: str | None
+    ) -> None:
+        reference_name = getattr(device_widget, "arg_name", None)
+        if not reference_name:
+            return
+        self.reference_units_changed.emit(self, reference_name, units)
+
+    def _handle_device_text_changed(self, device_widget: DeviceComboBox, device_name: str) -> None:
+        if not device_widget.validate_device(device_name):
+            self.selected_devices[device_widget] = ""
+            self._update_reference_units(device_widget, None)
+            self._emit_reference_units_changed(device_widget, None)
+
+    @staticmethod
+    def _apply_numeric_precision(widget: ScanDoubleSpinBox, item: dict) -> None:
+        if not isinstance(widget, ScanDoubleSpinBox):
+            return
+
+        precision = item.get("precision")
+        if precision is None:
+            return
+
+        try:
+            widget.setDecimals(max(0, int(precision)))
+        except (TypeError, ValueError):
+            logger.warning(
+                "Ignoring invalid precision %r for parameter %s", precision, item.get("name")
+            )
+
+    @staticmethod
+    def _apply_numeric_limits(widget: ScanDoubleSpinBox | ScanSpinBox, item: dict) -> None:
+        if isinstance(widget, ScanSpinBox):
+            minimum = -2147483647  # largest int which qt allows
+            maximum = 2147483647
+            if item.get("ge") is not None:
+                minimum = int(item["ge"])
+            if item.get("gt") is not None:
+                minimum = int(item["gt"]) + 1
+            if item.get("le") is not None:
+                maximum = int(item["le"])
+            if item.get("lt") is not None:
+                maximum = int(item["lt"]) - 1
+            widget.setRange(minimum, maximum)
+            return
+
+        if isinstance(widget, ScanDoubleSpinBox):
+            minimum = -float("inf")
+            maximum = float("inf")
+            step = 10 ** (-widget.decimals())
+            if item.get("ge") is not None:
+                minimum = float(item["ge"])
+            if item.get("gt") is not None:
+                minimum = float(item["gt"]) + step
+            if item.get("le") is not None:
+                maximum = float(item["le"])
+            if item.get("lt") is not None:
+                maximum = float(item["lt"]) - step
+            widget.setRange(minimum, maximum)

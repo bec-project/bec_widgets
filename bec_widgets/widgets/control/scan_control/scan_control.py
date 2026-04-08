@@ -14,7 +14,6 @@ from qtpy.QtWidgets import (
     QLabel,
     QPushButton,
     QSizePolicy,
-    QSpacerItem,
     QVBoxLayout,
     QWidget,
 )
@@ -25,6 +24,7 @@ from bec_widgets.utils.colors import apply_theme, get_accent_colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.widgets.control.buttons.stop_button.stop_button import StopButton
 from bec_widgets.widgets.control.scan_control.scan_group_box import ScanGroupBox
+from bec_widgets.widgets.control.scan_control.scan_info_adapter import ScanInfoAdapter
 from bec_widgets.widgets.editors.scan_metadata.scan_metadata import ScanMetadata
 
 
@@ -95,6 +95,7 @@ class ScanControl(BECWidget, QWidget):
         self._hide_scan_control_buttons = False
         self._hide_metadata = False
         self._hide_scan_selection_combobox = False
+        self._scan_info_adapter = ScanInfoAdapter()
 
         # Create and set main layout
         self._init_UI()
@@ -184,11 +185,12 @@ class ScanControl(BECWidget, QWidget):
             MessageEndpoints.available_scans()
         ).resource
         if self.config.allowed_scans is None:
-            supported_scans = ["ScanBase", "SyncFlyScanBase", "AsyncFlyScanBase"]
+            supported_scans = ["ScanBase", "SyncFlyScanBase", "AsyncFlyScanBase", "ScanBaseV4"]
             allowed_scans = [
                 scan_name
                 for scan_name, scan_info in self.available_scans.items()
-                if scan_info["base_class"] in supported_scans and len(scan_info["gui_config"]) > 0
+                if scan_info["base_class"] in supported_scans
+                and self._scan_info_adapter.has_scan_ui_config(scan_info)
             ]
 
         else:
@@ -376,14 +378,14 @@ class ScanControl(BECWidget, QWidget):
         self.reset_layout()
         selected_scan_info = self.available_scans.get(scan_name, {})
 
-        gui_config = selected_scan_info.get("gui_config", {})
-        self.arg_group = gui_config.get("arg_group", None)
-        self.kwarg_groups = gui_config.get("kwarg_groups", None)
+        gui_config = self._scan_info_adapter.build_scan_ui_config(selected_scan_info)
+        arg_group = gui_config.get("arg_group", None)
+        kwarg_groups = gui_config.get("kwarg_groups", [])
 
-        if bool(self.arg_group["arg_inputs"]):
-            self.add_arg_group(self.arg_group)
-        if len(self.kwarg_groups) > 0:
-            self.add_kwargs_boxes(self.kwarg_groups)
+        if arg_group and bool(arg_group.get("arg_inputs")):
+            self.add_arg_group(arg_group)
+        if kwarg_groups:
+            self.add_kwargs_boxes(kwarg_groups)
 
         self.update()
         self.adjustSize()
@@ -414,6 +416,7 @@ class ScanControl(BECWidget, QWidget):
         position = self.ARG_BOX_POSITION + (1 if self.arg_box is not None else 0)
         for group in groups:
             box = ScanGroupBox(box_type="kwargs", config=group)
+            box.reference_units_changed.connect(self._apply_reference_units_to_other_boxes)
             box.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
             self.layout.insertWidget(position + len(self.kwarg_boxes), box)
             self.kwarg_boxes.append(box)
@@ -427,10 +430,29 @@ class ScanControl(BECWidget, QWidget):
         """
         self.arg_box = ScanGroupBox(box_type="args", config=group)
         self.arg_box.device_selected.connect(self.emit_device_selected)
+        self.arg_box.reference_units_changed.connect(self._apply_reference_units_to_other_boxes)
         self.arg_box.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.arg_box.hide_add_remove_buttons = self._hide_add_remove_buttons
         self.layout.insertWidget(self.ARG_BOX_POSITION, self.arg_box)
         self.arg_box.setVisible(not self._hide_arg_box)
+
+    def _scan_group_boxes(self) -> list[ScanGroupBox]:
+        boxes = []
+        if self.arg_box is not None:
+            boxes.append(self.arg_box)
+        boxes.extend(self.kwarg_boxes)
+        return boxes
+
+    def _apply_reference_units_to_other_boxes(
+        self, source_box: ScanGroupBox, reference_name: str, units: str | None
+    ) -> None:
+        """
+        Propagate device-derived units to scan fields that reference a device in another group.
+        """
+        for box in self._scan_group_boxes():
+            if box is source_box:
+                continue
+            box.apply_reference_units(reference_name, units)
 
     @SafeSlot(str)
     def emit_device_selected(self, dev_names):

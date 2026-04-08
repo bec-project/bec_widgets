@@ -280,6 +280,262 @@ def test_populate_scans(scan_control, mocked_client):
     assert sorted(items) == sorted(expected_scans)
 
 
+def test_scan_control_uses_gui_visibility_and_signature(qtbot, mocked_client):
+    scan_info = {
+        "class": "AnnotatedScan",
+        "base_class": "ScanBase",
+        "arg_input": {
+            "device": "DeviceBase",
+            "start": {
+                "Annotated": {
+                    "type": "float",
+                    "metadata": {
+                        "ScanArgument": {
+                            "display_name": "Start Position",
+                            "description": "Start position",
+                            "tooltip": "Custom start tooltip",
+                            "expert": False,
+                            "alternative_group": None,
+                            "units": None,
+                            "reference_units": "device",
+                        }
+                    },
+                }
+            },
+            "stop": {
+                "Annotated": {
+                    "type": "float",
+                    "metadata": {
+                        "ScanArgument": {
+                            "display_name": None,
+                            "description": "Stop position",
+                            "tooltip": None,
+                            "expert": False,
+                            "alternative_group": None,
+                            "units": None,
+                            "reference_units": "device",
+                        }
+                    },
+                }
+            },
+        },
+        "arg_bundle_size": {"bundle": 3, "min": 1, "max": None},
+        "gui_visibility": {
+            "Movement Parameters": ["steps", "step_size"],
+            "Acquisition Parameters": ["exp_time", "relative"],
+        },
+        "required_kwargs": [],
+        "signature": [
+            {"name": "args", "kind": "VAR_POSITIONAL", "default": "_empty", "annotation": "_empty"},
+            {"name": "steps", "kind": "KEYWORD_ONLY", "default": 10, "annotation": "int"},
+            {
+                "name": "step_size",
+                "kind": "KEYWORD_ONLY",
+                "default": None,
+                "annotation": {
+                    "Annotated": {
+                        "type": "float",
+                        "metadata": {
+                            "ScanArgument": {
+                                "display_name": "Step Size Custom",
+                                "description": "Step size",
+                                "tooltip": "Custom step tooltip",
+                                "expert": False,
+                                "alternative_group": "scan_resolution",
+                                "units": "mm",
+                                "reference_units": None,
+                            }
+                        },
+                    }
+                },
+            },
+            {
+                "name": "exp_time",
+                "kind": "KEYWORD_ONLY",
+                "default": 0,
+                "annotation": {
+                    "Annotated": {
+                        "type": "float",
+                        "metadata": {
+                            "ScanArgument": {
+                                "display_name": None,
+                                "description": None,
+                                "tooltip": "Exposure time",
+                                "expert": False,
+                                "alternative_group": None,
+                                "units": "s",
+                                "reference_units": None,
+                            }
+                        },
+                    }
+                },
+            },
+            {"name": "relative", "kind": "KEYWORD_ONLY", "default": False, "annotation": "bool"},
+            {"name": "kwargs", "kind": "VAR_KEYWORD", "default": "_empty", "annotation": "_empty"},
+        ],
+    }
+    mocked_client.connector.set_and_publish(
+        MessageEndpoints.available_scans(),
+        AvailableResourceMessage(resource={"annotated_scan": scan_info}),
+    )
+
+    widget = ScanControl(client=mocked_client)
+    qtbot.addWidget(widget)
+    qtbot.waitExposed(widget)
+    widget.comboBox_scan_selection.setCurrentText("annotated_scan")
+
+    assert widget.comboBox_scan_selection.count() == 1
+    assert widget.arg_box.layout.itemAtPosition(0, 1).widget().text() == "Start Position"
+    assert "Custom start tooltip\nUnits from: device" in widget.arg_box.widgets[1].toolTip()
+    with patch.object(mocked_client.device_manager.devices.samx, "egu", return_value="mm"):
+        WidgetIO.set_value(widget.arg_box.widgets[0], "samx")
+    assert widget.arg_box.layout.itemAtPosition(0, 1).widget().text() == "Start Position"
+    assert widget.arg_box.widgets[1].suffix() == " mm"
+    assert "Custom start tooltip\nUnits: mm" in widget.arg_box.widgets[1].toolTip()
+    widget.arg_box.widgets[0].setCurrentText("not_a_device")
+    assert widget.arg_box.layout.itemAtPosition(0, 1).widget().text() == "Start Position"
+    assert widget.arg_box.widgets[1].suffix() == ""
+    assert "Custom start tooltip\nUnits from: device" in widget.arg_box.widgets[1].toolTip()
+    assert [box.title() for box in widget.kwarg_boxes] == [
+        "Movement Parameters",
+        "Acquisition Parameters",
+    ]
+    assert widget.kwarg_boxes[0].layout.itemAtPosition(0, 1).widget().text() == "Step Size Custom"
+    assert widget.kwarg_boxes[0].widgets[1].suffix() == " mm"
+    assert "Custom step tooltip\nUnits: mm" in widget.kwarg_boxes[0].widgets[1].toolTip()
+    assert widget.kwarg_boxes[1].layout.itemAtPosition(0, 0).widget().text() == "Exp Time"
+    assert "Exposure time\nUnits: s" in widget.kwarg_boxes[1].widgets[0].toolTip()
+
+
+def test_scan_control_propagates_reference_units_across_kwarg_groups(qtbot, mocked_client):
+    scan_info = {
+        "class": "RoundScan",
+        "base_class": "ScanBaseV4",
+        "arg_input": {},
+        "arg_bundle_size": {"bundle": 0, "min": None, "max": None},
+        "gui_visibility": {
+            "Motors": ["motor_1", "motor_2"],
+            "Ring Parameters": ["inner_radius", "outer_radius", "center_1", "center_2"],
+        },
+        "required_kwargs": [],
+        "signature": [
+            {
+                "name": "motor_1",
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "default": "_empty",
+                "annotation": "DeviceBase",
+            },
+            {
+                "name": "motor_2",
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "default": "_empty",
+                "annotation": "DeviceBase",
+            },
+            {
+                "name": "inner_radius",
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "default": "_empty",
+                "annotation": {
+                    "Annotated": {
+                        "type": "float",
+                        "metadata": {
+                            "ScanArgument": {
+                                "display_name": "Inner Radius",
+                                "units": None,
+                                "reference_units": "motor_1",
+                                "ge": 0,
+                            }
+                        },
+                    }
+                },
+            },
+            {
+                "name": "outer_radius",
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "default": "_empty",
+                "annotation": {
+                    "Annotated": {
+                        "type": "float",
+                        "metadata": {
+                            "ScanArgument": {
+                                "display_name": "Outer Radius",
+                                "units": None,
+                                "reference_units": "motor_1",
+                                "ge": 0,
+                            }
+                        },
+                    }
+                },
+            },
+            {
+                "name": "center_1",
+                "kind": "KEYWORD_ONLY",
+                "default": 0,
+                "annotation": {
+                    "Annotated": {
+                        "type": "float",
+                        "metadata": {
+                            "ScanArgument": {
+                                "display_name": "Center Motor 1",
+                                "units": None,
+                                "reference_units": "motor_1",
+                            }
+                        },
+                    }
+                },
+            },
+            {
+                "name": "center_2",
+                "kind": "KEYWORD_ONLY",
+                "default": 0,
+                "annotation": {
+                    "Annotated": {
+                        "type": "float",
+                        "metadata": {
+                            "ScanArgument": {
+                                "display_name": "Center Motor 2",
+                                "units": None,
+                                "reference_units": "motor_2",
+                            }
+                        },
+                    }
+                },
+            },
+        ],
+    }
+    mocked_client.connector.set_and_publish(
+        MessageEndpoints.available_scans(),
+        AvailableResourceMessage(resource={"round_scan": scan_info}),
+    )
+
+    widget = ScanControl(client=mocked_client)
+    qtbot.addWidget(widget)
+    qtbot.waitExposed(widget)
+    widget.comboBox_scan_selection.setCurrentText("round_scan")
+
+    motor_box = widget.kwarg_boxes[0]
+    ring_box = widget.kwarg_boxes[1]
+
+    assert "Units from: motor_1" in ring_box.widgets[0].toolTip()
+    assert ring_box.widgets[0].suffix() == ""
+
+    with patch.object(mocked_client.device_manager.devices.samx, "egu", return_value="mm"):
+        WidgetIO.set_value(motor_box.widgets[0], "samx")
+
+    assert ring_box.widgets[0].suffix() == " mm"
+    assert ring_box.widgets[1].suffix() == " mm"
+    assert ring_box.widgets[2].suffix() == " mm"
+    assert ring_box.widgets[3].suffix() == ""
+    assert "Units: mm" in ring_box.widgets[0].toolTip()
+
+    motor_box.widgets[0].setCurrentText("not_a_device")
+
+    assert ring_box.widgets[0].suffix() == ""
+    assert ring_box.widgets[1].suffix() == ""
+    assert ring_box.widgets[2].suffix() == ""
+    assert "Units from: motor_1" in ring_box.widgets[0].toolTip()
+
+
 def test_current_scan(scan_control, mocked_client):
     current_scan = scan_control.current_scan
     wrong_scan = "error_scan"
