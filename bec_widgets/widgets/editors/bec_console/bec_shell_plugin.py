@@ -22,7 +22,7 @@ class BECShellPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
 
     def createWidget(self, parent):
         if parent is None:
-           return QWidget()
+            return QWidget()
         t = BECShell(parent)
         return t
 
