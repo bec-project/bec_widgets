@@ -22,8 +22,8 @@ def _forward(func):
     @wraps(func)
     def wrapper(self, *args, **kwargs):
         target = getattr(self, "_main_widget")
-        method = getattr(target, func.__name__[1:])
         if QTermWidget:
+            method = getattr(target, func.__name__[1:])
             return method(*args, **kwargs)
         else:
             ...
