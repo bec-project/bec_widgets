@@ -4,6 +4,7 @@ import enum
 from uuid import uuid4
 from weakref import WeakValueDictionary
 
+import shiboken6
 from bec_lib.logger import bec_logger
 from pydantic import BaseModel
 from qtpy.QtCore import Qt
@@ -78,7 +79,9 @@ class BecConsoleRegistry:
 
         self._consoles[console.console_id] = console
         console_id, terminal_id = console.console_id, console.terminal_id
-        if (term_info := self._terminal_registry.get(terminal_id)) is None:
+        if (term_info := self._terminal_registry.get(terminal_id)) is None or not shiboken6.isValid(
+            term_info.instance
+        ):
             term = _BecTermClass()
             self._terminal_registry[terminal_id] = _TerminalOwnerInfo(
                 registered_console_ids={console_id},
