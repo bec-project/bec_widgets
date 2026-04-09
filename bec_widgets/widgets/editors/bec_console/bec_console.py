@@ -47,6 +47,7 @@ class _TerminalOwnerInfo(BaseModel):
     instance: BecTerminal
     terminal_id: str
     initialized: bool = False
+    keep_if_last_console_closed: bool = False
 
     model_config = {"arbitrary_types_allowed": True}
 
@@ -80,6 +81,7 @@ class BecConsoleRegistry:
                 owner_console_id=console_id,
                 instance=term,
                 terminal_id=terminal_id,
+                keep_if_last_console_closed=console.persevere_terminal,
             )
             return
 
@@ -102,7 +104,7 @@ class BecConsoleRegistry:
             term_info.registered_console_ids.remove(console_id)
         if term_info.owner_console_id == console_id:
             term_info.owner_console_id = None
-        if not term_info.registered_console_ids:
+        if not term_info.registered_console_ids and not term_info.keep_if_last_console_closed:
             term_info.instance.deleteLater()
             del self._terminal_registry[terminal_id]
 
@@ -217,9 +219,6 @@ class _Overlay(QWidget):
 class BecConsole(BECWidget, QWidget):
     """A console widget with access to a shared registry of terminals, such that instances can be moved around."""
 
-    _js_callback = Signal(bool)
-    initialized = Signal()
-
     PLUGIN = True
     ICON_NAME = "terminal"
 
@@ -231,6 +230,7 @@ class BecConsole(BECWidget, QWidget):
         gui_id=None,
         startup_cmd: str | None = None,
         terminal_id: str | None = None,
+        persevere_terminal: bool = False,
         **kwargs,
     ):
         super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
@@ -240,6 +240,7 @@ class BecConsole(BECWidget, QWidget):
         self.terminal_id = terminal_id or str(uuid4())
         self.console_id = self.gui_id
         self.term: BecTerminal | None = None  # Will be set in _set_up_instance
+        self.persevere_terminal = persevere_terminal
 
         self._set_up_instance()
 
@@ -388,6 +389,7 @@ class BECShell(BecConsole):
             client=client,
             gui_id=gui_id,
             terminal_id="bec_shell",
+            persevere_terminal=True,
             **kwargs,
         )
 

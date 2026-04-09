@@ -126,3 +126,14 @@ def test_is_owner(console_widget: BecConsole):
     assert not _bec_console_registry.is_owner(mock_console)
     mock_console.terminal_id = console_widget.terminal_id
     assert not _bec_console_registry.is_owner(mock_console)
+
+
+def test_bec_shell_leaves_terminal_instantiated(qtbot):
+    widget = BECShell()
+    qtbot.addWidget(widget)
+
+    assert len(_bec_console_registry._terminal_registry) != 0
+    _bec_console_registry.unregister(widget)
+    assert len(_bec_console_registry._terminal_registry) != 0
+
+    assert _bec_console_registry._terminal_registry["bec_shell"].owner_console_id is None
