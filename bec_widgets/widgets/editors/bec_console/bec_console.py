@@ -6,7 +6,7 @@ from weakref import WeakValueDictionary
 
 from bec_lib.logger import bec_logger
 from pydantic import BaseModel
-from qtpy.QtCore import Qt, Signal
+from qtpy.QtCore import Qt
 from qtpy.QtGui import QMouseEvent
 from qtpy.QtWidgets import (
     QApplication,
@@ -72,6 +72,10 @@ class BecConsoleRegistry:
         Args:
             console (BecConsole): The instance to register.
         """
+        # create this on first registration of anything, so we know QApp exists
+        if not getattr(self, "_persevered_terminals", None):
+            self._preserved_terminals = QWidget()
+
         self._consoles[console.console_id] = console
         console_id, terminal_id = console.console_id, console.terminal_id
         if (term_info := self._terminal_registry.get(terminal_id)) is None:
@@ -83,6 +87,8 @@ class BecConsoleRegistry:
                 terminal_id=terminal_id,
                 keep_if_last_console_closed=console.persevere_terminal,
             )
+            if console.persevere_terminal:
+                term.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
             return
 
         logger.info(f"Registered new console {console_id} for terminal {terminal_id}")
@@ -104,9 +110,12 @@ class BecConsoleRegistry:
             term_info.registered_console_ids.remove(console_id)
         if term_info.owner_console_id == console_id:
             term_info.owner_console_id = None
-        if not term_info.registered_console_ids and not term_info.keep_if_last_console_closed:
-            term_info.instance.deleteLater()
-            del self._terminal_registry[terminal_id]
+        if not term_info.registered_console_ids:
+            if not term_info.keep_if_last_console_closed:
+                term_info.instance.deleteLater()
+                del self._terminal_registry[terminal_id]
+            else:
+                term_info.instance.setParent(self._preserved_terminals)
 
         logger.info(f"Unregistered console {console_id} for terminal {terminal_id}")
 
@@ -135,8 +144,8 @@ class BecConsoleRegistry:
             return None
 
         instance_info = self._terminal_registry[terminal_id]
-        if (old_owner_console_ide := instance_info.owner_console_id) is not None:
-            if (old_owner := self._consoles.get(old_owner_console_ide)) is not None:
+        if (old_owner_console_id := instance_info.owner_console_id) is not None:
+            if (old_owner := self._consoles.get(old_owner_console_id)) is not None:
                 old_owner.yield_ownership()  # call this on the old owner to make sure it is updated
         instance_info.owner_console_id = console_id
         logger.info(f"Transferred ownership of terminal {terminal_id} to {console_id}")

@@ -78,6 +78,12 @@ class BecQTerm(QWidget):
             text += "\n"
         self._sendText(text)
 
+    def deleteLater(self, /) -> None:
+        return super().deleteLater()
+
+    def close(self, /) -> bool:
+        return super().close()
+
     # automatically forwarded to the widget only if it exists
     @_forward
     def _addCustomColorSchemeDir(self, custom_dir: str, /) -> None: ...
