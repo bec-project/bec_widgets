@@ -96,7 +96,7 @@ class BecConsoleRegistry:
         console_id, terminal_id = console.console_id, console.terminal_id
         if console_id in self._consoles:
             del self._consoles[console_id]
-        if (term_info := self._terminal_registry.get(console_id)) is None:
+        if (term_info := self._terminal_registry.get(terminal_id)) is None:
             return
         if console_id in term_info.registered_console_ids:
             term_info.registered_console_ids.remove(console_id)
@@ -230,13 +230,11 @@ class BecConsole(BECWidget, QWidget):
         client=None,
         gui_id=None,
         startup_cmd: str | None = None,
-        is_bec_shell: bool = False,
         terminal_id: str | None = None,
         **kwargs,
     ):
         super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
         self._mode = ConsoleMode.INACTIVE
-        self._is_bec_shell = is_bec_shell
         self._startup_cmd = startup_cmd
         self._is_initialized = False
         self.terminal_id = terminal_id or str(uuid4())
@@ -278,7 +276,7 @@ class BecConsole(BECWidget, QWidget):
         self.term = _bec_console_registry.try_get_term(self)
         if self.term:
             self._set_mode(ConsoleMode.ACTIVE)
-        elif self.isHidden:
+        elif self.isHidden():
             self._set_mode(ConsoleMode.HIDDEN)
         else:
             self._set_mode(ConsoleMode.INACTIVE)

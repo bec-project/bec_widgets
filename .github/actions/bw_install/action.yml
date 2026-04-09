@@ -62,4 +62,4 @@ runs:
         uv pip install --system -e ./ophyd_devices
         uv pip install --system -e ./bec/bec_lib[dev]
         uv pip install --system -e ./bec/bec_ipython_client
-        uv pip install --system -e ./bec_widgets[dev,pyside6]
+        uv pip install --system -e ./bec_widgets[dev,qtermwidget]
