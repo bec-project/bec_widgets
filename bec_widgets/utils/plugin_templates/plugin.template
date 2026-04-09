@@ -22,7 +22,7 @@ class {plugin_name_pascal}Plugin(QDesignerCustomWidgetInterface):  # pragma: no 
 
     def createWidget(self, parent):
         if parent is None:
-           return QWidget()
+            return QWidget()
         t = {plugin_name_pascal}(parent)
         return t
 

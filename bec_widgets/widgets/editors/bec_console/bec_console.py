@@ -7,7 +7,7 @@ from weakref import WeakValueDictionary
 from bec_lib.logger import bec_logger
 from pydantic import BaseModel
 from qtpy.QtCore import Qt, Signal
-from qtpy.QtGui import QMouseEvent, QResizeEvent
+from qtpy.QtGui import QMouseEvent
 from qtpy.QtWidgets import (
     QApplication,
     QHBoxLayout,
