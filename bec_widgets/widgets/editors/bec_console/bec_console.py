@@ -7,7 +7,7 @@ from weakref import WeakValueDictionary
 import shiboken6
 from bec_lib.logger import bec_logger
 from pydantic import BaseModel
-from qtpy.QtCore import Qt
+from qtpy.QtCore import QObject, Qt
 from qtpy.QtGui import QMouseEvent
 from qtpy.QtWidgets import (
     QApplication,
@@ -45,7 +45,7 @@ class _TerminalOwnerInfo(BaseModel):
 
     owner_console_id: str | None = None
     registered_console_ids: set[str] = set()
-    instance: BecTerminal
+    instance: BecTerminal | QWidget
     terminal_id: str
     initialized: bool = False
     keep_if_last_console_closed: bool = False
@@ -53,15 +53,16 @@ class _TerminalOwnerInfo(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
 
-class BecConsoleRegistry:
+class BecConsoleRegistry(QWidget):
     """
     A registry for the BecConsole class to manage its instances.
     """
 
-    def __init__(self):
+    def __init__(self, parent):
         """
         Initialize the registry.
         """
+        super().__init__(parent=parent)
         self._consoles: WeakValueDictionary[str, BecConsole] = WeakValueDictionary()
         self._terminal_registry: dict[str, _TerminalOwnerInfo] = {}
 
@@ -73,10 +74,6 @@ class BecConsoleRegistry:
         Args:
             console (BecConsole): The instance to register.
         """
-        # create this on first registration of anything, so we know QApp exists
-        if not getattr(self, "_persevered_terminals", None):
-            self._preserved_terminals = QWidget()
-
         self._consoles[console.console_id] = console
         console_id, terminal_id = console.console_id, console.terminal_id
         if (term_info := self._terminal_registry.get(terminal_id)) is None or not shiboken6.isValid(
@@ -118,7 +115,8 @@ class BecConsoleRegistry:
                 term_info.instance.deleteLater()
                 del self._terminal_registry[terminal_id]
             else:
-                term_info.instance.setParent(self._preserved_terminals)
+                term_info.instance.setHidden()
+                term_info.instance.setParent(self)
 
         logger.info(f"Unregistered console {console_id} for terminal {terminal_id}")
 
@@ -192,7 +190,8 @@ class BecConsoleRegistry:
             logger.debug(f"But it was not the owner, which was {term_info.owner_console_id}!")
             return
         term_info.owner_console_id = None
-        term_info.instance.setParent(None)
+
+        term_info.instance.setParent(QApplication.instance().console_widget_registry)
 
     def owner_is_visible(self, term_id: str) -> bool:
         """
@@ -210,9 +209,6 @@ class BecConsoleRegistry:
         if (owner := self._consoles.get(instance_info.owner_console_id)) is None:
             return False
         return owner.isVisible()
-
-
-_bec_console_registry = BecConsoleRegistry()
 
 
 class _Overlay(QWidget):
@@ -280,13 +276,13 @@ class BecConsole(BECWidget, QWidget):
         self._stacked_layout.addWidget(self._overlay)
 
         # will create a new terminal instance if there isn't already one for this ID
-        _bec_console_registry.register(self)
+        QApplication.instance().console_widget_registry.register(self)
         self._infer_mode()
         if self.startup_cmd:
             self.write(self.startup_cmd, True)  # will have no effect if not the owner
 
     def _infer_mode(self):
-        self.term = _bec_console_registry.try_get_term(self)
+        self.term = QApplication.instance().console_widget_registry.try_get_term(self)
         if self.term:
             self._set_mode(ConsoleMode.ACTIVE)
         elif self.isHidden():
@@ -351,7 +347,7 @@ class BecConsole(BECWidget, QWidget):
         from its current owner (if any) to this widget.
         """
         # Get the instance from registry
-        self.term = _bec_console_registry.take_ownership(self)
+        self.term = QApplication.instance().console_widget_registry.take_ownership(self)
         self._infer_mode()
         if self._mode == ConsoleMode.ACTIVE:
             logger.debug(f"Widget {self.gui_id} took ownership of instance {self.terminal_id}")
@@ -362,7 +358,7 @@ class BecConsole(BECWidget, QWidget):
         available for another widget to claim. This is automatically called when the
         widget becomes hidden.
         """
-        _bec_console_registry.yield_ownership(self)
+        QApplication.instance().console_widget_registry.yield_ownership(self)
         self._infer_mode()
         if self._mode != ConsoleMode.ACTIVE:
             logger.debug(f"Widget {self.gui_id} yielded ownership of instance {self.terminal_id}")
@@ -375,13 +371,13 @@ class BecConsole(BECWidget, QWidget):
     def showEvent(self, event):
         """Called when the widget is shown. Updates UI state based on ownership."""
         super().showEvent(event)
-        if not _bec_console_registry.is_owner(self):
-            if not _bec_console_registry.owner_is_visible(self.terminal_id):
+        if not QApplication.instance().console_widget_registry.is_owner(self):
+            if not QApplication.instance().console_widget_registry.owner_is_visible(self.terminal_id):
                 self.take_terminal_ownership()
 
     def cleanup(self):
         """Unregister this console on destruction."""
-        _bec_console_registry.unregister(self)
+        QApplication.instance().console_widget_registry.unregister(self)
         super().cleanup()
 
 

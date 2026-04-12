@@ -30,6 +30,7 @@ from bec_widgets.widgets.containers.main_window.addons.notification_center.notif
 )
 from bec_widgets.widgets.containers.main_window.addons.scroll_label import ScrollLabel
 from bec_widgets.widgets.containers.main_window.addons.web_links import BECWebLinksMixin
+from bec_widgets.widgets.editors.bec_console.bec_console import BecConsoleRegistry
 from bec_widgets.widgets.progress.scan_progressbar.scan_progressbar import ScanProgressBar
 from bec_widgets.widgets.utility.widget_hierarchy_tree.widget_hierarchy_tree import (
     WidgetHierarchyDialog,
@@ -53,6 +54,9 @@ class BECMainWindow(BECWidget, QMainWindow):
         super().__init__(parent=parent, **kwargs)
 
         self.app = QApplication.instance()
+        self._console_registry = BecConsoleRegistry(self)
+        if not hasattr(self.app, "console_widget_registry"):
+            self.app.console_widget_registry = self._console_registry
         self.status_bar = self.statusBar()
         self._launcher_window = None
         self.setWindowTitle(window_title)
