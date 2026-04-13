@@ -532,19 +532,13 @@ class BECGuiClient(RPCBase):
     def _start(self, wait: bool = False) -> None:
         self._killed = False
         self._client.connector.register(
-            MessageEndpoints.gui_registry_state(self._gui_id),
-            cb=self._handle_registry_update,
-            parent=self,
+            MessageEndpoints.gui_registry_state(self._gui_id), cb=self._handle_registry_update
         )
         return self._start_server(wait=wait)
 
-    @staticmethod
-    def _handle_registry_update(
-        msg: dict[str, GUIRegistryStateMessage], parent: BECGuiClient
-    ) -> None:
+    def _handle_registry_update(self, msg: dict[str, GUIRegistryStateMessage]) -> None:
         # This was causing a deadlock during shutdown, not sure why.
         # with self._lock:
-        self = parent
         self._server_registry = cast(dict[str, RegistryState], msg["data"].state)
         self._update_dynamic_namespace(self._server_registry)
 
