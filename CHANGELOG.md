@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.4.3 (2026-04-13)
+
+### Bug Fixes
+
+- Set OPHYD_CONTROL_LAYER to dummy for tests
+  ([`5e84d3b`](https://github.com/bec-project/bec_widgets/commit/5e84d3bec608ae9f2ee6dae67db2e3e1387b1f59))
+
+
 ## v3.4.2 (2026-04-01)
 
 ### Bug Fixes
