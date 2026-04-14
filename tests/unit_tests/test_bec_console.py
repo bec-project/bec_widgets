@@ -1,10 +1,13 @@
 from unittest import mock
 
 import pytest
-from qtpy.QtCore import Qt
+import shiboken6
+from qtpy.QtCore import QEvent, QEventLoop, Qt
 from qtpy.QtGui import QHideEvent, QShowEvent
 from qtpy.QtTest import QTest
+from qtpy.QtWidgets import QApplication, QWidget
 
+import bec_widgets.widgets.editors.bec_console.bec_console as bec_console_module
 from bec_widgets.widgets.editors.bec_console.bec_console import (
     BecConsole,
     BECShell,
@@ -13,6 +16,20 @@ from bec_widgets.widgets.editors.bec_console.bec_console import (
 )
 
 from .client_mocks import mocked_client
+
+
+def process_deferred_deletes():
+    app = QApplication.instance()
+    app.sendPostedEvents(None, QEvent.DeferredDelete)
+    app.processEvents(QEventLoop.AllEvents)
+
+
+@pytest.fixture(autouse=True)
+def clean_bec_console_registry():
+    _bec_console_registry.clear()
+    yield
+    _bec_console_registry.clear()
+    process_deferred_deletes()
 
 
 @pytest.fixture
@@ -126,3 +143,110 @@ def test_is_owner(console_widget: BecConsole):
     assert not _bec_console_registry.is_owner(mock_console)
     mock_console.terminal_id = console_widget.terminal_id
     assert not _bec_console_registry.is_owner(mock_console)
+
+
+def test_closing_active_console_keeps_terminal_valid_for_remaining_console(qtbot):
+    widget1 = BecConsole(client=mocked_client, gui_id="close_owner", terminal_id="shared_close")
+    widget2 = BecConsole(client=mocked_client, gui_id="remaining", terminal_id="shared_close")
+    qtbot.addWidget(widget2)
+
+    widget1.take_terminal_ownership()
+    term = widget1.term
+    assert term is not None
+
+    widget1.close()
+    widget1.deleteLater()
+    process_deferred_deletes()
+
+    assert shiboken6.isValid(term)
+    widget2.take_terminal_ownership()
+
+    assert widget2.term is term
+    assert widget2._mode == ConsoleMode.ACTIVE
+
+
+def test_active_console_detaches_terminal_before_destruction(qtbot):
+    widget1 = BecConsole(client=mocked_client, gui_id="owner", terminal_id="shared_detach")
+    widget2 = BecConsole(client=mocked_client, gui_id="survivor", terminal_id="shared_detach")
+    qtbot.addWidget(widget1)
+    qtbot.addWidget(widget2)
+
+    widget1.take_terminal_ownership()
+    term = widget1.term
+    assert term is not None
+    assert widget1.isAncestorOf(term)
+
+    widget1.close()
+
+    assert shiboken6.isValid(term)
+    assert not widget1.isAncestorOf(term)
+    assert term.parent() is widget2._term_holder
+
+
+def test_bec_shell_terminal_persists_after_last_shell_unregisters(qtbot):
+    shell = BECShell(gui_id="bec_shell_persistent")
+    qtbot.addWidget(shell)
+    term = shell.term
+    assert term is not None
+
+    _bec_console_registry.unregister(shell)
+
+    info = _bec_console_registry._terminal_registry["bec_shell"]
+    assert info.registered_console_ids == set()
+    assert info.owner_console_id is None
+    assert info.persist_session is True
+    assert info.instance is term
+    assert shiboken6.isValid(term)
+
+
+def test_new_bec_shell_claims_preserved_terminal(qtbot):
+    shell1 = BECShell(gui_id="bec_shell_first")
+    term = shell1.term
+    assert term is not None
+
+    shell1.close()
+    shell1.deleteLater()
+    process_deferred_deletes()
+
+    assert "bec_shell" in _bec_console_registry._terminal_registry
+    assert shiboken6.isValid(term)
+
+    shell2 = BECShell(gui_id="bec_shell_second")
+    qtbot.addWidget(shell2)
+    shell2.showEvent(QShowEvent())
+
+    assert shell2.term is term
+    assert shell2._mode == ConsoleMode.ACTIVE
+
+
+def test_persistent_bec_shell_sends_startup_command_once(qtbot, monkeypatch):
+    class RecordingTerminal(QWidget):
+        writes = []
+
+        def write(self, text: str, add_newline: bool = True):
+            self.writes.append((text, add_newline))
+
+    monkeypatch.setattr(bec_console_module, "_BecTermClass", RecordingTerminal)
+
+    shell1 = BECShell(gui_id="bec_shell_startup_first")
+    shell1.close()
+    shell1.deleteLater()
+    process_deferred_deletes()
+
+    shell2 = BECShell(gui_id="bec_shell_startup_second")
+    qtbot.addWidget(shell2)
+    shell2.showEvent(QShowEvent())
+
+    assert len(RecordingTerminal.writes) == 1
+    assert RecordingTerminal.writes[0][0].startswith("bec ")
+    assert RecordingTerminal.writes[0][1] is True
+
+
+def test_plain_console_terminal_removed_after_last_unregister(qtbot):
+    widget = BecConsole(client=mocked_client, gui_id="plain_console", terminal_id="plain_terminal")
+    qtbot.addWidget(widget)
+
+    assert "plain_terminal" in _bec_console_registry._terminal_registry
+    _bec_console_registry.unregister(widget)
+
+    assert "plain_terminal" not in _bec_console_registry._terminal_registry
