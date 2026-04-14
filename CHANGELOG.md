@@ -1,6 +1,33 @@
 # CHANGELOG
 
 
+## v3.5.0 (2026-04-14)
+
+### Bug Fixes
+
+- Connect signals the correct way around
+  ([`f562c61`](https://github.com/bec-project/bec_widgets/commit/f562c61e3cec3387f6821bad74403beeb3436355))
+
+- Create new bec shell if deleted
+  ([`1754e75`](https://github.com/bec-project/bec_widgets/commit/1754e759f0c59f2f4063f661bacd334127326947))
+
+- Formatting in plugin template
+  ([`fa2ef83`](https://github.com/bec-project/bec_widgets/commit/fa2ef83bb9dfeeb4c5fc7cd77168c16101c32693))
+
+- **bec_console**: Persistent bec session
+  ([`9b0ec9d`](https://github.com/bec-project/bec_widgets/commit/9b0ec9dd79ad1adc5d211dd703db7441da965f34))
+
+### Features
+
+- Add qtermwidget plugin and replace web term
+  ([`02cb393`](https://github.com/bec-project/bec_widgets/commit/02cb393bb086165dc64917b633d5570d02e1a2a9))
+
+### Refactoring
+
+- Code cleanup
+  ([`bda5d38`](https://github.com/bec-project/bec_widgets/commit/bda5d389651bb2b13734cd31159679e85b1bd583))
+
+
 ## v3.4.4 (2026-04-14)
 
 ### Bug Fixes
