@@ -1,6 +1,23 @@
 # CHANGELOG
 
 
+## v3.4.4 (2026-04-14)
+
+### Bug Fixes
+
+- Check duplicate stream sub
+  ([`c7de320`](https://github.com/bec-project/bec_widgets/commit/c7de320ca564264a31b84931f553170f25659685))
+
+- Check for duplicate subscriptions in GUIClient
+  ([`37747ba`](https://github.com/bec-project/bec_widgets/commit/37747babda407040333c6bd04646be9a49e0ee81))
+
+- Make gui client registry callback non static
+  ([`32f5d48`](https://github.com/bec-project/bec_widgets/commit/32f5d486d3fc8d41df2668c58932ae982819b285))
+
+- Remove staticmethod subscription
+  ([`0ff1fdc`](https://github.com/bec-project/bec_widgets/commit/0ff1fdc81578eec3ffc5d4030fca7b357a0b4c2f))
+
+
 ## v3.4.3 (2026-04-13)
 
 ### Bug Fixes
