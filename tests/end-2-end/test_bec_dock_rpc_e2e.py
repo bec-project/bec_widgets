@@ -1,6 +1,7 @@
 import pytest
 
 from bec_widgets.cli.client import Image, MotorMap, Waveform
+from bec_widgets.cli.client_utils import BECGuiClient
 from bec_widgets.cli.rpc.rpc_base import RPCReference
 
 # pylint: disable=unused-argument
@@ -122,7 +123,7 @@ def test_ring_bar(qtbot, connected_client_gui_obj):
     assert gui._ipython_registry[bar._gui_id].__class__.__name__ == "RingProgressBar"
 
 
-def test_rpc_gui_obj(connected_client_gui_obj, qtbot):
+def test_rpc_gui_obj(connected_client_gui_obj: BECGuiClient, qtbot):
     gui = connected_client_gui_obj
 
     qtbot.waitUntil(lambda: len(gui.windows) == 1, timeout=3000)
