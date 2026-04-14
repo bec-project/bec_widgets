@@ -10,9 +10,9 @@ import threading
 import time
 from contextlib import contextmanager
 from threading import Lock
-from typing import TYPE_CHECKING, Literal, TypeAlias, cast
+from typing import TYPE_CHECKING, Callable, Literal, TypeAlias, cast
 
-from bec_lib.endpoints import MessageEndpoints
+from bec_lib.endpoints import EndpointInfo, MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import, lazy_import_from
 from rich.console import Console
@@ -232,6 +232,11 @@ class BECGuiClient(RPCBase):
         """The launcher object."""
         return RPCBase(gui_id=f"{self._gui_id}:launcher", parent=self, object_name="launcher")
 
+    def _safe_register_stream(self, endpoint: EndpointInfo, cb: Callable, **kwargs):
+        """Check if already registered for registration in idempotent functions."""
+        if not self._client.connector.any_stream_is_registered(endpoint, cb=cb):
+            self._client.connector.register(endpoint, cb=cb, **kwargs)
+
     def connect_to_gui_server(self, gui_id: str) -> None:
         """Connect to a GUI server"""
         # Unregister the old callback
@@ -247,7 +252,7 @@ class BECGuiClient(RPCBase):
         self._ipython_registry = {}
 
         # Register the new callback
-        self._client.connector.register(
+        self._safe_register_stream(
             MessageEndpoints.gui_registry_state(self._gui_id),
             cb=self._handle_registry_update,
             from_start=True,
@@ -530,7 +535,7 @@ class BECGuiClient(RPCBase):
 
     def _start(self, wait: bool = False) -> None:
         self._killed = False
-        self._client.connector.register(
+        self._safe_register_stream(
             MessageEndpoints.gui_registry_state(self._gui_id), cb=self._handle_registry_update
         )
         return self._start_server(wait=wait)
