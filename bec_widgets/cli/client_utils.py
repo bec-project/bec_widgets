@@ -250,7 +250,6 @@ class BECGuiClient(RPCBase):
         self._client.connector.register(
             MessageEndpoints.gui_registry_state(self._gui_id),
             cb=self._handle_registry_update,
-            parent=self,
             from_start=True,
         )
 

@@ -248,9 +248,7 @@ class RPCBase:
             self._rpc_response = None
             self._msg_wait_event.clear()
             self._client.connector.register(
-                MessageEndpoints.gui_instruction_response(request_id),
-                cb=self._on_rpc_response,
-                parent=self,
+                MessageEndpoints.gui_instruction_response(request_id), cb=self._on_rpc_response
             )
 
         self._client.connector.set_and_publish(MessageEndpoints.gui_instructions(receiver), rpc_msg)
@@ -276,11 +274,10 @@ class RPCBase:
             self._rpc_response = None
             return self._create_widget_from_msg_result(msg_result)
 
-    @staticmethod
-    def _on_rpc_response(msg_obj: MessageObject, parent: RPCBase) -> None:
+    def _on_rpc_response(self, msg_obj: MessageObject) -> None:
         msg = cast(messages.RequestResponseMessage, msg_obj.value)
-        parent._rpc_response = msg
-        parent._msg_wait_event.set()
+        self._rpc_response = msg
+        self._msg_wait_event.set()
 
     def _create_widget_from_msg_result(self, msg_result):
         if msg_result is None:
