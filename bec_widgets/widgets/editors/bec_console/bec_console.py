@@ -75,7 +75,8 @@ class BecConsoleRegistry:
             return
         app.aboutToQuit.connect(self.clear, Qt.ConnectionType.UniqueConnection)
 
-    def _new_terminal_info(self, console: BecConsole) -> _TerminalOwnerInfo:
+    @staticmethod
+    def _new_terminal_info(console: BecConsole) -> _TerminalOwnerInfo:
         term = _BecTermClass()
         return _TerminalOwnerInfo(
             registered_console_ids={console.console_id},
@@ -85,7 +86,8 @@ class BecConsoleRegistry:
             persist_session=console.persist_terminal_session,
         )
 
-    def _replace_terminal(self, info: _TerminalOwnerInfo, console: BecConsole) -> None:
+    @staticmethod
+    def _replace_terminal(info: _TerminalOwnerInfo, console: BecConsole) -> None:
         info.instance = _BecTermClass()
         info.initialized = False
         info.owner_console_id = console.console_id
@@ -200,7 +202,7 @@ class BecConsoleRegistry:
         Unregister an instance of BecConsole.
 
         Args:
-            instance (BecConsole): The instance to unregister.
+            console (BecConsole): The instance to unregister.
         """
         console_id, terminal_id = console.console_id, console.terminal_id
         if console_id in self._consoles:
@@ -290,12 +292,11 @@ class BecConsoleRegistry:
 
     def yield_ownership(self, console: BecConsole):
         """
-        Yield ownership of a instance without destroying it. The instance remains in the
+        Yield ownership of an instance without destroying it. The instance remains in the
         registry with no owner, available for another widget to claim.
 
         Args:
-            gui_id (str): The GUI ID of the widget yielding ownership.
-
+            console (BecConsole): The console which wishes to yield ownership of its associated terminal.
         """
         console_id, terminal_id = console.console_id, console.terminal_id
         logger.debug(f"Console {console_id} attempted to yield ownership")
@@ -328,10 +329,10 @@ class BecConsoleRegistry:
 
     def owner_is_visible(self, term_id: str) -> bool:
         """
-        Check if the owner of a instance is currently visible.
+        Check if the owner of an instance is currently visible.
 
         Args:
-            unique_id (str): The unique identifier for the instance.
+            term_id (str): The terminal ID to check.
         Returns:
             bool: True if the owner is visible, False otherwise.
         """
@@ -468,7 +469,6 @@ class BecConsole(BECWidget, QWidget):
     def startup_cmd(self, cmd: str | None):
         """
         Set the startup command for the console.
-        logger.info(f"{self._console_id} inferred mode active through ownerp)
         """
         self._startup_cmd = cmd
 
