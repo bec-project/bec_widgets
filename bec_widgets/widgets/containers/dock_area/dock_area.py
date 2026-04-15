@@ -235,11 +235,8 @@ class BECDockArea(DockAreaWidget):
     def _load_initial_profile(self, name: str) -> None:
         """Load the initial profile."""
         self.load_profile(name)
-        combo = self.toolbar.components.get_action("workspace_combo").widget
-        combo.blockSignals(True)
         if not self._empty_profile_active:
-            combo.setCurrentText(name)
-        combo.blockSignals(False)
+            self._set_workspace_combo_text_silent(name)
 
     def _start_empty_workspace(self) -> None:
         """
@@ -669,6 +666,14 @@ class BECDockArea(DockAreaWidget):
         combo = self.toolbar.components.get_action("workspace_combo").widget
         combo.refresh_profiles(active_profile=name)
 
+    def _set_workspace_combo_text_silent(self, text: str) -> None:
+        combo = self.toolbar.components.get_action("workspace_combo").widget
+        was_blocked = combo.blockSignals(True)
+        try:
+            combo.setCurrentText(text)
+        finally:
+            combo.blockSignals(was_blocked)
+
     def _enter_empty_profile_state(self) -> None:
         """
         Switch to the transient empty workspace state.
@@ -796,7 +801,6 @@ class BECDockArea(DockAreaWidget):
             self._pending_autosave_skip = (current_profile, name)
         else:
             self._pending_autosave_skip = None
-        workspace_combo.setCurrentText(name)
         self._finalize_profile_change(name, namespace)
 
     @SafeSlot()
