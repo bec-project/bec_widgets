@@ -103,7 +103,6 @@ class ProfileComboBox(QComboBox):
             if index >= 0:
                 self.setCurrentIndex(index)
 
-        self.blockSignals(False)
         if active_profile and self.currentText() != active_profile:
             idx = self.findText(active_profile)
             if idx >= 0:
@@ -114,6 +113,7 @@ class ProfileComboBox(QComboBox):
             self.setToolTip("Active profile is not in quick select")
         else:
             self.setToolTip("")
+        self.blockSignals(False)
 
 
 def workspace_bundle(components: ToolbarComponents, enable_tools: bool = True) -> ToolbarBundle:

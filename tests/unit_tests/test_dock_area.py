@@ -1863,9 +1863,14 @@ class TestWorkspaceProfileOperations:
         with patch(
             "bec_widgets.widgets.containers.dock_area.dock_area.SaveProfileDialog", StubDialog
         ):
-            advanced_dock_area.save_profile(show_dialog=True)
+            widgets_before_save = list(advanced_dock_area.widget_list())
+            with patch.object(advanced_dock_area, "load_profile") as mock_load_profile:
+                advanced_dock_area.save_profile(show_dialog=True)
+                qtbot.wait(100)
+                mock_load_profile.assert_not_called()
 
         qtbot.wait(500)
+        assert list(advanced_dock_area.widget_list()) == widgets_before_save
         source_manifest = read_manifest(helper.open_user(source_profile))
         new_manifest = read_manifest(helper.open_user(new_profile))
 
