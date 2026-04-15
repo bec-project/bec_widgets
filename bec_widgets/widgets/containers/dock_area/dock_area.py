@@ -68,7 +68,7 @@ from bec_widgets.widgets.containers.dock_area.toolbar_components.workspace_actio
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindowNoRPC
 from bec_widgets.widgets.containers.qt_ads import CDockWidget
 from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox, PositionerBox2D
-from bec_widgets.widgets.control.scan_control import ScanControl
+from bec_widgets.widgets.control.scan_control.scan_control import ScanControl
 from bec_widgets.widgets.editors.bec_console.bec_console import BecConsole, BECShell
 from bec_widgets.widgets.plots.heatmap.heatmap import Heatmap
 from bec_widgets.widgets.plots.image.image import Image
