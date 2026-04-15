@@ -19,7 +19,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets.utils import BECConnector
+from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.utils.widget_highlighter import WidgetHighlighter
 from bec_widgets.utils.widget_io import WidgetHierarchy
 

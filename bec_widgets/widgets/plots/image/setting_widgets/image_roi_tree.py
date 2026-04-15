@@ -20,7 +20,8 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets import BECWidget
-from bec_widgets.utils import BECDispatcher, ConnectionConfig
+from bec_widgets.utils.bec_connector import ConnectionConfig
+from bec_widgets.utils.bec_dispatcher import BECDispatcher
 from bec_widgets.utils.toolbars.actions import WidgetAction
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import MaterialIconAction, ModularToolBar

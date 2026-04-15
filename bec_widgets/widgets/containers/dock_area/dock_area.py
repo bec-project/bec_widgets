@@ -21,7 +21,7 @@ import bec_widgets.widgets.containers.qt_ads as QtAds
 from bec_widgets import BECWidget, SafeProperty, SafeSlot
 from bec_widgets.applications.views.view import ViewTourSteps
 from bec_widgets.cli.rpc.rpc_widget_handler import widget_handler
-from bec_widgets.utils import BECDispatcher
+from bec_widgets.utils.bec_dispatcher import BECDispatcher
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.rpc_decorator import rpc_timeout
 from bec_widgets.utils.toolbars.actions import (

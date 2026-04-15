@@ -31,12 +31,11 @@ from bec_widgets.applications.views.device_manager_view.device_manager_view impo
     DeviceManagerWidget,
 )
 from bec_widgets.utils.colors import get_accent_colors
-from bec_widgets.widgets.control.device_manager.components import (
+from bec_widgets.widgets.control.device_manager.components.device_table.device_table import (
     DeviceTable,
-    DMConfigView,
-    DocstringView,
-    OphydValidation,
 )
+from bec_widgets.widgets.control.device_manager.components.dm_config_view import DMConfigView
+from bec_widgets.widgets.control.device_manager.components.dm_docstring_view import DocstringView
 from bec_widgets.widgets.control.device_manager.components.ophyd_validation.ophyd_validation import (
     ConfigStatus,
     ConnectionStatus,

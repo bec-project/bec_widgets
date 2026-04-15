@@ -10,7 +10,7 @@ except ImportError:
 from qtpy.QtWidgets import QGridLayout
 
 from bec_widgets.utils.widget_io import WidgetIO
-from bec_widgets.widgets.control.scan_control import ScanControl
+from bec_widgets.widgets.control.scan_control.scan_control import ScanControl
 
 
 @pytest.fixture(scope="function")

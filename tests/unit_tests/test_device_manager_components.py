@@ -16,8 +16,6 @@ from qtpy import QtCore, QtGui, QtWidgets
 
 from bec_widgets.utils.bec_list import BECList
 from bec_widgets.utils.colors import get_accent_colors
-from bec_widgets.widgets.control.device_manager import DeviceTable, DMConfigView, DocstringView
-from bec_widgets.widgets.control.device_manager.components import docstring_to_markdown
 from bec_widgets.widgets.control.device_manager.components.constants import HEADERS_HELP_MD
 from bec_widgets.widgets.control.device_manager.components.device_config_template.device_config_template import (
     DeviceConfigTemplate,
@@ -34,8 +32,16 @@ from bec_widgets.widgets.control.device_manager.components.device_config_templat
     ReadoutPriorityComboBox,
     _try_literal_eval,
 )
+from bec_widgets.widgets.control.device_manager.components.device_table.device_table import (
+    DeviceTable,
+)
 from bec_widgets.widgets.control.device_manager.components.device_table.device_table_row import (
     DeviceTableRow,
+)
+from bec_widgets.widgets.control.device_manager.components.dm_config_view import DMConfigView
+from bec_widgets.widgets.control.device_manager.components.dm_docstring_view import (
+    DocstringView,
+    docstring_to_markdown,
 )
 from bec_widgets.widgets.control.device_manager.components.ophyd_validation.ophyd_validation import (
     DeviceTest,

@@ -8,14 +8,16 @@ from ophyd_devices.interfaces.device_config_templates.ophyd_templates import OPH
 from qtpy import QtCore, QtWidgets
 
 from bec_widgets.utils.error_popups import SafeSlot
-from bec_widgets.widgets.control.device_manager.components import OphydValidation
 from bec_widgets.widgets.control.device_manager.components.device_config_template.device_config_template import (
     DeviceConfigTemplate,
 )
 from bec_widgets.widgets.control.device_manager.components.device_config_template.template_items import (
     validate_name,
 )
-from bec_widgets.widgets.control.device_manager.components.ophyd_validation import (
+from bec_widgets.widgets.control.device_manager.components.ophyd_validation.ophyd_validation import (
+    OphydValidation,
+)
+from bec_widgets.widgets.control.device_manager.components.ophyd_validation.ophyd_validation_utils import (
     ConfigStatus,
     ConnectionStatus,
     format_error_to_md,

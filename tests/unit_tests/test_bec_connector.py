@@ -5,7 +5,7 @@ import pytest
 from qtpy.QtCore import QObject
 from qtpy.QtWidgets import QApplication, QWidget
 
-from bec_widgets.utils import BECConnector
+from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.utils.error_popups import SafeProperty
 from bec_widgets.utils.error_popups import SafeSlot as Slot
 

@@ -12,8 +12,9 @@ from bec_widgets.widgets.plots.waveform.settings.curve_settings.curve_tree impor
     ScanIndexValidator,
 )
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
-from tests.unit_tests.client_mocks import dap_plugin_message, mocked_client, mocked_client_with_dap
-from tests.unit_tests.conftest import create_widget
+
+from .client_mocks import dap_plugin_message, mocked_client, mocked_client_with_dap
+from .conftest import create_widget
 
 ##################################################
 # CurveSetting

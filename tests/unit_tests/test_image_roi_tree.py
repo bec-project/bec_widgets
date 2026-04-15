@@ -7,8 +7,9 @@ from qtpy.QtCore import QPointF, Qt
 from bec_widgets.widgets.plots.image.image import Image
 from bec_widgets.widgets.plots.image.setting_widgets.image_roi_tree import ROIPropertyTree
 from bec_widgets.widgets.plots.roi.image_roi import CircularROI, RectangularROI
-from tests.unit_tests.client_mocks import mocked_client
-from tests.unit_tests.conftest import create_widget
+
+from .client_mocks import mocked_client
+from .conftest import create_widget
 
 
 @pytest.fixture
@@ -44,7 +45,7 @@ def test_initialization(roi_tree, image_widget):
     assert roi_tree.plot == image_widget.plot_item
     assert roi_tree.controller == image_widget.roi_controller
     assert isinstance(roi_tree.roi_items, dict)
-    assert len(roi_tree.tree.findItems("", Qt.MatchContains)) == 0  # Empty tree initially
+    assert len(roi_tree.tree.findItems("", Qt.MatchFlag.MatchContains)) == 0  # Empty tree initially
 
     # Check toolbar actions
     assert roi_tree.toolbar.components.get_action("roi_rectangle")
@@ -66,12 +67,16 @@ def test_controller_connection(roi_tree, image_widget):
 
     # Verify that ROI was added to the tree
     assert roi in roi_tree.roi_items
-    assert len(roi_tree.tree.findItems("test_roi", Qt.MatchExactly, roi_tree.COL_ROI)) == 1
+    assert (
+        len(roi_tree.tree.findItems("test_roi", Qt.MatchFlag.MatchExactly, roi_tree.COL_ROI)) == 1
+    )
 
     # Remove ROI via controller and check that it's removed from the tree
     image_widget.remove_roi(0)
     assert roi not in roi_tree.roi_items
-    assert len(roi_tree.tree.findItems("test_roi", Qt.MatchExactly, roi_tree.COL_ROI)) == 0
+    assert (
+        len(roi_tree.tree.findItems("test_roi", Qt.MatchFlag.MatchExactly, roi_tree.COL_ROI)) == 0
+    )
 
 
 def test_expand_collapse_tree(roi_tree, image_widget):

@@ -330,8 +330,10 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
 if __name__ == "__main__":  # pragma: no cover
     # pylint: disable=import-outside-toplevel
 
-    from bec_widgets.widgets.services.scan_history_browser.components import (
+    from bec_widgets.widgets.services.scan_history_browser.components.scan_history_device_viewer import (
         ScanHistoryDeviceViewer,
+    )
+    from bec_widgets.widgets.services.scan_history_browser.components.scan_history_metadata_viewer import (
         ScanHistoryMetadataViewer,
     )
     from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton

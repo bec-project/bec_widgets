@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, field_validator
 from qtpy.QtCore import QTimer
 from qtpy.QtWidgets import QWidget
 
-from bec_widgets.utils import ConnectionConfig
+from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.colors import Colors, apply_theme
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.widgets.plots.image.image_base import ImageBase

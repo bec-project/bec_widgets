@@ -22,14 +22,16 @@ from bec_widgets.utils.bec_list import BECList
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
-from bec_widgets.widgets.control.device_manager.components.ophyd_validation import (
+from bec_widgets.widgets.control.device_manager.components.ophyd_validation.ophyd_validation_utils import (
     ConfigStatus,
     ConnectionStatus,
     DeviceTestModel,
-    ValidationButton,
-    ValidationListItem,
     format_error_to_md,
     get_validation_icons,
+)
+from bec_widgets.widgets.control.device_manager.components.ophyd_validation.validation_list_item import (
+    ValidationButton,
+    ValidationListItem,
 )
 
 READY_TO_TEST = False

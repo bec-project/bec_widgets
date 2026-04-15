@@ -26,8 +26,10 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets.applications.views.device_manager_view.device_manager_dialogs import (
+from bec_widgets.applications.views.device_manager_view.device_manager_dialogs.config_choice_dialog import (
     ConfigChoiceDialog,
+)
+from bec_widgets.applications.views.device_manager_view.device_manager_dialogs.device_form_dialog import (
     DeviceFormDialog,
 )
 from bec_widgets.applications.views.device_manager_view.device_manager_dialogs.upload_redis_dialog import (
@@ -39,13 +41,15 @@ from bec_widgets.utils.toolbars.actions import MaterialIconAction
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.widgets.containers.dock_area.basic_dock_area import DockAreaWidget
-from bec_widgets.widgets.control.device_manager.components import (
+from bec_widgets.widgets.control.device_manager.components._util import SharedSelectionSignal
+from bec_widgets.widgets.control.device_manager.components.device_table.device_table import (
     DeviceTable,
-    DMConfigView,
-    DocstringView,
+)
+from bec_widgets.widgets.control.device_manager.components.dm_config_view import DMConfigView
+from bec_widgets.widgets.control.device_manager.components.dm_docstring_view import DocstringView
+from bec_widgets.widgets.control.device_manager.components.ophyd_validation.ophyd_validation import (
     OphydValidation,
 )
-from bec_widgets.widgets.control.device_manager.components._util import SharedSelectionSignal
 from bec_widgets.widgets.control.device_manager.components.ophyd_validation.ophyd_validation_utils import (
     ConfigStatus,
     ConnectionStatus,

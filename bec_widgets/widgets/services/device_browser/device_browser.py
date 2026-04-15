@@ -17,10 +17,10 @@ from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.list_of_expandable_frames import ListOfExpandableFrames
 from bec_widgets.utils.ui_loader import UILoader
-from bec_widgets.widgets.services.device_browser.device_item import DeviceItem
 from bec_widgets.widgets.services.device_browser.device_item.device_config_dialog import (
     DirectUpdateDeviceConfigDialog,
 )
+from bec_widgets.widgets.services.device_browser.device_item.device_item import DeviceItem
 from bec_widgets.widgets.services.device_browser.util import map_device_type_to_icon
 
 logger = bec_logger.logger

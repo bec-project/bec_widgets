@@ -5,7 +5,7 @@ import random
 import pytest
 
 from bec_widgets.cli.client_utils import BECGuiClient
-from bec_widgets.widgets.control.scan_control import ScanControl
+from bec_widgets.widgets.control.scan_control.scan_control import ScanControl
 
 # pylint: disable=unused-argument
 # pylint: disable=redefined-outer-name

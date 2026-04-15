@@ -7,7 +7,7 @@ from qtpy import QtCore, QtGui, QtWidgets
 
 from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.utils.error_popups import SafeSlot
-from bec_widgets.widgets.control.device_manager.components.ophyd_validation import (
+from bec_widgets.widgets.control.device_manager.components.ophyd_validation.ophyd_validation_utils import (
     ConfigStatus,
     ConnectionStatus,
     DeviceTestModel,

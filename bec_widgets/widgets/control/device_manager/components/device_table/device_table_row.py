@@ -2,7 +2,7 @@
 
 from bec_lib.atlas_models import Device as DeviceModel
 
-from bec_widgets.widgets.control.device_manager.components.ophyd_validation import (
+from bec_widgets.widgets.control.device_manager.components.ophyd_validation.ophyd_validation_utils import (
     ConfigStatus,
     ConnectionStatus,
 )

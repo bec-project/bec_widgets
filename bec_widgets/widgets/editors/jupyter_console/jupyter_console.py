@@ -1,9 +1,11 @@
-from bec_ipython_client.main import BECIPythonClient
+from bec_lib.utils.import_utils import lazy_import_from
 from qtconsole.inprocess import QtInProcessKernelManager
 from qtconsole.manager import QtKernelManager
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QApplication, QMainWindow
+
+BECIPythonClient = lazy_import_from("bec_ipython_client.main", ("BECIPythonClient",))
 
 
 class BECJupyterConsole(RichJupyterWidget):  # pragma: no cover:

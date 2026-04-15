@@ -25,7 +25,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets.utils import ConnectionConfig
+from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_signal_proxy import BECSignalProxy
 from bec_widgets.utils.colors import Colors, apply_theme
 from bec_widgets.utils.container_utils import WidgetContainerUtils

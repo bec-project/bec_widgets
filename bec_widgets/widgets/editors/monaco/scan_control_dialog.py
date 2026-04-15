@@ -11,7 +11,7 @@ from bec_lib.logger import bec_logger
 from qtpy.QtCore import QSize, Qt
 from qtpy.QtWidgets import QDialog, QDialogButtonBox, QPushButton, QVBoxLayout
 
-from bec_widgets.widgets.control.scan_control import ScanControl
+from bec_widgets.widgets.control.scan_control.scan_control import ScanControl
 
 logger = bec_logger.logger
 

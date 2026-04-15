@@ -4,11 +4,11 @@ import pytest
 from qtpy.QtCore import QPointF, Qt
 from qtpy.QtGui import QTransform
 
-from bec_widgets.utils import Crosshair
+from bec_widgets.utils.crosshair import Crosshair
 from bec_widgets.widgets.plots.image.image_item import ImageItem
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
-from tests.unit_tests.client_mocks import mocked_client
 
+from .client_mocks import mocked_client
 from .conftest import create_widget
 
 # pylint: disable = redefined-outer-name
@@ -214,7 +214,7 @@ def test_crosshair_clicked_signal(qtbot, plot_widget_with_crosshair):
     pos_in_widget = graphics_view.mapFromScene(pos_in_scene)
 
     # Simulate mouse click
-    qtbot.mouseClick(graphics_view.viewport(), Qt.LeftButton, pos=pos_in_widget)
+    qtbot.mouseClick(graphics_view.viewport(), Qt.MouseButton.LeftButton, pos=pos_in_widget)
 
     x, y = emitted_positions[0]
 

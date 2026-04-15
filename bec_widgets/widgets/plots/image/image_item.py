@@ -9,7 +9,8 @@ from pydantic import Field, ValidationError, field_validator
 from qtpy.QtCore import Signal
 from qtpy.QtGui import QTransform
 
-from bec_widgets.utils import BECConnector, Colors, ConnectionConfig
+from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
+from bec_widgets.utils.colors import Colors
 from bec_widgets.widgets.plots.image.image_processor import (
     ImageProcessor,
     ImageStats,

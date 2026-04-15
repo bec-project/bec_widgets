@@ -6,9 +6,13 @@ from pytestqt import qtbot
 from qtpy import QtCore
 
 from bec_widgets.utils.colors import get_accent_colors
-from bec_widgets.widgets.services.scan_history_browser.components import (
+from bec_widgets.widgets.services.scan_history_browser.components.scan_history_device_viewer import (
     ScanHistoryDeviceViewer,
+)
+from bec_widgets.widgets.services.scan_history_browser.components.scan_history_metadata_viewer import (
     ScanHistoryMetadataViewer,
+)
+from bec_widgets.widgets.services.scan_history_browser.components.scan_history_view import (
     ScanHistoryView,
 )
 from bec_widgets.widgets.services.scan_history_browser.scan_history_browser import (

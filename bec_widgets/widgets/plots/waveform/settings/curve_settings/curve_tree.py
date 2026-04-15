@@ -50,9 +50,10 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets import SafeSlot
-from bec_widgets.utils import ConnectionConfig, EntryValidator
+from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import Colors
+from bec_widgets.utils.entry_validator import EntryValidator
 from bec_widgets.utils.toolbars.actions import WidgetAction
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import MaterialIconAction, ModularToolBar

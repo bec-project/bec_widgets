@@ -15,8 +15,8 @@ from qtpy.QtWidgets import QWidget
 from redis.exceptions import RedisError
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
-from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.bec_connector import BECConnector
+from bec_widgets.utils.bec_dispatcher import BECDispatcher
 from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import ErrorPopupUtility
 from bec_widgets.utils.screen_utils import apply_window_geometry
@@ -25,7 +25,6 @@ from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib import messages
-    from qtpy.QtCore import QObject
 else:
     messages = lazy_import("bec_lib.messages")
 logger = bec_logger.logger

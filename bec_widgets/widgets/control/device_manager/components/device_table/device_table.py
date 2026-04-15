@@ -22,7 +22,7 @@ from bec_widgets.utils.fuzzy_search import is_match
 from bec_widgets.widgets.control.device_manager.components.device_table.device_table_row import (
     DeviceTableRow,
 )
-from bec_widgets.widgets.control.device_manager.components.ophyd_validation import (
+from bec_widgets.widgets.control.device_manager.components.ophyd_validation.ophyd_validation_utils import (
     ConfigStatus,
     ConnectionStatus,
     get_validation_icons,

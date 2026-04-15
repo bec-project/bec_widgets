@@ -19,7 +19,7 @@ from .client_mocks import mocked_client
 if TYPE_CHECKING:  # pragma: no cover
     from qtpy.QtWidgets import QListWidgetItem
 
-    from bec_widgets.widgets.services.device_browser.device_item import DeviceItem
+    from bec_widgets.widgets.services.device_browser.device_item.device_item import DeviceItem
 
 
 # pylint: disable=no-member

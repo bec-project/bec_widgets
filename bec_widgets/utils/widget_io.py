@@ -26,7 +26,7 @@ from qtpy.QtWidgets import (
 from bec_widgets.widgets.utility.toggle.toggle import ToggleSwitch
 
 if TYPE_CHECKING:  # pragma: no cover
-    from bec_widgets.utils import BECConnector
+    from bec_widgets.utils.bec_connector import BECConnector
 
 logger = bec_logger.logger
 
@@ -418,7 +418,7 @@ class WidgetHierarchy:
             only_bec_widgets(bool, optional): Whether to print only widgets that are instances of BECWidget.
             show_parent(bool, optional): Whether to display which BECWidget is the parent of each discovered BECWidget.
         """
-        from bec_widgets.utils import BECConnector
+        from bec_widgets.utils.bec_connector import BECConnector
         from bec_widgets.widgets.plots.waveform.waveform import Waveform
 
         for node in WidgetHierarchy.iter_widget_tree(
@@ -468,7 +468,7 @@ class WidgetHierarchy:
 
         from qtpy.QtWidgets import QApplication
 
-        from bec_widgets.utils import BECConnector
+        from bec_widgets.utils.bec_connector import BECConnector
         from bec_widgets.widgets.plots.plot_base import PlotBase
 
         # 1) Gather ALL QWidget-based BECConnector objects
@@ -534,7 +534,7 @@ class WidgetHierarchy:
         Returns:
             The nearest ancestor that is a BECConnector, or None if not found.
         """
-        from bec_widgets.utils import BECConnector
+        from bec_widgets.utils.bec_connector import BECConnector
 
         # Guard against deleted/invalid Qt wrappers
         if not shb.isValid(widget):
@@ -636,7 +636,7 @@ class WidgetHierarchy:
         Return all BECConnector instances whose closest BECConnector ancestor is the given widget,
         including the widget itself if it is a BECConnector.
         """
-        from bec_widgets.utils import BECConnector
+        from bec_widgets.utils.bec_connector import BECConnector
 
         connectors: list[BECConnector] = []
         if isinstance(widget, BECConnector):
@@ -664,7 +664,7 @@ class WidgetHierarchy:
             return None
 
         try:
-            from bec_widgets.utils import BECConnector  # local import to avoid cycles
+            from bec_widgets.utils.bec_connector import BECConnector  # local import to avoid cycles
 
             is_bec_target = False
             if isinstance(ancestor_class, str):

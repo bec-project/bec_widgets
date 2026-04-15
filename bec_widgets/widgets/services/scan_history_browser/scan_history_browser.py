@@ -1,9 +1,13 @@
 from qtpy import QtCore, QtWidgets
 
 from bec_widgets.utils.bec_widget import BECWidget, ConnectionConfig
-from bec_widgets.widgets.services.scan_history_browser.components import (
+from bec_widgets.widgets.services.scan_history_browser.components.scan_history_device_viewer import (
     ScanHistoryDeviceViewer,
+)
+from bec_widgets.widgets.services.scan_history_browser.components.scan_history_metadata_viewer import (
     ScanHistoryMetadataViewer,
+)
+from bec_widgets.widgets.services.scan_history_browser.components.scan_history_view import (
     ScanHistoryView,
 )
 
