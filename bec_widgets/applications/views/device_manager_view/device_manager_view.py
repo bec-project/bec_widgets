@@ -1,13 +1,16 @@
 """Module for Device Manager View."""
 
+from bec_lib.utils.import_utils import lazy_import_from
 from qtpy.QtCore import QRect
 from qtpy.QtWidgets import QWidget
 
-from bec_widgets.applications.views.device_manager_view.device_manager_widget import (
-    DeviceManagerWidget,
-)
 from bec_widgets.applications.views.view import ViewBase, ViewTourSteps
 from bec_widgets.utils.error_popups import SafeSlot
+
+DeviceManagerWidget = lazy_import_from(
+    "bec_widgets.applications.views.device_manager_view.device_manager_widget",
+    ("DeviceManagerWidget",),
+)
 
 
 class DeviceManagerView(ViewBase):

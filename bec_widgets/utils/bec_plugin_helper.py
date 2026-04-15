@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import ast
 import importlib.metadata
 import inspect
+import logging
 import pkgutil
 import traceback
 from importlib import util as importlib_util
@@ -9,11 +11,65 @@ from importlib.machinery import FileFinder, ModuleSpec, SourceFileLoader
 from types import ModuleType
 from typing import Generator
 
-from bec_lib.logger import bec_logger
+from bec_widgets.utils.plugin_utils import (
+    BECClassContainer,
+    BECClassInfo,
+    BECClassReference,
+    _ast_node_name,
+    _class_has_rpc_markers,
+    _discover_class_references_from_roots,
+    _find_package_roots,
+)
 
-from bec_widgets.utils.plugin_utils import BECClassContainer, BECClassInfo
+logger = logging.getLogger(__name__)
 
-logger = bec_logger.logger
+
+def _plugin_class_is_candidate(node: ast.ClassDef) -> bool:
+    base_names = {_ast_node_name(base) for base in node.bases}
+    return bool({"BECWidget", "BECConnector"} & base_names) or _class_has_rpc_markers(node)
+
+
+_PLUGIN_WIDGET_REFERENCE_CACHE: dict[tuple[tuple[str, str], ...], tuple[BECClassReference, ...]] = (
+    {}
+)
+
+
+def _plugin_entry_point_snapshot() -> tuple[tuple[str, str], ...]:
+    return tuple(
+        sorted(
+            (entry_point.name, entry_point.module)
+            for entry_point in importlib.metadata.entry_points(group="bec.widgets.user_widgets")  # type: ignore
+        )
+    )
+
+
+def _build_plugin_widget_references() -> tuple[BECClassReference, ...]:
+    references: list[BECClassReference] = []
+    seen_names: set[str] = set()
+    for entry_point in importlib.metadata.entry_points(group="bec.widgets.user_widgets"):  # type: ignore
+        try:
+            package_roots = _find_package_roots(entry_point.module)
+        except ModuleNotFoundError:
+            continue
+        for reference in _discover_class_references_from_roots(
+            entry_point.module,
+            package_roots,
+            file_name_filter=lambda file_name: file_name.endswith(".py")
+            and not file_name.startswith("__"),
+            candidate_filter=_plugin_class_is_candidate,
+        ):
+            if reference.name in seen_names:
+                continue
+            references.append(reference)
+            seen_names.add(reference.name)
+    return tuple(references)
+
+
+def get_all_plugin_widget_references(*, use_cache: bool = True) -> list[BECClassReference]:
+    snapshot = _plugin_entry_point_snapshot()
+    if not use_cache or snapshot not in _PLUGIN_WIDGET_REFERENCE_CACHE:
+        _PLUGIN_WIDGET_REFERENCE_CACHE[snapshot] = _build_plugin_widget_references()
+    return list(_PLUGIN_WIDGET_REFERENCE_CACHE[snapshot])
 
 
 def _submodule_specs(module: ModuleType) -> tuple[ModuleSpec | None, ...]:

@@ -6,14 +6,17 @@ import os
 
 from bec_lib.bec_yaml_loader import yaml_load
 from bec_lib.logger import bec_logger
+from bec_lib.utils.import_utils import lazy_import_from
 from bec_qthemes import material_icon
 from qtpy import QtCore, QtWidgets
 
-from bec_widgets.applications.views.device_manager_view.device_manager_display_widget import (
-    DeviceManagerDisplayWidget,
-)
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
+
+DeviceManagerDisplayWidget = lazy_import_from(
+    "bec_widgets.applications.views.device_manager_view.device_manager_display_widget",
+    ("DeviceManagerDisplayWidget",),
+)
 
 logger = bec_logger.logger
 

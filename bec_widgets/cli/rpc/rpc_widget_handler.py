@@ -1,9 +1,19 @@
 from __future__ import annotations
 
-from bec_widgets.cli.client_utils import IGNORE_WIDGETS
-from bec_widgets.utils.bec_plugin_helper import get_all_plugin_widgets
-from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.plugin_utils import get_custom_classes
+from typing import TYPE_CHECKING
+
+from bec_lib.utils.import_utils import lazy_import_from
+
+from bec_widgets.utils.bec_plugin_helper import get_all_plugin_widget_references
+from bec_widgets.utils.plugin_utils import get_custom_class_references
+
+try:
+    from bec_widgets.cli.constants import IGNORE_WIDGETS
+except ModuleNotFoundError:  # pragma: no cover
+    IGNORE_WIDGETS = ["LaunchWindow"]
+
+if TYPE_CHECKING:  # pragma: no cover
+    from bec_widgets.utils.bec_widget import BECWidget
 
 
 class RPCWidgetHandler:
@@ -13,7 +23,7 @@ class RPCWidgetHandler:
         self._widget_classes = None
 
     @property
-    def widget_classes(self) -> dict[str, type[BECWidget]]:
+    def widget_classes(self) -> dict[str, type["BECWidget"]]:
         """
         Get the available widget classes.
 
@@ -31,12 +41,24 @@ class RPCWidgetHandler:
         Returns:
             None
         """
-        self._widget_classes = (
-            get_custom_classes("bec_widgets", packages=("widgets", "applications"))
-            + get_all_plugin_widgets()
-        ).as_dict(IGNORE_WIDGETS)
+        ignored = set(IGNORE_WIDGETS)
+        widget_classes = {
+            reference.name: lazy_import_from(reference.module, (reference.name,))
+            for reference in get_all_plugin_widget_references(use_cache=False)
+            if reference.name not in ignored
+        }
+        widget_classes.update(
+            {
+                reference.name: lazy_import_from(reference.module, (reference.name,))
+                for reference in get_custom_class_references(
+                    "bec_widgets", packages=("widgets", "applications"), use_cache=False
+                )
+                if reference.name not in ignored
+            }
+        )
+        self._widget_classes = widget_classes
 
-    def create_widget(self, widget_type, **kwargs) -> BECWidget:
+    def create_widget(self, widget_type, **kwargs) -> "BECWidget":
         """
         Create a widget from an RPC message.
 

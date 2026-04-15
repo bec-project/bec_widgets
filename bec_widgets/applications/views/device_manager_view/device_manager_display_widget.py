@@ -13,6 +13,7 @@ from bec_lib.file_utils import DeviceConfigWriter
 from bec_lib.logger import bec_logger
 from bec_lib.messages import ConfigAction, ScanStatusMessage
 from bec_lib.plugin_helper import plugin_package_name, plugin_repo_path
+from bec_lib.utils.import_utils import lazy_import_from
 from bec_qthemes import apply_theme, material_icon
 from qtpy.QtCore import QMetaObject, Qt, QThreadPool, Signal
 from qtpy.QtGui import QColor
@@ -26,15 +27,6 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets.applications.views.device_manager_view.device_manager_dialogs.config_choice_dialog import (
-    ConfigChoiceDialog,
-)
-from bec_widgets.applications.views.device_manager_view.device_manager_dialogs.device_form_dialog import (
-    DeviceFormDialog,
-)
-from bec_widgets.applications.views.device_manager_view.device_manager_dialogs.upload_redis_dialog import (
-    UploadRedisDialog,
-)
 from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.toolbars.actions import MaterialIconAction
@@ -47,9 +39,6 @@ from bec_widgets.widgets.control.device_manager.components.device_table.device_t
 )
 from bec_widgets.widgets.control.device_manager.components.dm_config_view import DMConfigView
 from bec_widgets.widgets.control.device_manager.components.dm_docstring_view import DocstringView
-from bec_widgets.widgets.control.device_manager.components.ophyd_validation.ophyd_validation import (
-    OphydValidation,
-)
 from bec_widgets.widgets.control.device_manager.components.ophyd_validation.ophyd_validation_utils import (
     ConfigStatus,
     ConnectionStatus,
@@ -65,7 +54,28 @@ from bec_widgets.widgets.utility.spinner.spinner import SpinnerWidget
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.client import BECClient
 
+    from bec_widgets.applications.views.device_manager_view.device_manager_dialogs.upload_redis_dialog import (
+        UploadRedisDialog,
+    )
+
 logger = bec_logger.logger
+
+ConfigChoiceDialog = lazy_import_from(
+    "bec_widgets.applications.views.device_manager_view.device_manager_dialogs.config_choice_dialog",
+    ("ConfigChoiceDialog",),
+)
+DeviceFormDialog = lazy_import_from(
+    "bec_widgets.applications.views.device_manager_view.device_manager_dialogs.device_form_dialog",
+    ("DeviceFormDialog",),
+)
+UploadRedisDialog = lazy_import_from(
+    "bec_widgets.applications.views.device_manager_view.device_manager_dialogs.upload_redis_dialog",
+    ("UploadRedisDialog",),
+)
+OphydValidation = lazy_import_from(
+    "bec_widgets.widgets.control.device_manager.components.ophyd_validation.ophyd_validation",
+    ("OphydValidation",),
+)
 
 _yes_no_question = partial(
     QMessageBox.question,
