@@ -1,4 +1,6 @@
-from bec_widgets.utils.plugin_utils import get_custom_classes
+import sys
+
+from bec_widgets.utils.plugin_utils import get_custom_class_references, get_custom_classes
 
 
 def test_client_generator_classes():
@@ -10,3 +12,13 @@ def test_client_generator_classes():
     assert "Waveform" in connector_cls_names
     assert "MotorMap" in plugins
     assert "NonExisting" not in plugins
+
+
+def test_get_custom_class_references_avoids_importing_widget_modules():
+    target_module = "bec_widgets.widgets.plots.image.image"
+    sys.modules.pop(target_module, None)
+
+    references = get_custom_class_references("bec_widgets", use_cache=False)
+
+    assert "Image" in [reference.name for reference in references]
+    assert target_module not in sys.modules
