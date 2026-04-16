@@ -18,10 +18,10 @@ from qtpy.QtWidgets import (
 )
 
 import bec_widgets
-from bec_widgets.utils import UILoader
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.ui_loader import UILoader
 from bec_widgets.widgets.containers.main_window.addons.hover_widget import HoverWidget
 from bec_widgets.widgets.containers.main_window.addons.notification_center.notification_banner import (
     BECNotificationBroker,

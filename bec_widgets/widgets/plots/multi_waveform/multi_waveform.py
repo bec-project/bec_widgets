@@ -10,7 +10,8 @@ from pydantic import Field, ValidationError, field_validator
 from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QWidget
 
-from bec_widgets.utils import Colors, ConnectionConfig
+from bec_widgets.utils.bec_connector import ConnectionConfig
+from bec_widgets.utils.colors import Colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.side_panel import SidePanel
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox

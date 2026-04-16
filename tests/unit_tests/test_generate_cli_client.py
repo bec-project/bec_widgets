@@ -5,7 +5,7 @@ import black
 import isort
 import pytest
 
-from bec_widgets.cli.generate_cli import ClientGenerator
+from bec_widgets.utils.generate_cli import ClientGenerator
 from bec_widgets.utils.plugin_utils import BECClassContainer, BECClassInfo
 
 # pylint: disable=missing-function-docstring

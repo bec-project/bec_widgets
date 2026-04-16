@@ -13,9 +13,9 @@ from shiboken6 import isValid
 
 import bec_widgets.widgets.containers.qt_ads as QtAds
 from bec_widgets import BECWidget, SafeSlot
-from bec_widgets.cli.rpc.rpc_widget_handler import widget_handler
 from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.utils.property_editor import PropertyEditor
+from bec_widgets.utils.rpc_widget_handler import widget_handler
 from bec_widgets.utils.toolbars.actions import MaterialIconAction
 from bec_widgets.widgets.containers.qt_ads import (
     CDockAreaWidget,

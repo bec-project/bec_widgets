@@ -8,7 +8,8 @@ from bec_lib import bec_logger
 from pydantic import BaseModel, Field, field_validator
 from qtpy import QtCore
 
-from bec_widgets.utils import BECConnector, Colors, ConnectionConfig
+from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
+from bec_widgets.utils.colors import Colors
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_widgets.widgets.plots.waveform.waveform import Waveform

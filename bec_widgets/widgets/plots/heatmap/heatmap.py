@@ -19,8 +19,8 @@ from scipy.interpolate import (
 from scipy.spatial import cKDTree
 from toolz import partition
 
-from bec_widgets.utils import Colors
 from bec_widgets.utils.bec_connector import ConnectionConfig
+from bec_widgets.utils.colors import Colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.toolbars.actions import MaterialIconAction

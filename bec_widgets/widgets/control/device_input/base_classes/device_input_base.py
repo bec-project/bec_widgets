@@ -7,7 +7,7 @@ from bec_lib.device import Signal as BECSignal
 from bec_lib.logger import bec_logger
 from pydantic import field_validator
 
-from bec_widgets.utils import ConnectionConfig
+from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.filter_io import FilterIO

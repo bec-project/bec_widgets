@@ -10,7 +10,7 @@ from qtpy import QtCore
 from qtpy.QtCore import QObject, Signal
 
 from bec_widgets import SafeProperty
-from bec_widgets.utils import BECConnector, ConnectionConfig
+from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
 from bec_widgets.utils.colors import Colors
 
 if TYPE_CHECKING:

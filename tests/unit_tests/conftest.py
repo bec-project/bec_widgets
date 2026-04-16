@@ -23,11 +23,11 @@ from pytestqt.exceptions import TimeoutError as QtBotTimeoutError
 from qtpy.QtCore import QEvent, QEventLoop
 from qtpy.QtWidgets import QApplication, QMessageBox
 
-from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.tests.utils import DEVICES, DMMock
 from bec_widgets.utils import bec_dispatcher as bec_dispatcher_module
 from bec_widgets.utils import error_popups
 from bec_widgets.utils.bec_dispatcher import QtRedisConnector
+from bec_widgets.utils.rpc_register import RPCRegister
 
 # Patch to set default RAISE_ERROR_DEFAULT to True for tests
 # This means that by default, error popups will raise exceptions during tests
