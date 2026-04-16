@@ -1,8 +1,8 @@
 from unittest.mock import patch
 
-from bec_widgets.cli.rpc.rpc_widget_handler import RPCWidgetHandler
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.plugin_utils import BECClassContainer, BECClassInfo
+from bec_widgets.utils.rpc_widget_handler import RPCWidgetHandler
 
 
 def test_rpc_widget_handler():
@@ -16,7 +16,7 @@ class _TestPluginWidget(BECWidget): ...
 
 
 @patch(
-    "bec_widgets.cli.rpc.rpc_widget_handler.get_all_plugin_widgets",
+    "bec_widgets.utils.rpc_widget_handler.get_all_plugin_widgets",
     return_value=BECClassContainer(
         [
             BECClassInfo(name="DeviceComboBox", obj=_TestPluginWidget, module="", file=""),

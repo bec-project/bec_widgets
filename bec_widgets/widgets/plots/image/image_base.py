@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from qtpy.QtCore import QPointF, Signal, SignalInstance
 from qtpy.QtWidgets import QDialog, QVBoxLayout
 
-from bec_widgets.utils import Colors
+from bec_widgets.utils.colors import Colors
 from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.side_panel import SidePanel

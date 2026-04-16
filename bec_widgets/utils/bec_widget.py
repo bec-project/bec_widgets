@@ -10,11 +10,11 @@ from qtpy.QtGui import QFont, QPixmap
 from qtpy.QtWidgets import QApplication, QFileDialog, QLabel, QVBoxLayout, QWidget
 
 import bec_widgets.widgets.containers.qt_ads as QtAds
-from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
 from bec_widgets.utils.busy_loader import install_busy_loader
 from bec_widgets.utils.error_popups import SafeConnect, SafeSlot
 from bec_widgets.utils.rpc_decorator import rpc_timeout
+from bec_widgets.utils.rpc_register import RPCRegister
 from bec_widgets.utils.widget_io import WidgetHierarchy
 from bec_widgets.widgets.utility.spinner.spinner import SpinnerWidget
 

@@ -10,8 +10,8 @@ from qtpy.QtCore import Signal
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QHBoxLayout, QMainWindow, QWidget
 
-from bec_widgets.utils import Colors, ConnectionConfig
-from bec_widgets.utils.colors import apply_theme
+from bec_widgets.utils.bec_connector import ConnectionConfig
+from bec_widgets.utils.colors import Colors, apply_theme
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.toolbars.toolbar import MaterialIconAction

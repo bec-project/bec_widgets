@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Iterable
 from bec_lib.plugin_helper import _get_available_plugins
 from qtpy.QtWidgets import QWidget
 
-from bec_widgets.utils import BECConnector
+from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.utils.bec_widget import BECWidget
 
 if TYPE_CHECKING:  # pragma: no cover

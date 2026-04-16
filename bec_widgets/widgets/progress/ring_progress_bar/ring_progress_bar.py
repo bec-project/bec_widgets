@@ -6,8 +6,8 @@ from bec_lib.logger import bec_logger
 from qtpy.QtCore import QPointF, QSize, Qt
 from qtpy.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
-from bec_widgets.utils import Colors
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.colors import Colors
 from bec_widgets.utils.error_popups import SafeProperty
 from bec_widgets.utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.toolbars.actions import MaterialIconAction

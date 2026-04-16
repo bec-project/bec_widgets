@@ -3,7 +3,7 @@ from bec_lib.device import Signal
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import Property
 
-from bec_widgets.utils import ConnectionConfig
+from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.filter_io import FilterIO

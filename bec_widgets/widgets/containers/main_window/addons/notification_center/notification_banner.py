@@ -28,7 +28,7 @@ from qtpy.QtCore import QObject, QTimer
 from qtpy.QtWidgets import QApplication, QFrame, QMainWindow, QScrollArea, QWidget
 
 from bec_widgets import SafeProperty, SafeSlot
-from bec_widgets.utils import BECConnector
+from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.widget_io import WidgetIO
 

@@ -19,7 +19,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets.utils import ConnectionConfig
+from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme, get_accent_colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot

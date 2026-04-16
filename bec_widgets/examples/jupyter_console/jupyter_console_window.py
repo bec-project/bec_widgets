@@ -25,8 +25,8 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets.cli.rpc.rpc_widget_handler import widget_handler
 from bec_widgets.utils.colors import apply_theme
+from bec_widgets.utils.rpc_widget_handler import widget_handler
 from bec_widgets.utils.widget_io import WidgetHierarchy as wh
 from bec_widgets.widgets.editors.jupyter_console.jupyter_console import BECJupyterConsole
 

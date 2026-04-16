@@ -3,8 +3,8 @@ from qtpy import QtCore, QtGui
 from qtpy.QtCore import Property, Signal, Slot
 from qtpy.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
 
-from bec_widgets.utils import Colors
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.colors import Colors
 
 
 class RoundedColorMapButton(ColorMapButton):

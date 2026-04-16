@@ -8,8 +8,10 @@ from bec_lib import bec_logger
 from qtpy.QtCore import QPoint, QPointF, Qt, Signal
 from qtpy.QtWidgets import QHBoxLayout, QLabel, QMainWindow, QVBoxLayout, QWidget
 
-from bec_widgets.utils import ConnectionConfig, Crosshair, EntryValidator
+from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.crosshair import Crosshair
+from bec_widgets.utils.entry_validator import EntryValidator
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.fps_counter import FPSCounter
 from bec_widgets.utils.plot_indicator_items import BECArrowItem, BECTickItem

@@ -20,13 +20,13 @@ from qtpy.QtWidgets import (
 )
 
 import bec_widgets
-from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils.bec_plugin_helper import get_all_plugin_widgets
 from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.name_utils import pascal_to_snake
 from bec_widgets.utils.plugin_utils import get_plugin_auto_updates
 from bec_widgets.utils.round_frame import RoundedFrame
+from bec_widgets.utils.rpc_register import RPCRegister
 from bec_widgets.utils.screen_utils import apply_window_geometry, centered_geometry_for_app
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.utils.ui_loader import UILoader

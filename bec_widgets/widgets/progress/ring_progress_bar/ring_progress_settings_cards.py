@@ -19,9 +19,9 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets.utils import UILoader
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.settings_dialog import SettingWidget
+from bec_widgets.utils.ui_loader import UILoader
 from bec_widgets.widgets.progress.ring_progress_bar.ring import Ring
 from bec_widgets.widgets.utility.visual.colormap_widget.colormap_widget import BECColorMapWidget
 
