@@ -89,13 +89,6 @@ def test_available_widgets(qtbot, connected_client_gui_obj):
         # Skip private attributes
         if object_name.startswith("_"):
             continue
-        # Skip BECShell as ttyd is not installed
-        if object_name == "BECShell":
-            continue
-
-        # Skip BecConsole as ttyd is not installed
-        if object_name == "BecConsole":
-            continue
 
         #############################
         ######### Add widget ########
