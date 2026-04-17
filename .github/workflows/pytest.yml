@@ -1,31 +1,29 @@
 name: Run Pytest with Coverage
-on: 
+on:
   workflow_call:
     inputs:
       pr_number:
-        description: 'Pull request number'
+        description: "Pull request number"
         required: false
         type: number
       BEC_CORE_BRANCH:
-        description: 'Branch of BEC Core to install'
+        description: "Branch of BEC Core to install"
         required: false
-        default: 'main'
+        default: "main"
         type: string
       OPHYD_DEVICES_BRANCH:
-        description: 'Branch of Ophyd Devices to install'
+        description: "Branch of Ophyd Devices to install"
         required: false
-        default: 'main'
+        default: "main"
         type: string
       BEC_WIDGETS_BRANCH:
-        description: 'Branch of BEC Widgets to install'
+        description: "Branch of BEC Widgets to install"
         required: false
-        default: 'main'
+        default: "main"
         type: string
     secrets:
       CODECOV_TOKEN:
         required: true
-
-
 
 permissions:
   pull-requests: write
@@ -55,7 +53,7 @@ jobs:
 
       - name: Run Pytest with Coverage
         id: coverage
-        run: pytest --random-order --cov=bec_widgets --cov-config=pyproject.toml --cov-branch --cov-report=xml --no-cov-on-fail tests/unit_tests/
+        run: pytest --random-order --cov=bec_widgets --cov-config=pyproject.toml --cov-branch --cov-report=xml --no-cov-on-fail --ignore=tests/unit_tests/benchmarks tests/unit_tests/
 
       - name: Upload test artifacts
         uses: actions/upload-artifact@v4
