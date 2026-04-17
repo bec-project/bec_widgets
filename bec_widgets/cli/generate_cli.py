@@ -7,6 +7,7 @@ import inspect
 import os
 import sys
 from pathlib import Path
+from typing import get_overloads
 
 import black
 import isort
@@ -17,20 +18,6 @@ from bec_widgets.utils.generate_designer_plugin import DesignerPluginGenerator, 
 from bec_widgets.utils.plugin_utils import BECClassContainer, get_custom_classes
 
 logger = bec_logger.logger
-
-if sys.version_info >= (3, 11):
-    from typing import get_overloads
-else:
-    print(
-        "Python version is less than 3.11, using dummy function for get_overloads. "
-        "If you want to use the real function 'typing.get_overloads()', please use Python 3.11 or later."
-    )
-
-    def get_overloads(_obj):
-        """
-        Dummy function for Python versions before 3.11.
-        """
-        return []
 
 
 class ClientGenerator:
@@ -54,7 +41,7 @@ from __future__ import annotations
 from bec_lib.logger import bec_logger
 
 from bec_widgets.cli.rpc.rpc_base import RPCBase, rpc_call, rpc_timeout
-{"from bec_widgets.utils.bec_plugin_helper import get_all_plugin_widgets, get_plugin_client_module" if self._base else ""}
+{"from bec_widgets.utils.bec_plugin_helper import get_plugin_client_module" if self._base else ""}
 
 logger = bec_logger.logger
 
@@ -111,27 +98,19 @@ _Widgets = {
             self.content += """
 
 try:
-    _plugin_widgets = get_all_plugin_widgets().as_dict()
     plugin_client = get_plugin_client_module()
-    Widgets = _WidgetsEnumType("Widgets", {name: name for name in _plugin_widgets} | _Widgets)
-
-    if (_overlap := _Widgets.keys() & _plugin_widgets.keys()) != set():
-        for _widget in _overlap:
-            logger.warning(f"Detected duplicate widget {_widget} in plugin repo file: {inspect.getfile(_plugin_widgets[_widget])} !")
     for plugin_name, plugin_class in inspect.getmembers(plugin_client, inspect.isclass):
         if issubclass(plugin_class, RPCBase) and plugin_class is not RPCBase:
+            if plugin_name not in _Widgets:
+                _Widgets[plugin_name] = plugin_name
             if plugin_name in globals():
-                conflicting_file = (
-                    inspect.getfile(_plugin_widgets[plugin_name])
-                    if plugin_name in _plugin_widgets
-                    else f"{plugin_client}"
-                )
                 logger.warning(
-                    f"Plugin widget {plugin_name} from {conflicting_file} conflicts with a built-in class!"
+                    f"Plugin widget {plugin_name} in {plugin_class._IMPORT_MODULE} conflicts with a built-in class!"
                 )
                 continue
-            if plugin_name not in _overlap:
+            else:
                 globals()[plugin_name] = plugin_class
+        Widgets = _WidgetsEnumType("Widgets", _Widgets)
 except ImportError as e:
     logger.error(f"Failed loading plugins: \\n{reduce(add, traceback.format_exception(e))}")
 """
@@ -146,12 +125,8 @@ except ImportError as e:
 
         class_name = cls.__name__
 
-        if class_name == "BECDockArea":
-            self.content += f"""
-class {class_name}(RPCBase):"""
-        else:
-            self.content += f"""
-class {class_name}(RPCBase):"""
+        self.content += f"""
+class {class_name}(RPCBase):\n"""
 
         if cls.__doc__:
             # We only want the first line of the docstring
@@ -162,13 +137,9 @@ class {class_name}(RPCBase):"""
             else:
                 class_docs = cls.__doc__.split("\n")[1]
             self.content += f"""
-    \"\"\"{class_docs}\"\"\"
-    """
+    \"\"\"{class_docs}\"\"\"\n"""
         user_access_entries = self._get_user_access_entries(cls)
-        if not user_access_entries:
-            self.content += """...
-    """
-
+        self.content += f'    _IMPORT_MODULE="{cls.__module__}"\n'
         for method_entry in user_access_entries:
             method, obj, is_property_setter = self._resolve_method_object(cls, method_entry)
             if obj is None:

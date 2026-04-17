@@ -104,8 +104,7 @@ def test_client_generator_with_black_formatting():
         from bec_lib.logger import bec_logger
 
         from bec_widgets.cli.rpc.rpc_base import RPCBase, rpc_call, rpc_timeout
-        from bec_widgets.utils.bec_plugin_helper import (get_all_plugin_widgets,
-                                                        get_plugin_client_module)
+        from bec_widgets.utils.bec_plugin_helper import get_plugin_client_module
 
         logger = bec_logger.logger
 
@@ -123,31 +122,25 @@ def test_client_generator_with_black_formatting():
 
         
         try:
-            _plugin_widgets = get_all_plugin_widgets().as_dict()
             plugin_client = get_plugin_client_module()
-            Widgets = _WidgetsEnumType("Widgets", {name: name for name in _plugin_widgets} | _Widgets)
-
-            if (_overlap := _Widgets.keys() & _plugin_widgets.keys()) != set():
-                for _widget in _overlap:
-                    logger.warning(f"Detected duplicate widget {_widget} in plugin repo file: {inspect.getfile(_plugin_widgets[_widget])} !")
             for plugin_name, plugin_class in inspect.getmembers(plugin_client, inspect.isclass):
                 if issubclass(plugin_class, RPCBase) and plugin_class is not RPCBase:
+                    if plugin_name not in _Widgets:
+                        _Widgets[plugin_name] = plugin_name
                     if plugin_name in globals():
-                        conflicting_file = (
-                            inspect.getfile(_plugin_widgets[plugin_name])
-                            if plugin_name in _plugin_widgets
-                            else f"{plugin_client}"
-                        )
                         logger.warning(
-                            f"Plugin widget {plugin_name} from {conflicting_file} conflicts with a built-in class!"
+                            f"Plugin widget {plugin_name} in {plugin_class._IMPORT_MODULE} conflicts with a built-in class!"
                         )
                         continue
-                    if plugin_name not in _overlap:
+                    else:
                         globals()[plugin_name] = plugin_class
+                Widgets = _WidgetsEnumType("Widgets", _Widgets)
         except ImportError as e:
             logger.error(f"Failed loading plugins: \\n{reduce(add, traceback.format_exception(e))}")
 
         class MockBECFigure(RPCBase):
+            _IMPORT_MODULE = "tests.unit_tests.test_generate_cli_client"
+            
             @rpc_call
             def add_plot(self, plot_id: str):
                 """
@@ -162,6 +155,8 @@ def test_client_generator_with_black_formatting():
 
 
         class MockBECWaveform1D(RPCBase):
+            _IMPORT_MODULE = "tests.unit_tests.test_generate_cli_client"
+            
             @rpc_call
             def set_frequency(self, frequency: float) -> list:
                 """
