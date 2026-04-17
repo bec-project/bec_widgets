@@ -13,7 +13,7 @@ from typing import Literal, Optional
 from bec_lib.logger import bec_logger
 
 from bec_widgets.cli.rpc.rpc_base import RPCBase, rpc_call, rpc_timeout
-from bec_widgets.utils.bec_plugin_helper import get_all_plugin_widgets, get_plugin_client_module
+from bec_widgets.utils.bec_plugin_helper import get_plugin_client_module
 
 logger = bec_logger.logger
 
@@ -62,35 +62,27 @@ _Widgets = {
 
 
 try:
-    _plugin_widgets = get_all_plugin_widgets().as_dict()
     plugin_client = get_plugin_client_module()
-    Widgets = _WidgetsEnumType("Widgets", {name: name for name in _plugin_widgets} | _Widgets)
-
-    if (_overlap := _Widgets.keys() & _plugin_widgets.keys()) != set():
-        for _widget in _overlap:
-            logger.warning(
-                f"Detected duplicate widget {_widget} in plugin repo file: {inspect.getfile(_plugin_widgets[_widget])} !"
-            )
     for plugin_name, plugin_class in inspect.getmembers(plugin_client, inspect.isclass):
         if issubclass(plugin_class, RPCBase) and plugin_class is not RPCBase:
+            if plugin_name not in _Widgets:
+                _Widgets[plugin_name] = plugin_name
             if plugin_name in globals():
-                conflicting_file = (
-                    inspect.getfile(_plugin_widgets[plugin_name])
-                    if plugin_name in _plugin_widgets
-                    else f"{plugin_client}"
-                )
                 logger.warning(
-                    f"Plugin widget {plugin_name} from {conflicting_file} conflicts with a built-in class!"
+                    f"Plugin widget {plugin_name} in {plugin_class._IMPORT_MODULE} conflicts with a built-in class!"
                 )
                 continue
-            if plugin_name not in _overlap:
+            else:
                 globals()[plugin_name] = plugin_class
+        Widgets = _WidgetsEnumType("Widgets", _Widgets)
 except ImportError as e:
     logger.error(f"Failed loading plugins: \n{reduce(add, traceback.format_exception(e))}")
 
 
 class AdminView(RPCBase):
     """A view for administrators to change the current active experiment, manage messaging"""
+
+    _IMPORT_MODULE = "bec_widgets.applications.views.admin_view.admin_view"
 
     @rpc_call
     def activate(self) -> "None":
@@ -100,6 +92,8 @@ class AdminView(RPCBase):
 
 
 class AutoUpdates(RPCBase):
+    _IMPORT_MODULE = "bec_widgets.widgets.containers.auto_update.auto_updates"
+
     @property
     @rpc_call
     def enabled(self) -> "bool":
@@ -136,6 +130,8 @@ class AutoUpdates(RPCBase):
 
 
 class AvailableDeviceResources(RPCBase):
+    _IMPORT_MODULE = "bec_widgets.widgets.control.device_manager.components.available_device_resources.available_device_resources"
+
     @rpc_call
     def remove(self):
         """
@@ -156,6 +152,8 @@ class AvailableDeviceResources(RPCBase):
 
 
 class BECDockArea(RPCBase):
+    _IMPORT_MODULE = "bec_widgets.widgets.containers.dock_area.dock_area"
+
     @rpc_call
     def new(
         self,
@@ -391,6 +389,8 @@ class BECDockArea(RPCBase):
 
 
 class BECMainWindow(RPCBase):
+    _IMPORT_MODULE = "bec_widgets.widgets.containers.main_window.main_window"
+
     @rpc_call
     def remove(self):
         """
@@ -412,6 +412,8 @@ class BECMainWindow(RPCBase):
 
 class BECProgressBar(RPCBase):
     """A custom progress bar with smooth transitions. The displayed text can be customized using a template."""
+
+    _IMPORT_MODULE = "bec_widgets.widgets.progress.bec_progressbar.bec_progressbar"
 
     @rpc_call
     def set_value(self, value):
@@ -486,6 +488,8 @@ class BECProgressBar(RPCBase):
 class BECQueue(RPCBase):
     """Widget to display the BEC queue."""
 
+    _IMPORT_MODULE = "bec_widgets.widgets.services.bec_queue.bec_queue"
+
     @rpc_call
     def remove(self):
         """
@@ -508,6 +512,8 @@ class BECQueue(RPCBase):
 class BECShell(RPCBase):
     """A BecConsole pre-configured to run the BEC shell."""
 
+    _IMPORT_MODULE = "bec_widgets.widgets.editors.bec_console.bec_console"
+
     @rpc_call
     def remove(self):
         """
@@ -529,6 +535,8 @@ class BECShell(RPCBase):
 
 class BECStatusBox(RPCBase):
     """An autonomous widget to display the status of BEC services."""
+
+    _IMPORT_MODULE = "bec_widgets.widgets.services.bec_status_box.bec_status_box"
 
     @rpc_call
     def get_server_state(self) -> "str":
@@ -564,6 +572,8 @@ class BECStatusBox(RPCBase):
 
 class BaseROI(RPCBase):
     """Base class for all Region of Interest (ROI) implementations."""
+
+    _IMPORT_MODULE = "bec_widgets.widgets.plots.roi.image_roi"
 
     @property
     @rpc_call
@@ -694,6 +704,8 @@ class BaseROI(RPCBase):
 class BecConsole(RPCBase):
     """A console widget with access to a shared registry of terminals, such that instances can be moved around."""
 
+    _IMPORT_MODULE = "bec_widgets.widgets.editors.bec_console.bec_console"
+
     @rpc_call
     def remove(self):
         """
@@ -715,6 +727,8 @@ class BecConsole(RPCBase):
 
 class CircularROI(RPCBase):
     """Circular Region of Interest with center/diameter tracking and auto-labeling."""
+
+    _IMPORT_MODULE = "bec_widgets.widgets.plots.roi.image_roi"
 
     @property
     @rpc_call
@@ -843,6 +857,8 @@ class CircularROI(RPCBase):
 
 
 class Curve(RPCBase):
+    _IMPORT_MODULE = "bec_widgets.widgets.plots.waveform.curve"
+
     @rpc_call
     def remove(self):
         """
@@ -1009,6 +1025,8 @@ class Curve(RPCBase):
 class DapComboBox(RPCBase):
     """Editable combobox listing the available DAP models."""
 
+    _IMPORT_MODULE = "bec_widgets.widgets.dap.dap_combo_box.dap_combo_box"
+
     @rpc_call
     def select_y_axis(self, y_axis: str):
         """
@@ -1040,6 +1058,8 @@ class DapComboBox(RPCBase):
 class DeveloperView(RPCBase):
     """A view for users to write scripts and macros and execute them within the application."""
 
+    _IMPORT_MODULE = "bec_widgets.applications.views.developer_view.developer_view"
+
     @rpc_call
     def activate(self) -> "None":
         """
@@ -1049,6 +1069,8 @@ class DeveloperView(RPCBase):
 
 class DeviceBrowser(RPCBase):
     """DeviceBrowser is a widget that displays all available devices in the current BEC session."""
+
+    _IMPORT_MODULE = "bec_widgets.widgets.services.device_browser.device_browser"
 
     @rpc_call
     def remove(self):
@@ -1072,6 +1094,8 @@ class DeviceBrowser(RPCBase):
 class DeviceInitializationProgressBar(RPCBase):
     """A progress bar that displays the progress of device initialization."""
 
+    _IMPORT_MODULE = "bec_widgets.widgets.progress.device_initialization_progress_bar.device_initialization_progress_bar"
+
     @rpc_call
     def remove(self):
         """
@@ -1093,6 +1117,8 @@ class DeviceInitializationProgressBar(RPCBase):
 
 class DeviceInputBase(RPCBase):
     """Mixin base class for device input widgets."""
+
+    _IMPORT_MODULE = "bec_widgets.widgets.control.device_input.base_classes.device_input_base"
 
     @rpc_call
     def remove(self):
@@ -1116,6 +1142,8 @@ class DeviceInputBase(RPCBase):
 class DeviceManagerView(RPCBase):
     """A view for users to manage devices within the application."""
 
+    _IMPORT_MODULE = "bec_widgets.applications.views.device_manager_view.device_manager_view"
+
     @rpc_call
     def activate(self) -> "None":
         """
@@ -1125,6 +1153,8 @@ class DeviceManagerView(RPCBase):
 
 class DockAreaView(RPCBase):
     """Modular dock area view for arranging and managing multiple dockable widgets."""
+
+    _IMPORT_MODULE = "bec_widgets.applications.views.dock_area_view.dock_area_view"
 
     @rpc_call
     def activate(self) -> "None":
@@ -1369,6 +1399,8 @@ class DockAreaView(RPCBase):
 class DockAreaWidget(RPCBase):
     """Lightweight dock area that exposes the core Qt ADS docking helpers without any"""
 
+    _IMPORT_MODULE = "bec_widgets.widgets.containers.dock_area.basic_dock_area"
+
     @rpc_call
     def new(
         self,
@@ -1553,6 +1585,8 @@ class DockAreaWidget(RPCBase):
 class EllipticalROI(RPCBase):
     """Elliptical Region of Interest with centre/width/height tracking and auto-labelling."""
 
+    _IMPORT_MODULE = "bec_widgets.widgets.plots.roi.image_roi"
+
     @property
     @rpc_call
     def label(self) -> "str":
@@ -1674,6 +1708,8 @@ class EllipticalROI(RPCBase):
 
 class Heatmap(RPCBase):
     """Heatmap widget for visualizing 2d grid data with color mapping for the z-axis."""
+
+    _IMPORT_MODULE = "bec_widgets.widgets.plots.heatmap.heatmap"
 
     @rpc_call
     def remove(self):
@@ -2373,6 +2409,8 @@ class Heatmap(RPCBase):
 class Image(RPCBase):
     """Image widget for displaying 2D data."""
 
+    _IMPORT_MODULE = "bec_widgets.widgets.plots.image.image"
+
     @rpc_call
     def remove(self):
         """
@@ -2984,6 +3022,8 @@ class Image(RPCBase):
 
 
 class ImageItem(RPCBase):
+    _IMPORT_MODULE = "bec_widgets.widgets.plots.image.image_item"
+
     @property
     @rpc_call
     def color_map(self) -> "str":
@@ -3134,6 +3174,8 @@ class ImageItem(RPCBase):
 
 
 class LaunchWindow(RPCBase):
+    _IMPORT_MODULE = "bec_widgets.applications.launch_window"
+
     @rpc_call
     def show_launcher(self):
         """
@@ -3149,6 +3191,8 @@ class LaunchWindow(RPCBase):
 
 class LogPanel(RPCBase):
     """Displays a log panel"""
+
+    _IMPORT_MODULE = "bec_widgets.widgets.utility.logpanel.logpanel"
 
     @rpc_call
     def set_plain_text(self, text: str) -> None:
@@ -3169,11 +3213,14 @@ class LogPanel(RPCBase):
         """
 
 
-class Minesweeper(RPCBase): ...
+class Minesweeper(RPCBase):
+    _IMPORT_MODULE = "bec_widgets.widgets.games.minesweeper"
 
 
 class MonacoDock(RPCBase):
     """MonacoDock is a dock widget that contains Monaco editor instances."""
+
+    _IMPORT_MODULE = "bec_widgets.widgets.editors.monaco.monaco_dock"
 
     @rpc_call
     def new(
@@ -3359,6 +3406,8 @@ class MonacoDock(RPCBase):
 class MonacoWidget(RPCBase):
     """A simple Monaco editor widget"""
 
+    _IMPORT_MODULE = "bec_widgets.widgets.editors.monaco.monaco_widget"
+
     @rpc_call
     def set_text(
         self, text: "str", file_name: "str | None" = None, reset: "bool" = False
@@ -3532,6 +3581,8 @@ class MonacoWidget(RPCBase):
 
 class MotorMap(RPCBase):
     """Motor map widget for plotting motor positions in 2D including a trace of the last points."""
+
+    _IMPORT_MODULE = "bec_widgets.widgets.plots.motor_map.motor_map"
 
     @rpc_call
     def remove(self):
@@ -4003,6 +4054,8 @@ class MotorMap(RPCBase):
 class MultiWaveform(RPCBase):
     """MultiWaveform widget for displaying multiple waveforms emitted by a single signal."""
 
+    _IMPORT_MODULE = "bec_widgets.widgets.plots.multi_waveform.multi_waveform"
+
     @rpc_call
     def remove(self):
         """
@@ -4462,6 +4515,8 @@ class MultiWaveform(RPCBase):
 class PdfViewerWidget(RPCBase):
     """A widget to display PDF documents with toolbar controls."""
 
+    _IMPORT_MODULE = "bec_widgets.widgets.utility.pdf_viewer.pdf_viewer"
+
     @rpc_call
     def load_pdf(self, file_path: str):
         """
@@ -4593,6 +4648,10 @@ class PdfViewerWidget(RPCBase):
 class PositionIndicator(RPCBase):
     """Display a position within a defined range, e.g. motor limits."""
 
+    _IMPORT_MODULE = (
+        "bec_widgets.widgets.control.device_control.position_indicator.position_indicator"
+    )
+
     @rpc_call
     def set_value(self, position: float):
         """
@@ -4658,6 +4717,10 @@ class PositionIndicator(RPCBase):
 class PositionerBox(RPCBase):
     """Simple Widget to control a positioner in box form"""
 
+    _IMPORT_MODULE = (
+        "bec_widgets.widgets.control.device_control.positioner_box.positioner_box.positioner_box"
+    )
+
     @rpc_call
     def set_positioner(self, positioner: "str | Positioner"):
         """
@@ -4689,6 +4752,8 @@ class PositionerBox(RPCBase):
 
 class PositionerBox2D(RPCBase):
     """Simple Widget to control two positioners in box form"""
+
+    _IMPORT_MODULE = "bec_widgets.widgets.control.device_control.positioner_box.positioner_box_2d.positioner_box_2d"
 
     @rpc_call
     def set_positioner_hor(self, positioner: "str | Positioner"):
@@ -4759,6 +4824,8 @@ class PositionerBox2D(RPCBase):
 class PositionerControlLine(RPCBase):
     """A widget that controls a single device."""
 
+    _IMPORT_MODULE = "bec_widgets.widgets.control.device_control.positioner_box.positioner_control_line.positioner_control_line"
+
     @rpc_call
     def set_positioner(self, positioner: "str | Positioner"):
         """
@@ -4791,6 +4858,8 @@ class PositionerControlLine(RPCBase):
 class PositionerGroup(RPCBase):
     """Simple Widget to control a positioner in box form"""
 
+    _IMPORT_MODULE = "bec_widgets.widgets.control.device_control.positioner_group.positioner_group"
+
     @rpc_call
     def set_positioners(self, device_names: "str"):
         """
@@ -4821,6 +4890,8 @@ class PositionerGroup(RPCBase):
 
 class RectangularROI(RPCBase):
     """Defines a rectangular Region of Interest (ROI) with additional functionality."""
+
+    _IMPORT_MODULE = "bec_widgets.widgets.plots.roi.image_roi"
 
     @property
     @rpc_call
@@ -4951,6 +5022,8 @@ class RectangularROI(RPCBase):
 class ResumeButton(RPCBase):
     """A button that continue scan queue."""
 
+    _IMPORT_MODULE = "bec_widgets.widgets.control.buttons.button_resume.button_resume"
+
     @rpc_call
     def remove(self):
         """
@@ -4971,6 +5044,8 @@ class ResumeButton(RPCBase):
 
 
 class Ring(RPCBase):
+    _IMPORT_MODULE = "bec_widgets.widgets.progress.ring_progress_bar.ring"
+
     @rpc_call
     def set_value(self, value: "int | float"):
         """
@@ -5064,6 +5139,8 @@ class Ring(RPCBase):
 
 
 class RingProgressBar(RPCBase):
+    _IMPORT_MODULE = "bec_widgets.widgets.progress.ring_progress_bar.ring_progress_bar"
+
     @rpc_call
     def remove(self):
         """
@@ -5143,11 +5220,13 @@ class RingProgressBar(RPCBase):
 class SBBMonitor(RPCBase):
     """A widget to display the SBB monitor website."""
 
-    ...
+    _IMPORT_MODULE = "bec_widgets.widgets.editors.sbb_monitor.sbb_monitor"
 
 
 class ScanControl(RPCBase):
     """Widget to submit new scans to the queue."""
+
+    _IMPORT_MODULE = "bec_widgets.widgets.control.scan_control.scan_control"
 
     @rpc_call
     def attach(self):
@@ -5172,6 +5251,8 @@ class ScanControl(RPCBase):
 class ScanProgressBar(RPCBase):
     """Widget to display a progress bar that is hooked up to the scan progress of a scan."""
 
+    _IMPORT_MODULE = "bec_widgets.widgets.progress.scan_progressbar.scan_progressbar"
+
     @rpc_call
     def remove(self):
         """
@@ -5194,6 +5275,8 @@ class ScanProgressBar(RPCBase):
 class ScatterCurve(RPCBase):
     """Scatter curve item for the scatter waveform widget."""
 
+    _IMPORT_MODULE = "bec_widgets.widgets.plots.scatter_waveform.scatter_curve"
+
     @property
     @rpc_call
     def color_map(self) -> "str":
@@ -5203,6 +5286,8 @@ class ScatterCurve(RPCBase):
 
 
 class ScatterWaveform(RPCBase):
+    _IMPORT_MODULE = "bec_widgets.widgets.plots.scatter_waveform.scatter_waveform"
+
     @rpc_call
     def remove(self):
         """
@@ -5670,6 +5755,8 @@ class ScatterWaveform(RPCBase):
 
 
 class SignalLabel(RPCBase):
+    _IMPORT_MODULE = "bec_widgets.widgets.utility.signal_label.signal_label"
+
     @property
     @rpc_call
     def custom_label(self) -> "str":
@@ -5814,6 +5901,8 @@ class SignalLabel(RPCBase):
 class TextBox(RPCBase):
     """A widget that displays text in plain and HTML format"""
 
+    _IMPORT_MODULE = "bec_widgets.widgets.editors.text_box.text_box"
+
     @rpc_call
     def set_plain_text(self, text: str) -> None:
         """
@@ -5836,6 +5925,8 @@ class TextBox(RPCBase):
 class ViewBase(RPCBase):
     """Wrapper for a content widget used inside the main app's stacked view."""
 
+    _IMPORT_MODULE = "bec_widgets.applications.views.view"
+
     @rpc_call
     def activate(self) -> "None":
         """
@@ -5845,6 +5936,8 @@ class ViewBase(RPCBase):
 
 class Waveform(RPCBase):
     """Widget for plotting waveforms."""
+
+    _IMPORT_MODULE = "bec_widgets.widgets.plots.waveform.waveform"
 
     @rpc_call
     def remove(self):
@@ -6424,6 +6517,8 @@ class Waveform(RPCBase):
 
 
 class WaveformViewInline(RPCBase):
+    _IMPORT_MODULE = "bec_widgets.applications.views.view"
+
     @rpc_call
     def activate(self) -> "None":
         """
@@ -6432,6 +6527,8 @@ class WaveformViewInline(RPCBase):
 
 
 class WaveformViewPopup(RPCBase):
+    _IMPORT_MODULE = "bec_widgets.applications.views.view"
+
     @rpc_call
     def activate(self) -> "None":
         """
@@ -6441,6 +6538,8 @@ class WaveformViewPopup(RPCBase):
 
 class WebsiteWidget(RPCBase):
     """A simple widget to display a website"""
+
+    _IMPORT_MODULE = "bec_widgets.widgets.editors.website.website"
 
     @rpc_call
     def set_url(self, url: str) -> None:

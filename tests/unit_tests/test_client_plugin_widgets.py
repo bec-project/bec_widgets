@@ -9,7 +9,8 @@ from bec_widgets.cli.rpc.rpc_base import RPCBase
 from bec_widgets.utils.plugin_utils import BECClassContainer, BECClassInfo
 
 
-class _TestGlobalPlugin(RPCBase): ...
+class _TestGlobalPlugin(RPCBase):
+    _IMPORT_MODULE = "test.global.plugin.widgets"
 
 
 mock_client_module_globals = SimpleNamespace()
@@ -25,12 +26,13 @@ mock_client_module_globals.Widgets = _TestGlobalPlugin
 def test_plugins_dont_clobber_client_globals(bec_logger: MagicMock):
     reload(client)
     bec_logger.logger.warning.assert_called_with(
-        "Plugin widget Widgets from namespace(Widgets=<class 'tests.unit_tests.test_client_plugin_widgets._TestGlobalPlugin'>) conflicts with a built-in class!"
+        "Plugin widget Widgets in test.global.plugin.widgets conflicts with a built-in class!"
     )
     assert isinstance(client.Widgets, enum.EnumType)
 
 
-class _TestDuplicatePlugin(RPCBase): ...
+class _TestDuplicatePlugin(RPCBase):
+    _IMPORT_MODULE = "test.duplicate.plugin.module"
 
 
 mock_client_module_duplicate = SimpleNamespace()
@@ -54,7 +56,7 @@ def test_duplicate_plugins_not_allowed(_, bec_logger: MagicMock):
     reload(client)
     assert (
         call(
-            f"Detected duplicate widget Waveform in plugin repo file: {inspect.getfile(_TestDuplicatePlugin)} !"
+            "Plugin widget Waveform in test.duplicate.plugin.module conflicts with a built-in class!"
         )
         in bec_logger.logger.warning.mock_calls
     )
