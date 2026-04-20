@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v3.5.1 (2026-04-20)
+
+### Bug Fixes
+
+- Don't assume attr exists if we timed out waiting for it
+  ([`f7a1ee4`](https://github.com/bec-project/bec_widgets/commit/f7a1ee49a42c58ba315c8957b45a80d862ffe745))
+
+### Refactoring
+
+- Don't import real widgets in client
+  ([`8e51c1a`](https://github.com/bec-project/bec_widgets/commit/8e51c1adb6a7658c54846794cf97b774cbac2193))
+
+
 ## v3.5.0 (2026-04-14)
 
 ### Bug Fixes
