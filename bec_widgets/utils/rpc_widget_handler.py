@@ -1,42 +1,34 @@
 from __future__ import annotations
 
-from bec_widgets.cli.client_utils import IGNORE_WIDGETS
-from bec_widgets.utils.bec_plugin_helper import get_all_plugin_widgets
-from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.plugin_utils import get_custom_classes
+from typing import TYPE_CHECKING
+
+from bec_widgets.utils.plugin_utils import get_rpc_widget, rpc_widget_registry
+
+if TYPE_CHECKING:  # pragma: no cover
+    from bec_widgets.utils.bec_widget import BECWidget
 
 
 class RPCWidgetHandler:
     """Handler class for creating widgets from RPC messages."""
 
     def __init__(self):
-        self._widget_classes = None
+        self._widget_registry = None
 
     @property
-    def widget_classes(self) -> dict[str, type[BECWidget]]:
+    def widget_classes(self) -> dict[str, tuple[str, str]]:
         """
         Get the available widget classes.
 
         Returns:
             dict: The available widget classes.
         """
-        if self._widget_classes is None:
-            self.update_available_widgets()
-        return self._widget_classes  # type: ignore
+        registry = rpc_widget_registry()
+        if not registry:
+            return {}
+        return registry
 
-    def update_available_widgets(self):
-        """
-        Update the available widgets.
-
-        Returns:
-            None
-        """
-        self._widget_classes = (
-            get_custom_classes("bec_widgets", packages=("widgets", "applications"))
-            + get_all_plugin_widgets()
-        ).as_dict(IGNORE_WIDGETS)
-
-    def create_widget(self, widget_type, **kwargs) -> BECWidget:
+    @staticmethod
+    def create_widget(widget_type, **kwargs) -> BECWidget:
         """
         Create a widget from an RPC message.
 
@@ -48,9 +40,9 @@ class RPCWidgetHandler:
         Returns:
             widget(BECWidget): The created widget.
         """
-        widget_class = self.widget_classes.get(widget_type)  # type: ignore
-        if widget_class:
-            return widget_class(**kwargs)
+        widget = get_rpc_widget(widget_type, raise_on_missing=False)
+        if widget:
+            return widget(**kwargs)
         raise ValueError(f"Unknown widget type: {widget_type}")
 
 

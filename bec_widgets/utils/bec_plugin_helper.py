@@ -4,6 +4,7 @@ import importlib.metadata
 import inspect
 import pkgutil
 import traceback
+from functools import lru_cache
 from importlib import util as importlib_util
 from importlib.machinery import FileFinder, ModuleSpec, SourceFileLoader
 from types import ModuleType
@@ -11,7 +12,11 @@ from typing import Generator
 
 from bec_lib.logger import bec_logger
 
-from bec_widgets.utils.plugin_utils import BECClassContainer, BECClassInfo
+from bec_widgets.utils.plugin_utils import (
+    BECClassContainer,
+    BECClassInfo,
+    rpc_widget_registry_from_source,
+)
 
 logger = bec_logger.logger
 
@@ -53,6 +58,14 @@ def _submodule_by_name(module: ModuleType, name: str):
     return None
 
 
+def _submodule_spec_by_name(module: ModuleType, name: str) -> ModuleSpec | None:
+    for module_info in pkgutil.iter_modules(module.__path__):
+        if module_info.name != name or not isinstance(module_info.module_finder, FileFinder):
+            continue
+        return module_info.module_finder.find_spec(module_info.name)
+    return None
+
+
 def _get_widgets_from_module(module: ModuleType) -> BECClassContainer:
     """Find any BECWidget subclasses in the given module and return them with their info."""
     from bec_widgets.utils.bec_widget import BECWidget  # avoid circular import
@@ -90,16 +103,55 @@ def get_plugin_client_module() -> ModuleType | None:
     return _submodule_by_name(plugin, "client") if (plugin := user_widget_plugin()) else None
 
 
+def get_plugin_designer_module() -> ModuleType | None:
+    """If there is a plugin repository installed, return the designer module."""
+    return (
+        _submodule_by_name(plugin, "designer_plugins") if (plugin := user_widget_plugin()) else None
+    )
+
+
+@lru_cache
+def get_plugin_rpc_widget_registry() -> dict[str, tuple[str, str]]:
+    """If there is a plugin repository installed, return the RPC widget registry."""
+    plugin = user_widget_plugin()
+    if plugin is None:
+        return {}
+
+    client_spec = _submodule_spec_by_name(plugin, "client")
+    if client_spec is not None and client_spec.origin:
+        try:
+            return rpc_widget_registry_from_source(client_spec.origin)
+        except (OSError, SyntaxError) as exc:
+            logger.warning(f"Could not parse plugin RPC widget registry: {exc}")
+
+    client_module = get_plugin_client_module()
+    if client_module is None:
+        return {}
+    registry = {}
+    for plugin_name, plugin_class in inspect.getmembers(client_module, inspect.isclass):
+        if hasattr(plugin_class, "_IMPORT_MODULE"):
+            registry[plugin_name] = (plugin_class._IMPORT_MODULE, plugin_class.__name__)
+    return registry
+
+
+@lru_cache
+def get_plugin_designer_registry() -> dict[str, tuple[str, str]]:
+    """If there is a plugin repository installed, return the designer plugin registry."""
+    designer_module = get_plugin_designer_module()
+    if designer_module and hasattr(designer_module, "designer_plugins"):
+        return designer_module.designer_plugins
+    return {}
+
+
 def get_all_plugin_widgets() -> BECClassContainer:
     """If there is a plugin repository installed, load all widgets from it."""
     if plugin := user_widget_plugin():
         return _all_widgets_from_all_submods(plugin)
-    else:
-        return BECClassContainer()
+    return BECClassContainer()
 
 
 if __name__ == "__main__":  # pragma: no cover
-
+    widgets = get_plugin_rpc_widget_registry()
     client = get_plugin_client_module()
     print(get_all_plugin_widgets())
     ...

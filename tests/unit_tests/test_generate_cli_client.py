@@ -5,7 +5,8 @@ import black
 import isort
 import pytest
 
-from bec_widgets.utils.generate_cli import ClientGenerator
+from bec_widgets.utils.generate_cli import ClientGenerator, write_designer_plugins
+from bec_widgets.utils.generate_designer_plugin import DesignerPluginInfo
 from bec_widgets.utils.plugin_utils import BECClassContainer, BECClassInfo
 
 # pylint: disable=missing-function-docstring
@@ -57,6 +58,10 @@ class MockViewWithContent:
 
     def activate(self):
         """Activate view."""
+
+
+class MockDesignerWidget:
+    pass
 
 
 def test_client_generator_with_black_formatting():
@@ -285,3 +290,17 @@ c = a + b"""
         content = file.read()
 
     assert corrected in content
+
+
+def test_write_designer_plugins(tmp_path):
+    file_name = tmp_path / "designer_plugins.py"
+
+    write_designer_plugins([DesignerPluginInfo(MockDesignerWidget)], str(file_name))
+
+    with open(file_name, "r", encoding="utf-8") as file:
+        content = file.read()
+
+    assert '"MockDesignerWidget":' in content
+    assert '"tests.unit_tests.test_generate_cli_client"' in content
+    assert '"MockDesignerWidget"' in content
+    assert "MockDesignerWidgetPlugin" not in content
