@@ -10,6 +10,7 @@ from bec_lib.device import Positioner
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.lmfit_serializer import serialize_lmfit_params, serialize_param_object
 from bec_lib.scan_data_container import ScanDataContainer
+from bec_lib.utils.import_utils import lazy_import
 from pydantic import Field, ValidationError, field_validator
 from qtpy.QtCore import Qt, QTimer, Signal
 from qtpy.QtWidgets import (
@@ -54,13 +55,7 @@ _DAP_PARAM = object()
 if TYPE_CHECKING:  # pragma: no cover
     import lmfit  # type: ignore
 else:
-    try:
-        import lmfit  # type: ignore
-    except Exception as e:  # pragma: no cover
-        logger.warning(
-            f"lmfit could not be imported: {e}. Custom DAP functionality will be unavailable."
-        )
-        lmfit = None
+    lmfit = lazy_import("lmfit")
 
 
 # noinspection PyDataclass

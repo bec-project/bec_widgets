@@ -63,6 +63,10 @@ class DesignerPluginGenerator:
     def filenames(self):
         return plugin_filenames(self.info.plugin_name_snake)
 
+    @property
+    def excluded(self):
+        return self._excluded
+
     def run(self, validate=True):
         if self._excluded:
             print(f"Plugin {self.widget.__name__} is excluded from generation.")

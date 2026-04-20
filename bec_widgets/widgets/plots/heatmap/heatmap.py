@@ -2,21 +2,16 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pyqtgraph as pg
 from bec_lib import bec_logger, messages
 from bec_lib.endpoints import MessageEndpoints
+from bec_lib.utils.import_utils import lazy_import, lazy_import_from
 from pydantic import BaseModel, Field, field_validator
 from qtpy.QtCore import QObject, Qt, QThread, QTimer, Signal
 from qtpy.QtGui import QTransform
-from scipy.interpolate import (
-    CloughTocher2DInterpolator,
-    LinearNDInterpolator,
-    NearestNDInterpolator,
-)
-from scipy.spatial import cKDTree
 from toolz import partition
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
@@ -30,6 +25,22 @@ from bec_widgets.widgets.plots.image.image_item import ImageItem
 from bec_widgets.widgets.plots.plot_base import PlotBase
 
 logger = bec_logger.logger
+
+
+if TYPE_CHECKING:
+    from scipy.interpolate import (
+        CloughTocher2DInterpolator,
+        LinearNDInterpolator,
+        NearestNDInterpolator,
+    )
+    from scipy.spatial import cKDTree
+else:
+
+    CloughTocher2DInterpolator, LinearNDInterpolator, NearestNDInterpolator = lazy_import_from(
+        "scipy.interpolate",
+        ["CloughTocher2DInterpolator", "LinearNDInterpolator", "NearestNDInterpolator"],
+    )
+    cKDTree = lazy_import_from("scipy.spatial", ["cKDTree"])
 
 
 class HeatmapDeviceSignal(BaseModel):

@@ -239,7 +239,7 @@ class TestBasicDockArea:
         assert basic_dock_area.widget_map(bec_widgets_only=False)["panel_bec"] is panel_bec
 
     def test_new_widget_string_creates_widget(self, basic_dock_area, qtbot):
-        basic_dock_area.new("DarkModeButton")
+        basic_dock_area.new("RingProgressBar")
         qtbot.waitUntil(lambda: len(basic_dock_area.dock_list()) > 0, timeout=1000)
 
         assert basic_dock_area.widget_list()
@@ -623,7 +623,7 @@ class TestDockManagement:
         initial_count = len(advanced_dock_area.dock_list())
 
         # Create a widget by string name
-        widget = advanced_dock_area.new("DarkModeButton")
+        widget = advanced_dock_area.new("RingProgressBar")
 
         # Wait for the dock to be created (since it's async)
         qtbot.wait(200)
@@ -691,7 +691,7 @@ class TestDockManagement:
         initial_count = len(widget_map)
 
         # Create a widget
-        advanced_dock_area.new("DarkModeButton")
+        advanced_dock_area.new("RingProgressBar")
         qtbot.wait(200)
 
         # Check widget map updated
@@ -705,7 +705,7 @@ class TestDockManagement:
         initial_count = len(widget_list)
 
         # Create a widget
-        advanced_dock_area.new("DarkModeButton")
+        advanced_dock_area.new("RingProgressBar")
         qtbot.wait(200)
 
         # Check widget list updated
@@ -715,8 +715,8 @@ class TestDockManagement:
     def test_delete_all(self, advanced_dock_area, qtbot):
         """Test delete_all functionality."""
         # Create multiple widgets
-        advanced_dock_area.new("DarkModeButton")
-        advanced_dock_area.new("DarkModeButton")
+        advanced_dock_area.new("RingProgressBar")
+        advanced_dock_area.new("RingProgressBar")
 
         # Wait for docks to be created
         qtbot.wait(200)
@@ -772,7 +772,7 @@ class TestWorkspaceLocking:
     def test_lock_workspace_property_setter(self, advanced_dock_area, qtbot):
         """Test workspace_is_locked property setter."""
         # Create a dock first
-        advanced_dock_area.new("DarkModeButton")
+        advanced_dock_area.new("RingProgressBar")
         qtbot.wait(200)
 
         # Initially unlocked
@@ -887,8 +887,8 @@ class TestToolbarFunctionality:
     def test_attach_all_action(self, advanced_dock_area, qtbot):
         """Test attach_all toolbar action."""
         # Create floating docks
-        advanced_dock_area.new("DarkModeButton", start_floating=True)
-        advanced_dock_area.new("DarkModeButton", start_floating=True)
+        advanced_dock_area.new("RingProgressBar", start_floating=True)
+        advanced_dock_area.new("RingProgressBar", start_floating=True)
 
         qtbot.wait(200)
 
@@ -916,7 +916,7 @@ class TestToolbarFunctionality:
         # Floating entry
         settings.setArrayIndex(0)
         settings.setValue("object_name", "FloatingWaveform")
-        settings.setValue("widget_class", "DarkModeButton")
+        settings.setValue("widget_class", "RingProgressBar")
         settings.setValue("closable", True)
         settings.setValue("floatable", True)
         settings.setValue("movable", True)
@@ -934,7 +934,7 @@ class TestToolbarFunctionality:
         # Anchored entry
         settings.setArrayIndex(1)
         settings.setValue("object_name", "EmbeddedWaveform")
-        settings.setValue("widget_class", "DarkModeButton")
+        settings.setValue("widget_class", "RingProgressBar")
         settings.setValue("closable", True)
         settings.setValue("floatable", True)
         settings.setValue("movable", True)
@@ -1760,9 +1760,9 @@ class TestProfileManagement:
         settings = open_runtime_settings("test_manifest")
 
         # Create real docks
-        advanced_dock_area.new("DarkModeButton")
-        advanced_dock_area.new("DarkModeButton")
-        advanced_dock_area.new("DarkModeButton")
+        advanced_dock_area.new("RingProgressBar")
+        advanced_dock_area.new("RingProgressBar")
+        advanced_dock_area.new("RingProgressBar")
 
         # Wait for docks to be created
         qtbot.wait(1000)
@@ -1870,7 +1870,7 @@ class TestWorkspaceProfileOperations:
         settings.beginWriteArray("manifest/widgets", 1)
         settings.setArrayIndex(0)
         settings.setValue("object_name", "test_widget")
-        settings.setValue("widget_class", "DarkModeButton")
+        settings.setValue("widget_class", "RingProgressBar")
         settings.setValue("closable", True)
         settings.setValue("floatable", True)
         settings.setValue("movable", True)
@@ -1976,7 +1976,7 @@ class TestWorkspaceProfileOperations:
         settings.beginWriteArray("manifest/widgets", 1)
         settings.setArrayIndex(0)
         settings.setValue("object_name", "source_widget")
-        settings.setValue("widget_class", "DarkModeButton")
+        settings.setValue("widget_class", "RingProgressBar")
         settings.setValue("closable", True)
         settings.setValue("floatable", True)
         settings.setValue("movable", True)
@@ -1985,7 +1985,7 @@ class TestWorkspaceProfileOperations:
 
         advanced_dock_area.load_profile(source_profile)
         qtbot.wait(500)
-        advanced_dock_area.new("DarkModeButton")
+        advanced_dock_area.new("RingProgressBar")
         qtbot.wait(500)
 
         class StubDialog:
@@ -2029,7 +2029,7 @@ class TestWorkspaceProfileOperations:
             settings.beginWriteArray("manifest/widgets", 1)
             settings.setArrayIndex(0)
             settings.setValue("object_name", f"{profile}_widget")
-            settings.setValue("widget_class", "DarkModeButton")
+            settings.setValue("widget_class", "RingProgressBar")
             settings.setValue("closable", True)
             settings.setValue("floatable", True)
             settings.setValue("movable", True)
@@ -2038,7 +2038,7 @@ class TestWorkspaceProfileOperations:
 
         advanced_dock_area.load_profile(profile_a)
         qtbot.wait(500)
-        advanced_dock_area.new("DarkModeButton")
+        advanced_dock_area.new("RingProgressBar")
         qtbot.wait(500)
 
         advanced_dock_area.load_profile(profile_b)
@@ -2468,8 +2468,8 @@ class TestModeTransitions:
     def test_mode_switching_preserves_existing_docks(self, advanced_dock_area, qtbot):
         """Test that mode switching doesn't affect existing docked widgets."""
         # Create some widgets
-        advanced_dock_area.new("DarkModeButton")
-        advanced_dock_area.new("DarkModeButton")
+        advanced_dock_area.new("RingProgressBar")
+        advanced_dock_area.new("RingProgressBar")
         qtbot.wait(200)
 
         initial_dock_count = len(advanced_dock_area.dock_list())
