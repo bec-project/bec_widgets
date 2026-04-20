@@ -224,7 +224,6 @@ class BecLogsTableModel(QAbstractTableModel):
 
 
 class LogMsgProxyModel(QSortFilterProxyModel):
-
     show_service_column = Signal(bool)
 
     def __init__(
@@ -333,8 +332,7 @@ class LogMsgProxyModel(QSortFilterProxyModel):
             col = _CONST.headers.index("message")
             msg: str = model.data(model.index(source_row, col, source_parent)).lower()  # type: ignore
             if self._fuzzy_search:
-                if fuzz.partial_ratio(self._filter_text.lower(), msg) >= _CONST.FUZZ_THRESHOLD:
-                    return True
+                return fuzz.partial_ratio(self._filter_text.lower(), msg) >= _CONST.FUZZ_THRESHOLD
             else:
                 return self._filter_text.lower() in msg.lower()
         return True
@@ -439,7 +437,6 @@ class LogPanel(BECWidget, QWidget):
 
 
 class LogPanelToolbar(QWidget):
-
     services_selected = Signal(set)
     level_changed = Signal(LogLevel)
     fuzzy_changed = Signal(bool)
@@ -463,6 +460,8 @@ class LogPanelToolbar(QWidget):
             self.service_choice_button = QPushButton("Select services", self)
             self._layout.addWidget(self.service_choice_button)
             self.service_choice_button.clicked.connect(self._open_service_filter_dialog)
+            self.service_list_update(self.client.service_status)
+            self._services_selected = self._unique_service_names
 
         self.filter_level_dropdown = self._log_level_box()
         self._layout.addWidget(self.filter_level_dropdown)
@@ -476,15 +475,21 @@ class LogPanelToolbar(QWidget):
 
         self.pause_button = QToolButton()
         self.pause_button.setIcon(material_icon("pause", size=(20, 20), convert_to_pixmap=False))
+        self._PLAYING_TOOLTIP = "Pause live log updates."
+        self._PAUSED_TOOLTIP = "Continue live log updates."
+        self.pause_button.setToolTip(self._PLAYING_TOOLTIP)
         self._layout.addWidget(self.pause_button)
 
     @SafeSlot(bool)
     def _update_pause_button_icon(self, paused):
-        self.pause_button.setIcon(
-            material_icon(
-                "play_arrow" if paused else "pause", size=(20, 20), convert_to_pixmap=False
-            )
-        )
+        if paused:
+            icon = "play_arrow"
+            tooltip = self._PAUSED_TOOLTIP
+        else:
+            icon = "pause"
+            tooltip = self._PLAYING_TOOLTIP
+        self.pause_button.setIcon(material_icon(icon, size=(20, 20), convert_to_pixmap=False))
+        self.pause_button.setToolTip(tooltip)
 
     def _string_search_box(self):
         self._layout.addWidget(QLabel("Search: "))
@@ -498,7 +503,7 @@ class LogPanelToolbar(QWidget):
     def _log_level_box(self):
         box = QComboBox()
         box.setToolTip("Display logs with equal or greater significance to the selected level.")
-        [box.addItem(l.name) for l in LogLevel]
+        [box.addItem(level.name) for level in LogLevel]
         return box
 
     @SafeSlot(str)
@@ -598,7 +603,7 @@ class LogPanelToolbar(QWidget):
         if len(self._unique_service_names) == 0 or self._services_selected is None:
             return
         self._svc_dialog = QDialog(self)
-        self._svc_dialog.setWindowTitle(f"Select services to show logs from")
+        self._svc_dialog.setWindowTitle("Select services to show logs from")
         layout = QVBoxLayout()
         self._svc_dialog.setLayout(layout)
 
