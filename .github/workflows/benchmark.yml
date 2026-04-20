@@ -1,40 +1,24 @@
 name: BW Benchmarks
 
-on: [workflow_call]
+on: [ workflow_call ]
 
 permissions:
   contents: read
 
 env:
-  BENCHMARK_JSON: benchmark-results/current.json
-  BENCHMARK_BASELINE_JSON: gh-pages-benchmark-data/benchmarks/latest.json
-  BENCHMARK_SUMMARY: benchmark-results/summary.md
-  BENCHMARK_COMMAND: "bash .github/scripts/run_benchmarks.sh"
-  BENCHMARK_THRESHOLD_PERCENT: 10
-  BENCHMARK_HIGHER_IS_BETTER: false
+  QTWEBENGINE_DISABLE_SANDBOX: 1
+  QT_QPA_PLATFORM: "offscreen"
 
 jobs:
-  benchmark_attempt:
+  benchmark:
     runs-on: ubuntu-latest
-    continue-on-error: true
     permissions:
-      contents: read
+      contents: write
+      issues: write
+      pull-requests: write
     defaults:
       run:
         shell: bash -el {0}
-    strategy:
-      fail-fast: false
-      matrix:
-        attempt: [1, 2, 3]
-
-    env:
-      BENCHMARK_JSON: benchmark-results/current-${{ matrix.attempt }}.json
-      BEC_CORE_BRANCH: main
-      OPHYD_DEVICES_BRANCH: main
-      PLUGIN_REPO_BRANCH: main
-      BENCHMARK_PYTEST_DIRS: tests/unit_tests/benchmarks
-      QTWEBENGINE_DISABLE_SANDBOX: 1
-      QT_QPA_PLATFORM: "offscreen"
 
     steps:
       - name: Checkout BEC Widgets
@@ -50,190 +34,14 @@ jobs:
           auto-activate-base: true
           python-version: "3.11"
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgl1 libegl1 x11-utils libxkbcommon-x11-0 libdbus-1-3 xvfb
-          sudo apt-get -y install libnss3 libxdamage1 libasound2t64 libatomic1 libxcursor1
-          sudo apt-get -y install ttyd hyperfine redis-server
-
-      - name: Install full e2e environment
-        run: |
-          echo -e "\033[35;1m Using branch $BEC_CORE_BRANCH of BEC CORE \033[0;m";
-          git clone --branch "$BEC_CORE_BRANCH" https://github.com/bec-project/bec.git
-          echo -e "\033[35;1m Using branch $OPHYD_DEVICES_BRANCH of OPHYD_DEVICES \033[0;m";
-          git clone --branch "$OPHYD_DEVICES_BRANCH" https://github.com/bec-project/ophyd_devices.git
-          export OHPYD_DEVICES_PATH=$PWD/ophyd_devices
-          echo -e "\033[35;1m Using branch $PLUGIN_REPO_BRANCH of bec_testing_plugin \033[0;m";
-          git clone --branch "$PLUGIN_REPO_BRANCH" https://github.com/bec-project/bec_testing_plugin.git
-          cd ./bec
-          conda create -q -n test-environment python=3.11
-          conda activate test-environment
-          source ./bin/install_bec_dev.sh -t
-          cd ../
-          python -m pip install -e ./ophyd_devices -e .[dev,pyside6] -e ./bec_testing_plugin pytest-benchmark
-
-          mkdir -p "$(dirname "$BENCHMARK_JSON")"
-          python .github/scripts/run_with_bec_servers.py -- bash -lc "$BENCHMARK_COMMAND"
-          test -s "$BENCHMARK_JSON"
-
-      - name: Upload benchmark artifact
-        uses: actions/upload-artifact@v4
+      - name: Run, compare, and publish benchmarks
+        uses: bec-project/benchmark_action@main
         with:
-          name: bw-benchmark-json-${{ matrix.attempt }}
-          path: ${{ env.BENCHMARK_JSON }}
-
-  benchmark:
-    needs: [benchmark_attempt]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      issues: write
-      pull-requests: write
-
-    steps:
-      - name: Checkout BEC Widgets
-        uses: actions/checkout@v4
-        with:
-          repository: bec-project/bec_widgets
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
-      - name: Download benchmark attempts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: bw-benchmark-json-*
-          path: benchmark-results/attempts
-          merge-multiple: true
-
-      - name: Aggregate benchmark attempts
-        run: |
-          python .github/scripts/aggregate_benchmarks.py \
-            --input-dir benchmark-results/attempts \
-            --output "$BENCHMARK_JSON"
-
-      - name: Upload aggregate benchmark artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: bw-benchmark-json
-          path: ${{ env.BENCHMARK_JSON }}
-
-      - name: Fetch gh-pages benchmark data
-        run: |
-          if git ls-remote --exit-code --heads origin gh-pages; then
-            git clone --depth=1 --branch gh-pages "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git" gh-pages-benchmark-data
-          else
-            mkdir -p gh-pages-benchmark-data
-          fi
-
-      - name: Compare with latest gh-pages benchmark
-        id: compare
-        continue-on-error: true
-        run: |
-          if [ ! -s "$BENCHMARK_BASELINE_JSON" ]; then
-            mkdir -p "$(dirname "$BENCHMARK_SUMMARY")"
-            {
-              echo "<!-- bw-benchmark-comment -->"
-              echo "## Benchmark comparison"
-              echo
-              echo "No benchmark baseline was found on gh-pages."
-            } > "$BENCHMARK_SUMMARY"
-            exit 0
-          fi
-
-          args=(
-            --baseline "$BENCHMARK_BASELINE_JSON"
-            --current "$BENCHMARK_JSON"
-            --summary "$BENCHMARK_SUMMARY"
-            --threshold-percent "$BENCHMARK_THRESHOLD_PERCENT"
-          )
-
-          if [ "$BENCHMARK_HIGHER_IS_BETTER" = "true" ]; then
-            args+=(--higher-is-better)
-          fi
-
-          set +e
-          python .github/scripts/compare_benchmarks.py "${args[@]}"
-          status=$?
-          set -e
-
-          if [ ! -s "$BENCHMARK_SUMMARY" ]; then
-            mkdir -p "$(dirname "$BENCHMARK_SUMMARY")"
-            {
-              echo "<!-- bw-benchmark-comment -->"
-              echo "## Benchmark comparison"
-              echo
-              echo "Benchmark comparison failed before writing a summary."
-            } > "$BENCHMARK_SUMMARY"
-          fi
-
-          exit "$status"
-
-      - name: Find existing benchmark PR comment
-        if: github.event_name == 'pull_request'
-        id: fc
-        uses: peter-evans/find-comment@v3
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          comment-author: github-actions[bot]
-          body-includes: "<!-- bw-benchmark-comment -->"
-
-      - name: Create or update benchmark PR comment
-        if: github.event_name == 'pull_request'
-        uses: peter-evans/create-or-update-comment@v5
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          comment-id: ${{ steps.fc.outputs.comment-id }}
-          body-path: ${{ env.BENCHMARK_SUMMARY }}
-          edit-mode: replace
-
-      - name: Fail on benchmark regression
-        if: github.event_name == 'pull_request' && steps.compare.outcome == 'failure'
-        run: exit 1
-
-  publish:
-    needs: [benchmark]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout BEC Widgets
-        uses: actions/checkout@v4
-        with:
-          repository: bec-project/bec_widgets
-          ref: ${{ github.sha }}
-
-      - name: Download aggregate benchmark artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: bw-benchmark-json
-          path: .
-
-      - name: Prepare gh-pages for publishing
-        run: |
-          # Clean up any existing worktree/directory
-          if [ -d gh-pages-benchmark-data ]; then
-            git worktree remove gh-pages-benchmark-data --force || rm -rf gh-pages-benchmark-data
-          fi
-
-          if git ls-remote --exit-code --heads origin gh-pages; then
-            git fetch --depth=1 origin gh-pages
-            git worktree add gh-pages-benchmark-data FETCH_HEAD
-          else
-            git worktree add --detach gh-pages-benchmark-data
-            git -C gh-pages-benchmark-data checkout --orphan gh-pages
-            git -C gh-pages-benchmark-data rm -rf .
-          fi
-
-      - name: Publish benchmark data to gh-pages
-        working-directory: gh-pages-benchmark-data
-        run: |
-          mkdir -p benchmarks/history
-          cp "../$BENCHMARK_JSON" benchmarks/latest.json
-          cp "../$BENCHMARK_JSON" "benchmarks/history/${GITHUB_SHA}.json"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add benchmarks/latest.json "benchmarks/history/${GITHUB_SHA}.json"
-          git commit -m "Update BW benchmark data for ${GITHUB_SHA}" || exit 0
-          git push origin HEAD:gh-pages
+          mode: all
+          attempts: "3"
+          system-packages: libgl1 libegl1 x11-utils libxkbcommon-x11-0 libdbus-1-3 xvfb
+            libnss3 libxdamage1 libasound2t64 libatomic1 libxcursor1 hyperfine
+            redis-server
+          setup-scripts: .github/scripts/setup_benchmark_env.sh
+          benchmark-pytest-dirs: tests/unit_tests/benchmarks
+          threshold-percent: "10"
