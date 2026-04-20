@@ -32,7 +32,21 @@ python -m pip install -e ./ophyd_devices -e .[dev,pyside6] -e ./bec_testing_plug
 benchmark_tmp_dir="$(mktemp -d)"
 export BEC_SERVICE_CONFIG="$benchmark_tmp_dir/services_config.yaml"
 
+# Start Redis
 redis-server --daemonize yes --port 6379
 
+# Wait for Redis to be ready
+timeout 30 bash -c 'until redis-cli ping > /dev/null 2>&1; do sleep 0.1; done' || {
+  echo "Redis failed to start" >&2
+  exit 1
+}
+
+# Start BEC server
 bec-server start --config "$BEC_SERVICE_CONFIG"
+
+# Wait for BEC server to be ready
+sleep 5
+
+# Export BEC client configuration
+export BEC_CONFIG='{"redis": {"host": "localhost", "port": 6379}}'
 
