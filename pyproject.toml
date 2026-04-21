@@ -44,7 +44,7 @@ bw-generate-cli = "bec_widgets.cli.generate_cli:main"
 [project.optional-dependencies]
 dev = [
   "coverage~=7.0",
-  "fakeredis~=2.23, >=2.23.2",
+  "fakeredis==2.34.1",
   "pytest-bec-e2e>=2.21.4, <=4.0",
   "pytest-qt~=4.4",
   "pytest-random-order~=1.1",
