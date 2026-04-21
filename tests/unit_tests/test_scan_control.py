@@ -503,6 +503,10 @@ def test_changing_scans_remember_parameters(scan_control, mocked_client):
 
 def test_get_scan_parameters_from_redis(qtbot, scan_control: ScanControl, mocked_client):
     scan_control.comboBox_scan_selection.setCurrentIndex(-1)
+    assert "line_scan" in [
+        scan_control.comboBox_scan_selection.itemText(i)
+        for i in range(scan_control.comboBox_scan_selection.count())
+    ]
     scan_name = "line_scan"
     scan_control.comboBox_scan_selection.setCurrentText(scan_name)
     qtbot.wait(100)
@@ -596,6 +600,10 @@ def test_restore_parameters_with_fewer_arg_bundles(scan_control: ScanControl, qt
     """
     # Select the scan type that has history with only one arg bundle
     scan_control.comboBox_scan_selection.setCurrentIndex(-1)
+    assert "line_scan" in [
+        scan_control.comboBox_scan_selection.itemText(i)
+        for i in range(scan_control.comboBox_scan_selection.count())
+    ]
     scan_control.current_scan = "line_scan"
     qtbot.waitUntil(lambda: scan_control.arg_box.count_arg_rows() == 1, timeout=1000)
 
