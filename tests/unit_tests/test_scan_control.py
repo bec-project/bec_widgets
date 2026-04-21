@@ -501,22 +501,23 @@ def test_changing_scans_remember_parameters(scan_control, mocked_client):
     assert grid_kwargs["burst_at_each_point"] == kwargs["burst_at_each_point"]
 
 
-def test_get_scan_parameters_from_redis(scan_control, mocked_client):
+def test_get_scan_parameters_from_redis(qtbot, scan_control: ScanControl, mocked_client):
     scan_name = "line_scan"
     scan_control.comboBox_scan_selection.setCurrentText(scan_name)
 
     scan_control.toggle.checked = True
-
-    args, kwargs = scan_control.get_scan_parameters(bec_object=False)
-
-    assert args == ["samx", 0.0, 2.0]
-    assert kwargs == {
+    args = ["samx", 0.0, 2.0]
+    kwargs = {
         "steps": 10,
         "relative": False,
         "exp_time": 2.0,
         "burst_at_each_point": 1,
         "metadata": {"comment": "", "sample_name": "", "scan_name": "line_scan"},
     }
+
+    qtbot.waitUntil(
+        lambda: scan_control.get_scan_parameters(bec_object=False) == (args, kwargs), timeout=5000
+    )
 
 
 TEST_MD = {
