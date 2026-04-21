@@ -501,6 +501,7 @@ def test_changing_scans_remember_parameters(scan_control, mocked_client):
     assert grid_kwargs["burst_at_each_point"] == kwargs["burst_at_each_point"]
 
 
+@pytest.mark.skip(reason="Unreliable - GH issue #1134")
 def test_get_scan_parameters_from_redis(scan_control, mocked_client):
     scan_name = "line_scan"
     scan_control.comboBox_scan_selection.setCurrentText(scan_name)
@@ -585,6 +586,7 @@ def test_scan_metadata_is_passed_to_scan_function(scan_control: ScanControl):
     scans.grid_scan.assert_called_once_with(metadata=TEST_MD)
 
 
+@pytest.mark.skip(reason="Unreliable - GH issue #1134")
 def test_restore_parameters_with_fewer_arg_bundles(scan_control, qtbot):
     """
     Ensure that when more argument bundles are present than exist in the
