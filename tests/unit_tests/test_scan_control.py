@@ -586,7 +586,7 @@ def test_scan_metadata_is_passed_to_scan_function(scan_control: ScanControl):
     scans.grid_scan.assert_called_once_with(metadata=TEST_MD)
 
 
-def test_restore_parameters_with_fewer_arg_bundles(scan_control, qtbot):
+def test_restore_parameters_with_fewer_arg_bundles(scan_control: ScanControl, qtbot):
     """
     Ensure that when more argument bundles are present than exist in the
     stored history, restoring parameters regenerates the arg box to the
@@ -595,6 +595,7 @@ def test_restore_parameters_with_fewer_arg_bundles(scan_control, qtbot):
     """
     # Select the scan type that has history with only one arg bundle
     scan_control.comboBox_scan_selection.setCurrentText("line_scan")
+    qtbot.waitUntil(lambda: scan_control.arg_box.count_arg_rows() == 1, timeout=1000)
 
     # Manually add bundles so we end up with three rows
     while scan_control.arg_box.count_arg_rows() < 3:
@@ -603,10 +604,9 @@ def test_restore_parameters_with_fewer_arg_bundles(scan_control, qtbot):
 
     # Trigger restore of parameters from history
     scan_control.toggle.checked = True
-    qtbot.wait(200)
 
     # After restore, arg_box should have only one bundle (the history size)
-    assert scan_control.arg_box.count_arg_rows() == 1
+    qtbot.waitUntil(lambda: scan_control.arg_box.count_arg_rows() == 1, timeout=1000)
 
     # Verify that the restored parameter values match the history
     args, kwargs = scan_control.get_scan_parameters(bec_object=False)
