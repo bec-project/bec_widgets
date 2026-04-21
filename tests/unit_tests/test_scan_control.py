@@ -510,7 +510,18 @@ def test_get_scan_parameters_from_redis(qtbot, scan_control: ScanControl, mocked
     scan_name = "line_scan"
     scan_control.comboBox_scan_selection.setCurrentText(scan_name)
     qtbot.wait(100)
+    slot_hit = False
+
+    def mock_request(*args):
+        ScanControl.request_last_executed_scan_parameters(scan_control, *args)
+        nonlocal slot_hit
+        slot_hit = True
+
+    scan_control.request_last_executed_scan_parameters = mock_request
+    # Trigger restore of parameters from history
     scan_control.toggle.checked = True
+
+    qtbot.waitUntil(lambda: slot_hit, timeout=1000)
     args = ["samx", 0.0, 2.0]
     kwargs = {
         "steps": 10,
@@ -612,6 +623,9 @@ def test_restore_parameters_with_fewer_arg_bundles(scan_control: ScanControl, qt
         scan_control.arg_box.add_widget_bundle()
     assert scan_control.arg_box.count_arg_rows() == 3
 
+    scan_control.client.connector.xadd(
+        MessageEndpoints.scan_history(), msg_dict={"data": scan_history}
+    )
     slot_hit = False
 
     def mock_request(*args):
