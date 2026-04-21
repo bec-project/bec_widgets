@@ -612,9 +612,18 @@ def test_restore_parameters_with_fewer_arg_bundles(scan_control: ScanControl, qt
         scan_control.arg_box.add_widget_bundle()
     assert scan_control.arg_box.count_arg_rows() == 3
 
+    slot_hit = False
+
+    def mock_request(*args):
+        ScanControl.request_last_executed_scan_parameters(scan_control, *args)
+        nonlocal slot_hit
+        slot_hit = True
+
+    scan_control.request_last_executed_scan_parameters = mock_request
     # Trigger restore of parameters from history
     scan_control.toggle.checked = True
 
+    qtbot.waitUntil(lambda: slot_hit, timeout=1000)
     # After restore, arg_box should have only one bundle (the history size)
     qtbot.waitUntil(lambda: scan_control.arg_box.count_arg_rows() == 1, timeout=1000)
 
