@@ -1,6 +1,28 @@
 # CHANGELOG
 
 
+## v3.6.0 (2026-04-21)
+
+### Bug Fixes
+
+- Change resize mode to interactive
+  ([`a5db2dc`](https://github.com/bec-project/bec_widgets/commit/a5db2dc340f3386e68b300fd4528a44f87cbbf97))
+
+- Small usability changes
+  ([`5a497c3`](https://github.com/bec-project/bec_widgets/commit/5a497c3598c2d8f27916d91d53c646d5d6d3a4a7))
+
+### Features
+
+- Add button/slot to pause/unpause logs
+  ([`23e3644`](https://github.com/bec-project/bec_widgets/commit/23e3644619de958bcfdb8a0b2ee1f7c2ce05b235))
+
+- Add logpanel to menu
+  ([`2e8f43f`](https://github.com/bec-project/bec_widgets/commit/2e8f43fcac581cd1c227308198565d142a1bf276))
+
+- Migrate logpanel to table model/view
+  ([`09bb112`](https://github.com/bec-project/bec_widgets/commit/09bb1121d83bac1f6e4827daa476fbe7cd5b3a80))
+
+
 ## v3.5.1 (2026-04-20)
 
 ### Bug Fixes
