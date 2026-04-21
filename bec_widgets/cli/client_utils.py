@@ -26,7 +26,9 @@ if TYPE_CHECKING:  # pragma: no cover
 
     import bec_widgets.cli.client as client
 else:
-    GUIRegistryStateMessage = lazy_import_from("bec_lib.messages", "GUIRegistryStateMessage")
+    GUIRegistryStateMessage = lazy_import_from(
+        "bec_lib.messages", "GUIRegistryStateMessage"
+    )
     client = lazy_import("bec_widgets.cli.client")
 
 
@@ -199,7 +201,9 @@ class AvailableWidgetsNamespace:
         for attr_name, _ in self.__dict__.items():
             docs = getattr(client, attr_name).__doc__
             docs = docs if docs else "No description available"
-            table.add_row(attr_name, docs if len(docs.strip()) > 0 else "No description available")
+            table.add_row(
+                attr_name, docs if len(docs.strip()) > 0 else "No description available"
+            )
         console.print(table)
         return ""
 
@@ -230,7 +234,9 @@ class BECGuiClient(RPCBase):
     @property
     def launcher(self) -> RPCBase:
         """The launcher object."""
-        return RPCBase(gui_id=f"{self._gui_id}:launcher", parent=self, object_name="launcher")
+        return RPCBase(
+            gui_id=f"{self._gui_id}:launcher", parent=self, object_name="launcher"
+        )
 
     def _safe_register_stream(self, endpoint: EndpointInfo, cb: Callable, **kwargs):
         """Check if already registered for registration in idempotent functions."""
@@ -241,7 +247,8 @@ class BECGuiClient(RPCBase):
         """Connect to a GUI server"""
         # Unregister the old callback
         self._client.connector.unregister(
-            MessageEndpoints.gui_registry_state(self._gui_id), cb=self._handle_registry_update
+            MessageEndpoints.gui_registry_state(self._gui_id),
+            cb=self._handle_registry_update,
         )
         self._gui_id = gui_id
 
@@ -401,7 +408,9 @@ class BECGuiClient(RPCBase):
                     and "has no attribute 'system.launch_dock_area'" not in error
                 ):
                     raise
-                logger.debug("Server does not support system.launch_dock_area; using launcher RPC")
+                logger.debug(
+                    "Server does not support system.launch_dock_area; using launcher RPC"
+                )
 
         return self.launcher._run_rpc(
             "launch",
@@ -462,7 +471,8 @@ class BECGuiClient(RPCBase):
 
         # Unregister the registry state
         self._client.connector.unregister(
-            MessageEndpoints.gui_registry_state(self._gui_id), cb=self._handle_registry_update
+            MessageEndpoints.gui_registry_state(self._gui_id),
+            cb=self._handle_registry_update,
         )
         # Remove all reference from top level
         self._top_level.clear()
@@ -525,9 +535,15 @@ class BECGuiClient(RPCBase):
                 finally:
                     threading.current_thread().cancel()  # type: ignore
 
-            self._gui_started_timer = RepeatTimer(
-                0.5, lambda: self._gui_is_alive() and gui_started_callback(self._gui_post_startup)
-            )
+            def check_gui_started_and_continue():
+                if self._gui_is_alive():
+                    gui_started_callback(self._gui_post_startup)
+                elif self._process.poll():
+                    logger.error(
+                        f"GUI process failed to start with: {self._process.communicate()}"
+                    )
+
+            self._gui_started_timer = RepeatTimer(0.5, check_gui_started_and_continue)
             self._gui_started_timer.start()
 
         if wait:
@@ -536,7 +552,8 @@ class BECGuiClient(RPCBase):
     def _start(self, wait: bool = False) -> None:
         self._killed = False
         self._safe_register_stream(
-            MessageEndpoints.gui_registry_state(self._gui_id), cb=self._handle_registry_update
+            MessageEndpoints.gui_registry_state(self._gui_id),
+            cb=self._handle_registry_update,
         )
         return self._start_server(wait=wait)
 
@@ -603,7 +620,9 @@ class BECGuiClient(RPCBase):
             self._ipython_registry.pop(gui_id)
 
         removed_widgets = [
-            widget.object_name for widget in self._top_level.values() if widget._is_deleted()
+            widget.object_name
+            for widget in self._top_level.values()
+            if widget._is_deleted()
         ]
 
         for widget_name in removed_widgets:
