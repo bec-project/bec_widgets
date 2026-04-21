@@ -1,6 +1,6 @@
 name: BW Benchmarks
 
-on: [workflow_call]
+on: [ workflow_call ]
 
 permissions:
   contents: read
@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        attempt: [1, 2, 3]
+        attempt: [ 1, 2, 3 ]
 
     env:
       BENCHMARK_JSON: benchmark-results/current-${{ matrix.attempt }}.json
@@ -84,7 +84,7 @@ jobs:
           path: ${{ env.BENCHMARK_JSON }}
 
   benchmark:
-    needs: [benchmark_attempt]
+    needs: [ benchmark_attempt ]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -191,7 +191,7 @@ jobs:
         run: exit 1
 
   publish:
-    needs: [benchmark]
+    needs: [ benchmark ]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -208,7 +208,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: bw-benchmark-json
-          path: .
+          path: benchmark-results
+
+      - name: Verify aggregate benchmark artifact
+        run: test -s "$BENCHMARK_JSON"
 
       - name: Prepare gh-pages for publishing
         run: |
