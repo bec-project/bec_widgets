@@ -502,9 +502,10 @@ def test_changing_scans_remember_parameters(scan_control, mocked_client):
 
 
 def test_get_scan_parameters_from_redis(qtbot, scan_control: ScanControl, mocked_client):
+    scan_control.comboBox_scan_selection.setCurrentIndex(-1)
     scan_name = "line_scan"
     scan_control.comboBox_scan_selection.setCurrentText(scan_name)
-
+    qtbot.wait(100)
     scan_control.toggle.checked = True
     args = ["samx", 0.0, 2.0]
     kwargs = {
@@ -594,7 +595,8 @@ def test_restore_parameters_with_fewer_arg_bundles(scan_control: ScanControl, qt
     This is a check for the previous infinite loop bug.
     """
     # Select the scan type that has history with only one arg bundle
-    scan_control.comboBox_scan_selection.setCurrentText("line_scan")
+    scan_control.comboBox_scan_selection.setCurrentIndex(-1)
+    scan_control.current_scan = "line_scan"
     qtbot.waitUntil(lambda: scan_control.arg_box.count_arg_rows() == 1, timeout=1000)
 
     # Manually add bundles so we end up with three rows
