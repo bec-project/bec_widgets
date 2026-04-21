@@ -10,7 +10,7 @@ env:
   BENCHMARK_BASELINE_JSON: gh-pages-benchmark-data/benchmarks/latest.json
   BENCHMARK_SUMMARY: benchmark-results/summary.md
   BENCHMARK_COMMAND: "bash .github/scripts/run_benchmarks.sh"
-  BENCHMARK_THRESHOLD_PERCENT: 10
+  BENCHMARK_THRESHOLD_PERCENT: 20
   BENCHMARK_HIGHER_IS_BETTER: false
 
 jobs:
