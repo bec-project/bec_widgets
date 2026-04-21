@@ -5,7 +5,7 @@ import pytest
 from bec_lib.service_config import ServiceConfig
 from qtpy.QtWidgets import QWidget
 
-from bec_widgets.cli.server import GUIServer
+from bec_widgets.applications.companion_app import GUIServer
 from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.utils.rpc_server import RegistryNotReadyError, RPCServer, SingleshotRPCRepeat
 
