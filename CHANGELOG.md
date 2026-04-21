@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v3.7.1 (2026-04-21)
+
+### Bug Fixes
+
+- **heatmap**: Fix access to status from metadata
+  ([`55694ff`](https://github.com/bec-project/bec_widgets/commit/55694ff2b96581e03c63c8b8e068e2db79bcf780))
+
+### Testing
+
+- Fix exit status and status access in tests
+  ([`91afc77`](https://github.com/bec-project/bec_widgets/commit/91afc775d59b4ba31bed3585847a67c301acf9b0))
+
+
 ## v3.7.0 (2026-04-21)
 
 ### Features
