@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
+from bec_lib.client import BECClient
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.messages import AvailableResourceMessage, ScanHistoryMessage
 from qtpy.QtCore import QModelIndex, Qt
@@ -255,11 +256,10 @@ scan_history = ScanHistoryMessage(
 
 
 @pytest.fixture(scope="function")
-def scan_control(qtbot, mocked_client):  # , mock_dev):
+def scan_control(qtbot, mocked_client: BECClient):
+    mocked_client.connector._redis_conn.flushall()
     mocked_client.connector.set(MessageEndpoints.available_scans(), available_scans_message)
-    mocked_client.connector.xadd(
-        topic=MessageEndpoints.scan_history(), msg_dict={"data": scan_history}
-    )
+    mocked_client.connector.xadd(MessageEndpoints.scan_history(), msg_dict={"data": scan_history})
     widget = ScanControl(client=mocked_client)
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
