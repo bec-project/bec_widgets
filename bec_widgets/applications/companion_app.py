@@ -19,8 +19,8 @@ from qtpy.QtWidgets import QApplication
 
 import bec_widgets
 from bec_widgets.applications.launch_window import LaunchWindow
-from bec_widgets.utils.rpc_register import RPCRegister
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
+from bec_widgets.utils.rpc_register import RPCRegister
 
 logger = bec_logger.logger
 
