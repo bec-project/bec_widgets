@@ -611,7 +611,7 @@ class Heatmap(ImageBase):
             scan_msg = self.scan_item.status_message
         elif hasattr(self.scan_item, "metadata"):
             metadata = self.scan_item.metadata["bec"]
-            status = metadata["exit_status"]
+            status = metadata["status"]
             scan_id = metadata["scan_id"]
             scan_name = metadata["scan_name"]
             scan_type = metadata["scan_type"]
