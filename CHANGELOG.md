@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v3.7.0 (2026-04-21)
+
+### Features
+
+- Move companion app to applications
+  ([`0cf84cd`](https://github.com/bec-project/bec_widgets/commit/0cf84cd1d839ac4a39ffb5fb9ba57d432e04348a))
+
+### Refactoring
+
+- Cleanup of imports
+  ([`3e77f54`](https://github.com/bec-project/bec_widgets/commit/3e77f540345f56b9f184a332fcdd50d4d4c8c621))
+
+
 ## v3.6.0 (2026-04-21)
 
 ### Bug Fixes
