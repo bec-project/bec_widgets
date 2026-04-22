@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+
+##########################
+### AI-generated file. ###
+##########################
+
 set -euo pipefail
 
 mkdir -p benchmark-results

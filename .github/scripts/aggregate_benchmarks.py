@@ -1,4 +1,7 @@
-#!/usr/bin/env python3
+##########################
+### AI-generated file. ###
+##########################
+
 """Aggregate and merge benchmark JSON files.
 
 The workflow runs the same benchmark suite on multiple independent runners.
