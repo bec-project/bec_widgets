@@ -1,4 +1,7 @@
-#!/usr/bin/env python3
+##########################
+### AI-generated file. ###
+##########################
+
 """Run a command with BEC e2e services available."""
 
 from __future__ import annotations

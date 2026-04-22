@@ -1,4 +1,7 @@
-#!/usr/bin/env python3
+##########################
+### AI-generated file. ###
+##########################
+
 """Compare benchmark JSON files and write a GitHub Actions summary.
 
 The script supports JSON emitted by hyperfine, JSON emitted by pytest-benchmark,
