@@ -24,19 +24,9 @@ class ProfileComboBox(QComboBox):
     def set_quick_profile_provider(self, provider: Callable[[], list[str]]) -> None:
         self._quick_provider = provider
 
-    def refresh_profiles(
-        self, active_profile: str | None = None, show_empty_profile: bool = False
+    def _refresh_profiles(
+        self, current_text: str, active_profile: str | None = None, show_empty_profile: bool = False
     ) -> None:
-        """
-        Refresh the profile list and ensure the active profile is visible.
-
-        Args:
-            active_profile(str | None): The currently active profile name.
-            show_empty_profile(bool): If True, show an explicit empty unsaved workspace entry.
-        """
-
-        current_text = active_profile or self.currentText()
-        self.blockSignals(True)
         self.clear()
 
         quick_profiles = self._quick_provider()
@@ -113,7 +103,24 @@ class ProfileComboBox(QComboBox):
             self.setToolTip("Active profile is not in quick select")
         else:
             self.setToolTip("")
-        self.blockSignals(False)
+
+    def refresh_profiles(
+        self, active_profile: str | None = None, show_empty_profile: bool = False
+    ) -> None:
+        """
+        Refresh the profile list and ensure the active profile is visible.
+
+        Args:
+            active_profile(str | None): The currently active profile name.
+            show_empty_profile(bool): If True, show an explicit empty unsaved workspace entry.
+        """
+
+        current_text = active_profile or self.currentText()
+        was_blocked = self.blockSignals(True)
+        try:
+            self._refresh_profiles(current_text, active_profile, show_empty_profile)
+        finally:
+            self.blockSignals(was_blocked)
 
 
 def workspace_bundle(components: ToolbarComponents, enable_tools: bool = True) -> ToolbarBundle:
@@ -122,6 +129,7 @@ def workspace_bundle(components: ToolbarComponents, enable_tools: bool = True) -
 
     Args:
         components (ToolbarComponents): The components to be added to the bundle.
+        enable_tools(bool): If True, show the workspace management tools; otherwise, only show the profile combo.
 
     Returns:
         ToolbarBundle: The workspace toolbar bundle.
