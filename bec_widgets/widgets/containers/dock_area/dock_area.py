@@ -35,25 +35,25 @@ from bec_widgets.utils.widget_state_manager import WidgetStateManager
 from bec_widgets.widgets.containers.dock_area.basic_dock_area import DockAreaWidget
 from bec_widgets.widgets.containers.dock_area.profile_utils import (
     SETTINGS_KEYS,
-    default_profile_candidates,
+    baseline_profile_candidates,
     delete_profile_files,
     get_last_profile,
     is_profile_read_only,
     is_quick_select,
     list_profiles,
     list_quick_profiles,
-    load_default_profile_screenshot,
-    load_user_profile_screenshot,
+    load_baseline_profile_screenshot,
+    load_runtime_profile_screenshot,
     now_iso_utc,
-    open_default_settings,
-    open_user_settings,
+    open_baseline_settings,
+    open_runtime_settings,
     profile_origin,
     profile_origin_display,
     read_manifest,
-    restore_user_from_default,
+    restore_runtime_from_baseline,
+    runtime_profile_candidates,
     set_last_profile,
     set_quick_select,
-    user_profile_candidates,
     write_manifest,
 )
 from bec_widgets.widgets.containers.dock_area.settings.dialogs import (
@@ -588,13 +588,13 @@ class BECDockArea(DockAreaWidget):
 
     @property
     def profile_namespace(self) -> str | None:
-        """Namespace used to scope user/default profile files for this dock area."""
+        """Namespace used to scope runtime/baseline profile files for this dock area."""
         return self._resolve_profile_namespace()
 
     def _profile_exists(self, name: str, namespace: str | None) -> bool:
         return any(
-            os.path.exists(path) for path in user_profile_candidates(name, namespace)
-        ) or any(os.path.exists(path) for path in default_profile_candidates(name, namespace))
+            os.path.exists(path) for path in runtime_profile_candidates(name, namespace)
+        ) or any(os.path.exists(path) for path in baseline_profile_candidates(name, namespace))
 
     def _write_snapshot_to_settings(self, settings, save_preview: bool = True) -> None:
         """
@@ -620,35 +620,34 @@ class BECDockArea(DockAreaWidget):
         name: str,
         namespace: str | None,
         *,
-        write_default: bool = True,
-        write_user: bool = True,
+        write_baseline: bool = True,
+        write_runtime: bool = True,
         save_preview: bool = True,
     ) -> None:
         """
-        Write profile settings to default and/or user settings files.
+        Write profile settings to baseline and/or runtime settings files.
 
         Args:
             name: The profile name.
             namespace: The profile namespace.
-            write_default: Whether to write to the default settings file.
-            write_user: Whether to write to the user settings file.
+            write_baseline: Whether to write to the baseline settings file.
+            write_runtime: Whether to write to the runtime settings file.
             save_preview: Whether to save a screenshot preview.
         """
-        if write_default:
-            ds = open_default_settings(name, namespace=namespace)
-            self._write_snapshot_to_settings(ds, save_preview=save_preview)
-            if not ds.value(SETTINGS_KEYS["created_at"], ""):
-                ds.setValue(SETTINGS_KEYS["created_at"], now_iso_utc())
-            if not ds.value(SETTINGS_KEYS["is_quick_select"], None):
-                ds.setValue(SETTINGS_KEYS["is_quick_select"], True)
 
-        if write_user:
-            us = open_user_settings(name, namespace=namespace)
-            self._write_snapshot_to_settings(us, save_preview=save_preview)
-            if not us.value(SETTINGS_KEYS["created_at"], ""):
-                us.setValue(SETTINGS_KEYS["created_at"], now_iso_utc())
-            if not us.value(SETTINGS_KEYS["is_quick_select"], None):
-                us.setValue(SETTINGS_KEYS["is_quick_select"], True)
+        def _write_settings(open_settings) -> None:
+            settings = open_settings(name, namespace=namespace)
+            self._write_snapshot_to_settings(settings, save_preview=save_preview)
+            if not settings.value(SETTINGS_KEYS["created_at"], ""):
+                settings.setValue(SETTINGS_KEYS["created_at"], now_iso_utc())
+            if not settings.value(SETTINGS_KEYS["is_quick_select"], None):
+                settings.setValue(SETTINGS_KEYS["is_quick_select"], True)
+
+        if write_baseline:
+            _write_settings(open_baseline_settings)
+
+        if write_runtime:
+            _write_settings(open_runtime_settings)
 
     def _finalize_profile_change(self, name: str, namespace: str | None) -> None:
         """
@@ -710,10 +709,10 @@ class BECDockArea(DockAreaWidget):
         Save the current workspace profile.
 
         On first save of a given name:
-          - writes a default copy to states/default/<name>.ini with tag=default and created_at
-          - writes a user copy   to states/user/<name>.ini    with tag=user    and created_at
-        On subsequent saves of user-owned profiles:
-          - updates both the default and user copies so restore uses the latest snapshot.
+          - writes a baseline copy to profiles/baseline/<name>.ini with created_at
+          - writes a runtime copy to profiles/runtime/<name>.ini with created_at
+        On subsequent saves:
+          - updates both the baseline and runtime copies so restore uses the latest snapshot.
         Read-only bundled profiles cannot be overwritten.
 
         Args:
@@ -777,7 +776,7 @@ class BECDockArea(DockAreaWidget):
             overwrite_existing = origin == "settings"
 
         origin_before_save = profile_origin(name, namespace=namespace)
-        overwrite_default = overwrite_existing and origin_before_save == "settings"
+        overwrite_baseline = overwrite_existing and origin_before_save == "settings"
 
         # Display saving placeholder in toolbar
         workspace_combo = self.toolbar.components.get_action("workspace_combo").widget
@@ -786,12 +785,12 @@ class BECDockArea(DockAreaWidget):
         workspace_combo.setCurrentIndex(0)
         workspace_combo.blockSignals(False)
 
-        # Write to default and/or user settings
-        should_write_default = overwrite_default or not any(
-            os.path.exists(path) for path in default_profile_candidates(name, namespace)
+        # Write to baseline and/or runtime settings
+        should_write_baseline = overwrite_baseline or not any(
+            os.path.exists(path) for path in baseline_profile_candidates(name, namespace)
         )
         self._write_profile_settings(
-            name, namespace, write_default=should_write_default, write_user=True
+            name, namespace, write_baseline=should_write_baseline, write_runtime=True
         )
 
         set_quick_select(name, quickselect, namespace=namespace)
@@ -825,8 +824,8 @@ class BECDockArea(DockAreaWidget):
         """
         Load a workspace profile.
 
-        Before switching, persist the current profile to the user copy.
-        Prefer loading the user copy; fall back to the default copy.
+        Before switching, persist the current profile to the runtime copy.
+        Prefer loading the runtime copy; fall back to the baseline copy.
 
         Args:
             name (str | None): The name of the profile to load. If None, prompts the user.
@@ -848,14 +847,14 @@ class BECDockArea(DockAreaWidget):
             if skip_pair and skip_pair == (prev_name, name):
                 self._pending_autosave_skip = None
             else:
-                us_prev = open_user_settings(prev_name, namespace=namespace)
+                us_prev = open_runtime_settings(prev_name, namespace=namespace)
                 self._write_snapshot_to_settings(us_prev, save_preview=True)
 
         settings = None
-        if any(os.path.exists(path) for path in user_profile_candidates(name, namespace)):
-            settings = open_user_settings(name, namespace=namespace)
-        elif any(os.path.exists(path) for path in default_profile_candidates(name, namespace)):
-            settings = open_default_settings(name, namespace=namespace)
+        if any(os.path.exists(path) for path in runtime_profile_candidates(name, namespace)):
+            settings = open_runtime_settings(name, namespace=namespace)
+        elif any(os.path.exists(path) for path in baseline_profile_candidates(name, namespace)):
+            settings = open_baseline_settings(name, namespace=namespace)
         if settings is None:
             logger.warning(f"Profile '{name}' not found in namespace '{namespace}'. Creating new.")
             self.delete_all()
@@ -897,9 +896,9 @@ class BECDockArea(DockAreaWidget):
 
     @SafeSlot()
     @SafeSlot(str)
-    def restore_user_profile_from_default(self, name: str | None = None):
+    def restore_runtime_profile_from_baseline(self, name: str | None = None):
         """
-        Overwrite the user copy of *name* with the default baseline.
+        Overwrite the runtime copy of *name* with the baseline.
         If *name* is None, target the currently active profile.
 
         Args:
@@ -916,13 +915,13 @@ class BECDockArea(DockAreaWidget):
             ba = bytes(self.screenshot_bytes())
             current_pixmap.loadFromData(ba)
         if current_pixmap is None or current_pixmap.isNull():
-            current_pixmap = load_user_profile_screenshot(target, namespace=namespace)
-        default_pixmap = load_default_profile_screenshot(target, namespace=namespace)
+            current_pixmap = load_runtime_profile_screenshot(target, namespace=namespace)
+        baseline_pixmap = load_baseline_profile_screenshot(target, namespace=namespace)
 
-        if not RestoreProfileDialog.confirm(self, current_pixmap, default_pixmap):
+        if not RestoreProfileDialog.confirm(self, current_pixmap, baseline_pixmap):
             return
 
-        restore_user_from_default(target, namespace=namespace)
+        restore_runtime_from_baseline(target, namespace=namespace)
         self.delete_all()
         self.load_profile(target)
 
@@ -1057,7 +1056,7 @@ class BECDockArea(DockAreaWidget):
         manage_action = self.toolbar.components.get_action("manage_workspaces").action
         if self.manage_dialog is None or not self.manage_dialog.isVisible():
             self.manage_widget = WorkSpaceManager(
-                self, target_widget=self, default_profile=self._current_profile_name
+                self, target_widget=self, active_profile=self._current_profile_name
             )
             self.manage_dialog = QDialog(modal=False)
 
@@ -1156,7 +1155,7 @@ class BECDockArea(DockAreaWidget):
             return
 
         namespace = self.profile_namespace
-        settings = open_user_settings(name, namespace=namespace)
+        settings = open_runtime_settings(name, namespace=namespace)
         self._write_snapshot_to_settings(settings)
         set_last_profile(name, namespace=namespace, instance=self._last_profile_instance_id())
         self._exit_snapshot_written = True

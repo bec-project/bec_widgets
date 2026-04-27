@@ -19,19 +19,19 @@ from bec_widgets.widgets.containers.dock_area.basic_dock_area import (
 from bec_widgets.widgets.containers.dock_area.dock_area import BECDockArea, SaveProfileDialog
 from bec_widgets.widgets.containers.dock_area.profile_utils import (
     SETTINGS_KEYS,
-    default_profile_path,
+    baseline_profile_path,
     get_profile_info,
     is_profile_read_only,
     is_quick_select,
     list_profiles,
-    load_default_profile_screenshot,
-    load_user_profile_screenshot,
-    open_default_settings,
-    open_user_settings,
+    load_baseline_profile_screenshot,
+    load_runtime_profile_screenshot,
+    open_baseline_settings,
+    open_runtime_settings,
     read_manifest,
-    restore_user_from_default,
+    restore_runtime_from_baseline,
+    runtime_profile_path,
     set_quick_select,
-    user_profile_path,
     write_manifest,
 )
 from bec_widgets.widgets.containers.dock_area.settings.dialogs import (
@@ -188,17 +188,17 @@ class _NamespaceProfiles:
     def __init__(self, widget: BECDockArea):
         self.namespace = widget.profile_namespace
 
-    def open_user(self, name: str):
-        return open_user_settings(name, namespace=self.namespace)
+    def open_runtime(self, name: str):
+        return open_runtime_settings(name, namespace=self.namespace)
 
-    def open_default(self, name: str):
-        return open_default_settings(name, namespace=self.namespace)
+    def open_baseline(self, name: str):
+        return open_baseline_settings(name, namespace=self.namespace)
 
-    def user_path(self, name: str) -> str:
-        return user_profile_path(name, namespace=self.namespace)
+    def runtime_path(self, name: str) -> str:
+        return runtime_profile_path(name, namespace=self.namespace)
 
-    def default_path(self, name: str) -> str:
-        return default_profile_path(name, namespace=self.namespace)
+    def baseline_path(self, name: str) -> str:
+        return baseline_profile_path(name, namespace=self.namespace)
 
     def list_profiles(self) -> list[str]:
         return list_profiles(namespace=self.namespace)
@@ -946,7 +946,7 @@ class TestToolbarFunctionality:
 
     def test_load_profile_restores_floating_dock(self, advanced_dock_area, qtbot):
         helper = profile_helper(advanced_dock_area)
-        settings = helper.open_user("floating_profile")
+        settings = helper.open_runtime("floating_profile")
         settings.clear()
 
         settings.setValue("profile/created_at", "2025-11-23T00:00:00Z")
@@ -1246,9 +1246,9 @@ class TestProfileInfoAndScreenshots:
         settings.endArray()
         settings.sync()
 
-    def test_get_profile_info_user_origin(self, temp_profile_dir):
-        name = "info_user"
-        settings = open_user_settings(name)
+    def test_get_profile_info_runtime_origin(self, temp_profile_dir):
+        name = "info_runtime"
+        settings = open_runtime_settings(name)
         settings.setValue(profile_utils.SETTINGS_KEYS["created_at"], "2023-01-01T00:00:00Z")
         settings.setValue("profile/author", "Custom")
         set_quick_select(name, True)
@@ -1262,22 +1262,22 @@ class TestProfileInfoAndScreenshots:
         assert info.is_quick_select is True
         assert info.widget_count == 3
         assert info.author == "User"
-        assert info.user_path.endswith(f"{name}.ini")
+        assert info.runtime_path.endswith(f"{name}.ini")
         assert info.size_kb >= 0
 
-    def test_get_profile_info_default_only(self, temp_profile_dir):
-        name = "info_default"
-        settings = open_default_settings(name)
+    def test_get_profile_info_baseline_only(self, temp_profile_dir):
+        name = "info_baseline"
+        settings = open_baseline_settings(name)
         self._write_manifest(settings, count=1)
 
-        user_path = user_profile_path(name)
-        if os.path.exists(user_path):
-            os.remove(user_path)
+        runtime_path = runtime_profile_path(name)
+        if os.path.exists(runtime_path):
+            os.remove(runtime_path)
 
         info = get_profile_info(name)
 
         assert info.origin == "settings"
-        assert info.user_path.endswith(f"{name}.ini")
+        assert info.baseline_path.endswith(f"{name}.ini")
         assert info.widget_count == 1
 
     def test_get_profile_info_module_readonly(self, module_profile_factory):
@@ -1289,10 +1289,10 @@ class TestProfileInfoAndScreenshots:
 
     def test_get_profile_info_unknown_profile(self):
         name = "nonexistent_profile"
-        if os.path.exists(user_profile_path(name)):
-            os.remove(user_profile_path(name))
-        if os.path.exists(default_profile_path(name)):
-            os.remove(default_profile_path(name))
+        if os.path.exists(runtime_profile_path(name)):
+            os.remove(runtime_profile_path(name))
+        if os.path.exists(baseline_profile_path(name)):
+            os.remove(baseline_profile_path(name))
 
         info = get_profile_info(name)
 
@@ -1300,29 +1300,29 @@ class TestProfileInfoAndScreenshots:
         assert info.is_read_only is False
         assert info.widget_count == 0
 
-    def test_load_user_profile_screenshot(self, temp_profile_dir):
-        name = "user_screenshot"
-        settings = open_user_settings(name)
+    def test_load_runtime_profile_screenshot(self, temp_profile_dir):
+        name = "runtime_screenshot"
+        settings = open_runtime_settings(name)
         settings.setValue(profile_utils.SETTINGS_KEYS["screenshot"], self.PNG_BYTES)
         settings.sync()
 
-        pix = load_user_profile_screenshot(name)
+        pix = load_runtime_profile_screenshot(name)
 
         assert pix is not None and not pix.isNull()
 
-    def test_load_default_profile_screenshot(self, temp_profile_dir):
-        name = "default_screenshot"
-        settings = open_default_settings(name)
+    def test_load_baseline_profile_screenshot(self, temp_profile_dir):
+        name = "baseline_screenshot"
+        settings = open_baseline_settings(name)
         settings.setValue(profile_utils.SETTINGS_KEYS["screenshot"], self.PNG_BYTES)
         settings.sync()
 
-        pix = load_default_profile_screenshot(name)
+        pix = load_baseline_profile_screenshot(name)
 
         assert pix is not None and not pix.isNull()
 
     def test_load_screenshot_from_settings_invalid(self, temp_profile_dir):
         name = "invalid_screenshot"
-        settings = open_user_settings(name)
+        settings = open_runtime_settings(name)
         settings.setValue(profile_utils.SETTINGS_KEYS["screenshot"], "not-an-image")
         settings.sync()
 
@@ -1332,7 +1332,7 @@ class TestProfileInfoAndScreenshots:
 
     def test_load_screenshot_from_settings_bytes(self, temp_profile_dir):
         name = "bytes_screenshot"
-        settings = open_user_settings(name)
+        settings = open_runtime_settings(name)
         settings.setValue(profile_utils.SETTINGS_KEYS["screenshot"], self.PNG_BYTES)
         settings.sync()
 
@@ -1347,7 +1347,7 @@ class TestWorkSpaceManager:
     @staticmethod
     def _create_profiles(names):
         for name in names:
-            settings = open_user_settings(name)
+            settings = open_runtime_settings(name)
             settings.setValue("meta", "value")
             settings.sync()
 
@@ -1411,7 +1411,7 @@ class TestWorkSpaceManager:
 
         manager.delete_profile(name)
 
-        assert not os.path.exists(user_profile_path(name))
+        assert not os.path.exists(runtime_profile_path(name))
         assert target.refresh_calls >= 1
 
     def test_delete_readonly_profile_shows_message(
@@ -1441,21 +1441,23 @@ class TestWorkSpaceManager:
 class TestAdvancedDockAreaRestoreAndDialogs:
     """Additional coverage for restore flows and workspace dialogs."""
 
-    def test_restore_user_profile_from_default_confirm_true(self, advanced_dock_area, monkeypatch):
+    def test_restore_runtime_profile_from_baseline_confirm_true(
+        self, advanced_dock_area, monkeypatch
+    ):
         profile_name = "profile_restore_true"
         helper = profile_helper(advanced_dock_area)
-        helper.open_default(profile_name).sync()
-        helper.open_user(profile_name).sync()
+        helper.open_baseline(profile_name).sync()
+        helper.open_runtime(profile_name).sync()
         advanced_dock_area._current_profile_name = profile_name
         advanced_dock_area.isVisible = lambda: False
         pix = QPixmap(8, 8)
         pix.fill(Qt.red)
         monkeypatch.setattr(
-            "bec_widgets.widgets.containers.dock_area.dock_area.load_user_profile_screenshot",
+            "bec_widgets.widgets.containers.dock_area.dock_area.load_runtime_profile_screenshot",
             lambda name, namespace=None: pix,
         )
         monkeypatch.setattr(
-            "bec_widgets.widgets.containers.dock_area.dock_area.load_default_profile_screenshot",
+            "bec_widgets.widgets.containers.dock_area.dock_area.load_baseline_profile_screenshot",
             lambda name, namespace=None: pix,
         )
         monkeypatch.setattr(
@@ -1465,12 +1467,12 @@ class TestAdvancedDockAreaRestoreAndDialogs:
 
         with (
             patch(
-                "bec_widgets.widgets.containers.dock_area.dock_area.restore_user_from_default"
+                "bec_widgets.widgets.containers.dock_area.dock_area.restore_runtime_from_baseline"
             ) as mock_restore,
             patch.object(advanced_dock_area, "delete_all") as mock_delete_all,
             patch.object(advanced_dock_area, "load_profile") as mock_load_profile,
         ):
-            advanced_dock_area.restore_user_profile_from_default()
+            advanced_dock_area.restore_runtime_profile_from_baseline()
 
         assert mock_restore.call_count == 1
         args, kwargs = mock_restore.call_args
@@ -1479,20 +1481,22 @@ class TestAdvancedDockAreaRestoreAndDialogs:
         mock_delete_all.assert_called_once()
         mock_load_profile.assert_called_once_with(profile_name)
 
-    def test_restore_user_profile_from_default_confirm_false(self, advanced_dock_area, monkeypatch):
+    def test_restore_runtime_profile_from_baseline_confirm_false(
+        self, advanced_dock_area, monkeypatch
+    ):
         profile_name = "profile_restore_false"
         helper = profile_helper(advanced_dock_area)
-        helper.open_default(profile_name).sync()
-        helper.open_user(profile_name).sync()
+        helper.open_baseline(profile_name).sync()
+        helper.open_runtime(profile_name).sync()
         advanced_dock_area._current_profile_name = profile_name
         advanced_dock_area.isVisible = lambda: False
         monkeypatch.setattr(
-            "bec_widgets.widgets.containers.dock_area.dock_area.load_user_profile_screenshot",
-            lambda name: QPixmap(),
+            "bec_widgets.widgets.containers.dock_area.dock_area.load_runtime_profile_screenshot",
+            lambda name, namespace=None: QPixmap(),
         )
         monkeypatch.setattr(
-            "bec_widgets.widgets.containers.dock_area.dock_area.load_default_profile_screenshot",
-            lambda name: QPixmap(),
+            "bec_widgets.widgets.containers.dock_area.dock_area.load_baseline_profile_screenshot",
+            lambda name, namespace=None: QPixmap(),
         )
         monkeypatch.setattr(
             "bec_widgets.widgets.containers.dock_area.dock_area.RestoreProfileDialog.confirm",
@@ -1500,24 +1504,24 @@ class TestAdvancedDockAreaRestoreAndDialogs:
         )
 
         with patch(
-            "bec_widgets.widgets.containers.dock_area.dock_area.restore_user_from_default"
+            "bec_widgets.widgets.containers.dock_area.dock_area.restore_runtime_from_baseline"
         ) as mock_restore:
-            advanced_dock_area.restore_user_profile_from_default()
+            advanced_dock_area.restore_runtime_profile_from_baseline()
 
         mock_restore.assert_not_called()
 
-    def test_restore_user_profile_from_default_no_target(self, advanced_dock_area, monkeypatch):
+    def test_restore_runtime_profile_from_baseline_no_target(self, advanced_dock_area, monkeypatch):
         advanced_dock_area._current_profile_name = None
         with patch(
             "bec_widgets.widgets.containers.dock_area.dock_area.RestoreProfileDialog.confirm"
         ) as mock_confirm:
-            advanced_dock_area.restore_user_profile_from_default()
+            advanced_dock_area.restore_runtime_profile_from_baseline()
         mock_confirm.assert_not_called()
 
     def test_refresh_workspace_list_with_refresh_profiles(self, advanced_dock_area):
         profile_name = "refresh_profile"
         helper = profile_helper(advanced_dock_area)
-        helper.open_user(profile_name).sync()
+        helper.open_runtime(profile_name).sync()
         # Simulate a normal named-profile state (not transient empty startup mode).
         advanced_dock_area._empty_profile_active = False
         advanced_dock_area._current_profile_name = profile_name
@@ -1572,8 +1576,8 @@ class TestAdvancedDockAreaRestoreAndDialogs:
         active = "active_profile"
         quick = "quick_profile"
         helper = profile_helper(advanced_dock_area)
-        helper.open_user(active).sync()
-        helper.open_user(quick).sync()
+        helper.open_runtime(active).sync()
+        helper.open_runtime(quick).sync()
         helper.set_quick_select(quick, True)
 
         combo_stub = ComboStub()
@@ -1600,7 +1604,7 @@ class TestAdvancedDockAreaRestoreAndDialogs:
 
         advanced_dock_area._current_profile_name = "manager_profile"
         helper = profile_helper(advanced_dock_area)
-        helper.open_user("manager_profile").sync()
+        helper.open_runtime("manager_profile").sync()
 
         advanced_dock_area.show_workspace_manager()
 
@@ -1635,17 +1639,108 @@ class TestProfileManagement:
 
     def test_profile_path(self, temp_profile_dir):
         """Test profile path generation."""
-        path = user_profile_path("test_profile")
-        expected = os.path.join(temp_profile_dir, "user", "test_profile.ini")
+        path = runtime_profile_path("test_profile")
+        expected = os.path.join(temp_profile_dir, "runtime", "test_profile.ini")
         assert path == expected
 
-        default_path = default_profile_path("test_profile")
-        expected_default = os.path.join(temp_profile_dir, "default", "test_profile.ini")
-        assert default_path == expected_default
+        baseline_path = baseline_profile_path("test_profile")
+        expected_baseline = os.path.join(temp_profile_dir, "baseline", "test_profile.ini")
+        assert baseline_path == expected_baseline
+
+    def test_legacy_user_profile_is_mapped_to_runtime(self, temp_profile_dir):
+        """Legacy user profiles are copied into the canonical runtime segment."""
+        name = "legacy_runtime"
+        legacy_dir = os.path.join(temp_profile_dir, "user")
+        os.makedirs(legacy_dir, exist_ok=True)
+        legacy_path = os.path.join(legacy_dir, f"{name}.ini")
+        legacy_settings = QSettings(legacy_path, QSettings.IniFormat)
+        legacy_settings.setValue("test/value", "legacy")
+        legacy_settings.sync()
+
+        canonical_path = runtime_profile_path(name)
+        assert not os.path.exists(canonical_path)
+
+        assert name in list_profiles()
+
+        assert os.path.exists(canonical_path)
+        assert open_runtime_settings(name).value("test/value", "", type=str) == "legacy"
+
+    def test_legacy_default_profile_is_mapped_to_baseline(self, temp_profile_dir):
+        """Legacy default profiles are copied into the canonical baseline segment."""
+        name = "legacy_baseline"
+        legacy_dir = os.path.join(temp_profile_dir, "default")
+        os.makedirs(legacy_dir, exist_ok=True)
+        legacy_path = os.path.join(legacy_dir, f"{name}.ini")
+        legacy_settings = QSettings(legacy_path, QSettings.IniFormat)
+        legacy_settings.setValue("test/value", "legacy")
+        legacy_settings.sync()
+
+        canonical_path = baseline_profile_path(name)
+        assert not os.path.exists(canonical_path)
+
+        assert name in list_profiles()
+
+        assert os.path.exists(canonical_path)
+        assert open_baseline_settings(name).value("test/value", "", type=str) == "legacy"
+
+    def test_runtime_namespace_fallback_is_materialized(self, temp_profile_dir):
+        """Canonical runtime namespace fallback is copied before opening primary settings."""
+        name = "runtime_namespace_fallback"
+        fallback_settings = open_runtime_settings(name)
+        fallback_settings.setValue("test/value", "fallback")
+        fallback_settings.sync()
+
+        namespaced_path = runtime_profile_path(name, namespace="beamline")
+        assert not os.path.exists(namespaced_path)
+
+        settings = open_runtime_settings(name, namespace="beamline")
+
+        assert os.path.exists(namespaced_path)
+        assert settings.value("test/value", "", type=str) == "fallback"
+
+    def test_baseline_namespace_fallback_is_materialized(self, temp_profile_dir):
+        """Canonical baseline namespace fallback is copied before opening primary settings."""
+        name = "baseline_namespace_fallback"
+        fallback_settings = open_baseline_settings(name)
+        fallback_settings.setValue("test/value", "fallback")
+        fallback_settings.sync()
+
+        namespaced_path = baseline_profile_path(name, namespace="beamline")
+        assert not os.path.exists(namespaced_path)
+
+        settings = open_baseline_settings(name, namespace="beamline")
+
+        assert os.path.exists(namespaced_path)
+        assert settings.value("test/value", "", type=str) == "fallback"
+
+    def test_canonical_profile_wins_over_legacy_profile(self, temp_profile_dir):
+        """Canonical runtime/baseline files are not overwritten by legacy fallback files."""
+        name = "canonical_wins"
+        runtime_settings = open_runtime_settings(name)
+        runtime_settings.setValue("test/value", "canonical-runtime")
+        runtime_settings.sync()
+        baseline_settings = open_baseline_settings(name)
+        baseline_settings.setValue("test/value", "canonical-baseline")
+        baseline_settings.sync()
+
+        for segment, value in (("user", "legacy-runtime"), ("default", "legacy-baseline")):
+            legacy_dir = os.path.join(temp_profile_dir, segment)
+            os.makedirs(legacy_dir, exist_ok=True)
+            legacy_settings = QSettings(
+                os.path.join(legacy_dir, f"{name}.ini"), QSettings.IniFormat
+            )
+            legacy_settings.setValue("test/value", value)
+            legacy_settings.sync()
+
+        assert name in list_profiles()
+        assert open_runtime_settings(name).value("test/value", "", type=str) == "canonical-runtime"
+        assert (
+            open_baseline_settings(name).value("test/value", "", type=str) == "canonical-baseline"
+        )
 
     def test_open_settings(self, temp_profile_dir):
         """Test opening settings for a profile."""
-        settings = open_user_settings("test_profile")
+        settings = open_runtime_settings("test_profile")
         assert isinstance(settings, QSettings)
 
     def test_list_profiles_empty(self, temp_profile_dir):
@@ -1666,7 +1761,7 @@ class TestProfileManagement:
         # Create some test profile files
         profile_names = ["profile1", "profile2", "profile3"]
         for name in profile_names:
-            settings = open_user_settings(name)
+            settings = open_runtime_settings(name)
             settings.setValue("test", "value")
             settings.sync()
 
@@ -1676,24 +1771,24 @@ class TestProfileManagement:
 
     def test_readonly_profile_operations(self, temp_profile_dir, module_profile_factory):
         """Test read-only profile functionality."""
-        profile_name = "user_profile"
+        profile_name = "runtime_profile"
 
         # Initially should not be read-only
         assert not is_profile_read_only(profile_name)
 
-        # Create a user profile and ensure it's writable
-        settings = open_user_settings(profile_name)
+        # Create a runtime profile and ensure it's writable
+        settings = open_runtime_settings(profile_name)
         settings.setValue("test", "value")
         settings.sync()
         assert not is_profile_read_only(profile_name)
 
         # Verify a bundled module profile is detected as read-only
-        readonly_name = module_profile_factory("module_default")
+        readonly_name = module_profile_factory("module_baseline")
         assert is_profile_read_only(readonly_name)
 
     def test_write_and_read_manifest(self, temp_profile_dir, advanced_dock_area, qtbot):
         """Test writing and reading dock manifest."""
-        settings = open_user_settings("test_manifest")
+        settings = open_runtime_settings("test_manifest")
 
         # Create real docks
         advanced_dock_area.new("DarkModeButton")
@@ -1723,18 +1818,18 @@ class TestProfileManagement:
     def test_restore_preserves_quick_select(self, temp_profile_dir):
         """Ensure restoring keeps the quick select flag when it was enabled."""
         profile_name = "restorable_profile"
-        default_settings = open_default_settings(profile_name)
-        default_settings.setValue("test", "default")
-        default_settings.sync()
+        baseline_settings = open_baseline_settings(profile_name)
+        baseline_settings.setValue("test", "baseline")
+        baseline_settings.sync()
 
-        user_settings = open_user_settings(profile_name)
-        user_settings.setValue("test", "user")
-        user_settings.sync()
+        runtime_settings = open_runtime_settings(profile_name)
+        runtime_settings.setValue("test", "runtime")
+        runtime_settings.sync()
 
         set_quick_select(profile_name, True)
         assert is_quick_select(profile_name)
 
-        restore_user_from_default(profile_name)
+        restore_runtime_from_baseline(profile_name)
 
         assert is_quick_select(profile_name)
 
@@ -1758,7 +1853,7 @@ class TestWorkspaceProfileOperations:
             widget.prepare_for_shutdown()
         mock_write.assert_not_called()
 
-        helper.open_user("real_profile").sync()
+        helper.open_runtime("real_profile").sync()
         widget.load_profile("real_profile")
         assert widget._empty_profile_active is False
         assert widget._empty_profile_consumed is True
@@ -1772,7 +1867,7 @@ class TestWorkspaceProfileOperations:
         profile_name = module_profile_factory("readonly_profile")
         new_profile = f"{profile_name}_custom"
         helper = profile_helper(advanced_dock_area)
-        target_path = helper.user_path(new_profile)
+        target_path = helper.runtime_path(new_profile)
         if os.path.exists(target_path):
             os.remove(target_path)
 
@@ -1802,7 +1897,7 @@ class TestWorkspaceProfileOperations:
         helper = profile_helper(advanced_dock_area)
 
         # Create a profile with manifest
-        settings = helper.open_user(profile_name)
+        settings = helper.open_runtime(profile_name)
         settings.beginWriteArray("manifest/widgets", 1)
         settings.setArrayIndex(0)
         settings.setValue("object_name", "test_widget")
@@ -1823,6 +1918,46 @@ class TestWorkspaceProfileOperations:
         widget_map = advanced_dock_area.widget_map()
         assert "test_widget" in widget_map
 
+    def test_load_profile_materializes_runtime_namespace_fallback(self, advanced_dock_area):
+        """Loading a runtime fallback copies it into the active namespace before opening."""
+        profile_name = "load_runtime_namespace_fallback"
+        helper = profile_helper(advanced_dock_area)
+        fallback_settings = open_runtime_settings(profile_name)
+        fallback_settings.setValue("test/value", "fallback")
+        fallback_settings.sync()
+
+        namespaced_path = helper.runtime_path(profile_name)
+        assert not os.path.exists(namespaced_path)
+
+        advanced_dock_area.load_profile(profile_name)
+
+        assert os.path.exists(namespaced_path)
+        assert (
+            QSettings(namespaced_path, QSettings.IniFormat).value("test/value", "", type=str)
+            == "fallback"
+        )
+        assert advanced_dock_area._current_profile_name == profile_name
+
+    def test_load_profile_materializes_baseline_namespace_fallback(self, advanced_dock_area):
+        """Loading a baseline fallback copies it into the active namespace before opening."""
+        profile_name = "load_baseline_namespace_fallback"
+        helper = profile_helper(advanced_dock_area)
+        fallback_settings = open_baseline_settings(profile_name)
+        fallback_settings.setValue("test/value", "fallback")
+        fallback_settings.sync()
+
+        namespaced_path = helper.baseline_path(profile_name)
+        assert not os.path.exists(namespaced_path)
+
+        advanced_dock_area.load_profile(profile_name)
+
+        assert os.path.exists(namespaced_path)
+        assert (
+            QSettings(namespaced_path, QSettings.IniFormat).value("test/value", "", type=str)
+            == "fallback"
+        )
+        assert advanced_dock_area._current_profile_name == profile_name
+
     def test_save_as_skips_autosave_source_profile(
         self, advanced_dock_area, temp_profile_dir, qtbot
     ):
@@ -1831,7 +1966,7 @@ class TestWorkspaceProfileOperations:
         new_profile = "autosave_new"
         helper = profile_helper(advanced_dock_area)
 
-        settings = helper.open_user(source_profile)
+        settings = helper.open_runtime(source_profile)
         settings.beginWriteArray("manifest/widgets", 1)
         settings.setArrayIndex(0)
         settings.setValue("object_name", "source_widget")
@@ -1871,8 +2006,8 @@ class TestWorkspaceProfileOperations:
 
         qtbot.wait(500)
         assert list(advanced_dock_area.widget_list()) == widgets_before_save
-        source_manifest = read_manifest(helper.open_user(source_profile))
-        new_manifest = read_manifest(helper.open_user(new_profile))
+        source_manifest = read_manifest(helper.open_runtime(source_profile))
+        new_manifest = read_manifest(helper.open_runtime(new_profile))
 
         assert len(source_manifest) == 1
         assert len(new_manifest) == 2
@@ -1884,7 +2019,7 @@ class TestWorkspaceProfileOperations:
         helper = profile_helper(advanced_dock_area)
 
         for profile in (profile_a, profile_b):
-            settings = helper.open_user(profile)
+            settings = helper.open_runtime(profile)
             settings.beginWriteArray("manifest/widgets", 1)
             settings.setArrayIndex(0)
             settings.setValue("object_name", f"{profile}_widget")
@@ -1903,7 +2038,7 @@ class TestWorkspaceProfileOperations:
         advanced_dock_area.load_profile(profile_b)
         qtbot.wait(500)
 
-        manifest_a = read_manifest(helper.open_user(profile_a))
+        manifest_a = read_manifest(helper.open_runtime(profile_a))
         assert len(manifest_a) == 2
 
     def test_delete_profile_readonly(
@@ -1912,15 +2047,15 @@ class TestWorkspaceProfileOperations:
         """Test deleting bundled profile removes only the writable copy."""
         profile_name = module_profile_factory("readonly_profile")
         helper = profile_helper(advanced_dock_area)
-        helper.list_profiles()  # ensure default and user copies are materialized
-        helper.open_default(profile_name).sync()
-        settings = helper.open_user(profile_name)
+        helper.list_profiles()  # ensure baseline and runtime copies are materialized
+        helper.open_baseline(profile_name).sync()
+        settings = helper.open_runtime(profile_name)
         settings.setValue("test", "value")
         settings.sync()
-        user_path = helper.user_path(profile_name)
-        default_path = helper.default_path(profile_name)
-        assert os.path.exists(user_path)
-        assert os.path.exists(default_path)
+        runtime_path = helper.runtime_path(profile_name)
+        baseline_path = helper.baseline_path(profile_name)
+        assert os.path.exists(runtime_path)
+        assert os.path.exists(baseline_path)
 
         with patch.object(advanced_dock_area.toolbar.components, "get_action") as mock_get_action:
             mock_combo = MagicMock()
@@ -1941,9 +2076,9 @@ class TestWorkspaceProfileOperations:
 
                 mock_question.assert_not_called()
                 mock_info.assert_called_once()
-                # Read-only profile should remain intact (user + default copies)
-                assert os.path.exists(user_path)
-                assert os.path.exists(default_path)
+                # Read-only profile should remain intact (runtime + baseline copies)
+                assert os.path.exists(runtime_path)
+                assert os.path.exists(baseline_path)
 
     def test_delete_profile_success(self, advanced_dock_area, temp_profile_dir):
         """Test successful profile deletion."""
@@ -1951,11 +2086,11 @@ class TestWorkspaceProfileOperations:
         helper = profile_helper(advanced_dock_area)
 
         # Create regular profile
-        settings = helper.open_user(profile_name)
+        settings = helper.open_runtime(profile_name)
         settings.setValue("test", "value")
         settings.sync()
-        user_path = helper.user_path(profile_name)
-        assert os.path.exists(user_path)
+        runtime_path = helper.runtime_path(profile_name)
+        assert os.path.exists(runtime_path)
 
         with patch.object(advanced_dock_area.toolbar.components, "get_action") as mock_get_action:
             mock_combo = MagicMock()
@@ -1973,7 +2108,7 @@ class TestWorkspaceProfileOperations:
                     mock_question.assert_called_once()
                     mock_refresh.assert_called_once()
                     # Profile should be deleted
-                    assert not os.path.exists(user_path)
+                    assert not os.path.exists(runtime_path)
 
     def test_delete_profile_cli_usage(self, advanced_dock_area, temp_profile_dir):
         """Test delete_profile with explicit name (CLI usage - no dialog by default)."""
@@ -1981,24 +2116,24 @@ class TestWorkspaceProfileOperations:
         helper = profile_helper(advanced_dock_area)
 
         # Create regular profile
-        settings = helper.open_user(profile_name)
+        settings = helper.open_runtime(profile_name)
         settings.setValue("test", "value")
         settings.sync()
-        user_path = helper.user_path(profile_name)
-        assert os.path.exists(user_path)
+        runtime_path = helper.runtime_path(profile_name)
+        assert os.path.exists(runtime_path)
 
         # Delete without dialog (CLI usage - default behavior)
         result = advanced_dock_area.delete_profile(profile_name)
 
         assert result is True
-        assert not os.path.exists(user_path)
+        assert not os.path.exists(runtime_path)
 
     def test_refresh_workspace_list(self, advanced_dock_area, temp_profile_dir):
         """Test refreshing workspace list."""
         # Create some profiles
         helper = profile_helper(advanced_dock_area)
         for name in ["profile1", "profile2"]:
-            settings = helper.open_user(name)
+            settings = helper.open_runtime(name)
             settings.setValue("test", "value")
             settings.sync()
 

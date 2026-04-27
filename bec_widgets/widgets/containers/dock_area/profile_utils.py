@@ -2,9 +2,13 @@
 Utilities for managing BECDockArea profiles stored in INI files.
 
 Policy:
-- All created/modified profiles are stored under the BEC settings root: <base_path>/profiles/{default,user}
-- Bundled read-only defaults are discovered in BW core states/default and plugin bec_widgets/profiles but never written to.
-- Lookup order when reading: user → settings default → app or plugin bundled default.
+- All created/modified profiles are stored under the BEC settings root:
+  <base_path>/profiles/{baseline,runtime}
+- Bundled read-only baselines are discovered in BW core profiles and plugin
+  bec_widgets/profiles but never written to.
+- Lookup order when reading: runtime → settings baseline → app or plugin bundled baseline.
+- Legacy settings paths profiles/{default,user} are read through a thin segment
+  alias layer and copied to the canonical location on first access.
 """
 
 from __future__ import annotations
@@ -32,6 +36,12 @@ logger = bec_logger.logger
 MODULE_PATH = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
 ProfileOrigin = Literal["module", "plugin", "settings", "unknown"]
+ProfileSegment = Literal["baseline", "runtime"]
+
+_PROFILE_SEGMENT_ALIASES: dict[ProfileSegment, tuple[str, str]] = {
+    "baseline": ("baseline", "default"),
+    "runtime": ("runtime", "user"),
+}
 
 
 def module_profiles_dir() -> str:
@@ -130,7 +140,7 @@ def _profiles_dir(segment: str, namespace: str | None) -> str:
     Build (and ensure) the directory that holds profiles for a namespace segment.
 
     Args:
-        segment (str): Either ``"user"`` or ``"default"``.
+        segment (str): Profile segment directory name.
         namespace (str | None): Optional namespace label to scope profiles.
 
     Returns:
@@ -143,157 +153,175 @@ def _profiles_dir(segment: str, namespace: str | None) -> str:
     return path
 
 
-def _user_path_candidates(name: str, namespace: str | None) -> list[str]:
-    """
-    Generate candidate user-profile paths honoring namespace fallbacks.
-
-    Args:
-        name (str): Profile name without extension.
-        namespace (str | None): Optional namespace label.
-
-    Returns:
-        list[str]: Ordered list of candidate user profile paths (.ini files).
-    """
+def _candidate_namespaces(namespace: str | None) -> list[str | None]:
     ns = slugify.slugify(namespace, separator="_") if namespace else None
-    primary = os.path.join(_profiles_dir("user", ns), f"{name}.ini")
     if not ns:
-        return [primary]
-    legacy = os.path.join(_profiles_dir("user", None), f"{name}.ini")
-    return [primary, legacy] if legacy != primary else [primary]
+        return [None]
+    return [ns, None]
 
 
-def _default_path_candidates(name: str, namespace: str | None) -> list[str]:
+def _segment_profile_path(segment_name: str, name: str, namespace: str | None) -> str:
+    return os.path.join(_profiles_dir(segment_name, namespace), f"{name}.ini")
+
+
+def _canonical_profile_path(segment: ProfileSegment, name: str, namespace: str | None) -> str:
+    return _segment_profile_path(_PROFILE_SEGMENT_ALIASES[segment][0], name, namespace)
+
+
+def _segment_path_candidates(
+    segment: ProfileSegment,
+    name: str,
+    namespace: str | None,
+    *,
+    include_legacy: bool = True,
+    migrate_legacy: bool = True,
+) -> list[str]:
     """
-    Generate candidate default-profile paths honoring namespace fallbacks.
+    Generate profile candidates for a canonical segment.
 
-    Args:
-        name (str): Profile name without extension.
-        namespace (str | None): Optional namespace label.
-
-    Returns:
-        list[str]: Ordered list of candidate default profile paths (.ini files).
+    Canonical baseline/runtime files are always preferred. Namespace fallback
+    files and legacy default/user files are copied to the primary canonical path
+    when the primary file does not exist.
     """
-    ns = slugify.slugify(namespace, separator="_") if namespace else None
-    primary = os.path.join(_profiles_dir("default", ns), f"{name}.ini")
-    if not ns:
-        return [primary]
-    legacy = os.path.join(_profiles_dir("default", None), f"{name}.ini")
-    return [primary, legacy] if legacy != primary else [primary]
+    canonical = [
+        _segment_profile_path(_PROFILE_SEGMENT_ALIASES[segment][0], name, ns)
+        for ns in _candidate_namespaces(namespace)
+    ]
+    legacy = []
+    if include_legacy:
+        legacy = [
+            _segment_profile_path(_PROFILE_SEGMENT_ALIASES[segment][1], name, ns)
+            for ns in _candidate_namespaces(namespace)
+        ]
+
+    primary_canonical = canonical[0]
+    if migrate_legacy and not os.path.exists(primary_canonical):
+        canonical_src = next((path for path in canonical[1:] if os.path.exists(path)), None)
+        if canonical_src:
+            os.makedirs(os.path.dirname(primary_canonical), exist_ok=True)
+            shutil.copy2(canonical_src, primary_canonical)
+        elif include_legacy:
+            legacy_src = next((path for path in legacy if os.path.exists(path)), None)
+            if legacy_src:
+                os.makedirs(os.path.dirname(primary_canonical), exist_ok=True)
+                shutil.copy2(legacy_src, primary_canonical)
+
+    return list(dict.fromkeys(canonical + legacy))
 
 
-def default_profiles_dir(namespace: str | None = None) -> str:
+def baseline_profiles_dir(namespace: str | None = None) -> str:
     """
-    Return the directory that stores default profiles for the namespace.
+    Return the directory that stores baseline profiles for the namespace.
 
     Args:
         namespace (str | None, optional): Namespace label. Defaults to ``None``.
 
     Returns:
-        str: Absolute path to the default profile directory.
+        str: Absolute path to the baseline profile directory.
     """
-    return _profiles_dir("default", namespace)
+    return _profiles_dir("baseline", namespace)
 
 
-def user_profiles_dir(namespace: str | None = None) -> str:
+def runtime_profiles_dir(namespace: str | None = None) -> str:
     """
-    Return the directory that stores user profiles for the namespace.
+    Return the directory that stores runtime profiles for the namespace.
 
     Args:
         namespace (str | None, optional): Namespace label. Defaults to ``None``.
 
     Returns:
-        str: Absolute path to the user profile directory.
+        str: Absolute path to the runtime profile directory.
     """
-    return _profiles_dir("user", namespace)
+    return _profiles_dir("runtime", namespace)
 
 
-def default_profile_path(name: str, namespace: str | None = None) -> str:
+def baseline_profile_path(name: str, namespace: str | None = None) -> str:
     """
-    Compute the canonical default profile path for a profile name.
-
-    Args:
-        name (str): Profile name without extension.
-        namespace (str | None, optional): Namespace label. Defaults to ``None``.
-
-    Returns:
-        str: Absolute path to the default profile file (.ini).
-    """
-    return _default_path_candidates(name, namespace)[0]
-
-
-def user_profile_path(name: str, namespace: str | None = None) -> str:
-    """
-    Compute the canonical user profile path for a profile name.
-
-    Args:
-        name (str): Profile name without extension.
-        namespace (str | None, optional): Namespace label. Defaults to ``None``.
-
-    Returns:
-        str: Absolute path to the user profile file (.ini).
-    """
-    return _user_path_candidates(name, namespace)[0]
-
-
-def user_profile_candidates(name: str, namespace: str | None = None) -> list[str]:
-    """
-    List all user profile path candidates for a profile name.
-
-    Args:
-        name (str): Profile name without extension.
-        namespace (str | None, optional): Namespace label. Defaults to ``None``.
-
-    Returns:
-        list[str]: De-duplicated list of candidate user profile paths.
-    """
-    return list(dict.fromkeys(_user_path_candidates(name, namespace)))
-
-
-def default_profile_candidates(name: str, namespace: str | None = None) -> list[str]:
-    """
-    List all default profile path candidates for a profile name.
+    Compute the canonical baseline profile path for a profile name.
 
     Args:
         name (str): Profile name without extension.
         namespace (str | None, optional): Namespace label. Defaults to ``None``.
 
     Returns:
-        list[str]: De-duplicated list of candidate default profile paths.
+        str: Absolute path to the baseline profile file (.ini).
     """
-    return list(dict.fromkeys(_default_path_candidates(name, namespace)))
+    return _canonical_profile_path("baseline", name, namespace)
 
 
-def _existing_user_settings(name: str, namespace: str | None = None) -> QSettings | None:
+def runtime_profile_path(name: str, namespace: str | None = None) -> str:
     """
-    Resolve the first existing user profile settings object.
+    Compute the canonical runtime profile path for a profile name.
+
+    Args:
+        name (str): Profile name without extension.
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+
+    Returns:
+        str: Absolute path to the runtime profile file (.ini).
+    """
+    return _canonical_profile_path("runtime", name, namespace)
+
+
+def runtime_profile_candidates(name: str, namespace: str | None = None) -> list[str]:
+    """
+    List all runtime profile path candidates for a profile name.
+
+    Args:
+        name (str): Profile name without extension.
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+
+    Returns:
+        list[str]: De-duplicated list of candidate runtime profile paths.
+    """
+    return _segment_path_candidates("runtime", name, namespace)
+
+
+def baseline_profile_candidates(name: str, namespace: str | None = None) -> list[str]:
+    """
+    List all baseline profile path candidates for a profile name.
+
+    Args:
+        name (str): Profile name without extension.
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+
+    Returns:
+        list[str]: De-duplicated list of candidate baseline profile paths.
+    """
+    return _segment_path_candidates("baseline", name, namespace)
+
+
+def _existing_runtime_settings(name: str, namespace: str | None = None) -> QSettings | None:
+    """
+    Resolve the first existing runtime profile settings object.
 
     Args:
         name (str): Profile name without extension.
         namespace (str | None, optional): Namespace label to search. Defaults to ``None``.
 
     Returns:
-        QSettings | None: Config for the first existing user profile candidate, or ``None``
+        QSettings | None: Config for the first existing runtime profile candidate, or ``None``
             when no files are present.
     """
-    for path in user_profile_candidates(name, namespace):
+    for path in runtime_profile_candidates(name, namespace):
         if os.path.exists(path):
             return QSettings(path, QSettings.IniFormat)
     return None
 
 
-def _existing_default_settings(name: str, namespace: str | None = None) -> QSettings | None:
+def _existing_baseline_settings(name: str, namespace: str | None = None) -> QSettings | None:
     """
-    Resolve the first existing default profile settings object.
+    Resolve the first existing baseline profile settings object.
 
     Args:
         name (str): Profile name without extension.
         namespace (str | None, optional): Namespace label to search. Defaults to ``None``.
 
     Returns:
-        QSettings | None: Config for the first existing default profile candidate, or ``None``
+        QSettings | None: Config for the first existing baseline profile candidate, or ``None``
             when no files are present.
     """
-    for path in default_profile_candidates(name, namespace):
+    for path in baseline_profile_candidates(name, namespace):
         if os.path.exists(path):
             return QSettings(path, QSettings.IniFormat)
     return None
@@ -347,7 +375,7 @@ def profile_origin(name: str, namespace: str | None = None) -> ProfileOrigin:
     plugin_path = plugin_profile_path(name)
     if plugin_path and os.path.exists(plugin_path):
         return "plugin"
-    for path in user_profile_candidates(name, namespace) + default_profile_candidates(
+    for path in runtime_profile_candidates(name, namespace) + baseline_profile_candidates(
         name, namespace
     ):
         if os.path.exists(path):
@@ -406,8 +434,8 @@ def delete_profile_files(name: str, namespace: str | None = None) -> bool:
     read_only = is_profile_read_only(name, namespace)
 
     removed = False
-    # Always allow removing user copies; keep default copies for read-only origins.
-    for path in set(user_profile_candidates(name, namespace)):
+    # Always allow removing runtime copies; keep baseline copies for read-only origins.
+    for path in set(runtime_profile_candidates(name, namespace)):
         try:
             os.remove(path)
             removed = True
@@ -415,7 +443,7 @@ def delete_profile_files(name: str, namespace: str | None = None) -> bool:
             continue
 
     if not read_only:
-        for path in set(default_profile_candidates(name, namespace)):
+        for path in set(baseline_profile_candidates(name, namespace)):
             try:
                 os.remove(path)
                 removed = True
@@ -443,7 +471,7 @@ SETTINGS_KEYS = {
 
 def list_profiles(namespace: str | None = None) -> list[str]:
     """
-    Enumerate all known profile names, syncing bundled defaults when missing locally.
+    Enumerate all known profile names, syncing bundled baselines when missing locally.
 
     Args:
         namespace (str | None, optional): Namespace label scoped to the profile set.
@@ -459,16 +487,27 @@ def list_profiles(namespace: str | None = None) -> list[str]:
             return set()
         return {os.path.splitext(f)[0] for f in os.listdir(directory) if f.endswith(".ini")}
 
-    settings_dirs = {default_profiles_dir(namespace), user_profiles_dir(namespace)}
+    settings_dirs = {baseline_profiles_dir(namespace), runtime_profiles_dir(namespace)}
     if ns:
-        settings_dirs.add(default_profiles_dir(None))
-        settings_dirs.add(user_profiles_dir(None))
+        settings_dirs.add(baseline_profiles_dir(None))
+        settings_dirs.add(runtime_profiles_dir(None))
+
+    for segment in ("baseline", "runtime"):
+        for legacy_dir in [
+            _profiles_dir(_PROFILE_SEGMENT_ALIASES[segment][1], item)
+            for item in _candidate_namespaces(namespace)
+        ]:
+            settings_dirs.add(legacy_dir)
 
     settings_names: set[str] = set()
     for directory in settings_dirs:
         settings_names |= _collect_from(directory)
 
-    # Also consider read-only defaults from core module and beamline plugin repositories
+    for name in sorted(settings_names):
+        runtime_profile_candidates(name, namespace)
+        baseline_profile_candidates(name, namespace)
+
+    # Also consider read-only baselines from core module and beamline plugin repositories
     read_only_sources: dict[str, tuple[str, str]] = {}
     sources: list[tuple[str, str | None]] = [
         ("module", module_profiles_dir()),
@@ -484,17 +523,17 @@ def list_profiles(namespace: str | None = None) -> list[str]:
             read_only_sources.setdefault(name, (origin, os.path.join(directory, filename)))
 
     for name, (_origin, src) in sorted(read_only_sources.items()):
-        # Ensure a copy in the namespace-specific settings default directory
-        dst_default = default_profile_path(name, namespace)
-        if not os.path.exists(dst_default):
-            os.makedirs(os.path.dirname(dst_default), exist_ok=True)
-            shutil.copyfile(src, dst_default)
-        # Ensure a user copy exists to allow edits in the writable settings area
-        dst_user = user_profile_path(name, namespace)
-        if not os.path.exists(dst_user):
-            os.makedirs(os.path.dirname(dst_user), exist_ok=True)
-            shutil.copyfile(src, dst_user)
-            s = open_user_settings(name, namespace)
+        # Ensure a copy in the namespace-specific settings baseline directory.
+        dst_baseline = baseline_profile_path(name, namespace)
+        if not os.path.exists(dst_baseline):
+            os.makedirs(os.path.dirname(dst_baseline), exist_ok=True)
+            shutil.copy2(src, dst_baseline)
+        # Ensure a runtime copy exists to allow edits in the writable settings area.
+        dst_runtime = runtime_profile_path(name, namespace)
+        if not os.path.exists(dst_runtime):
+            os.makedirs(os.path.dirname(dst_runtime), exist_ok=True)
+            shutil.copy2(src, dst_runtime)
+            s = open_runtime_settings(name, namespace)
             if s.value(SETTINGS_KEYS["created_at"], "") == "":
                 s.setValue(SETTINGS_KEYS["created_at"], now_iso_utc())
 
@@ -504,32 +543,34 @@ def list_profiles(namespace: str | None = None) -> list[str]:
     return sorted(settings_names)
 
 
-def open_default_settings(name: str, namespace: str | None = None) -> QSettings:
+def open_baseline_settings(name: str, namespace: str | None = None) -> QSettings:
     """
-    Open (and create if necessary) the default profile settings file.
+    Open (and create if necessary) the baseline profile settings file.
 
     Args:
         name (str): Profile name without extension.
         namespace (str | None, optional): Namespace label. Defaults to ``None``.
 
     Returns:
-        QSettings: Settings instance targeting the default profile file.
+        QSettings: Settings instance targeting the baseline profile file.
     """
-    return QSettings(default_profile_path(name, namespace), QSettings.IniFormat)
+    baseline_profile_candidates(name, namespace)
+    return QSettings(baseline_profile_path(name, namespace), QSettings.IniFormat)
 
 
-def open_user_settings(name: str, namespace: str | None = None) -> QSettings:
+def open_runtime_settings(name: str, namespace: str | None = None) -> QSettings:
     """
-    Open (and create if necessary) the user profile settings file.
+    Open (and create if necessary) the runtime profile settings file.
 
     Args:
         name (str): Profile name without extension.
         namespace (str | None, optional): Namespace label. Defaults to ``None``.
 
     Returns:
-        QSettings: Settings instance targeting the user profile file.
+        QSettings: Settings instance targeting the runtime profile file.
     """
-    return QSettings(user_profile_path(name, namespace), QSettings.IniFormat)
+    runtime_profile_candidates(name, namespace)
+    return QSettings(runtime_profile_path(name, namespace), QSettings.IniFormat)
 
 
 def _app_settings() -> QSettings:
@@ -759,26 +800,26 @@ def read_manifest(settings: QSettings) -> list[dict]:
     return items
 
 
-def restore_user_from_default(name: str, namespace: str | None = None) -> None:
+def restore_runtime_from_baseline(name: str, namespace: str | None = None) -> None:
     """
-    Copy the default profile to the user profile, preserving quick-select flag.
+    Copy the baseline profile to the runtime profile, preserving quick-select flag.
 
     Args:
         name(str): Profile name without extension.
         namespace(str | None, optional): Namespace label. Defaults to ``None``.
     """
     src = None
-    for candidate in default_profile_candidates(name, namespace):
+    for candidate in baseline_profile_candidates(name, namespace):
         if os.path.exists(candidate):
             src = candidate
             break
     if not src:
         return
-    dst = user_profile_path(name, namespace)
+    dst = runtime_profile_path(name, namespace)
     preserve_quick_select = is_quick_select(name, namespace)
     os.makedirs(os.path.dirname(dst), exist_ok=True)
     shutil.copyfile(src, dst)
-    s = open_user_settings(name, namespace)
+    s = open_runtime_settings(name, namespace)
     if not s.value(SETTINGS_KEYS["created_at"], ""):
         s.setValue(SETTINGS_KEYS["created_at"], now_iso_utc())
     if preserve_quick_select:
@@ -796,9 +837,9 @@ def is_quick_select(name: str, namespace: str | None = None) -> bool:
     Returns:
         bool: True if quick-select is enabled for the profile.
     """
-    s = _existing_user_settings(name, namespace)
+    s = _existing_runtime_settings(name, namespace)
     if s is None:
-        s = _existing_default_settings(name, namespace)
+        s = _existing_baseline_settings(name, namespace)
     if s is None:
         return False
     return s.value(SETTINGS_KEYS["is_quick_select"], False, type=bool)
@@ -813,13 +854,13 @@ def set_quick_select(name: str, enabled: bool, namespace: str | None = None) -> 
         enabled(bool): True to enable quick-select, False to disable.
         namespace(str | None, optional): Namespace label. Defaults to ``None``.
     """
-    s = open_user_settings(name, namespace)
+    s = open_runtime_settings(name, namespace)
     s.setValue(SETTINGS_KEYS["is_quick_select"], bool(enabled))
 
 
 def list_quick_profiles(namespace: str | None = None) -> list[str]:
     """
-    List only profiles that have quick-select enabled (user wins over default).
+    List only profiles that have quick-select enabled (runtime wins over baseline).
 
     Args:
         namespace(str | None, optional): Namespace label. Defaults to ``None``.
@@ -909,8 +950,8 @@ class ProfileInfo(BaseModel):
     is_quick_select: bool = False
     widget_count: int = 0
     size_kb: int = 0
-    user_path: str = ""
-    default_path: str = ""
+    runtime_path: str = ""
+    baseline_path: str = ""
     origin: ProfileOrigin = "unknown"
     is_read_only: bool = False
 
@@ -924,19 +965,19 @@ def get_profile_info(name: str, namespace: str | None = None) -> ProfileInfo:
         namespace (str | None, optional): Namespace label. Defaults to ``None``.
 
     Returns:
-        ProfileInfo: Structured profile metadata, preferring the user copy when present.
+        ProfileInfo: Structured profile metadata, preferring the runtime copy when present.
     """
-    user_paths = user_profile_candidates(name, namespace)
-    default_paths = default_profile_candidates(name, namespace)
-    u_path = next((p for p in user_paths if os.path.exists(p)), user_paths[0])
-    d_path = next((p for p in default_paths if os.path.exists(p)), default_paths[0])
+    runtime_paths = runtime_profile_candidates(name, namespace)
+    baseline_paths = baseline_profile_candidates(name, namespace)
+    r_path = next((p for p in runtime_paths if os.path.exists(p)), runtime_paths[0])
+    b_path = next((p for p in baseline_paths if os.path.exists(p)), baseline_paths[0])
     origin = profile_origin(name, namespace)
     read_only = origin in {"module", "plugin"}
-    prefer_user = os.path.exists(u_path)
-    if prefer_user:
-        s = QSettings(u_path, QSettings.IniFormat)
-    elif os.path.exists(d_path):
-        s = QSettings(d_path, QSettings.IniFormat)
+    prefer_runtime = os.path.exists(r_path)
+    if prefer_runtime:
+        s = QSettings(r_path, QSettings.IniFormat)
+    elif os.path.exists(b_path):
+        s = QSettings(b_path, QSettings.IniFormat)
     else:
         s = None
     if s is None:
@@ -957,14 +998,14 @@ def get_profile_info(name: str, namespace: str | None = None) -> ProfileInfo:
             is_quick_select=False,
             widget_count=0,
             size_kb=0,
-            user_path=u_path,
-            default_path=d_path,
+            runtime_path=r_path,
+            baseline_path=b_path,
             origin=origin,
             is_read_only=read_only,
         )
 
     created = s.value(SETTINGS_KEYS["created_at"], "", type=str) or now_iso_utc()
-    src_path = u_path if prefer_user else d_path
+    src_path = r_path if prefer_runtime else b_path
     modified = _file_modified_iso(src_path)
     count = _manifest_count(s)
     try:
@@ -990,8 +1031,8 @@ def get_profile_info(name: str, namespace: str | None = None) -> ProfileInfo:
         is_quick_select=is_quick_select(name, namespace),
         widget_count=count,
         size_kb=size_kb,
-        user_path=u_path,
-        default_path=d_path,
+        runtime_path=r_path,
+        baseline_path=b_path,
         origin=origin,
         is_read_only=read_only,
     )
@@ -999,7 +1040,7 @@ def get_profile_info(name: str, namespace: str | None = None) -> ProfileInfo:
 
 def load_profile_screenshot(name: str, namespace: str | None = None) -> QPixmap | None:
     """
-    Load the stored screenshot pixmap for a profile from settings (user preferred).
+    Load the stored screenshot pixmap for a profile from settings (runtime preferred).
 
     Args:
         name (str): Profile name without extension.
@@ -1008,34 +1049,17 @@ def load_profile_screenshot(name: str, namespace: str | None = None) -> QPixmap 
     Returns:
         QPixmap | None: Screenshot pixmap or ``None`` if unavailable.
     """
-    s = _existing_user_settings(name, namespace)
+    s = _existing_runtime_settings(name, namespace)
     if s is None:
-        s = _existing_default_settings(name, namespace)
-    if s is None:
-        return None
-    return _load_screenshot_from_settings(s)
-
-
-def load_default_profile_screenshot(name: str, namespace: str | None = None) -> QPixmap | None:
-    """
-    Load the screenshot from the default profile copy, if available.
-
-    Args:
-        name (str): Profile name without extension.
-        namespace (str | None, optional): Namespace label. Defaults to ``None``.
-
-    Returns:
-        QPixmap | None: Screenshot pixmap or ``None`` if unavailable.
-    """
-    s = _existing_default_settings(name, namespace)
+        s = _existing_baseline_settings(name, namespace)
     if s is None:
         return None
     return _load_screenshot_from_settings(s)
 
 
-def load_user_profile_screenshot(name: str, namespace: str | None = None) -> QPixmap | None:
+def load_baseline_profile_screenshot(name: str, namespace: str | None = None) -> QPixmap | None:
     """
-    Load the screenshot from the user profile copy, if available.
+    Load the screenshot from the baseline profile copy, if available.
 
     Args:
         name (str): Profile name without extension.
@@ -1044,7 +1068,24 @@ def load_user_profile_screenshot(name: str, namespace: str | None = None) -> QPi
     Returns:
         QPixmap | None: Screenshot pixmap or ``None`` if unavailable.
     """
-    s = _existing_user_settings(name, namespace)
+    s = _existing_baseline_settings(name, namespace)
+    if s is None:
+        return None
+    return _load_screenshot_from_settings(s)
+
+
+def load_runtime_profile_screenshot(name: str, namespace: str | None = None) -> QPixmap | None:
+    """
+    Load the screenshot from the runtime profile copy, if available.
+
+    Args:
+        name (str): Profile name without extension.
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+
+    Returns:
+        QPixmap | None: Screenshot pixmap or ``None`` if unavailable.
+    """
+    s = _existing_runtime_settings(name, namespace)
     if s is None:
         return None
     return _load_screenshot_from_settings(s)
