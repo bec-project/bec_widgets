@@ -151,15 +151,15 @@ def workspace_bundle(components: ToolbarComponents, enable_tools: bool = True) -
     components.get_action("save_workspace").action.setVisible(enable_tools)
 
     components.add_safe(
-        "reset_default_workspace",
+        "reset_baseline_workspace",
         MaterialIconAction(
             icon_name="undo",
-            tooltip="Refresh Current Workspace",
+            tooltip="Restore Baseline Profile",
             checkable=False,
             parent=components.toolbar,
         ),
     )
-    components.get_action("reset_default_workspace").action.setVisible(enable_tools)
+    components.get_action("reset_baseline_workspace").action.setVisible(enable_tools)
 
     components.add_safe(
         "manage_workspaces",
@@ -172,7 +172,7 @@ def workspace_bundle(components: ToolbarComponents, enable_tools: bool = True) -
     bundle = ToolbarBundle("workspace", components)
     bundle.add_action("workspace_combo")
     bundle.add_action("save_workspace")
-    bundle.add_action("reset_default_workspace")
+    bundle.add_action("reset_baseline_workspace")
     bundle.add_action("manage_workspaces")
     return bundle
 
@@ -202,9 +202,9 @@ class WorkspaceConnection(BundleConnection):
             self.target_widget.load_profile
         )
 
-        reset_action = self.components.get_action("reset_default_workspace").action
+        reset_action = self.components.get_action("reset_baseline_workspace").action
         if reset_action.isVisible():
-            reset_action.triggered.connect(self._reset_workspace_to_default)
+            reset_action.triggered.connect(self._reset_workspace_to_baseline)
 
         manage_action = self.components.get_action("manage_workspaces").action
         if manage_action.isVisible():
@@ -221,9 +221,9 @@ class WorkspaceConnection(BundleConnection):
             self.target_widget.load_profile
         )
 
-        reset_action = self.components.get_action("reset_default_workspace").action
+        reset_action = self.components.get_action("reset_baseline_workspace").action
         if reset_action.isVisible():
-            reset_action.triggered.disconnect(self._reset_workspace_to_default)
+            reset_action.triggered.disconnect(self._reset_workspace_to_baseline)
 
         manage_action = self.components.get_action("manage_workspaces").action
         if manage_action.isVisible():
@@ -231,8 +231,8 @@ class WorkspaceConnection(BundleConnection):
         self._connected = False
 
     @SafeSlot()
-    def _reset_workspace_to_default(self):
+    def _reset_workspace_to_baseline(self):
         """
         Refreshes the current workspace.
         """
-        self.target_widget.restore_user_profile_from_default()
+        self.target_widget.restore_runtime_profile_from_baseline()

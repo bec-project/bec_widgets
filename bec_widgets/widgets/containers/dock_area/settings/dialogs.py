@@ -160,7 +160,7 @@ class SaveProfileDialog(QDialog):
                 self,
                 "Read-only profile",
                 (
-                    f"'{name}' is a default profile provided by {provider} and cannot be overwritten.\n"
+                    f"'{name}' is a baseline profile provided by {provider} and cannot be overwritten.\n"
                     "Please choose a different name."
                 ),
             )
@@ -179,7 +179,7 @@ class SaveProfileDialog(QDialog):
                 "Overwrite profile",
                 (
                     f"A profile named '{name}' already exists.\n\n"
-                    "Overwriting will update both the saved profile and its restore default.\n"
+                    "Overwriting will update both the runtime profile and its restore baseline.\n"
                     "Do you want to continue?"
                 ),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
@@ -257,21 +257,24 @@ class PreviewPanel(QGroupBox):
 
 class RestoreProfileDialog(QDialog):
     """
-    Confirmation dialog that previews the current profile screenshot against the default baseline.
+    Confirmation dialog that previews the current runtime screenshot against the baseline.
     """
 
     def __init__(
-        self, parent: QWidget | None, current_pixmap: QPixmap | None, default_pixmap: QPixmap | None
+        self,
+        parent: QWidget | None,
+        current_pixmap: QPixmap | None,
+        baseline_pixmap: QPixmap | None,
     ):
         super().__init__(parent)
-        self.setWindowTitle("Restore Profile to Default")
+        self.setWindowTitle("Restore Profile to Baseline")
         self.setModal(True)
         self.resize(880, 480)
 
         layout = QVBoxLayout(self)
 
         info_label = QLabel(
-            "Restoring will discard your custom layout and replace it with the default profile."
+            "Restoring will discard your runtime layout and replace it with the baseline profile."
         )
         info_label.setWordWrap(True)
         layout.addWidget(info_label)
@@ -280,7 +283,7 @@ class RestoreProfileDialog(QDialog):
         layout.addLayout(preview_row)
 
         current_preview = PreviewPanel("Current", current_pixmap, self)
-        default_preview = PreviewPanel("Default", default_pixmap, self)
+        baseline_preview = PreviewPanel("Baseline", baseline_pixmap, self)
 
         # Equal expansion left/right
         preview_row.addWidget(current_preview, 1)
@@ -292,7 +295,7 @@ class RestoreProfileDialog(QDialog):
         arrow_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
         preview_row.addWidget(arrow_label)
 
-        preview_row.addWidget(default_preview, 1)
+        preview_row.addWidget(baseline_preview, 1)
 
         # Enforce equal stretch for both previews
         preview_row.setStretch(0, 1)
@@ -300,7 +303,7 @@ class RestoreProfileDialog(QDialog):
         preview_row.setStretch(2, 1)
 
         warn_label = QLabel(
-            "This action cannot be undone. Do you want to restore the default layout now?"
+            "This action cannot be undone. Do you want to restore the baseline layout now?"
         )
         warn_label.setWordWrap(True)
         layout.addWidget(warn_label)
@@ -324,7 +327,7 @@ class RestoreProfileDialog(QDialog):
 
     @staticmethod
     def confirm(
-        parent: QWidget | None, current_pixmap: QPixmap | None, default_pixmap: QPixmap | None
+        parent: QWidget | None, current_pixmap: QPixmap | None, baseline_pixmap: QPixmap | None
     ) -> bool:
-        dialog = RestoreProfileDialog(parent, current_pixmap, default_pixmap)
+        dialog = RestoreProfileDialog(parent, current_pixmap, baseline_pixmap)
         return dialog.exec() == QDialog.Accepted

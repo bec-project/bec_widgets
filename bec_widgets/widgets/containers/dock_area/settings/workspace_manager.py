@@ -48,7 +48,7 @@ class WorkSpaceManager(BECWidget, QWidget):
     HEADERS = ["Actions", "Profile", "Author"]
 
     def __init__(
-        self, parent=None, target_widget=None, default_profile: str | None = None, **kwargs
+        self, parent=None, target_widget=None, active_profile: str | None = None, **kwargs
     ):
         super().__init__(parent=parent, **kwargs)
         self.target_widget = target_widget
@@ -59,13 +59,13 @@ class WorkSpaceManager(BECWidget, QWidget):
         self._init_ui()
         if self.target_widget is not None and hasattr(self.target_widget, "profile_changed"):
             self.target_widget.profile_changed.connect(self.on_profile_changed)
-        if default_profile is not None:
-            self._select_by_name(default_profile)
-            self._show_profile_details(default_profile)
+        if active_profile is not None:
+            self._select_by_name(active_profile)
+            self._show_profile_details(active_profile)
 
     def _init_ui(self):
         self.root_layout = QHBoxLayout(self)
-        self.splitter = QSplitter(Qt.Horizontal, self)
+        self.splitter = QSplitter(Qt.Orientation.Horizontal, self)
         self.root_layout.addWidget(self.splitter)
 
         # Init components
@@ -89,7 +89,9 @@ class WorkSpaceManager(BECWidget, QWidget):
         left_panel.setMinimumWidth(220)
 
         # Make the screenshot preview expand to fill remaining space
-        self.screenshot_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.screenshot_label.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
 
         self.right_box = QGroupBox("Profile Screenshot Preview", self)
         right_col = QVBoxLayout(self.right_box)
@@ -250,8 +252,8 @@ class WorkSpaceManager(BECWidget, QWidget):
             ("Quick select", "Yes" if info.is_quick_select else "No"),
             ("Widgets", str(info.widget_count)),
             ("Size (KB)", str(info.size_kb)),
-            ("User path", info.user_path or ""),
-            ("Default path", info.default_path or ""),
+            ("Runtime path", info.runtime_path or ""),
+            ("Baseline path", info.baseline_path or ""),
         ]
         for k, v in entries:
             self.profile_details_tree.addTopLevelItem(QTreeWidgetItem([k, v]))

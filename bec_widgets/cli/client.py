@@ -340,10 +340,10 @@ class BECDockArea(RPCBase):
         Save the current workspace profile.
 
         On first save of a given name:
-          - writes a default copy to states/default/<name>.ini with tag=default and created_at
-          - writes a user copy   to states/user/<name>.ini    with tag=user    and created_at
-        On subsequent saves of user-owned profiles:
-          - updates both the default and user copies so restore uses the latest snapshot.
+          - writes a baseline copy to profiles/baseline/<name>.ini with created_at
+          - writes a runtime copy to profiles/runtime/<name>.ini with created_at
+        On subsequent saves:
+          - updates both the baseline and runtime copies so restore uses the latest snapshot.
         Read-only bundled profiles cannot be overwritten.
 
         Args:
@@ -362,8 +362,8 @@ class BECDockArea(RPCBase):
         """
         Load a workspace profile.
 
-        Before switching, persist the current profile to the user copy.
-        Prefer loading the user copy; fall back to the default copy.
+        Before switching, persist the current profile to the runtime copy.
+        Prefer loading the runtime copy; fall back to the baseline copy.
 
         Args:
             name (str | None): The name of the profile to load. If None, prompts the user.
@@ -1348,10 +1348,10 @@ class DockAreaView(RPCBase):
         Save the current workspace profile.
 
         On first save of a given name:
-          - writes a default copy to states/default/<name>.ini with tag=default and created_at
-          - writes a user copy   to states/user/<name>.ini    with tag=user    and created_at
-        On subsequent saves of user-owned profiles:
-          - updates both the default and user copies so restore uses the latest snapshot.
+          - writes a baseline copy to profiles/baseline/<name>.ini with created_at
+          - writes a runtime copy to profiles/runtime/<name>.ini with created_at
+        On subsequent saves:
+          - updates both the baseline and runtime copies so restore uses the latest snapshot.
         Read-only bundled profiles cannot be overwritten.
 
         Args:
@@ -1370,8 +1370,8 @@ class DockAreaView(RPCBase):
         """
         Load a workspace profile.
 
-        Before switching, persist the current profile to the user copy.
-        Prefer loading the user copy; fall back to the default copy.
+        Before switching, persist the current profile to the runtime copy.
+        Prefer loading the runtime copy; fall back to the baseline copy.
 
         Args:
             name (str | None): The name of the profile to load. If None, prompts the user.
