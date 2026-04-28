@@ -235,4 +235,4 @@ class WorkspaceConnection(BundleConnection):
         """
         Refreshes the current workspace.
         """
-        self.target_widget.restore_runtime_profile_from_baseline()
+        self.target_widget.restore_baseline_profile()

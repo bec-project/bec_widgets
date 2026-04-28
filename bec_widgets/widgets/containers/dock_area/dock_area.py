@@ -108,6 +108,7 @@ class BECDockArea(DockAreaWidget):
         "list_profiles",
         "save_profile",
         "load_profile",
+        "restore_baseline_profile",
         "delete_profile",
     ]
 
@@ -896,30 +897,34 @@ class BECDockArea(DockAreaWidget):
 
     @SafeSlot()
     @SafeSlot(str)
-    def restore_runtime_profile_from_baseline(self, name: str | None = None):
+    @SafeSlot(str, bool)
+    @rpc_timeout(None)
+    def restore_baseline_profile(self, name: str | None = None, show_dialog: bool = True):
         """
         Overwrite the runtime copy of *name* with the baseline.
         If *name* is None, target the currently active profile.
 
         Args:
             name (str | None): The name of the profile to restore. If None, uses the current profile.
+            show_dialog (bool): If True, ask for confirmation before restoring.
         """
         target = name or getattr(self, "_current_profile_name", None)
         if not target:
             return
         namespace = self.profile_namespace
 
-        current_pixmap = None
-        if self.isVisible():
-            current_pixmap = QPixmap()
-            ba = bytes(self.screenshot_bytes())
-            current_pixmap.loadFromData(ba)
-        if current_pixmap is None or current_pixmap.isNull():
-            current_pixmap = load_runtime_profile_screenshot(target, namespace=namespace)
-        baseline_pixmap = load_baseline_profile_screenshot(target, namespace=namespace)
+        if show_dialog:
+            current_pixmap = None
+            if self.isVisible():
+                current_pixmap = QPixmap()
+                ba = bytes(self.screenshot_bytes())
+                current_pixmap.loadFromData(ba)
+            if current_pixmap is None or current_pixmap.isNull():
+                current_pixmap = load_runtime_profile_screenshot(target, namespace=namespace)
+            baseline_pixmap = load_baseline_profile_screenshot(target, namespace=namespace)
 
-        if not RestoreProfileDialog.confirm(self, current_pixmap, baseline_pixmap):
-            return
+            if not RestoreProfileDialog.confirm(self, current_pixmap, baseline_pixmap):
+                return
 
         restore_runtime_from_baseline(target, namespace=namespace)
         self.delete_all()
