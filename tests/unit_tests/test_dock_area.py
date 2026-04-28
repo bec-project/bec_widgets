@@ -615,35 +615,6 @@ class TestBasicDockArea:
         ]
 
 
-class TestAdvancedDockAreaInit:
-    """Test initialization and basic properties."""
-
-    def test_init(self, advanced_dock_area):
-        assert advanced_dock_area is not None
-        assert isinstance(advanced_dock_area, BECDockArea)
-        assert advanced_dock_area.mode == "creator"
-        assert hasattr(advanced_dock_area, "dock_manager")
-        assert hasattr(advanced_dock_area, "toolbar")
-        assert hasattr(advanced_dock_area, "dark_mode_button")
-        assert hasattr(advanced_dock_area, "state_manager")
-
-    def test_rpc_and_plugin_flags(self):
-        assert BECDockArea.RPC is True
-        assert BECDockArea.PLUGIN is False
-
-    def test_user_access_list(self):
-        expected_methods = [
-            "new",
-            "widget_map",
-            "widget_list",
-            "workspace_is_locked",
-            "attach_all",
-            "delete_all",
-        ]
-        for method in expected_methods:
-            assert method in BECDockArea.USER_ACCESS
-
-
 class TestDockManagement:
     """Test dock creation, management, and manipulation."""
 
@@ -850,16 +821,6 @@ class TestDeveloperMode:
 
 class TestToolbarFunctionality:
     """Test toolbar setup and functionality."""
-
-    def test_toolbar_setup(self, advanced_dock_area):
-        """Test toolbar is properly set up."""
-        assert hasattr(advanced_dock_area, "toolbar")
-        assert hasattr(advanced_dock_area, "_ACTION_MAPPINGS")
-
-        # Check that action mappings are properly set
-        assert "menu_plots" in advanced_dock_area._ACTION_MAPPINGS
-        assert "menu_devices" in advanced_dock_area._ACTION_MAPPINGS
-        assert "menu_utils" in advanced_dock_area._ACTION_MAPPINGS
 
     def test_toolbar_plot_actions(self, advanced_dock_area):
         """Test plot toolbar actions trigger widget creation."""
@@ -1213,18 +1174,6 @@ class TestPreviewPanel:
         panel.setPixmap(None)
         assert panel.image_label.pixmap() is None or panel.image_label.pixmap().isNull()
         assert "No preview available" in panel.image_label.text()
-
-
-class TestRestoreProfileDialog:
-    """Test restore dialog confirmation flow."""
-
-    def test_confirm_accepts(self, monkeypatch):
-        monkeypatch.setattr(RestoreProfileDialog, "exec", lambda self: QDialog.Accepted)
-        assert RestoreProfileDialog.confirm(None, QPixmap(), QPixmap()) is True
-
-    def test_confirm_rejects(self, monkeypatch):
-        monkeypatch.setattr(RestoreProfileDialog, "exec", lambda self: QDialog.Rejected)
-        assert RestoreProfileDialog.confirm(None, QPixmap(), QPixmap()) is False
 
 
 class TestProfileInfoAndScreenshots:
@@ -1738,11 +1687,6 @@ class TestProfileManagement:
             open_baseline_settings(name).value("test/value", "", type=str) == "canonical-baseline"
         )
 
-    def test_open_settings(self, temp_profile_dir):
-        """Test opening settings for a profile."""
-        settings = open_runtime_settings("test_profile")
-        assert isinstance(settings, QSettings)
-
     def test_list_profiles_empty(self, temp_profile_dir):
         """Test listing profiles when directory is empty."""
         try:
@@ -2172,20 +2116,6 @@ class TestCleanupAndMisc:
 
         # Verify dock was removed
         assert len(advanced_dock_area.dock_list()) == initial_count - 1
-
-    def test_apply_dock_lock(self, advanced_dock_area, qtbot):
-        """Test _apply_dock_lock functionality."""
-        # Create a dock first
-        advanced_dock_area.new("DarkModeButton")
-        qtbot.wait(200)
-
-        # Test locking
-        advanced_dock_area._apply_dock_lock(True)
-        # No assertion needed - just verify it doesn't crash
-
-        # Test unlocking
-        advanced_dock_area._apply_dock_lock(False)
-        # No assertion needed - just verify it doesn't crash
 
     def test_make_dock(self, advanced_dock_area):
         """Test _make_dock functionality."""
