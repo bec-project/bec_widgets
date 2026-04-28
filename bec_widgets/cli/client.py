@@ -369,6 +369,18 @@ class BECDockArea(RPCBase):
             name (str | None): The name of the profile to load. If None, prompts the user.
         """
 
+    @rpc_timeout(None)
+    @rpc_call
+    def restore_baseline_profile(self, name: "str | None" = None, show_dialog: "bool" = True):
+        """
+        Overwrite the runtime copy of *name* with the baseline.
+        If *name* is None, target the currently active profile.
+
+        Args:
+            name (str | None): The name of the profile to restore. If None, uses the current profile.
+            show_dialog (bool): If True, ask for confirmation before restoring.
+        """
+
     @rpc_call
     def delete_profile(self, name: "str | None" = None, show_dialog: "bool" = False) -> "bool":
         """
@@ -1375,6 +1387,18 @@ class DockAreaView(RPCBase):
 
         Args:
             name (str | None): The name of the profile to load. If None, prompts the user.
+        """
+
+    @rpc_timeout(None)
+    @rpc_call
+    def restore_baseline_profile(self, name: "str | None" = None, show_dialog: "bool" = True):
+        """
+        Overwrite the runtime copy of *name* with the baseline.
+        If *name* is None, target the currently active profile.
+
+        Args:
+            name (str | None): The name of the profile to restore. If None, uses the current profile.
+            show_dialog (bool): If True, ask for confirmation before restoring.
         """
 
     @rpc_call

@@ -1421,7 +1421,7 @@ class TestAdvancedDockAreaRestoreAndDialogs:
             patch.object(advanced_dock_area, "delete_all") as mock_delete_all,
             patch.object(advanced_dock_area, "load_profile") as mock_load_profile,
         ):
-            advanced_dock_area.restore_runtime_profile_from_baseline()
+            advanced_dock_area.restore_baseline_profile()
 
         assert mock_restore.call_count == 1
         args, kwargs = mock_restore.call_args
@@ -1455,16 +1455,41 @@ class TestAdvancedDockAreaRestoreAndDialogs:
         with patch(
             "bec_widgets.widgets.containers.dock_area.dock_area.restore_runtime_from_baseline"
         ) as mock_restore:
-            advanced_dock_area.restore_runtime_profile_from_baseline()
+            advanced_dock_area.restore_baseline_profile()
 
         mock_restore.assert_not_called()
+
+    def test_restore_runtime_profile_from_baseline_without_dialog(self, advanced_dock_area):
+        profile_name = "alignment_scan"
+        helper = profile_helper(advanced_dock_area)
+        helper.open_baseline(profile_name).sync()
+        helper.open_runtime(profile_name).sync()
+
+        with (
+            patch(
+                "bec_widgets.widgets.containers.dock_area.dock_area.RestoreProfileDialog.confirm"
+            ) as mock_confirm,
+            patch(
+                "bec_widgets.widgets.containers.dock_area.dock_area.restore_runtime_from_baseline"
+            ) as mock_restore,
+            patch.object(advanced_dock_area, "delete_all") as mock_delete_all,
+            patch.object(advanced_dock_area, "load_profile") as mock_load_profile,
+        ):
+            advanced_dock_area.restore_baseline_profile(profile_name, show_dialog=False)
+
+        mock_confirm.assert_not_called()
+        mock_restore.assert_called_once_with(
+            profile_name, namespace=advanced_dock_area.profile_namespace
+        )
+        mock_delete_all.assert_called_once()
+        mock_load_profile.assert_called_once_with(profile_name)
 
     def test_restore_runtime_profile_from_baseline_no_target(self, advanced_dock_area, monkeypatch):
         advanced_dock_area._current_profile_name = None
         with patch(
             "bec_widgets.widgets.containers.dock_area.dock_area.RestoreProfileDialog.confirm"
         ) as mock_confirm:
-            advanced_dock_area.restore_runtime_profile_from_baseline()
+            advanced_dock_area.restore_baseline_profile()
         mock_confirm.assert_not_called()
 
     def test_refresh_workspace_list_with_refresh_profiles(self, advanced_dock_area):
