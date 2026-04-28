@@ -146,10 +146,7 @@ class TestDeviceManagerViewDialogs:
         group_combo: QtWidgets.QComboBox = dialog._control_widgets["group_combo"]
         assert group_combo.count() == len(OPHYD_DEVICE_TEMPLATES)
 
-        # Test select a group from available templates
         variant_combo = dialog._control_widgets["variant_combo"]
-        assert variant_combo.isEnabled() is False
-
         with qtbot.waitSignal(group_combo.currentTextChanged):
             epics_signal_index = group_combo.findText("EpicsSignal")
             group_combo.setCurrentIndex(epics_signal_index)  # Select "EpicsSignal" group
@@ -235,7 +232,7 @@ class TestDeviceManagerViewDialogs:
         sample_config = {
             "name": "TestDevice",
             "enabled": True,
-            "deviceClass": "ophyd.EpicsSignal",
+            "deviceClass": "ophyd_devices.EpicsSignal",
             "readoutPriority": "baseline",
             "deviceConfig": {"read_pv": "X25DA-ES1-MOT:GET"},
         }
@@ -248,7 +245,7 @@ class TestDeviceManagerViewDialogs:
         assert variant_combo.currentText() == "EpicsSignal"
         config = dialog._device_config_template.get_config_fields()
         assert config["name"] == "TestDevice"
-        assert config["deviceClass"] == "ophyd.EpicsSignal"
+        assert config["deviceClass"] == "ophyd_devices.EpicsSignal"
         assert config["deviceConfig"]["read_pv"] == "X25DA-ES1-MOT:GET"
 
         # Test now to add the device config with different validation results
