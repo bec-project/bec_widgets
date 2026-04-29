@@ -1887,6 +1887,43 @@ class TestWorkspaceProfileOperations:
         widget_map = advanced_dock_area.widget_map()
         assert "test_widget" in widget_map
 
+    def test_load_profile_default_does_not_restore_baseline(self, advanced_dock_area):
+        """Regular profile loading should not restore the runtime copy."""
+        profile_name = "load_without_baseline_restore"
+        helper = profile_helper(advanced_dock_area)
+        helper.open_runtime(profile_name).sync()
+
+        with patch(
+            "bec_widgets.widgets.containers.dock_area.dock_area.restore_runtime_from_baseline"
+        ) as mock_restore:
+            advanced_dock_area.load_profile(profile_name)
+
+        mock_restore.assert_not_called()
+        assert advanced_dock_area._current_profile_name == profile_name
+
+    def test_load_profile_restores_baseline_without_dialog(self, advanced_dock_area):
+        """CLI loading can restore the runtime copy from baseline without confirmation."""
+        profile_name = "alignment_scan"
+        helper = profile_helper(advanced_dock_area)
+        helper.open_baseline(profile_name).sync()
+        helper.open_runtime(profile_name).sync()
+
+        with (
+            patch(
+                "bec_widgets.widgets.containers.dock_area.dock_area.RestoreProfileDialog.confirm"
+            ) as mock_confirm,
+            patch(
+                "bec_widgets.widgets.containers.dock_area.dock_area.restore_runtime_from_baseline"
+            ) as mock_restore,
+        ):
+            advanced_dock_area.load_profile(profile_name, restore_baseline=True)
+
+        mock_confirm.assert_not_called()
+        mock_restore.assert_called_once_with(
+            profile_name, namespace=advanced_dock_area.profile_namespace
+        )
+        assert advanced_dock_area._current_profile_name == profile_name
+
     def test_load_profile_materializes_runtime_namespace_fallback(self, advanced_dock_area):
         """Loading a runtime fallback copies it into the active namespace before opening."""
         profile_name = "load_runtime_namespace_fallback"

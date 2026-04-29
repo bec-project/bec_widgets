@@ -358,15 +358,19 @@ class BECDockArea(RPCBase):
 
     @rpc_timeout(None)
     @rpc_call
-    def load_profile(self, name: "str | None" = None):
+    def load_profile(self, name: "str | None" = None, restore_baseline: "bool" = False):
         """
         Load a workspace profile.
 
         Before switching, persist the current profile to the runtime copy.
-        Prefer loading the runtime copy; fall back to the baseline copy.
+        Prefer loading the runtime copy; fall back to the baseline copy. When
+        ``restore_baseline`` is True, first overwrite the runtime copy with the
+        baseline profile and then load it.
 
         Args:
             name (str | None): The name of the profile to load. If None, prompts the user.
+            restore_baseline (bool): If True, restore the runtime copy from the
+                baseline before loading. Defaults to False.
         """
 
     @rpc_timeout(None)
@@ -1378,15 +1382,19 @@ class DockAreaView(RPCBase):
 
     @rpc_timeout(None)
     @rpc_call
-    def load_profile(self, name: "str | None" = None):
+    def load_profile(self, name: "str | None" = None, restore_baseline: "bool" = False):
         """
         Load a workspace profile.
 
         Before switching, persist the current profile to the runtime copy.
-        Prefer loading the runtime copy; fall back to the baseline copy.
+        Prefer loading the runtime copy; fall back to the baseline copy. When
+        ``restore_baseline`` is True, first overwrite the runtime copy with the
+        baseline profile and then load it.
 
         Args:
             name (str | None): The name of the profile to load. If None, prompts the user.
+            restore_baseline (bool): If True, restore the runtime copy from the
+                baseline before loading. Defaults to False.
         """
 
     @rpc_timeout(None)
