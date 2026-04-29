@@ -1,6 +1,53 @@
 # CHANGELOG
 
 
+## v3.7.2 (2026-04-29)
+
+### Bug Fixes
+
+- **dock-area**: Avoid switching profile when saving new profile
+  ([`73b44cf`](https://github.com/bec-project/bec_widgets/commit/73b44cffb219347cacb609f3b93068eda6701b42))
+
+- **workspace-actions**: Use try/finally and restore previous blocked state in refresh_profiles
+  ([`30ef255`](https://github.com/bec-project/bec_widgets/commit/30ef25533af9df5a9bd9e69808dc49fdf22f4318))
+
+Agent-Logs-Url:
+  https://github.com/bec-project/bec_widgets/sessions/004cb4bc-5015-485e-a803-1e63876b7024
+
+Co-authored-by: wyzula-jan <133381102+wyzula-jan@users.noreply.github.com>
+
+### Build System
+
+- Add pytest-benchmark dependency
+  ([`551d38d`](https://github.com/bec-project/bec_widgets/commit/551d38d90111361e64bfcf10a1409be71dd298bc))
+
+### Chores
+
+- Update header comments in script files to indicate AI generation
+  ([`3f1aa80`](https://github.com/bec-project/bec_widgets/commit/3f1aa80756368454c3631cb6cf9d29db28af177a))
+
+### Continuous Integration
+
+- Add benchmark workflow
+  ([`999b7a2`](https://github.com/bec-project/bec_widgets/commit/999b7a2321f2f222c04b056a2db4280f66de9c48))
+
+- Fix benchmark upload
+  ([`19b5c8f`](https://github.com/bec-project/bec_widgets/commit/19b5c8f724dbdb7421957c290f9213bf072392df))
+
+- Increase threshold to 20 percent
+  ([`409c9e5`](https://github.com/bec-project/bec_widgets/commit/409c9e5bfacdfc003f1bc8c9944f01798bd3818e))
+
+### Testing
+
+- Fix assertions after updating ophyd devices templates
+  ([`a614d66`](https://github.com/bec-project/bec_widgets/commit/a614d662d6da716a49afb4ed3a3903f108210386))
+
+Co-authored-by: Copilot <copilot@github.com>
+
+- Remove references to "scan_motors" in tests
+  ([`5056ef8`](https://github.com/bec-project/bec_widgets/commit/5056ef8946d03a20e802709d3fe81c84c195fe41))
+
+
 ## v3.7.1 (2026-04-21)
 
 ### Bug Fixes
