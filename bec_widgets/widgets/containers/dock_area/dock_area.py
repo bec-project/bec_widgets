@@ -21,6 +21,7 @@ import bec_widgets.widgets.containers.qt_ads as QtAds
 from bec_widgets import BECWidget, SafeProperty, SafeSlot
 from bec_widgets.applications.views.view import ViewTourSteps
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
+from bec_widgets.utils.bec_plugin_helper import get_all_plugin_widgets
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.rpc_decorator import rpc_timeout
 from bec_widgets.utils.rpc_widget_handler import widget_handler
@@ -398,6 +399,19 @@ class BECDockArea(DockAreaWidget):
         _build_menu("menu_devices", "Add Device Control ", device_actions)
         _build_menu("menu_utils", "Add Utils ", util_actions)
 
+        # Build plugin widget menu (only shown when plugin widgets are available)
+        plugin_widgets_dict = get_all_plugin_widgets().as_dict()
+        plugin_actions: dict[str, tuple[str, str, str]] = {
+            widget_name: (
+                getattr(widget_cls, "ICON_NAME", "widgets"),
+                f"Add {widget_name}",
+                widget_name,
+            )
+            for widget_name, widget_cls in plugin_widgets_dict.items()
+        }
+        if plugin_actions:
+            _build_menu("menu_plugins", "Add Plugins ", plugin_actions)
+
         # Create flat toolbar bundles for each widget type
         def _build_flat_bundles(category: str, mapping: dict[str, tuple[str, str, str]]):
             bundle = ToolbarBundle(f"flat_{category}", self.toolbar.components)
@@ -468,14 +482,16 @@ class BECDockArea(DockAreaWidget):
         bda.add_action("dark_mode")
         self.toolbar.add_bundle(bda)
 
-        self._apply_toolbar_layout()
-
-        # Store mappings on self for use in _hook_toolbar
+        # Store mappings on self for use in _hook_toolbar and _apply_toolbar_layout
         self._ACTION_MAPPINGS = {
             "menu_plots": plot_actions,
             "menu_devices": device_actions,
             "menu_utils": util_actions,
         }
+        if plugin_actions:
+            self._ACTION_MAPPINGS["menu_plugins"] = plugin_actions
+
+        self._apply_toolbar_layout()
 
     def _hook_toolbar(self):
         def _connect_menu(menu_key: str):
@@ -501,6 +517,8 @@ class BECDockArea(DockAreaWidget):
         _connect_menu("menu_plots")
         _connect_menu("menu_devices")
         _connect_menu("menu_utils")
+        if "menu_plugins" in self._ACTION_MAPPINGS:
+            _connect_menu("menu_plugins")
 
         def _connect_flat_actions(mapping: dict[str, tuple[str, str, str]]):
             for action_id, (_, _, widget_type) in mapping.items():
@@ -1109,6 +1127,10 @@ class BECDockArea(DockAreaWidget):
                 "menu_plots",
                 "menu_devices",
                 "menu_utils",
+            ]
+            if "menu_plugins" in getattr(self, "_ACTION_MAPPINGS", {}):
+                bundles.append("menu_plugins")
+            bundles += [
                 "spacer_bundle",
                 "workspace",
                 "dock_actions",

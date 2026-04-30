@@ -1024,6 +1024,89 @@ class TestToolbarFunctionality:
                 # Verify save was called with the filename
                 mock_screenshot.save.assert_called_once_with(str(screenshot_path))
 
+    def test_plugin_menu_not_shown_when_no_plugins(self, qtbot, mocked_client):
+        """Test that the plugin menu is not shown when there are no plugin widgets."""
+        with patch(
+            "bec_widgets.widgets.containers.dock_area.dock_area.get_all_plugin_widgets"
+        ) as mock_plugins:
+            from bec_widgets.utils.plugin_utils import BECClassContainer
+
+            mock_plugins.return_value = BECClassContainer()
+            widget = BECDockArea(client=mocked_client)
+            qtbot.addWidget(widget)
+            qtbot.waitExposed(widget)
+
+        assert "menu_plugins" not in widget._ACTION_MAPPINGS
+        # Verify no "menu_plugins" bundle exists in the toolbar
+        assert "menu_plugins" not in widget.toolbar.bundles
+
+    def test_plugin_menu_shown_when_plugins_available(self, qtbot, mocked_client):
+        """Test that the plugin menu is shown when plugin widgets are available."""
+        from bec_widgets.utils.bec_widget import BECWidget
+        from bec_widgets.utils.plugin_utils import BECClassContainer, BECClassInfo
+        from qtpy.QtWidgets import QWidget as _QWidget
+
+        class FakePluginWidget(BECWidget, _QWidget):
+            ICON_NAME = "star"
+            PLUGIN = True
+
+            def __init__(self, parent=None, **kwargs):
+                super().__init__(parent=parent, **kwargs)
+
+        container = BECClassContainer(
+            [BECClassInfo(name="FakePluginWidget", module="fake", file="fake.py", obj=FakePluginWidget)]
+        )
+
+        with patch(
+            "bec_widgets.widgets.containers.dock_area.dock_area.get_all_plugin_widgets"
+        ) as mock_plugins:
+            mock_plugins.return_value = container
+            # Make as_dict() return our fake widget
+            container_mock = MagicMock()
+            container_mock.as_dict.return_value = {"FakePluginWidget": FakePluginWidget}
+            mock_plugins.return_value = container_mock
+
+            widget = BECDockArea(client=mocked_client)
+            qtbot.addWidget(widget)
+            qtbot.waitExposed(widget)
+
+        assert "menu_plugins" in widget._ACTION_MAPPINGS
+        assert "FakePluginWidget" in widget._ACTION_MAPPINGS["menu_plugins"]
+        plugin_entry = widget._ACTION_MAPPINGS["menu_plugins"]["FakePluginWidget"]
+        assert plugin_entry[0] == "star"  # icon name
+        assert plugin_entry[1] == "Add FakePluginWidget"  # tooltip
+        assert plugin_entry[2] == "FakePluginWidget"  # widget type name
+        assert "menu_plugins" in widget.toolbar.bundles
+
+    def test_plugin_menu_action_triggers_new(self, qtbot, mocked_client):
+        """Test that clicking a plugin menu action creates a new dock with the plugin widget."""
+        from bec_widgets.utils.bec_widget import BECWidget
+        from qtpy.QtWidgets import QWidget as _QWidget
+
+        class FakePluginWidget(BECWidget, _QWidget):
+            ICON_NAME = "star"
+            PLUGIN = True
+
+            def __init__(self, parent=None, **kwargs):
+                super().__init__(parent=parent, **kwargs)
+
+        with patch(
+            "bec_widgets.widgets.containers.dock_area.dock_area.get_all_plugin_widgets"
+        ) as mock_plugins:
+            container_mock = MagicMock()
+            container_mock.as_dict.return_value = {"FakePluginWidget": FakePluginWidget}
+            mock_plugins.return_value = container_mock
+
+            widget = BECDockArea(client=mocked_client)
+            qtbot.addWidget(widget)
+            qtbot.waitExposed(widget)
+
+        with patch.object(widget, "new") as mock_new:
+            menu_plugins = widget.toolbar.components.get_action("menu_plugins")
+            action = menu_plugins.actions["FakePluginWidget"].action
+            action.trigger()
+            mock_new.assert_called_once_with(widget="FakePluginWidget")
+
 
 class TestDockSettingsDialog:
     """Test dock settings dialog functionality."""
