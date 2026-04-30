@@ -56,7 +56,7 @@ dev = [
   "watchdog~=6.0",
   "pre_commit~=4.2",
 ]
-qtermwidget = ["pyside6_qtermwidget"]
+qtermwidget = []
 
 [build-system]
 requires = ["hatchling"]
