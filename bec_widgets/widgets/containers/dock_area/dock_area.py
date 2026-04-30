@@ -403,7 +403,9 @@ class BECDockArea(DockAreaWidget):
         try:
             plugin_widgets_dict = get_all_plugin_widgets().as_dict()
         except (ImportError, AttributeError, RuntimeError):
-            logger.warning("Failed to load plugin widgets for toolbar menu.", exc_info=True)
+            logger.warning(
+                "Failed to discover plugin widgets for toolbar menu.", exc_info=True
+            )
             plugin_widgets_dict = {}
         plugin_actions: dict[str, tuple[str, str, str]] = {
             widget_name: (

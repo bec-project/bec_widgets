@@ -1056,7 +1056,7 @@ class TestToolbarFunctionality:
         # Verify no "menu_plugins" bundle exists in the toolbar
         assert "menu_plugins" not in widget.toolbar.bundles
 
-    def test_plugin_menu_shown_when_plugins_available(self, qtbot, mocked_client, fake_plugin_widget_cls):
+    def test_plugin_menu_includes_available_plugins(self, qtbot, mocked_client, fake_plugin_widget_cls):
         """Test that the plugin menu is shown when plugin widgets are available."""
         with patch(
             "bec_widgets.widgets.containers.dock_area.dock_area.get_all_plugin_widgets"
