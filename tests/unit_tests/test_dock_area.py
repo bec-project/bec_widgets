@@ -47,8 +47,9 @@ from .client_mocks import mocked_client
 @pytest.fixture
 def fake_plugin_widget_cls():
     """Return a fake plugin widget class for use in toolbar plugin menu tests."""
-    from bec_widgets.utils.bec_widget import BECWidget
     from qtpy.QtWidgets import QWidget as _QWidget
+
+    from bec_widgets.utils.bec_widget import BECWidget
 
     class FakePluginWidget(BECWidget, _QWidget):
         ICON_NAME = "star"

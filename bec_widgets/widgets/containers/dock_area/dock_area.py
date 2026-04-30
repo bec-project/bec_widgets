@@ -400,12 +400,10 @@ class BECDockArea(DockAreaWidget):
         _build_menu("menu_utils", "Add Utils ", util_actions)
 
         # Build plugin widget menu (only shown when plugin widgets are available)
-        try:
+        try:  # TODO move this check to bec_plugin_helper.ser_widget_plugin method to fix globally
             plugin_widgets_dict = get_all_plugin_widgets().as_dict()
         except (ImportError, AttributeError, RuntimeError):
-            logger.warning(
-                "Failed to discover plugin widgets for toolbar menu.", exc_info=True
-            )
+            logger.warning("Failed to discover plugin widgets for toolbar menu.", exc_info=True)
             plugin_widgets_dict = {}
         plugin_actions: dict[str, tuple[str, str, str]] = {
             widget_name: (
@@ -417,6 +415,9 @@ class BECDockArea(DockAreaWidget):
         }
         if plugin_actions:
             _build_menu("menu_plugins", "Add Plugins ", plugin_actions)
+            logger.success(
+                "Plugin widgets added to toolbar menu: " + ", ".join(plugin_actions.keys())
+            )
 
         # Create flat toolbar bundles for each widget type
         def _build_flat_bundles(category: str, mapping: dict[str, tuple[str, str, str]]):
@@ -1129,18 +1130,10 @@ class BECDockArea(DockAreaWidget):
         if mode_key == "user":
             bundles = ["spacer_bundle", "workspace", "dock_actions"]
         elif mode_key == "creator":
-            bundles = [
-                "menu_plots",
-                "menu_devices",
-                "menu_utils",
-            ]
+            bundles = ["menu_plots", "menu_devices", "menu_utils"]
             if "menu_plugins" in getattr(self, "_ACTION_MAPPINGS", {}):
                 bundles.append("menu_plugins")
-            bundles += [
-                "spacer_bundle",
-                "workspace",
-                "dock_actions",
-            ]
+            bundles += ["spacer_bundle", "workspace", "dock_actions"]
         elif mode_key == "plot":
             bundles = ["flat_plots", "spacer_bundle", "workspace", "dock_actions"]
         elif mode_key == "device":
