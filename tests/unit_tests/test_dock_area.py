@@ -45,6 +45,22 @@ from .client_mocks import mocked_client
 
 
 @pytest.fixture
+def fake_plugin_widget_cls():
+    """Return a fake plugin widget class for use in toolbar plugin menu tests."""
+    from bec_widgets.utils.bec_widget import BECWidget
+    from qtpy.QtWidgets import QWidget as _QWidget
+
+    class FakePluginWidget(BECWidget, _QWidget):
+        ICON_NAME = "star"
+        PLUGIN = True
+
+        def __init__(self, parent=None, **kwargs):
+            super().__init__(parent=parent, **kwargs)
+
+    return FakePluginWidget
+
+
+@pytest.fixture
 def advanced_dock_area(qtbot, mocked_client):
     """Create an AdvancedDockArea instance for testing."""
     widget = BECDockArea(client=mocked_client)
@@ -1040,23 +1056,13 @@ class TestToolbarFunctionality:
         # Verify no "menu_plugins" bundle exists in the toolbar
         assert "menu_plugins" not in widget.toolbar.bundles
 
-    def test_plugin_menu_shown_when_plugins_available(self, qtbot, mocked_client):
+    def test_plugin_menu_shown_when_plugins_available(self, qtbot, mocked_client, fake_plugin_widget_cls):
         """Test that the plugin menu is shown when plugin widgets are available."""
-        from bec_widgets.utils.bec_widget import BECWidget
-        from qtpy.QtWidgets import QWidget as _QWidget
-
-        class FakePluginWidget(BECWidget, _QWidget):
-            ICON_NAME = "star"
-            PLUGIN = True
-
-            def __init__(self, parent=None, **kwargs):
-                super().__init__(parent=parent, **kwargs)
-
         with patch(
             "bec_widgets.widgets.containers.dock_area.dock_area.get_all_plugin_widgets"
         ) as mock_plugins:
             container_mock = MagicMock()
-            container_mock.as_dict.return_value = {"FakePluginWidget": FakePluginWidget}
+            container_mock.as_dict.return_value = {"FakePluginWidget": fake_plugin_widget_cls}
             mock_plugins.return_value = container_mock
 
             widget = BECDockArea(client=mocked_client)
@@ -1071,23 +1077,13 @@ class TestToolbarFunctionality:
         assert plugin_entry[2] == "FakePluginWidget"  # widget type name
         assert "menu_plugins" in widget.toolbar.bundles
 
-    def test_plugin_menu_action_triggers_new(self, qtbot, mocked_client):
+    def test_plugin_menu_action_triggers_new(self, qtbot, mocked_client, fake_plugin_widget_cls):
         """Test that clicking a plugin menu action creates a new dock with the plugin widget."""
-        from bec_widgets.utils.bec_widget import BECWidget
-        from qtpy.QtWidgets import QWidget as _QWidget
-
-        class FakePluginWidget(BECWidget, _QWidget):
-            ICON_NAME = "star"
-            PLUGIN = True
-
-            def __init__(self, parent=None, **kwargs):
-                super().__init__(parent=parent, **kwargs)
-
         with patch(
             "bec_widgets.widgets.containers.dock_area.dock_area.get_all_plugin_widgets"
         ) as mock_plugins:
             container_mock = MagicMock()
-            container_mock.as_dict.return_value = {"FakePluginWidget": FakePluginWidget}
+            container_mock.as_dict.return_value = {"FakePluginWidget": fake_plugin_widget_cls}
             mock_plugins.return_value = container_mock
 
             widget = BECDockArea(client=mocked_client)
