@@ -400,7 +400,11 @@ class BECDockArea(DockAreaWidget):
         _build_menu("menu_utils", "Add Utils ", util_actions)
 
         # Build plugin widget menu (only shown when plugin widgets are available)
-        plugin_widgets_dict = get_all_plugin_widgets().as_dict()
+        try:
+            plugin_widgets_dict = get_all_plugin_widgets().as_dict()
+        except Exception:
+            logger.warning("Failed to load plugin widgets for toolbar menu.", exc_info=True)
+            plugin_widgets_dict = {}
         plugin_actions: dict[str, tuple[str, str, str]] = {
             widget_name: (
                 getattr(widget_cls, "ICON_NAME", "widgets"),

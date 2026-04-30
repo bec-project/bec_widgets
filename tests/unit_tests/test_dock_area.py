@@ -1043,7 +1043,6 @@ class TestToolbarFunctionality:
     def test_plugin_menu_shown_when_plugins_available(self, qtbot, mocked_client):
         """Test that the plugin menu is shown when plugin widgets are available."""
         from bec_widgets.utils.bec_widget import BECWidget
-        from bec_widgets.utils.plugin_utils import BECClassContainer, BECClassInfo
         from qtpy.QtWidgets import QWidget as _QWidget
 
         class FakePluginWidget(BECWidget, _QWidget):
@@ -1053,15 +1052,9 @@ class TestToolbarFunctionality:
             def __init__(self, parent=None, **kwargs):
                 super().__init__(parent=parent, **kwargs)
 
-        container = BECClassContainer(
-            [BECClassInfo(name="FakePluginWidget", module="fake", file="fake.py", obj=FakePluginWidget)]
-        )
-
         with patch(
             "bec_widgets.widgets.containers.dock_area.dock_area.get_all_plugin_widgets"
         ) as mock_plugins:
-            mock_plugins.return_value = container
-            # Make as_dict() return our fake widget
             container_mock = MagicMock()
             container_mock.as_dict.return_value = {"FakePluginWidget": FakePluginWidget}
             mock_plugins.return_value = container_mock
