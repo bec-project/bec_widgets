@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v3.8.0 (2026-05-01)
+
+### Bug Fixes
+
+- **dock_area**: Change to show_dialo=False for CLI profile baseline restore
+  ([`0b1f0b4`](https://github.com/bec-project/bec_widgets/commit/0b1f0b4c262ff31469b7114b9f00bf0a7b85e8f2))
+
+- **dock_area**: Cli call load_profile has restore_baseline kwarg
+  ([`cc82597`](https://github.com/bec-project/bec_widgets/commit/cc825972c202cd9ded32f8b2d1ce5f822c2ebdba))
+
+### Features
+
+- **dock_area**: Add CLI restore current profile from baseline with optional confirmation dialog
+  ([`17865a2`](https://github.com/bec-project/bec_widgets/commit/17865a2c338a4a1f944659dde4ec05c25a8dd963))
+
+
 ## v3.7.3 (2026-05-01)
 
 ### Bug Fixes
