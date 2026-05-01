@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v3.7.3 (2026-05-01)
+
+### Bug Fixes
+
+- **dock_area**: Profile names changed, default->baseline, user->runtime
+  ([`dd32caf`](https://github.com/bec-project/bec_widgets/commit/dd32caf6e815fd1922b6aae84d00decad9dbf869))
+
+### Testing
+
+- **dock_area**: Remove low-value tests
+  ([`717d74b`](https://github.com/bec-project/bec_widgets/commit/717d74b19e8c6960209190c47ba32732ffaa0094))
+
+
 ## v3.7.2 (2026-04-29)
 
 ### Bug Fixes
