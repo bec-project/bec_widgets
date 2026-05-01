@@ -375,7 +375,7 @@ class BECDockArea(RPCBase):
 
     @rpc_timeout(None)
     @rpc_call
-    def restore_baseline_profile(self, name: "str | None" = None, show_dialog: "bool" = True):
+    def restore_baseline_profile(self, name: "str | None" = None, show_dialog: "bool" = False):
         """
         Overwrite the runtime copy of *name* with the baseline.
         If *name* is None, target the currently active profile.
@@ -1399,7 +1399,7 @@ class DockAreaView(RPCBase):
 
     @rpc_timeout(None)
     @rpc_call
-    def restore_baseline_profile(self, name: "str | None" = None, show_dialog: "bool" = True):
+    def restore_baseline_profile(self, name: "str | None" = None, show_dialog: "bool" = False):
         """
         Overwrite the runtime copy of *name* with the baseline.
         If *name* is None, target the currently active profile.
