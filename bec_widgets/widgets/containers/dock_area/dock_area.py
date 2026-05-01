@@ -907,7 +907,7 @@ class BECDockArea(DockAreaWidget):
     @SafeSlot(str)
     @SafeSlot(str, bool)
     @rpc_timeout(None)
-    def restore_baseline_profile(self, name: str | None = None, show_dialog: bool = True):
+    def restore_baseline_profile(self, name: str | None = None, show_dialog: bool = False):
         """
         Overwrite the runtime copy of *name* with the baseline.
         If *name* is None, target the currently active profile.

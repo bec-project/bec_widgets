@@ -1421,7 +1421,7 @@ class TestAdvancedDockAreaRestoreAndDialogs:
             patch.object(advanced_dock_area, "delete_all") as mock_delete_all,
             patch.object(advanced_dock_area, "load_profile") as mock_load_profile,
         ):
-            advanced_dock_area.restore_baseline_profile()
+            advanced_dock_area.restore_baseline_profile(show_dialog=True)
 
         assert mock_restore.call_count == 1
         args, kwargs = mock_restore.call_args
@@ -1455,7 +1455,7 @@ class TestAdvancedDockAreaRestoreAndDialogs:
         with patch(
             "bec_widgets.widgets.containers.dock_area.dock_area.restore_runtime_from_baseline"
         ) as mock_restore:
-            advanced_dock_area.restore_baseline_profile()
+            advanced_dock_area.restore_baseline_profile(show_dialog=True)
 
         mock_restore.assert_not_called()
 
@@ -1489,7 +1489,7 @@ class TestAdvancedDockAreaRestoreAndDialogs:
         with patch(
             "bec_widgets.widgets.containers.dock_area.dock_area.RestoreProfileDialog.confirm"
         ) as mock_confirm:
-            advanced_dock_area.restore_baseline_profile()
+            advanced_dock_area.restore_baseline_profile(show_dialog=True)
         mock_confirm.assert_not_called()
 
     def test_refresh_workspace_list_with_refresh_profiles(self, advanced_dock_area):
