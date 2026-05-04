@@ -155,7 +155,7 @@ widget_icons = {
     "RingProgressBar": "track_changes",
     "SBBMonitor": "train",
     "ScanControl": "tune",
-    "ScanMetadata": "widgets",
+    "ScanMetadata": "list_alt",
     "ScanProgressBar": "timelapse",
     "ScatterWaveform": "scatter_plot",
     "SignalComboBox": "list_alt",

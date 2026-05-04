@@ -60,9 +60,11 @@ class MockViewWithContent:
         """Activate view."""
 
 
-class MockDesignerWidget:
+class MockDesignerWidgetBase:
     ICON_NAME = "mock_icon"
 
+
+class MockDesignerWidget(MockDesignerWidgetBase):
     pass
 
 
