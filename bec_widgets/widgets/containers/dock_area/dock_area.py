@@ -19,8 +19,7 @@ from qtpy.QtWidgets import (
 
 import bec_widgets.widgets.containers.qt_ads as QtAds
 from bec_widgets import BECWidget, SafeProperty, SafeSlot
-from bec_widgets.applications.views.view import ViewTourSteps
-from bec_widgets.utils.bec_dispatcher import BECDispatcher
+from bec_widgets.cli.designer_plugins import widget_icons
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.rpc_decorator import rpc_timeout
 from bec_widgets.utils.rpc_widget_handler import widget_handler
@@ -65,22 +64,7 @@ from bec_widgets.widgets.containers.dock_area.toolbar_components.workspace_actio
     WorkspaceConnection,
     workspace_bundle,
 )
-from bec_widgets.widgets.containers.main_window.main_window import BECMainWindowNoRPC
 from bec_widgets.widgets.containers.qt_ads import CDockWidget
-from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox, PositionerBox2D
-from bec_widgets.widgets.control.scan_control import ScanControl
-from bec_widgets.widgets.editors.bec_console.bec_console import BecConsole, BECShell
-from bec_widgets.widgets.plots.heatmap.heatmap import Heatmap
-from bec_widgets.widgets.plots.image.image import Image
-from bec_widgets.widgets.plots.motor_map.motor_map import MotorMap
-from bec_widgets.widgets.plots.multi_waveform.multi_waveform import MultiWaveform
-from bec_widgets.widgets.plots.scatter_waveform.scatter_waveform import ScatterWaveform
-from bec_widgets.widgets.plots.waveform.waveform import Waveform
-from bec_widgets.widgets.progress.ring_progress_bar.ring_progress_bar import RingProgressBar
-from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
-from bec_widgets.widgets.services.bec_status_box.bec_status_box import BECStatusBox
-from bec_widgets.widgets.utility.logpanel.logpanel import LogPanel
-from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
 
 logger = bec_logger.logger
 
@@ -144,6 +128,10 @@ class BECDockArea(DockAreaWidget):
         self._mode = mode
 
         # Toolbar
+        from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import (
+            DarkModeButton,
+        )
+
         self.dark_mode_button = DarkModeButton(parent=self, toolbar=True)
         self.dark_mode_button.setVisible(enable_profile_management)
         self._setup_toolbar()
@@ -342,39 +330,42 @@ class BECDockArea(DockAreaWidget):
         self.toolbar = ModularToolBar(parent=self)
 
         plot_actions = {
-            "waveform": (Waveform.ICON_NAME, "Add Waveform", "Waveform"),
+            "waveform": (widget_icons["Waveform"], "Add Waveform", "Waveform"),
             "scatter_waveform": (
-                ScatterWaveform.ICON_NAME,
+                widget_icons["ScatterWaveform"],
                 "Add Scatter Waveform",
                 "ScatterWaveform",
             ),
-            "multi_waveform": (MultiWaveform.ICON_NAME, "Add Multi Waveform", "MultiWaveform"),
-            "image": (Image.ICON_NAME, "Add Image", "Image"),
-            "motor_map": (MotorMap.ICON_NAME, "Add Motor Map", "MotorMap"),
-            "heatmap": (Heatmap.ICON_NAME, "Add Heatmap", "Heatmap"),
+            "multi_waveform": (
+                widget_icons["MultiWaveform"],
+                "Add Multi Waveform",
+                "MultiWaveform",
+            ),
+            "image": (widget_icons["Image"], "Add Image", "Image"),
+            "motor_map": (widget_icons["MotorMap"], "Add Motor Map", "MotorMap"),
+            "heatmap": (widget_icons["Heatmap"], "Add Heatmap", "Heatmap"),
         }
         device_actions = {
-            "scan_control": (ScanControl.ICON_NAME, "Add Scan Control", "ScanControl"),
-            "positioner_box": (PositionerBox.ICON_NAME, "Add Device Box", "PositionerBox"),
+            "scan_control": (widget_icons["ScanControl"], "Add Scan Control", "ScanControl"),
+            "positioner_box": (widget_icons["PositionerBox"], "Add Device Box", "PositionerBox"),
             "positioner_box_2D": (
-                PositionerBox2D.ICON_NAME,
+                widget_icons["PositionerBox2D"],
                 "Add Device 2D Box",
                 "PositionerBox2D",
             ),
         }
         util_actions = {
-            "queue": (BECQueue.ICON_NAME, "Add Scan Queue", "BECQueue"),
-            "status": (BECStatusBox.ICON_NAME, "Add BEC Status Box", "BECStatusBox"),
+            "queue": (widget_icons["BECQueue"], "Add Scan Queue", "BECQueue"),
+            "status": (widget_icons["BECStatusBox"], "Add BEC Status Box", "BECStatusBox"),
             "progress_bar": (
-                RingProgressBar.ICON_NAME,
+                widget_icons["RingProgressBar"],
                 "Add Circular ProgressBar",
                 "RingProgressBar",
             ),
-            "terminal": (BecConsole.ICON_NAME, "Add Terminal", "BecConsole"),
-            "bec_shell": (BECShell.ICON_NAME, "Add BEC Shell", "BECShell"),
-            "log_panel": (LogPanel.ICON_NAME, "Add LogPanel - Disabled", "LogPanel"),
-            "sbb_monitor": ("train", "Add SBB Monitor", "SBBMonitor"),
-            "log_panel": (LogPanel.ICON_NAME, "Add LogPanel", "LogPanel"),
+            "terminal": (widget_icons["BecConsole"], "Add Terminal", "BecConsole"),
+            "bec_shell": (widget_icons["BECShell"], "Add BEC Shell", "BECShell"),
+            "sbb_monitor": (widget_icons["SBBMonitor"], "Add SBB Monitor", "SBBMonitor"),
+            "log_panel": (widget_icons["LogPanel"], "Add LogPanel", "LogPanel"),
         }
 
         # Create expandable menu actions (original behavior)
@@ -1198,6 +1189,8 @@ class BECDockArea(DockAreaWidget):
         )
         step_ids.append(step_id)
 
+        from bec_widgets.applications.views.view import ViewTourSteps
+
         return ViewTourSteps(view_title="Dock Area Workspace", step_ids=step_ids)
 
     def cleanup(self):
@@ -1217,6 +1210,9 @@ class BECDockArea(DockAreaWidget):
 
 if __name__ == "__main__":  # pragma: no cover
     import sys
+
+    from bec_widgets.utils.bec_dispatcher import BECDispatcher
+    from bec_widgets.widgets.containers.main_window.main_window import BECMainWindowNoRPC
 
     app = QApplication(sys.argv)
     apply_theme("dark")

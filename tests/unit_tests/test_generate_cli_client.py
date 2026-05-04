@@ -61,6 +61,8 @@ class MockViewWithContent:
 
 
 class MockDesignerWidget:
+    ICON_NAME = "mock_icon"
+
     pass
 
 
@@ -303,4 +305,5 @@ def test_write_designer_plugins(tmp_path):
     assert '"MockDesignerWidget":' in content
     assert '"tests.unit_tests.test_generate_cli_client"' in content
     assert '"MockDesignerWidget"' in content
+    assert '"MockDesignerWidget": "mock_icon"' in content
     assert "MockDesignerWidgetPlugin" not in content

@@ -278,6 +278,14 @@ designer_plugins = {
 
     content += """
 }
+
+widget_icons = {
+"""
+    for info in plugin_infos:
+        content += f'    "{info.plugin_name_pascal}": "{info.icon_name}",\n'
+
+    content += """
+}
 """
 
     try:
