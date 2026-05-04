@@ -206,7 +206,6 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
 
     def _populate_registry_widgets(self):
         try:
-            widget_handler.update_available_widgets()
             items = sorted(widget_handler.widget_classes.keys())
         except Exception as exc:
             print(f"Failed to load registered widgets: {exc}")
@@ -335,20 +334,13 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
 
         If kwargs does not contain `object_name`, it will default to the provided shortcut.
         """
-        # Ensure registry is loaded
-        widget_handler.update_available_widgets()
-        cls = widget_handler.widget_classes.get(widget_type)
-        if cls is None:
-            raise ValueError(f"Unknown registered widget type: {widget_type}")
-
         if kwargs is None:
             kwargs = {"object_name": shortcut}
         else:
             kwargs = dict(kwargs)
             kwargs.setdefault("object_name", shortcut)
 
-        # Instantiate and add
-        widget = cls(**kwargs)
+        widget = widget_handler.create_widget(widget_type, **kwargs)
         if not isinstance(widget, QWidget):
             raise TypeError(
                 f"Instantiated object for type '{widget_type}' is not a QWidget: {type(widget)}"
