@@ -29,6 +29,7 @@ class DesignerPluginInfo:
         self.plugin_name_pascal = plugin_class.__name__
         self.plugin_name_snake = pascal_to_snake(self.plugin_name_pascal)
         self.widget_import = f"from {plugin_class.__module__} import {self.plugin_name_pascal}"
+        self.icon_name = getattr(plugin_class, "ICON_NAME", "")
         plugin_module = (
             ".".join(plugin_class.__module__.split(".")[:-1]) + f".{self.plugin_name_snake}_plugin"
         )
