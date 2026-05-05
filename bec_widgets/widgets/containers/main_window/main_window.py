@@ -355,17 +355,13 @@ class BECMainWindow(BECWidget, QMainWindow):
 
         bec_docs = QAction("BEC Docs", self)
         bec_docs.setIcon(help_icon)
-        widgets_docs = QAction("BEC Widgets Docs", self)
-        widgets_docs.setIcon(help_icon)
         bug_report = QAction("Bug Report", self)
         bug_report.setIcon(bug_icon)
 
         bec_docs.triggered.connect(BECWebLinksMixin.open_bec_docs)
-        widgets_docs.triggered.connect(BECWebLinksMixin.open_bec_widgets_docs)
         bug_report.triggered.connect(BECWebLinksMixin.open_bec_bug_report)
 
         help_menu.addAction(bec_docs)
-        help_menu.addAction(widgets_docs)
         help_menu.addAction(bug_report)
 
     ################################################################################

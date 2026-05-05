@@ -247,12 +247,10 @@ def test_bec_weblinks(monkeypatch):
     monkeypatch.setattr(webbrowser, "open", fake_open)
 
     BECWebLinksMixin.open_bec_docs()
-    BECWebLinksMixin.open_bec_widgets_docs()
     BECWebLinksMixin.open_bec_bug_report()
 
     assert opened_urls == [
-        "https://beamline-experiment-control.readthedocs.io/en/latest/",
-        "https://bec.readthedocs.io/projects/bec-widgets/en/latest/",
+        "https://bec-project.github.io/bec_docs/",
         "https://github.com/bec-project/bec_widgets/issues",
     ]
 
