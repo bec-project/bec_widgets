@@ -256,7 +256,9 @@ scan_history = ScanHistoryMessage(
 
 @pytest.fixture(scope="function")
 def scan_control(qtbot, mocked_client):  # , mock_dev):
-    mocked_client.connector.set(MessageEndpoints.available_scans(), available_scans_message)
+    mocked_client.connector.set_and_publish(
+        MessageEndpoints.available_scans(), available_scans_message
+    )
     mocked_client.connector.xadd(
         topic=MessageEndpoints.scan_history(), msg_dict={"data": scan_history}
     )
