@@ -14,7 +14,9 @@ from .test_scan_control import available_scans_message
 @pytest.fixture
 def monaco_widget(qtbot, mocked_client):
     widget = MonacoWidget(client=mocked_client)
-    mocked_client.connector.set(MessageEndpoints.available_scans(), available_scans_message)
+    mocked_client.connector.set_and_publish(
+        MessageEndpoints.available_scans(), available_scans_message
+    )
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
@@ -62,7 +64,9 @@ def test_monaco_widget_get_scan_control_code(monaco_widget: MonacoWidget, qtbot,
     """
     Test that the MonacoWidget can get scan control code from the dialog.
     """
-    mocked_client.connector.set(MessageEndpoints.available_scans(), available_scans_message)
+    mocked_client.connector.set_and_publish(
+        MessageEndpoints.available_scans(), available_scans_message
+    )
 
     scan_control_dialog = ScanControlDialog(client=mocked_client)
     qtbot.addWidget(scan_control_dialog)
