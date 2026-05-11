@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.8.1 (2026-05-11)
+
+### Bug Fixes
+
+- **web_links**: Update documentation links in BECWebLinksMixin
+  ([`9d92f8b`](https://github.com/bec-project/bec_widgets/commit/9d92f8b53a6ffe57a9dffad797580228023bf6e1))
+
+
 ## v3.8.0 (2026-05-01)
 
 ### Bug Fixes
