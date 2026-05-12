@@ -143,6 +143,15 @@ def get_plugin_designer_registry() -> dict[str, tuple[str, str]]:
     return {}
 
 
+@lru_cache
+def get_plugin_widget_icons() -> dict[str, str]:
+    """If there is a plugin repository installed, return the designer widget icon registry."""
+    designer_module = get_plugin_designer_module()
+    if designer_module and hasattr(designer_module, "widget_icons"):
+        return designer_module.widget_icons
+    return {}
+
+
 def get_all_plugin_widgets() -> BECClassContainer:
     """If there is a plugin repository installed, load all widgets from it."""
     if plugin := user_widget_plugin():

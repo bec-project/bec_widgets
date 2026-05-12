@@ -2,7 +2,10 @@ from importlib.machinery import FileFinder, SourceFileLoader
 from types import ModuleType
 from unittest import mock
 
-from bec_widgets.utils.bec_plugin_helper import _all_widgets_from_all_submods
+from bec_widgets.utils.bec_plugin_helper import (
+    _all_widgets_from_all_submods,
+    get_plugin_widget_icons,
+)
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.plugin_utils import BECClassContainer, BECClassInfo
 
@@ -69,3 +72,29 @@ def test_all_widgets_from_module_no_widgets():
         widgets = _all_widgets_from_all_submods(module).as_dict()
 
     assert widgets == {}
+
+
+def test_get_plugin_widget_icons_from_designer_module():
+    designer_module = mock.MagicMock(spec=ModuleType)
+    designer_module.widget_icons = {"PluginWidget": "star"}
+
+    get_plugin_widget_icons.cache_clear()
+    try:
+        with mock.patch(
+            "bec_widgets.utils.bec_plugin_helper.get_plugin_designer_module",
+            return_value=designer_module,
+        ):
+            assert get_plugin_widget_icons() == {"PluginWidget": "star"}
+    finally:
+        get_plugin_widget_icons.cache_clear()
+
+
+def test_get_plugin_widget_icons_without_designer_module():
+    get_plugin_widget_icons.cache_clear()
+    try:
+        with mock.patch(
+            "bec_widgets.utils.bec_plugin_helper.get_plugin_designer_module", return_value=None
+        ):
+            assert get_plugin_widget_icons() == {}
+    finally:
+        get_plugin_widget_icons.cache_clear()
