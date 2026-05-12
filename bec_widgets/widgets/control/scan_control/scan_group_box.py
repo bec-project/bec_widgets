@@ -271,9 +271,16 @@ class ScanGroupBox(QGroupBox):
                 continue
             if default == "_empty":
                 default = None
-            widget = widget_class(parent=self.parent(), arg_name=arg_name, default=default)
+            if widget_class is DeviceComboBox:
+                widget = widget_class(
+                    parent=self.parent(),
+                    arg_name=arg_name,
+                    default=default,
+                    device_filter=BECDeviceFilter.DEVICE,
+                )
+            else:
+                widget = widget_class(parent=self.parent(), arg_name=arg_name, default=default)
             if isinstance(widget, DeviceComboBox):
-                widget.set_device_filter(BECDeviceFilter.DEVICE)
                 self.selected_devices[widget] = ""
                 widget.device_selected.connect(self.emit_device_selected)
             if isinstance(widget, ScanLiteralsComboBox):

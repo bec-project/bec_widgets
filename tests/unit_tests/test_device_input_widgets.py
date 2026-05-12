@@ -37,6 +37,8 @@ def test_device_input_combobox_init(device_input_combobox):
     assert isinstance(device_input_combobox, DeviceComboBox)
     assert device_input_combobox.config.widget_class == "DeviceComboBox"
     assert device_input_combobox.isEditable() is True
+    assert device_input_combobox.currentText() == ""
+    assert device_input_combobox.is_valid_input is False
     assert device_input_combobox.config.device_filter == []
     assert device_input_combobox.config.readout_filter == [
         ReadoutPriority.MONITORED.value,

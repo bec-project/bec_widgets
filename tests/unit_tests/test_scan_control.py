@@ -9,6 +9,7 @@ from qtpy.QtCore import QModelIndex, Qt
 
 from bec_widgets.utils.forms_from_types.items import StrFormItem
 from bec_widgets.utils.widget_io import WidgetIO
+from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.control.scan_control import ScanControl
 
 from .client_mocks import mocked_client
@@ -304,6 +305,12 @@ def test_on_scan_selected(scan_control, scan_name):
             assert widget is not None  # Confirm that a widget exists
             expected_widget_type = scan_control.arg_box.WIDGET_HANDLER.get(arg_value, None)
             assert isinstance(widget, expected_widget_type)  # Confirm the widget type matches
+            if isinstance(widget, DeviceComboBox):
+                assert widget.currentText() == ""
+                assert "samx" in widget.devices
+                assert (
+                    "async_device" in widget.devices
+                )  # async device should also be present in the device list
 
     # Check kwargs boxes
     kwargs_group = [param for param in expected_scan_info["gui_config"]["kwarg_groups"]]
