@@ -63,15 +63,15 @@ TEST_LOG_MESSAGES = [
 
 @pytest.fixture
 def log_panel(qtbot, mocked_client):
-    mocked_client.connector.xread = lambda *_, **__: TEST_LOG_MESSAGES
-    widget = LogPanel()
-    qtbot.addWidget(widget)
-    qtbot.waitExposed(widget)
-    yield widget
-    widget._model.log_queue.cleanup()
-    widget.close()
-    widget.deleteLater()
-    qtbot.wait(100)
+    with patch.object(mocked_client.connector, "xread", lambda *_, **__: TEST_LOG_MESSAGES):
+        widget = LogPanel()
+        qtbot.addWidget(widget)
+        qtbot.waitExposed(widget)
+        yield widget
+        widget._model.log_queue.cleanup()
+        widget.close()
+        widget.deleteLater()
+        qtbot.wait(100)
 
 
 def test_log_panel_init(qtbot, log_panel: LogPanel):
