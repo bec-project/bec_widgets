@@ -1,6 +1,30 @@
 # CHANGELOG
 
 
+## v3.9.0 (2026-05-12)
+
+### Bug Fixes
+
+- Test bw-generate-cli
+  ([`085f9fa`](https://github.com/bec-project/bec_widgets/commit/085f9fa271a0a8e339bff83f235011ac4a9d29ea))
+
+- **dock_area**: Icon fetching for toolbar import optimised
+  ([`79931fa`](https://github.com/bec-project/bec_widgets/commit/79931faf554fd0978c54d6562aa1b5fc4ab823b2))
+
+- **jupyter_console_widget**: Widget_handler API fix
+  ([`6b3cebe`](https://github.com/bec-project/bec_widgets/commit/6b3cebe9cbdb5c02ae2aa14b0f624a51c9c2ca4c))
+
+### Features
+
+- Move to lazy widget import
+  ([`5cc8242`](https://github.com/bec-project/bec_widgets/commit/5cc82425f07d76e881ae59a121a3af77f227bfee))
+
+### Testing
+
+- Fix available scans endpoint operation
+  ([`bb1544e`](https://github.com/bec-project/bec_widgets/commit/bb1544ecb70612267e2b03ba041c6f656789d63c))
+
+
 ## v3.8.1 (2026-05-11)
 
 ### Bug Fixes
