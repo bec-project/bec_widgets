@@ -26,7 +26,6 @@ from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.widgets.control.buttons.stop_button.stop_button import StopButton
 from bec_widgets.widgets.control.scan_control.scan_group_box import ScanGroupBox
 from bec_widgets.widgets.editors.scan_metadata.scan_metadata import ScanMetadata
-from bec_widgets.widgets.utility.toggle.toggle import ToggleSwitch
 
 
 class ScanParameterConfig(BaseModel):
@@ -84,7 +83,6 @@ class ScanControl(BECWidget, QWidget):
         self.kwarg_boxes = []
         self.expert_mode = False  # TODO implement in the future versions
         self.previous_scan = None
-        self.last_scan_found = None
 
         # Widget Default Parameters
         self.config.default_scan = default_scan
@@ -123,17 +121,12 @@ class ScanControl(BECWidget, QWidget):
         scan_selection_layout.addWidget(self.comboBox_scan_selection, 1)
         self.scan_selection_group.layout().addLayout(scan_selection_layout)
 
-        # Label to reload the last scan parameters within scan selection group box
-        self.toggle_layout = QHBoxLayout()
-        self.toggle_layout.addSpacerItem(
-            QSpacerItem(0, 0, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        # Button to reload the last scan parameters on demand.
+        self.last_scan_button = QPushButton(
+            "Restore last scan parameters", self.scan_selection_group
         )
-        self.last_scan_label = QLabel("Restore last scan parameters", self.scan_selection_group)
-        self.toggle = ToggleSwitch(parent=self.scan_selection_group, checked=False)
-        self.toggle.enabled.connect(self.request_last_executed_scan_parameters)
-        self.toggle_layout.addWidget(self.last_scan_label)
-        self.toggle_layout.addWidget(self.toggle)
-        self.scan_selection_group.layout().addLayout(self.toggle_layout)
+        self.last_scan_button.clicked.connect(self.request_last_executed_scan_parameters)
+        self.scan_selection_group.layout().addWidget(self.last_scan_button)
         self.scan_selection_group.setSizePolicy(
             QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed
         )
@@ -206,7 +199,6 @@ class ScanControl(BECWidget, QWidget):
         """Callback for scan selection combo box"""
         selected_scan_name = self.comboBox_scan_selection.currentText()
         self.scan_selected.emit(selected_scan_name)
-        self.request_last_executed_scan_parameters()
         self.restore_scan_parameters(selected_scan_name)
 
     @SafeSlot()
@@ -215,10 +207,6 @@ class ScanControl(BECWidget, QWidget):
         """
         Requests the last executed scan parameters from BEC and restores them to the scan control widget.
         """
-        self.last_scan_found = False
-        if not self.toggle.checked:
-            return
-
         current_scan = self.comboBox_scan_selection.currentText()
         history = (
             self.client.connector.xread(
@@ -246,8 +234,6 @@ class ScanControl(BECWidget, QWidget):
             if merged and self.kwarg_boxes:
                 for box in self.kwarg_boxes:
                     box.set_parameters(merged)
-
-            self.last_scan_found = True
             break
 
     @SafeProperty(str)
@@ -496,8 +482,6 @@ class ScanControl(BECWidget, QWidget):
         Args:
             scan_name(str): Name of the scan to restore the parameters for.
         """
-        if self.last_scan_found is True:
-            return
         scan_params = self.config.scans.get(scan_name, None)
         if scan_params is None and self.previous_scan is None:
             return
