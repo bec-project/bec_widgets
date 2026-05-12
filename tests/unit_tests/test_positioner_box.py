@@ -12,9 +12,7 @@ from bec_widgets.widgets.control.device_control.positioner_box import (
     PositionerBox,
     PositionerControlLine,
 )
-from bec_widgets.widgets.control.device_input.device_line_edit.device_line_edit import (
-    DeviceLineEdit,
-)
+from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 
 from .client_mocks import mocked_client
 from .conftest import create_widget
@@ -164,8 +162,8 @@ def test_positioner_box_open_dialog_selection(qtbot, positioner_box):
         # pylint: disable=protected-access
         assert positioner_box._dialog is not None
         qtbot.waitUntil(lambda: positioner_box._dialog.isVisible() is True, timeout=1000)
-        line_edit = positioner_box._dialog.findChild(DeviceLineEdit)
-        line_edit.setText("samy")
+        line_edit = positioner_box._dialog.findChild(DeviceComboBox)
+        line_edit.setCurrentText("samy")
         close_button = positioner_box._dialog.findChild(QPushButton)
         assert close_button.text() == "Close"
         qtbot.mouseClick(close_button, Qt.LeftButton)

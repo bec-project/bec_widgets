@@ -6,8 +6,8 @@ import pytest
 from qtpy import QtCore
 from qtpy.QtWidgets import QDialogButtonBox, QLabel
 
-from bec_widgets.widgets.control.device_input.base_classes.device_signal_input_base import (
-    DeviceSignalInputBaseConfig,
+from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import (
+    SignalComboBoxConfig,
 )
 from bec_widgets.widgets.utility.signal_label.signal_label import ChoiceDialog, SignalLabel
 
@@ -61,7 +61,7 @@ SAMX_INFO_DICT = {
 @pytest.fixture
 def signal_label(qtbot, mocked_client: MagicMock):
     with patch.object(mocked_client.device_manager.devices.samx, "_info", SAMX_INFO_DICT):
-        config = DeviceSignalInputBaseConfig(device="samx", default="samx")
+        config = SignalComboBoxConfig(device="samx", default="samx")
         widget = SignalLabel(
             config=config, custom_label="Test Label", custom_units="m/s", client=mocked_client
         )
@@ -149,7 +149,8 @@ def test_choose_signal_dialog_sends_choices(signal_label: SignalLabel, qtbot):
     dialog = signal_label.show_choice_dialog()
     qtbot.waitUntil(dialog.button_box.button(QDialogButtonBox.Ok).isVisible, timeout=500)
     dialog._device_field.dev["test device"] = MagicMock()
-    dialog._device_field.setText("test device")
+    dialog._device_field.devices = ["test device"]
+    dialog._device_field.setCurrentText("test device")
     dialog._signal_field._signals = [("test signal", {"component_name": "test signal"})]
     dialog._signal_field.addItem("test signal")
     dialog._signal_field.setCurrentIndex(0)
@@ -162,7 +163,8 @@ def test_dialog_handler_updates_devices(signal_label: SignalLabel, qtbot):
     dialog = signal_label.show_choice_dialog()
     qtbot.waitUntil(dialog.button_box.button(QDialogButtonBox.Ok).isVisible, timeout=500)
     dialog._device_field.dev["flux_capacitor"] = MagicMock()
-    dialog._device_field.setText("flux_capacitor")
+    dialog._device_field.devices = ["flux_capacitor"]
+    dialog._device_field.setCurrentText("flux_capacitor")
     dialog._signal_field._signals = [("spin_speed", {"component_name": "spin_speed"})]
     dialog._signal_field.addItem("spin_speed")
     dialog._signal_field.setCurrentIndex(0)
@@ -176,7 +178,7 @@ def test_choose_signal_dialog_invalid_device(signal_label: SignalLabel, qtbot):
     signal_label._process_dialog = MagicMock()
     dialog = signal_label.show_choice_dialog()
     qtbot.waitUntil(dialog.button_box.button(QDialogButtonBox.Ok).isVisible, timeout=500)
-    dialog._device_field.setText("invalid device")
+    dialog._device_field.setCurrentText("invalid device")
     dialog._signal_field.addItem("test signal")
     dialog._signal_field.setCurrentIndex(0)
     qtbot.mouseClick(dialog.button_box.button(QDialogButtonBox.Ok), QtCore.Qt.LeftButton)
@@ -206,7 +208,8 @@ def test_dialog_has_signals(signal_label: SignalLabel, qtbot):
         "signals": {"signal 1": {"kind_str": "hinted"}, "signal 2": {"kind_str": "normal"}}
     }
 
-    dialog._device_field.setText("test device")
+    dialog._device_field.devices = ["test device"]
+    dialog._device_field.setCurrentText("test device")
     assert dialog._signal_field.count() == 2  # the actual signal and the category label
     assert dialog._signal_field.currentText() == "signal 1"
 

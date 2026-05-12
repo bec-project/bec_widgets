@@ -1,37 +1,53 @@
 from __future__ import annotations
 
-from qtpy.QtCore import QSize, Qt, Signal
+from bec_lib.callback_handler import EventType
+from bec_lib.device import Signal as BECSignal
+from bec_lib.logger import bec_logger
+from qtpy.QtCore import Property, QSize, Qt, Signal, Slot
 from qtpy.QtWidgets import QComboBox, QSizePolicy
 
+from bec_widgets.utils.bec_connector import ConnectionConfig
+from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
-from bec_widgets.utils.filter_io import ComboBoxFilterHandler, FilterIO
-from bec_widgets.utils.ophyd_kind_util import Kind
-from bec_widgets.widgets.control.device_input.base_classes.device_signal_input_base import (
-    DeviceSignalInputBase,
-    DeviceSignalInputBaseConfig,
+from bec_widgets.utils.filter_io import (
+    get_bec_signals_for_classes,
+    replace_combobox_items,
+    signal_items_for_kind,
 )
+from bec_widgets.utils.ophyd_kind_util import Kind
+
+logger = bec_logger.logger
 
 
-class SignalComboBox(DeviceSignalInputBase, QComboBox):
+class SignalComboBoxConfig(ConnectionConfig):
+    """Configuration for SignalComboBox."""
+
+    signal_filter: list[str] | None = None
+    signal_class_filter: list[str] | None = None
+    ndim_filter: int | list[int] | None = None
+    default: str | None = None
+    arg_name: str | None = None
+    device: str | None = None
+    signals: list[str] | None = None
+
+
+class SignalComboBox(BECWidget, QComboBox):
     """
-    Line edit widget for device input with autocomplete for device names.
+    Editable combobox for selecting BEC device signals.
 
     Args:
         parent: Parent widget.
         client: BEC client object.
-        config: Device input configuration.
+        config: Signal combobox configuration.
         gui_id: GUI ID.
         device: Device name to filter signals from.
-        signal_filter: Signal filter, list of signal kinds from ophyd Kind enum. Check DeviceSignalInputBase for more details.
-        signal_class_filter: List of signal classes to filter the signals by. Only signals of these classes will be shown.
-        ndim_filter: Dimensionality filter, int or list of ints to filter signals by their number of dimensions. If signal do not support ndim, it will be included in the selection anyway.
-        default: Default device name.
-        arg_name: Argument name, can be used for the other widgets which has to call some other function in bec using correct argument names.
-        store_signal_config: Whether to store the full signal config in the combobox item data.
+        signal_filter: Signal kind filters from Kind.
+        signal_class_filter: Signal classes to show.
+        ndim_filter: Dimensionality filter for signal-class based lists.
+        default: Default signal name.
+        arg_name: Argument name used by scan/input widgets.
+        store_signal_config: Whether to store signal config in item data.
         require_device: If True, signals are only shown/validated when a device is set.
-    Signals:
-        device_signal_changed: Emitted when the current text represents a valid signal selection.
-        signal_reset: Emitted when validation fails and the selection should be treated as cleared.
     """
 
     USER_ACCESS = ["set_signal", "set_device", "signals", "get_signal_name"]
@@ -47,10 +63,10 @@ class SignalComboBox(DeviceSignalInputBase, QComboBox):
         self,
         parent=None,
         client=None,
-        config: DeviceSignalInputBaseConfig | None = None,
+        config: SignalComboBoxConfig | dict | None = None,
         gui_id: str | None = None,
         device: str | None = None,
-        signal_filter: list[Kind] | None = None,
+        signal_filter: list[Kind | str] | Kind | str | None = None,
         signal_class_filter: list[str] | None = None,
         ndim_filter: int | list[int] | None = None,
         default: str | None = None,
@@ -59,277 +75,336 @@ class SignalComboBox(DeviceSignalInputBase, QComboBox):
         require_device: bool = False,
         **kwargs,
     ):
-        super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
-        if arg_name is not None:
-            self.config.arg_name = arg_name
-            self.arg_name = arg_name
-        if default is not None:
-            self.set_device(default)
+        self.config = self._process_config(config)
+        super().__init__(parent=parent, client=client, config=self.config, gui_id=gui_id, **kwargs)
+        self.get_bec_shortcuts()
 
-        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        self.setMinimumSize(QSize(100, 0))
-        self._set_first_element_as_empty = True
+        self._device: str | None = None
+        self._signal_filter: set[Kind] = set()
+        self._signals: list[str | tuple[str, dict]] = []
+        self._hinted_signals: list[tuple[str, dict]] = []
+        self._normal_signals: list[tuple[str, dict]] = []
+        self._config_signals: list[tuple[str, dict]] = []
+        self._set_first_element_as_empty = False
         self._signal_class_filter = signal_class_filter or []
         self._store_signal_config = store_signal_config
-        self.config.ndim_filter = ndim_filter or None
         self._require_device = require_device
         self._is_valid_input = False
 
-        # Note: Runtime arguments (e.g. device, default, arg_name) intentionally take
-        # precedence over values from the passed-in config. Full reconciliation and
-        # restoration of state between designer-provided config and runtime arguments
-        # is not yet implemented, as earlier attempts caused issues with QtDesigner.
+        if arg_name is not None:
+            self.config.arg_name = arg_name
+            self.arg_name = arg_name
+
+        if signal_filter is None and self.config.signal_filter:
+            signal_filter = self.config.signal_filter
+        if signal_class_filter is None and self.config.signal_class_filter:
+            self._signal_class_filter = self.config.signal_class_filter
+        if ndim_filter is None and self.config.ndim_filter is not None:
+            ndim_filter = self.config.ndim_filter
+        if device is None and self.config.device:
+            device = self.config.device
+        if default is None and self.config.default:
+            default = self.config.default
+        self.config.ndim_filter = ndim_filter
+
+        self.setEditable(True)
+        self.setInsertPolicy(QComboBox.NoInsert)
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.setMinimumSize(QSize(100, 0))
+
+        self._device_update_register = self.bec_dispatcher.client.callbacks.register(
+            EventType.DEVICE_UPDATE, self.update_signals_from_filters
+        )
         self.currentTextChanged.connect(self.on_text_changed)
 
-        # Kind filtering is always applied; class filtering is additive. If signal_filter is None,
-        # we default to hinted+normal, even when signal_class_filter is empty or None. To disable
-        # kinds, pass an explicit signal_filter or toggle include_* after init.
-        if signal_filter is not None:
-            self.set_filter(signal_filter)
-        else:
-            self.set_filter([Kind.hinted, Kind.normal, Kind.config])
+        self.set_filter(signal_filter or [Kind.hinted, Kind.normal, Kind.config])
 
         if device is not None:
             self.set_device(device)
         if default is not None:
             self.set_signal(default)
+        self.check_validity(self.currentText())
+
+    @staticmethod
+    def _process_config(config: SignalComboBoxConfig | dict | None) -> SignalComboBoxConfig:
+        if config is None:
+            return SignalComboBoxConfig(widget_class="SignalComboBox")
+        return SignalComboBoxConfig.model_validate(config)
+
+    @SafeSlot(str)
+    def set_signal(self, signal: str):
+        """Set the current signal if it is available in the combobox."""
+        display_text = self._display_text_for_signal(signal)
+        if display_text is None:
+            logger.warning(
+                f"Signal {signal} not found for device {self.device} and filtered selection {self.signal_filter}."
+            )
+            return
+        self.setCurrentText(display_text)
+        self.config.default = signal
 
     @SafeSlot(str)
     def set_device(self, device: str | None):
-        """
-        Set the device. When signal_class_filter is active, ensures base-class
-        logic runs and then refreshes the signal list to show only signals from
-        that device matching the signal class filter.
-
-        Args:
-            device(str): device name.
-        """
-        super().set_device(device)
-
-        if self._signal_class_filter:
-            # Refresh the signal list to show only this device's signals
-            self.update_signals_from_signal_classes()
+        """Set the device that scopes kind-based signal filtering."""
+        if not self.validate_device(device):
+            self._device = None
+        else:
+            self._device = device
+        self.config.device = self._device
+        self.update_signals_from_filters()
 
     @SafeSlot()
     @SafeSlot(dict, dict)
     def update_signals_from_filters(
         self, content: dict | None = None, metadata: dict | None = None
     ):
-        """Update the filters for the combobox.
-        When signal_class_filter is active, skip the normal Kind-based filtering.
-
-        Args:
-            content (dict | None): Content dictionary from BEC event.
-            metadata (dict | None): Metadata dictionary from BEC event.
-        """
-        super().update_signals_from_filters(content, metadata)
+        """Refresh available signals from the current device and filters."""
+        self.config.signal_filter = [kind.name for kind in self.signal_filter]
 
         if self._signal_class_filter:
             self.update_signals_from_signal_classes()
             return
-        # pylint: disable=protected-access
-        if FilterIO._find_handler(self) is ComboBoxFilterHandler:
-            if len(self._config_signals) > 0:
-                self.insertItem(
-                    len(self._hinted_signals) + len(self._normal_signals), "Config Signals"
-                )
-                self.model().item(len(self._hinted_signals) + len(self._normal_signals)).setEnabled(
-                    False
-                )
-            if len(self._normal_signals) > 0:
-                self.insertItem(len(self._hinted_signals), "Normal Signals")
-                self.model().item(len(self._hinted_signals)).setEnabled(False)
-            if len(self._hinted_signals) > 0:
-                self.insertItem(0, "Hinted Signals")
-                self.model().item(0).setEnabled(False)
+
+        if not self.validate_device(self._device):
+            self._device = None
+            self.config.device = None
+            self._set_signal_groups([], [], [])
+            return
+
+        device = self.get_device_object(self._device)
+        device_info = device._info.get("signals", {})
+
+        if isinstance(device, BECSignal):
+            self._set_signal_groups([(self._device, {})], [], [])
+            return
+
+        self._set_signal_groups(
+            signal_items_for_kind(
+                kind=Kind.hinted,
+                signal_filter=self.signal_filter,
+                device_info=device_info,
+                device_name=self._device,
+            ),
+            signal_items_for_kind(
+                kind=Kind.normal,
+                signal_filter=self.signal_filter,
+                device_info=device_info,
+                device_name=self._device,
+            ),
+            signal_items_for_kind(
+                kind=Kind.config,
+                signal_filter=self.signal_filter,
+                device_info=device_info,
+                device_name=self._device,
+            ),
+        )
+
+    @Property(str)
+    def device(self) -> str:
+        """Selected device."""
+        return self._device or ""
+
+    @device.setter
+    def device(self, value: str):
+        self.set_device(value)
+
+    @Property(bool)
+    def include_hinted_signals(self):
+        """Include hinted signals."""
+        return Kind.hinted in self.signal_filter
+
+    @include_hinted_signals.setter
+    def include_hinted_signals(self, value: bool):
+        self._set_kind_filter_enabled(Kind.hinted, value)
+
+    @Property(bool)
+    def include_normal_signals(self):
+        """Include normal signals."""
+        return Kind.normal in self.signal_filter
+
+    @include_normal_signals.setter
+    def include_normal_signals(self, value: bool):
+        self._set_kind_filter_enabled(Kind.normal, value)
+
+    @Property(bool)
+    def include_config_signals(self):
+        """Include config signals."""
+        return Kind.config in self.signal_filter
+
+    @include_config_signals.setter
+    def include_config_signals(self, value: bool):
+        self._set_kind_filter_enabled(Kind.config, value)
 
     @SafeProperty(bool)
     def set_first_element_as_empty(self) -> bool:
-        """
-        Whether the first element in the combobox should be empty.
-        This is useful to allow the user to select a device from the list.
-        """
+        """Whether an empty choice is inserted as the first item."""
         return self._set_first_element_as_empty
 
     @set_first_element_as_empty.setter
     def set_first_element_as_empty(self, value: bool) -> None:
-        """
-        Set whether the first element in the combobox should be empty.
-        This is useful to allow the user to select a device from the list.
-
-        Args:
-            value (bool): True if the first element should be empty, False otherwise.
-        """
         self._set_first_element_as_empty = value
-        if self._set_first_element_as_empty:
-            self.insertItem(0, "")
+        if value:
+            if self.count() == 0 or self.itemText(0) != "":
+                self.insertItem(0, "")
             self.setCurrentIndex(0)
-        else:
-            if self.count() > 0 and self.itemText(0) == "":
-                self.removeItem(0)
+        elif self.count() > 0 and self.itemText(0) == "":
+            self.removeItem(0)
 
     @SafeProperty("QStringList")
     def signal_class_filter(self) -> list[str]:
-        """
-        Get the list of signal classes to filter.
-
-        Returns:
-            list[str]: List of signal class names to filter.
-        """
+        """Signal class names used to build the signal list."""
         return self._signal_class_filter
 
     @signal_class_filter.setter
     def signal_class_filter(self, value: list[str] | None):
-        """
-        Set the signal class filter.
-
-        Args:
-            value (list[str] | None): List of signal class names to filter, or None/empty
-                to disable class-based filtering and revert to the default behavior.
-        """
-        normalized_value = value or []
-        self._signal_class_filter = normalized_value
-        self.config.signal_class_filter = normalized_value
-        if self._signal_class_filter:
-            self.update_signals_from_signal_classes()
-        else:
-            self.update_signals_from_filters()
+        self._signal_class_filter = value or []
+        self.config.signal_class_filter = self._signal_class_filter
+        self.update_signals_from_filters()
 
     @SafeProperty(int)
     def ndim_filter(self) -> int:
-        """Dimensionality filter for signals."""
+        """Dimensionality filter for signal-class based lists."""
         return self.config.ndim_filter if isinstance(self.config.ndim_filter, int) else -1
 
     @ndim_filter.setter
     def ndim_filter(self, value: int):
         self.config.ndim_filter = None if value < 0 else value
-        if self._signal_class_filter:
-            self.update_signals_from_signal_classes(ndim_filter=self.config.ndim_filter)
+        self.update_signals_from_filters()
 
     @SafeProperty(bool)
     def require_device(self) -> bool:
-        """
-        If True, signals are only shown/validated when a device is set.
-
-        Note:
-            This property affects list rebuilding only when a signal_class_filter
-            is active. Without a signal class filter, the available signals are
-            managed by the standard Kind-based filtering.
-        """
+        """Whether validation/listing requires a selected device."""
         return self._require_device
 
     @require_device.setter
     def require_device(self, value: bool):
         self._require_device = value
-        # Rebuild list when toggled, but only when using signal_class_filter
-        if self._signal_class_filter:
-            self.update_signals_from_signal_classes()
+        self.update_signals_from_filters()
 
-    def set_to_obj_name(self, obj_name: str) -> bool:
-        """
-        Set the combobox to the object name of the signal.
+    @property
+    def signals(self) -> list[str | tuple[str, dict]]:
+        """Available signals after filtering."""
+        return self._signals
 
-        Args:
-            obj_name (str): Object name of the signal.
+    @signals.setter
+    def signals(self, value: list[str | tuple[str, dict]]):
+        self._signals = value
+        self.config.signals = [entry[0] if isinstance(entry, tuple) else entry for entry in value]
+        self._replace_signal_items()
 
-        Returns:
-            bool: True if the object name was found and set, False otherwise.
-        """
-        for i in range(self.count()):
-            signal_data = self.itemData(i)
-            if signal_data and signal_data.get("obj_name") == obj_name:
-                self.setCurrentIndex(i)
-                return True
+    @property
+    def signal_filter(self) -> set[Kind]:
+        """Signal kind filters."""
+        return self._signal_filter
+
+    @property
+    def is_valid_input(self) -> bool:
+        """Whether the current text represents a valid signal selection."""
+        return self._is_valid_input
+
+    @property
+    def selected_signal_comp_name(self) -> str:
+        """Component name for the current signal, falling back to object name."""
+        index = self._find_signal_index(self.currentText())
+        if index < 0:
+            return self.get_signal_name()
+        signal_info = self.itemData(index)
+        if isinstance(signal_info, dict):
+            return signal_info.get("component_name") or self.get_signal_name()
+        return self.get_signal_name()
+
+    def set_filter(self, filter_selection: Kind | str | list[Kind | str] | None):
+        """Enable one or more signal kind filters."""
+        if filter_selection is None:
+            return
+        filters = filter_selection if isinstance(filter_selection, list) else [filter_selection]
+        for signal_filter in filters:
+            kind = self._normalize_kind(signal_filter)
+            if kind is not None:
+                self._signal_filter.add(kind)
+        self.update_signals_from_filters()
+
+    def get_available_filters(self) -> list[Kind]:
+        """Return available signal kind filters."""
+        return [Kind.hinted, Kind.normal, Kind.config]
+
+    def get_device_object(self, device: str) -> object | None:
+        """Return a BEC device object by name."""
+        dev = getattr(self.dev, device, None)
+        if dev is None:
+            logger.warning(f"Device {device} not found in devicemanager.")
+            return None
+        return dev
+
+    def validate_device(self, device: str | None, raise_on_false: bool = False) -> bool:
+        """Validate that a device exists in the current device manager."""
+        if device in self.dev:
+            return True
+        if raise_on_false:
+            raise ValueError(f"Device {device} not found in devicemanager.")
         return False
 
-    def set_to_first_enabled(self) -> bool:
-        """
-        Set the combobox to the first enabled item.
+    def validate_signal(self, signal: str) -> bool:
+        """Validate a signal by display text, object name, or component name."""
+        return self._display_text_for_signal(signal) is not None
 
-        Returns:
-            bool: True if an enabled item was found and set, False otherwise.
-        """
-        for i in range(self.count()):
-            if self.model().item(i).isEnabled():
-                self.setCurrentIndex(i)
+    def set_to_obj_name(self, obj_name: str) -> bool:
+        """Select the item whose signal config has the given object name."""
+        index = self._find_signal_index(obj_name)
+        if index < 0:
+            return False
+        self.setCurrentIndex(index)
+        return True
+
+    def set_to_first_enabled(self) -> bool:
+        """Select the first enabled item."""
+        for index in range(self.count()):
+            item = self.model().item(index)
+            if item is not None and item.isEnabled():
+                self.setCurrentIndex(index)
                 return True
         return False
 
     def get_signal_name(self) -> str:
-        """
-        Get the signal name from the combobox.
-
-        Returns:
-            str: The signal name.
-        """
-        signal_name = self.currentText()
-        index = self.findText(signal_name)
-        if index == -1:
-            return signal_name
+        """Return the selected signal object name when available."""
+        current_text = self.currentText()
+        index = self._find_signal_index(current_text)
+        if index < 0:
+            return current_text
 
         signal_info = self.itemData(index)
-        if signal_info:
-            signal_name = signal_info.get("obj_name", signal_name)
-
-        return signal_name if signal_name else ""
+        if isinstance(signal_info, dict):
+            return signal_info.get("obj_name") or current_text
+        return current_text
 
     def get_signal_config(self) -> dict | None:
-        """
-        Get the signal config from the combobox for the currently selected signal.
-
-        Returns:
-            dict | None: The signal configuration dictionary or None if not available.
-        """
+        """Return the selected signal config if item-data storage is enabled."""
         if not self._store_signal_config:
             return None
-
-        index = self.currentIndex()
-        if index == -1:
-            return None
-
-        signal_info = self.itemData(index)
-        return signal_info if signal_info else None
+        signal_info = self.itemData(self.currentIndex())
+        return signal_info if isinstance(signal_info, dict) else None
 
     def update_signals_from_signal_classes(self, ndim_filter: int | list[int] | None = None):
-        """
-        Update the combobox with signals filtered by signal classes and optionally by ndim.
-        Uses device_manager.get_bec_signals() to retrieve signals.
-        If a device is set, only shows signals from that device.
-
-        Args:
-            ndim_filter (int | list[int] | None): Filter signals by dimensionality.
-                If provided, only signals with matching ndim will be included.
-                Can be a single int or a list of ints. Use None to include all dimensions.
-                If not provided, uses the previously set ndim_filter.
-        """
+        """Refresh signals from device_manager.get_bec_signals for class-based filtering."""
         if not self._signal_class_filter:
             return
 
         if self._require_device and not self._device:
-            self.clear()
-            self._signals = []
-            FilterIO.set_selection(widget=self, selection=self._signals)
+            self.signals = []
             return
 
-        # Update stored ndim_filter if a new one is provided
         if ndim_filter is not None:
             self.config.ndim_filter = ndim_filter
 
-        self.clear()
-
-        # Get signals with ndim filtering applied at the FilterIO level
-        signals = FilterIO.update_with_signal_class(
-            widget=self,
-            signal_class_filter=self._signal_class_filter,
+        signals = get_bec_signals_for_classes(
             client=self.client,
-            ndim_filter=self.config.ndim_filter,  # Pass ndim_filter to FilterIO
+            signal_class_filter=self._signal_class_filter,
+            ndim_filter=self.config.ndim_filter,
         )
 
-        # Track signals for validation and FilterIO selection
+        self.clear()
         self._signals = []
-
         for device_name, signal_name, signal_config in signals:
-            # Filter by device if one is set
             if self._device and device_name != self._device:
                 continue
             if self._signal_filter:
@@ -339,53 +414,43 @@ class SignalComboBox(DeviceSignalInputBase, QComboBox):
                 }:
                     continue
 
-            # Get storage_name for tooltip
-            storage_name = signal_config.get("storage_name", "")
-
-            # Store the full signal config as item data if requested
             if self._store_signal_config:
                 self.addItem(signal_name, signal_config)
             else:
                 self.addItem(signal_name)
 
-            # Track for validation
             self._signals.append(signal_name)
-
-            # Set tooltip to storage_name (Qt.ToolTipRole = 3)
+            storage_name = signal_config.get("storage_name", "")
             if storage_name:
                 self.setItemData(self.count() - 1, storage_name, Qt.ItemDataRole.ToolTipRole)
 
-        # Keep FilterIO selection in sync for validate_signal
-        FilterIO.set_selection(widget=self, selection=self._signals)
+        self.config.signals = [
+            entry if isinstance(entry, str) else entry[0] for entry in self._signals
+        ]
+        if self._set_first_element_as_empty and self.count() > 0 and self.itemText(0) != "":
+            self.insertItem(0, "")
 
     @SafeSlot()
     def reset_selection(self):
-        """Reset the selection of the combobox."""
-        self.clear()
-        self.setItemText(0, "Select a device")
+        """Reset the current selection and refresh available signals."""
+        self.setCurrentText("")
         self.update_signals_from_filters()
         self.device_signal_changed.emit("")
 
     @SafeSlot(str)
     def on_text_changed(self, text: str):
-        """Validate and emit only when the signal is valid.
-        For a positioner, the readback value has to be renamed to the device name.
-        When using signal_class_filter, device validation is skipped.
-        """
+        """Validate the current text when edited or selected."""
         self.check_validity(text)
 
+    @Slot(str)
     def check_validity(self, input_text: str) -> None:
-        """Check if the current value is a valid signal and emit only when valid."""
+        """Validate current text and update visual state."""
         if self._signal_class_filter:
-            if self._require_device and (not self._device or not input_text):
-                is_valid = False
-            else:
-                is_valid = self.validate_signal(input_text)
+            is_valid = not (self._require_device and not self._device) and self.validate_signal(
+                input_text
+            )
         else:
-            if self._require_device and not self.validate_device(self._device):
-                is_valid = False
-            else:
-                is_valid = self.validate_device(self._device) and self.validate_signal(input_text)
+            is_valid = self.validate_device(self._device) and self.validate_signal(input_text)
 
         if is_valid:
             self._is_valid_input = True
@@ -397,18 +462,89 @@ class SignalComboBox(DeviceSignalInputBase, QComboBox):
             if self.isEnabled():
                 self.setStyleSheet("border: 1px solid red;")
 
-    @property
-    def selected_signal_comp_name(self) -> str:
-        return dict(self.signals).get(self.currentText(), {}).get("component_name", "")
+    def cleanup(self):
+        """Cleanup the widget."""
+        self.bec_dispatcher.client.callbacks.remove(self._device_update_register)
+        super().cleanup()
 
-    @property
-    def is_valid_input(self) -> bool:
-        """Whether the current text represents a valid signal selection."""
-        return self._is_valid_input
+    @staticmethod
+    def _normalize_kind(value: Kind | str) -> Kind | None:
+        if isinstance(value, Kind):
+            return value
+        return Kind.__members__.get(value) or Kind.__members__.get(value.lower())
+
+    def _set_kind_filter_enabled(self, kind: Kind, enabled: bool):
+        if enabled:
+            self._signal_filter.add(kind)
+        else:
+            self._signal_filter.discard(kind)
+        self.update_signals_from_filters()
+
+    def _set_signal_groups(
+        self,
+        hinted: list[tuple[str, dict]],
+        normal: list[tuple[str, dict]],
+        config: list[tuple[str, dict]],
+    ) -> None:
+        self._hinted_signals = hinted
+        self._normal_signals = normal
+        self._config_signals = config
+        self.signals = self._hinted_signals + self._normal_signals + self._config_signals
+        self._insert_group_headers()
+
+    def _replace_signal_items(self):
+        replace_combobox_items(self, self._signals)
+        if self._set_first_element_as_empty and self.count() > 0 and self.itemText(0) != "":
+            self.insertItem(0, "")
+
+    def _insert_group_headers(self):
+        offset = (
+            1
+            if self._set_first_element_as_empty and self.count() > 0 and self.itemText(0) == ""
+            else 0
+        )
+        if self._config_signals:
+            index = offset + len(self._hinted_signals) + len(self._normal_signals)
+            self.insertItem(index, "Config Signals")
+            self.model().item(index).setEnabled(False)
+        if self._normal_signals:
+            index = offset + len(self._hinted_signals)
+            self.insertItem(index, "Normal Signals")
+            self.model().item(index).setEnabled(False)
+        if self._hinted_signals:
+            index = offset
+            self.insertItem(index, "Hinted Signals")
+            self.model().item(index).setEnabled(False)
+
+    def _display_text_for_signal(self, signal: str) -> str | None:
+        for entry in self._signals:
+            display_text = entry[0] if isinstance(entry, tuple) else entry
+            if display_text == signal:
+                return display_text
+            if isinstance(entry, tuple) and self._signal_info_matches(entry[1], signal):
+                return display_text
+        return None
+
+    @staticmethod
+    def _signal_info_matches(signal_info: dict, signal: str) -> bool:
+        return signal in {
+            signal_info.get("obj_name"),
+            signal_info.get("component_name"),
+            signal_info.get("component_name", "").replace(".", "_"),
+        }
+
+    def _find_signal_index(self, signal: str) -> int:
+        index = self.findText(signal)
+        if index >= 0:
+            return index
+        for item_index in range(self.count()):
+            signal_info = self.itemData(item_index)
+            if isinstance(signal_info, dict) and self._signal_info_matches(signal_info, signal):
+                return item_index
+        return -1
 
 
 if __name__ == "__main__":  # pragma: no cover
-    # pylint: disable=import-outside-toplevel
     from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 
     from bec_widgets.utils.colors import apply_theme
@@ -417,16 +553,14 @@ if __name__ == "__main__":  # pragma: no cover
     apply_theme("dark")
     widget = QWidget()
     widget.setFixedSize(200, 200)
-    layout = QVBoxLayout()
-    widget.setLayout(layout)
+    layout = QVBoxLayout(widget)
     box = SignalComboBox(
         device="waveform",
         signal_class_filter=["AsyncSignal", "AsyncMultiSignal"],
         ndim_filter=[1, 2],
         store_signal_config=True,
         signal_filter=[Kind.hinted, Kind.normal, Kind.config],
-    )  # change signal filter class to test
-    box.setEditable(True)
+    )
     layout.addWidget(box)
     widget.show()
     app.exec_()

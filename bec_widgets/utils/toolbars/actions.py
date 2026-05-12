@@ -27,8 +27,10 @@ from qtpy.QtWidgets import (
 
 import bec_widgets
 from bec_widgets.utils.toolbars.splitter import ResizableSpacer
-from bec_widgets.widgets.control.device_input.base_classes.device_input_base import BECDeviceFilter
-from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
+from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import (
+    BECDeviceFilter,
+    DeviceComboBox,
+)
 
 logger = bec_logger.logger
 

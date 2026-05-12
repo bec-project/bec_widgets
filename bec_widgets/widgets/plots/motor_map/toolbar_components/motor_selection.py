@@ -3,8 +3,10 @@ from qtpy.QtWidgets import QHBoxLayout, QSizePolicy, QWidget
 from bec_widgets.utils.toolbars.actions import NoCheckDelegate, WidgetAction
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle, ToolbarComponents
 from bec_widgets.utils.toolbars.connections import BundleConnection
-from bec_widgets.widgets.control.device_input.base_classes.device_input_base import BECDeviceFilter
-from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
+from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import (
+    BECDeviceFilter,
+    DeviceComboBox,
+)
 
 
 class MotorSelection(QWidget):

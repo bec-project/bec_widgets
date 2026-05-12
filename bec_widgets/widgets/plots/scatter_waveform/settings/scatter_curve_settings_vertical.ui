@@ -58,7 +58,7 @@
                             </widget>
                         </item>
                         <item row="0" column="1">
-                            <widget class="DeviceLineEdit" name="device_x"/>
+                            <widget class="DeviceComboBox" name="device_x"/>
                         </item>
                         <item row="1" column="0">
                             <widget class="QLabel" name="label_2">
@@ -87,7 +87,7 @@
                             </widget>
                         </item>
                         <item row="0" column="1">
-                            <widget class="DeviceLineEdit" name="device_y"/>
+                            <widget class="DeviceComboBox" name="device_y"/>
                         </item>
                         <item row="1" column="0">
                             <widget class="QLabel" name="label_4">
@@ -116,7 +116,7 @@
                             </widget>
                         </item>
                         <item row="0" column="1">
-                            <widget class="DeviceLineEdit" name="device_z"/>
+                            <widget class="DeviceComboBox" name="device_z"/>
                         </item>
                         <item row="1" column="0">
                             <widget class="QLabel" name="label_6">
@@ -135,9 +135,9 @@
     </widget>
     <customwidgets>
         <customwidget>
-            <class>DeviceLineEdit</class>
-            <extends>QLineEdit</extends>
-            <header>device_line_edit</header>
+            <class>DeviceComboBox</class>
+            <extends>QComboBox</extends>
+            <header>device_combo_box</header>
         </customwidget>
         <customwidget>
             <class>ToggleSwitch</class>
@@ -154,7 +154,7 @@
     <connections>
         <connection>
             <sender>device_x</sender>
-            <signal>textChanged(QString)</signal>
+            <signal>currentTextChanged(QString)</signal>
             <receiver>signal_x</receiver>
             <slot>clear()</slot>
             <hints>
@@ -170,7 +170,7 @@
         </connection>
         <connection>
             <sender>device_y</sender>
-            <signal>textChanged(QString)</signal>
+            <signal>currentTextChanged(QString)</signal>
             <receiver>signal_y</receiver>
             <slot>clear()</slot>
             <hints>
@@ -186,7 +186,7 @@
         </connection>
         <connection>
             <sender>device_z</sender>
-            <signal>textChanged(QString)</signal>
+            <signal>currentTextChanged(QString)</signal>
             <receiver>signal_z</receiver>
             <slot>clear()</slot>
             <hints>

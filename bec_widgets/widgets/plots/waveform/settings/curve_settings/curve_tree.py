@@ -79,7 +79,7 @@ class CurveRow(QTreeWidgetItem):
 
     Columns:
       0: Actions (delete or "Add DAP" if source=device)
-      1..2: DeviceLineEdit and QLineEdit if source=device, or "Model" label and DapComboBox if source=dap
+      1..2: DeviceComboBox and QLineEdit if source=device, or "Model" label and DapComboBox if source=dap
       3: ColorButton
       4: Style QComboBox
       5: Pen width QSpinBox
