@@ -256,6 +256,7 @@ scan_history = ScanHistoryMessage(
 
 @pytest.fixture(scope="function")
 def scan_control(qtbot, mocked_client):  # , mock_dev):
+    # mocked_client.connector.delete(MessageEndpoints.scan_history())
     mocked_client.connector.set_and_publish(
         MessageEndpoints.available_scans(), available_scans_message
     )
@@ -266,6 +267,7 @@ def scan_control(qtbot, mocked_client):  # , mock_dev):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
+    # mocked_client.connector.delete(MessageEndpoints.scan_history())
 
 
 def test_populate_scans(scan_control, mocked_client):
@@ -503,12 +505,49 @@ def test_changing_scans_remember_parameters(scan_control, mocked_client):
     assert grid_kwargs["burst_at_each_point"] == kwargs["burst_at_each_point"]
 
 
-@pytest.mark.skip(reason="Unreliable - GH issue #1134")
-def test_get_scan_parameters_from_redis(scan_control, mocked_client):
+def test_scan_selection_does_not_fetch_last_scan_parameters(
+    scan_control, mocked_client, monkeypatch
+):
+    xread = MagicMock(wraps=mocked_client.connector.xread)
+    monkeypatch.setattr(mocked_client.connector, "xread", xread)
+
+    scan_control.comboBox_scan_selection.setCurrentText("line_scan")
+    assert scan_control.comboBox_scan_selection.currentText() == "line_scan"
+
+    scan_control.comboBox_scan_selection.setCurrentText("grid_scan")
+
+    xread.assert_not_called()
+
+
+def test_restore_last_scan_parameters_button_fetches_on_demand(
+    scan_control, mocked_client, qtbot, monkeypatch
+):
+    xread = MagicMock(wraps=mocked_client.connector.xread)
+    monkeypatch.setattr(mocked_client.connector, "xread", xread)
+
+    scan_control.comboBox_scan_selection.setCurrentText("grid_scan")
+    scan_control.comboBox_scan_selection.setCurrentText("line_scan")
+    xread.assert_not_called()
+
+    scan_control.last_scan_button.click()
+
+    xread.assert_called_once_with(
+        MessageEndpoints.scan_history(), from_start=True, user_id=scan_control.object_name
+    )
+    args, kwargs = scan_control.get_scan_parameters(bec_object=False)
+    assert args == ["samx", 0.0, 2.0]
+    assert kwargs["steps"] == 10
+    assert kwargs["relative"] is False
+    assert kwargs["exp_time"] == 2
+
+
+# @pytest.mark.skip(reason="Unreliable - GH issue #1134") # so far kept here if the flaky behavior returns, but I think test_logpanel fixture was causing the issue
+def test_get_scan_parameters_from_redis(scan_control, mocked_client, qtbot):
     scan_name = "line_scan"
     scan_control.comboBox_scan_selection.setCurrentText(scan_name)
 
-    scan_control.toggle.checked = True
+    scan_control.last_scan_button.click()
+    qtbot.wait(200)
 
     args, kwargs = scan_control.get_scan_parameters(bec_object=False)
 
@@ -588,7 +627,7 @@ def test_scan_metadata_is_passed_to_scan_function(scan_control: ScanControl):
     scans.grid_scan.assert_called_once_with(metadata=TEST_MD)
 
 
-@pytest.mark.skip(reason="Unreliable - GH issue #1134")
+# @pytest.mark.skip(reason="Unreliable - GH issue #1134") # so far kept here if the flaky behavior returns, but I think test_logpanel fixture was causing the issue
 def test_restore_parameters_with_fewer_arg_bundles(scan_control, qtbot):
     """
     Ensure that when more argument bundles are present than exist in the
@@ -605,7 +644,7 @@ def test_restore_parameters_with_fewer_arg_bundles(scan_control, qtbot):
     assert scan_control.arg_box.count_arg_rows() == 3
 
     # Trigger restore of parameters from history
-    scan_control.toggle.checked = True
+    scan_control.last_scan_button.click()
     qtbot.wait(200)
 
     # After restore, arg_box should have only one bundle (the history size)
