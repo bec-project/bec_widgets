@@ -192,8 +192,7 @@ Positioner boxes and tweak controls handle precise moves, homing, and calibratio
 
 ## Documentation
 
-Documentation of BEC Widgets can be found [here](https://bec-widgets.readthedocs.io/en/latest/). The documentation of
-the BEC can be found [here](https://bec.readthedocs.io/en/latest/).
+The documentation can be found [here](https://bec.readthedocs.io/).
 
 ## License
 
