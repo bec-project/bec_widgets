@@ -256,7 +256,6 @@ scan_history = ScanHistoryMessage(
 
 @pytest.fixture(scope="function")
 def scan_control(qtbot, mocked_client):  # , mock_dev):
-    # mocked_client.connector.delete(MessageEndpoints.scan_history())
     mocked_client.connector.set_and_publish(
         MessageEndpoints.available_scans(), available_scans_message
     )
@@ -267,7 +266,6 @@ def scan_control(qtbot, mocked_client):  # , mock_dev):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
-    # mocked_client.connector.delete(MessageEndpoints.scan_history())
 
 
 def test_populate_scans(scan_control, mocked_client):
@@ -520,7 +518,7 @@ def test_scan_selection_does_not_fetch_last_scan_parameters(
 
 
 def test_restore_last_scan_parameters_button_fetches_on_demand(
-    scan_control, mocked_client, qtbot, monkeypatch
+    scan_control, mocked_client, monkeypatch
 ):
     xread = MagicMock(wraps=mocked_client.connector.xread)
     monkeypatch.setattr(mocked_client.connector, "xread", xread)
@@ -541,13 +539,11 @@ def test_restore_last_scan_parameters_button_fetches_on_demand(
     assert kwargs["exp_time"] == 2
 
 
-# @pytest.mark.skip(reason="Unreliable - GH issue #1134") # so far kept here if the flaky behavior returns, but I think test_logpanel fixture was causing the issue
-def test_get_scan_parameters_from_redis(scan_control, mocked_client, qtbot):
+def test_get_scan_parameters_from_redis(scan_control):
     scan_name = "line_scan"
     scan_control.comboBox_scan_selection.setCurrentText(scan_name)
 
     scan_control.last_scan_button.click()
-    qtbot.wait(200)
 
     args, kwargs = scan_control.get_scan_parameters(bec_object=False)
 
@@ -627,8 +623,7 @@ def test_scan_metadata_is_passed_to_scan_function(scan_control: ScanControl):
     scans.grid_scan.assert_called_once_with(metadata=TEST_MD)
 
 
-# @pytest.mark.skip(reason="Unreliable - GH issue #1134") # so far kept here if the flaky behavior returns, but I think test_logpanel fixture was causing the issue
-def test_restore_parameters_with_fewer_arg_bundles(scan_control, qtbot):
+def test_restore_parameters_with_fewer_arg_bundles(scan_control):
     """
     Ensure that when more argument bundles are present than exist in the
     stored history, restoring parameters regenerates the arg box to the
@@ -645,7 +640,6 @@ def test_restore_parameters_with_fewer_arg_bundles(scan_control, qtbot):
 
     # Trigger restore of parameters from history
     scan_control.last_scan_button.click()
-    qtbot.wait(200)
 
     # After restore, arg_box should have only one bundle (the history size)
     assert scan_control.arg_box.count_arg_rows() == 1
