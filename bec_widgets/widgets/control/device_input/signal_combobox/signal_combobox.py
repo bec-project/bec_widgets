@@ -3,8 +3,8 @@ from __future__ import annotations
 from bec_lib.callback_handler import EventType
 from bec_lib.device import Signal as BECSignal
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import Property, QSize, Qt, Signal, Slot
-from qtpy.QtWidgets import QComboBox, QSizePolicy
+from qtpy.QtCore import Property, QSize, QStringListModel, Qt, Signal, Slot
+from qtpy.QtWidgets import QComboBox, QCompleter, QSizePolicy
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
@@ -29,6 +29,7 @@ class SignalComboBoxConfig(ConnectionConfig):
     arg_name: str | None = None
     device: str | None = None
     signals: list[str] | None = None
+    autocomplete: bool = False
 
 
 class SignalComboBox(BECWidget, QComboBox):
@@ -73,6 +74,7 @@ class SignalComboBox(BECWidget, QComboBox):
         arg_name: str | None = None,
         store_signal_config: bool = True,
         require_device: bool = False,
+        autocomplete: bool | None = None,
         **kwargs,
     ):
         self.config = self._process_config(config)
@@ -90,6 +92,7 @@ class SignalComboBox(BECWidget, QComboBox):
         self._store_signal_config = store_signal_config
         self._require_device = require_device
         self._is_valid_input = False
+        self._completer_model = QStringListModel(self)
 
         if arg_name is not None:
             self.config.arg_name = arg_name
@@ -105,12 +108,16 @@ class SignalComboBox(BECWidget, QComboBox):
             device = self.config.device
         if default is None and self.config.default:
             default = self.config.default
+        if autocomplete is not None:
+            self.config.autocomplete = autocomplete
         self.config.ndim_filter = ndim_filter
 
         self.setEditable(True)
         self.setInsertPolicy(QComboBox.NoInsert)
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self.setMinimumSize(QSize(100, 0))
+        if self.config.autocomplete:
+            self.autocomplete = True
 
         self._device_update_register = self.bec_dispatcher.client.callbacks.register(
             EventType.DEVICE_UPDATE, self.update_signals_from_filters
@@ -281,6 +288,20 @@ class SignalComboBox(BECWidget, QComboBox):
         self._require_device = value
         self.update_signals_from_filters()
 
+    @SafeProperty(bool)
+    def autocomplete(self) -> bool:
+        """Whether autocomplete suggestions are enabled while editing."""
+        return self.config.autocomplete
+
+    @autocomplete.setter
+    def autocomplete(self, value: bool) -> None:
+        self.config.autocomplete = value
+        if value:
+            completer = QCompleter(self._completer_model, self)
+            self.setCompleter(completer)
+        else:
+            self._restore_default_completer()
+
     @property
     def signals(self) -> list[str | tuple[str, dict]]:
         """Available signals after filtering."""
@@ -427,6 +448,7 @@ class SignalComboBox(BECWidget, QComboBox):
         self.config.signals = [
             entry if isinstance(entry, str) else entry[0] for entry in self._signals
         ]
+        self._update_completer_model(self.config.signals)
         if self._set_first_element_as_empty and self.count() > 0 and self.itemText(0) != "":
             self.insertItem(0, "")
 
@@ -494,6 +516,7 @@ class SignalComboBox(BECWidget, QComboBox):
 
     def _replace_signal_items(self):
         replace_combobox_items(self, self._signals)
+        self._update_completer_model(self._signal_display_texts(self._signals))
         if self._set_first_element_as_empty and self.count() > 0 and self.itemText(0) != "":
             self.insertItem(0, "")
 
@@ -542,6 +565,21 @@ class SignalComboBox(BECWidget, QComboBox):
             if isinstance(signal_info, dict) and self._signal_info_matches(signal_info, signal):
                 return item_index
         return -1
+
+    @staticmethod
+    def _signal_display_texts(signals: list[str | tuple[str, dict]]) -> list[str]:
+        return [entry[0] if isinstance(entry, tuple) else entry for entry in signals]
+
+    def _update_completer_model(self, items: list[str]) -> None:
+        self._completer_model.setStringList(items)
+
+    def _restore_default_completer(self) -> None:
+        if self.completer() is not None and self.completer().model() == self.model():
+            return
+        current_text = self.currentText()
+        self.setEditable(False)
+        self.setEditable(True)
+        self.setCurrentText(current_text)
 
 
 if __name__ == "__main__":  # pragma: no cover

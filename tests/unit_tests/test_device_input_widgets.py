@@ -48,6 +48,9 @@ def test_device_input_combobox_init(device_input_combobox):
         ReadoutPriority.ON_REQUEST.value,
     ]
     assert device_input_combobox.config.default is None
+    assert device_input_combobox.autocomplete is False
+    assert device_input_combobox.completer() is not None
+    assert device_input_combobox.completer().model() == device_input_combobox.model()
     assert device_input_combobox.devices == [
         "samx",
         "samy",
@@ -74,6 +77,22 @@ def test_device_input_combobox_init_with_kwargs(device_input_combobox_with_kwarg
     assert device_input_combobox_with_kwargs.config.device_filter == ["Positioner"]
     assert device_input_combobox_with_kwargs.config.default == "samx"
     assert device_input_combobox_with_kwargs.config.arg_name == "test_arg_name"
+
+
+def test_device_input_combobox_autocomplete(qtbot, mocked_client):
+    widget = DeviceComboBox(client=mocked_client, autocomplete=True)
+    qtbot.addWidget(widget)
+    qtbot.waitExposed(widget)
+
+    assert widget.autocomplete is True
+    assert widget.completer() is not None
+    assert widget.completer().model().stringList() == widget.devices
+    assert widget.completer().model() != widget.model()
+
+    widget.autocomplete = False
+
+    assert widget.completer() is not None
+    assert widget.completer().model() == widget.model()
 
 
 def test_get_device_from_input_combobox_init(device_input_combobox):

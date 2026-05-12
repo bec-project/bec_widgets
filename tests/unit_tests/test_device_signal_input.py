@@ -44,6 +44,27 @@ def test_signal_combobox_init(device_signal_combobox):
     assert device_signal_combobox._hinted_signals == []
     assert device_signal_combobox._normal_signals == []
     assert device_signal_combobox._config_signals == []
+    assert device_signal_combobox.autocomplete is False
+    assert device_signal_combobox.completer() is not None
+    assert device_signal_combobox.completer().model() == device_signal_combobox.model()
+
+
+def test_signal_combobox_autocomplete(qtbot, mocked_client):
+    widget = create_widget(
+        qtbot=qtbot, widget=SignalComboBox, client=mocked_client, autocomplete=True
+    )
+
+    widget.set_device("samx")
+
+    assert widget.autocomplete is True
+    assert widget.completer() is not None
+    assert widget.completer().model().stringList() == ["samx (readback)", "setpoint", "velocity"]
+    assert widget.completer().model() != widget.model()
+
+    widget.autocomplete = False
+
+    assert widget.completer() is not None
+    assert widget.completer().model() == widget.model()
 
 
 def test_signal_combobox_qproperties(device_signal_combobox):
