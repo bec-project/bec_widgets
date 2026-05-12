@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from functools import lru_cache
 from typing import Literal, Mapping, Sequence
 
 import slugify
@@ -20,7 +21,12 @@ from qtpy.QtWidgets import (
 import bec_widgets.widgets.containers.qt_ads as QtAds
 from bec_widgets import BECWidget, SafeProperty, SafeSlot
 from bec_widgets.cli.designer_plugins import widget_icons
+from bec_widgets.utils.bec_plugin_helper import (
+    get_plugin_rpc_widget_registry,
+    get_plugin_widget_icons,
+)
 from bec_widgets.utils.colors import apply_theme
+from bec_widgets.utils.plugin_utils import get_rpc_widget_registry
 from bec_widgets.utils.rpc_decorator import rpc_timeout
 from bec_widgets.utils.rpc_widget_handler import widget_handler
 from bec_widgets.utils.toolbars.actions import (
@@ -72,6 +78,19 @@ _PROFILE_NAMESPACE_UNSET = object()
 
 PROFILE_STATE_KEYS = {key: SETTINGS_KEYS[key] for key in ("geom", "state", "ads_state")}
 StartupProfile = Literal["restore", "skip"] | str | None
+
+
+@lru_cache
+def _plugin_toolbar_actions() -> dict[str, tuple[str, str, str]]:
+    plugin_registry = get_plugin_rpc_widget_registry()
+    internal_registry = get_rpc_widget_registry()
+    plugin_icons = get_plugin_widget_icons()
+
+    return {
+        widget_name: (plugin_icons.get(widget_name, "widgets"), f"Add {widget_name}", widget_name)
+        for widget_name in sorted(plugin_registry)
+        if widget_name not in internal_registry
+    }
 
 
 class BECDockArea(DockAreaWidget):
@@ -390,6 +409,10 @@ class BECDockArea(DockAreaWidget):
         _build_menu("menu_devices", "Add Device Control ", device_actions)
         _build_menu("menu_utils", "Add Utils ", util_actions)
 
+        plugin_actions = _plugin_toolbar_actions()
+        if plugin_actions:
+            _build_menu("menu_plugins", "Add Plugins ", plugin_actions)
+
         # Create flat toolbar bundles for each widget type
         def _build_flat_bundles(category: str, mapping: dict[str, tuple[str, str, str]]):
             bundle = ToolbarBundle(f"flat_{category}", self.toolbar.components)
@@ -460,14 +483,16 @@ class BECDockArea(DockAreaWidget):
         bda.add_action("dark_mode")
         self.toolbar.add_bundle(bda)
 
-        self._apply_toolbar_layout()
-
-        # Store mappings on self for use in _hook_toolbar
+        # Store mappings on self for use in _hook_toolbar and _apply_toolbar_layout
         self._ACTION_MAPPINGS = {
             "menu_plots": plot_actions,
             "menu_devices": device_actions,
             "menu_utils": util_actions,
         }
+        if plugin_actions:
+            self._ACTION_MAPPINGS["menu_plugins"] = plugin_actions
+
+        self._apply_toolbar_layout()
 
     def _hook_toolbar(self):
         def _connect_menu(menu_key: str):
@@ -476,7 +501,8 @@ class BECDockArea(DockAreaWidget):
 
             # first two items not needed for this part
             for key, (_, _, widget_type) in mapping.items():
-                act = menu.actions[key].action
+                toolbar_action = menu.actions[key]
+                act = toolbar_action.action
                 if key == "terminal":
                     act.triggered.connect(
                         lambda _, t=widget_type: self.new(widget=t, closable=True, startup_cmd=None)
@@ -487,12 +513,18 @@ class BECDockArea(DockAreaWidget):
                             widget=t, closable=True, show_settings_action=False
                         )
                     )
+                elif menu_key == "menu_plugins":
+                    act.triggered.connect(
+                        lambda _, t=widget_type, a=toolbar_action: self._new_plugin_widget(t, a)
+                    )
                 else:
                     act.triggered.connect(lambda _, t=widget_type: self.new(widget=t))
 
         _connect_menu("menu_plots")
         _connect_menu("menu_devices")
         _connect_menu("menu_utils")
+        if "menu_plugins" in self._ACTION_MAPPINGS:
+            _connect_menu("menu_plugins")
 
         def _connect_flat_actions(mapping: dict[str, tuple[str, str, str]]):
             for action_id, (_, _, widget_type) in mapping.items():
@@ -506,6 +538,10 @@ class BECDockArea(DockAreaWidget):
 
         self.toolbar.components.get_action("attach_all").action.triggered.connect(self.attach_all)
         self.toolbar.components.get_action("screenshot").action.triggered.connect(self.screenshot)
+
+    def _new_plugin_widget(self, widget_type: str, toolbar_action: MaterialIconAction) -> None:
+        # Created as helper method for simple tests
+        self.new(widget=widget_type, dock_icon=toolbar_action.get_icon())
 
     def _set_editable(self, editable: bool) -> None:
         self.workspace_is_locked = not editable
@@ -1108,14 +1144,10 @@ class BECDockArea(DockAreaWidget):
         if mode_key == "user":
             bundles = ["spacer_bundle", "workspace", "dock_actions"]
         elif mode_key == "creator":
-            bundles = [
-                "menu_plots",
-                "menu_devices",
-                "menu_utils",
-                "spacer_bundle",
-                "workspace",
-                "dock_actions",
-            ]
+            bundles = ["menu_plots", "menu_devices", "menu_utils"]
+            if "menu_plugins" in getattr(self, "_ACTION_MAPPINGS", {}):
+                bundles.append("menu_plugins")
+            bundles += ["spacer_bundle", "workspace", "dock_actions"]
         elif mode_key == "plot":
             bundles = ["flat_plots", "spacer_bundle", "workspace", "dock_actions"]
         elif mode_key == "device":

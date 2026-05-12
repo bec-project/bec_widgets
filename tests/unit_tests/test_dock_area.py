@@ -11,6 +11,7 @@ from qtpy.QtGui import QPixmap
 from qtpy.QtWidgets import QDialog, QMessageBox, QWidget
 
 import bec_widgets.widgets.containers.dock_area.basic_dock_area as basic_dock_module
+import bec_widgets.widgets.containers.dock_area.dock_area as dock_area_module
 import bec_widgets.widgets.containers.dock_area.profile_utils as profile_utils
 from bec_widgets.widgets.containers.dock_area.basic_dock_area import (
     DockAreaWidget,
@@ -66,6 +67,13 @@ def isolate_profile_storage(tmp_path, monkeypatch):
 def temp_profile_dir():
     """Return the current temporary profile directory."""
     return os.environ["BECWIDGETS_PROFILE_DIR"]
+
+
+@pytest.fixture
+def clear_plugin_toolbar_actions_cache():
+    dock_area_module._plugin_toolbar_actions.cache_clear()
+    yield
+    dock_area_module._plugin_toolbar_actions.cache_clear()
 
 
 @pytest.fixture
@@ -984,6 +992,64 @@ class TestToolbarFunctionality:
 
                 # Verify save was called with the filename
                 mock_screenshot.save.assert_called_once_with(str(screenshot_path))
+
+    def test_plugin_toolbar_actions_empty_when_no_plugins(self, clear_plugin_toolbar_actions_cache):
+        """Test that no plugin toolbar actions are produced when no plugin widgets exist."""
+        with patch(
+            "bec_widgets.widgets.containers.dock_area.dock_area.get_plugin_rpc_widget_registry",
+            return_value={},
+        ):
+            plugin_actions = dock_area_module._plugin_toolbar_actions()
+
+        assert plugin_actions == {}
+
+    def test_plugin_toolbar_actions_include_available_plugins(
+        self, clear_plugin_toolbar_actions_cache
+    ):
+        """Test that plugin toolbar actions are built from RPC widgets and generated icons."""
+        plugin_registry = {
+            "FakePluginWidget": ("fake_plugin.widgets.fake_plugin_widget", "FakePluginWidget")
+        }
+        with (
+            patch(
+                "bec_widgets.widgets.containers.dock_area.dock_area.get_plugin_rpc_widget_registry",
+                return_value=plugin_registry,
+            ),
+            patch(
+                "bec_widgets.widgets.containers.dock_area.dock_area.get_plugin_widget_icons",
+                return_value={"FakePluginWidget": "star"},
+            ),
+        ):
+            plugin_actions = dock_area_module._plugin_toolbar_actions()
+
+        assert plugin_actions == {
+            "FakePluginWidget": ("star", "Add FakePluginWidget", "FakePluginWidget")
+        }
+
+    def test_plugin_toolbar_actions_ignore_builtin_name_collisions(
+        self, clear_plugin_toolbar_actions_cache
+    ):
+        """Test that plugin widgets shadowed by built-ins are not added to the plugin menu."""
+        plugin_registry = {"Waveform": ("fake_plugin.widgets.waveform", "Waveform")}
+        with patch(
+            "bec_widgets.widgets.containers.dock_area.dock_area.get_plugin_rpc_widget_registry",
+            return_value=plugin_registry,
+        ):
+            plugin_actions = dock_area_module._plugin_toolbar_actions()
+
+        assert plugin_actions == {}
+
+    def test_new_plugin_widget_passes_toolbar_icon_to_new(self):
+        """Test that plugin widget creation passes the toolbar icon to dock creation."""
+        dock_area = MagicMock()
+        toolbar_action = MagicMock()
+        dock_icon = object()
+        toolbar_action.get_icon.return_value = dock_icon
+
+        BECDockArea._new_plugin_widget(dock_area, "FakePluginWidget", toolbar_action)
+
+        toolbar_action.get_icon.assert_called_once_with()
+        dock_area.new.assert_called_once_with(widget="FakePluginWidget", dock_icon=dock_icon)
 
 
 class TestDockSettingsDialog:
