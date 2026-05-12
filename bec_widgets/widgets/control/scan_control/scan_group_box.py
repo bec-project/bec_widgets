@@ -277,6 +277,7 @@ class ScanGroupBox(QGroupBox):
                     arg_name=arg_name,
                     default=default,
                     device_filter=BECDeviceFilter.DEVICE,
+                    autocomplete=True,
                 )
             else:
                 widget = widget_class(parent=self.parent(), arg_name=arg_name, default=default)

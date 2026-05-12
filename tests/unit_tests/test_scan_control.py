@@ -307,6 +307,7 @@ def test_on_scan_selected(scan_control, scan_name):
             assert isinstance(widget, expected_widget_type)  # Confirm the widget type matches
             if isinstance(widget, DeviceComboBox):
                 assert widget.currentText() == ""
+                assert widget.autocomplete is True
                 assert "samx" in widget.devices
                 assert (
                     "async_device" in widget.devices

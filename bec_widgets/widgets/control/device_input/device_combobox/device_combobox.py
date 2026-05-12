@@ -7,8 +7,8 @@ from bec_lib.device import ComputedSignal, Device, Positioner, ReadoutPriority
 from bec_lib.device import Signal as BECSignal
 from bec_lib.logger import bec_logger
 from pydantic import Field, field_validator
-from qtpy.QtCore import QSize, Signal, Slot
-from qtpy.QtWidgets import QComboBox, QSizePolicy
+from qtpy.QtCore import QSize, QStringListModel, Signal, Slot
+from qtpy.QtWidgets import QComboBox, QCompleter, QSizePolicy
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
@@ -36,6 +36,7 @@ class DeviceInputConfig(ConnectionConfig):
     arg_name: str | None = None
     apply_filter: bool = True
     signal_class_filter: list[str] = Field(default_factory=list)
+    autocomplete: bool = False
 
     @field_validator("device_filter")
     @classmethod
@@ -104,6 +105,7 @@ class DeviceComboBox(BECWidget, QComboBox):
         default: str | None = None,
         arg_name: str | None = None,
         signal_class_filter: list[str] | None = None,
+        autocomplete: bool | None = None,
         **kwargs,
     ):
         self.config = self._process_config(config)
@@ -124,6 +126,7 @@ class DeviceComboBox(BECWidget, QComboBox):
         self._is_valid_input = False
         self._accent_colors = get_accent_colors()
         self._set_first_element_as_empty = False
+        self._completer_model = QStringListModel(self)
 
         self.setEditable(True)
         self.setInsertPolicy(QComboBox.NoInsert)
@@ -144,6 +147,10 @@ class DeviceComboBox(BECWidget, QComboBox):
             signal_class_filter = self.config.signal_class_filter
         if default is None and self.config.default:
             default = self.config.default
+        if autocomplete is not None:
+            self.config.autocomplete = autocomplete
+        if self.config.autocomplete:
+            self.autocomplete = True
 
         if available_devices is not None:
             self.set_available_devices(available_devices)
@@ -358,6 +365,20 @@ class DeviceComboBox(BECWidget, QComboBox):
             if not current_text:
                 self.setCurrentText("")
 
+    @SafeProperty(bool)
+    def autocomplete(self) -> bool:
+        """Whether autocomplete suggestions are enabled while editing."""
+        return self.config.autocomplete
+
+    @autocomplete.setter
+    def autocomplete(self, value: bool) -> None:
+        self.config.autocomplete = value
+        if value:
+            completer = QCompleter(self._completer_model, self)
+            self.setCompleter(completer)
+        else:
+            self._restore_default_completer()
+
     @property
     def device_filter(self) -> list[BECDeviceFilter]:
         """Device class filters."""
@@ -508,8 +529,20 @@ class DeviceComboBox(BECWidget, QComboBox):
     def _replace_items(self, devices: list[str]):
         current_text = self.currentText()
         replace_combobox_items(self, devices)
+        self._update_completer_model(devices)
         if self._set_first_element_as_empty:
             self.insertItem(0, "")
+        self.setCurrentText(current_text)
+
+    def _update_completer_model(self, items: list[str]) -> None:
+        self._completer_model.setStringList(items)
+
+    def _restore_default_completer(self) -> None:
+        if self.completer() is not None and self.completer().model() == self.model():
+            return
+        current_text = self.currentText()
+        self.setEditable(False)
+        self.setEditable(True)
         self.setCurrentText(current_text)
 
     def _device_name_from_text(self, text: str) -> str:
