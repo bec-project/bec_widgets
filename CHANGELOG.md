@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v3.9.1 (2026-05-12)
+
+### Bug Fixes
+
+- Logpanel fixture overwriting xread
+  ([`3c7834b`](https://github.com/bec-project/bec_widgets/commit/3c7834b492a5d2da13689f58b20caf38dda9ac1d))
+
+- **scan_control**: Restore scan parameters from history are fetched on demand with button
+  ([`acd35a2`](https://github.com/bec-project/bec_widgets/commit/acd35a278660ce4962167af6237b5d12007f0774))
+
+
 ## v3.9.0 (2026-05-12)
 
 ### Bug Fixes
