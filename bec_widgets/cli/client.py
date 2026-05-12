@@ -1131,30 +1131,6 @@ class DeviceInitializationProgressBar(RPCBase):
         """
 
 
-class DeviceInputBase(RPCBase):
-    """Mixin base class for device input widgets."""
-
-    _IMPORT_MODULE = "bec_widgets.widgets.control.device_input.base_classes.device_input_base"
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-    @rpc_call
-    def attach(self):
-        """
-        None
-        """
-
-    @rpc_call
-    def detach(self):
-        """
-        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
-        """
-
-
 class DeviceManagerView(RPCBase):
     """A view for users to manage devices within the application."""
 

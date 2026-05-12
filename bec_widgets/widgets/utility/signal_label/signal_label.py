@@ -25,9 +25,7 @@ from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.ophyd_kind_util import Kind
-from bec_widgets.widgets.control.device_input.device_line_edit.device_line_edit import (
-    DeviceLineEdit,
-)
+from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import SignalComboBox
 
 if TYPE_CHECKING:
@@ -58,7 +56,7 @@ class ChoiceDialog(QDialog):
 
         layout = QHBoxLayout()
 
-        self._device_field = DeviceLineEdit(parent=parent, client=client)
+        self._device_field = DeviceComboBox(parent=parent, client=client)
         self._signal_field = SignalComboBox(parent=parent, client=client)
         layout.addWidget(self._device_field)
         layout.addWidget(self._signal_field)
@@ -73,10 +71,13 @@ class ChoiceDialog(QDialog):
         self._signal_field.include_config_signals = show_config
 
         self.setLayout(layout)
-        self._device_field.textChanged.connect(self._update_device)
+        self._device_field.currentTextChanged.connect(self._update_device)
         if device:
             self._device_field.set_device(device)
-        if signal and signal in set(s[0] for s in self._signal_field.signals):
+        available_signals = {
+            entry[0] if isinstance(entry, tuple) else entry for entry in self._signal_field.signals
+        }
+        if signal and signal in available_signals:
             self._signal_field.set_signal(signal)
 
     def _display_error(self):
@@ -97,19 +98,19 @@ class ChoiceDialog(QDialog):
             self._device_field.set_device(device)
             self._signal_field.set_device(device)
             self._device_field.setStyleSheet(
-                f"QLineEdit {{ border-style: solid; border-width: 2px; border-color: {self._accent_colors.success.name() if self._accent_colors else 'green'}}}"
+                f"QComboBox {{ border-style: solid; border-width: 2px; border-color: {self._accent_colors.success.name() if self._accent_colors else 'green'}}}"
             )
             self.button_box.button(QDialogButtonBox.Ok).setEnabled(True)
         else:
             self._device_field.setStyleSheet(
-                f"QLineEdit {{ border-style: solid; border-width: 2px; border-color: {self._accent_colors.emergency.name() if self._accent_colors else 'red'}}}"
+                f"QComboBox {{ border-style: solid; border-width: 2px; border-color: {self._accent_colors.emergency.name() if self._accent_colors else 'red'}}}"
             )
             self.button_box.button(QDialogButtonBox.Ok).setEnabled(False)
             self._signal_field.clear()
 
     def accept(self):
         self.accepted_output.emit(
-            self._device_field.text(), self._signal_field.selected_signal_comp_name
+            self._device_field.currentText(), self._signal_field.selected_signal_comp_name
         )
         self.cleanup()
         return super().accept()
@@ -170,7 +171,7 @@ class SignalLabel(BECWidget, QWidget):
             client (BECClient, optional): The BEC client. Defaults to None.
             device (str, optional): The device name. Defaults to None.
             signal (str, optional): The signal name. Defaults to None.
-            selection_dialog_config (DeviceSignalInputBaseConfig | dict, optional): Configuration for the signal selection dialog.
+            selection_dialog_config: Configuration for the signal selection dialog.
             show_select_button (bool, optional): Whether to show the select button. Defaults to True.
             show_default_units (bool, optional): Whether to show default units. Defaults to False.
             custom_label (str, optional): Custom label for the widget. Defaults to "".

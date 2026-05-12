@@ -21,9 +21,9 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets.utils.widget_io import WidgetIO
-from bec_widgets.widgets.control.device_input.base_classes.device_input_base import BECDeviceFilter
-from bec_widgets.widgets.control.device_input.device_line_edit.device_line_edit import (
-    DeviceLineEdit,
+from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import (
+    BECDeviceFilter,
+    DeviceComboBox,
 )
 
 logger = bec_logger.logger
@@ -164,8 +164,8 @@ class ScanCheckBox(QCheckBox):
 
 class ScanGroupBox(QGroupBox):
     WIDGET_HANDLER = {
-        ScanArgType.DEVICE: DeviceLineEdit,
-        ScanArgType.DEVICEBASE: DeviceLineEdit,
+        ScanArgType.DEVICE: DeviceComboBox,
+        ScanArgType.DEVICEBASE: DeviceComboBox,
         ScanArgType.FLOAT: ScanDoubleSpinBox,
         ScanArgType.INT: ScanSpinBox,
         ScanArgType.BOOL: ScanCheckBox,
@@ -272,7 +272,7 @@ class ScanGroupBox(QGroupBox):
             if default == "_empty":
                 default = None
             widget = widget_class(parent=self.parent(), arg_name=arg_name, default=default)
-            if isinstance(widget, DeviceLineEdit):
+            if isinstance(widget, DeviceComboBox):
                 widget.set_device_filter(BECDeviceFilter.DEVICE)
                 self.selected_devices[widget] = ""
                 widget.device_selected.connect(self.emit_device_selected)
@@ -311,7 +311,7 @@ class ScanGroupBox(QGroupBox):
             return
 
         for widget in self.widgets[-len(self.inputs) :]:
-            if isinstance(widget, DeviceLineEdit):
+            if isinstance(widget, DeviceComboBox):
                 self.selected_devices[widget] = ""
             widget.close()
             widget.deleteLater()
@@ -323,7 +323,7 @@ class ScanGroupBox(QGroupBox):
     def remove_all_widget_bundles(self):
         """Remove every widget bundle from the scan control layout."""
         for widget in list(self.widgets):
-            if isinstance(widget, DeviceLineEdit):
+            if isinstance(widget, DeviceComboBox):
                 self.selected_devices.pop(widget, None)
             widget.close()
             widget.deleteLater()
@@ -360,8 +360,10 @@ class ScanGroupBox(QGroupBox):
             for j in range(self.layout.columnCount()):
                 try:  # In case that the bundle size changes
                     widget = self.layout.itemAtPosition(i, j).widget()
-                    if isinstance(widget, DeviceLineEdit) and device_object:
+                    if isinstance(widget, DeviceComboBox) and device_object:
                         value = widget.get_current_device()
+                    elif isinstance(widget, DeviceComboBox):
+                        value = widget.currentText()
                     else:
                         value = WidgetIO.get_value(widget)
                     args.append(value)
@@ -373,8 +375,10 @@ class ScanGroupBox(QGroupBox):
         kwargs = {}
         for i in range(self.layout.columnCount()):
             widget = self.layout.itemAtPosition(1, i).widget()
-            if isinstance(widget, DeviceLineEdit) and device_object:
+            if isinstance(widget, DeviceComboBox) and device_object:
                 value = widget.get_current_device().name
+            elif isinstance(widget, DeviceComboBox):
+                value = widget.currentText()
             elif isinstance(widget, ScanLiteralsComboBox):
                 value = widget.get_value()
             else:
@@ -390,7 +394,7 @@ class ScanGroupBox(QGroupBox):
                 if item is not None:
                     widget = item.widget()
                     if widget is not None:
-                        if isinstance(widget, DeviceLineEdit):
+                        if isinstance(widget, DeviceComboBox):
                             widget_rows += 1
         return widget_rows
 

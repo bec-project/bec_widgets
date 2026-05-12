@@ -21,9 +21,9 @@ from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.control.device_control.position_indicator.position_indicator import (
     PositionIndicator,
 )
-from bec_widgets.widgets.control.device_input.base_classes.device_input_base import BECDeviceFilter
-from bec_widgets.widgets.control.device_input.device_line_edit.device_line_edit import (
-    DeviceLineEdit,
+from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import (
+    BECDeviceFilter,
+    DeviceComboBox,
 )
 from bec_widgets.widgets.utility.spinner.spinner import SpinnerWidget
 
@@ -257,10 +257,10 @@ class PositionerBoxBase(BECWidget, QWidget):
             self._dialog = QDialog(self)
             self._dialog.setWindowTitle("Positioner Selection")
             layout = QVBoxLayout()
-            line_edit = DeviceLineEdit(
+            line_edit = DeviceComboBox(
                 self, client=self.client, device_filter=[BECDeviceFilter.POSITIONER]
             )
-            line_edit.textChanged.connect(set_positioner)
+            line_edit.currentTextChanged.connect(set_positioner)
             layout.addWidget(line_edit)
             close_button = QPushButton("Close")
             close_button.clicked.connect(self._dialog.accept)

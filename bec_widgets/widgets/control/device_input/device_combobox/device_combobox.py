@@ -1,32 +1,80 @@
+from __future__ import annotations
+
+import enum
+
 from bec_lib.callback_handler import EventType
-from bec_lib.device import ReadoutPriority
+from bec_lib.device import ComputedSignal, Device, Positioner, ReadoutPriority
+from bec_lib.device import Signal as BECSignal
+from bec_lib.logger import bec_logger
+from pydantic import Field, field_validator
 from qtpy.QtCore import QSize, Signal, Slot
 from qtpy.QtWidgets import QComboBox, QSizePolicy
 
+from bec_widgets.utils.bec_connector import ConnectionConfig
+from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import get_accent_colors
-from bec_widgets.utils.error_popups import SafeProperty
-from bec_widgets.widgets.control.device_input.base_classes.device_input_base import (
-    BECDeviceFilter,
-    DeviceInputBase,
-    DeviceInputConfig,
-)
+from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.filter_io import get_bec_signals_for_classes, replace_combobox_items
+
+logger = bec_logger.logger
 
 
-class DeviceComboBox(DeviceInputBase, QComboBox):
+class BECDeviceFilter(enum.Enum):
+    """Filter for BEC device classes."""
+
+    DEVICE = "Device"
+    POSITIONER = "Positioner"
+    SIGNAL = "Signal"
+    COMPUTED_SIGNAL = "ComputedSignal"
+
+
+class DeviceInputConfig(ConnectionConfig):
+    device_filter: list[str] = Field(default_factory=list)
+    readout_filter: list[str] = Field(default_factory=list)
+    devices: list[str] = Field(default_factory=list)
+    default: str | None = None
+    arg_name: str | None = None
+    apply_filter: bool = True
+    signal_class_filter: list[str] = Field(default_factory=list)
+
+    @field_validator("device_filter")
+    @classmethod
+    def check_device_filter(cls, value):
+        valid_filters = [entry.value for entry in BECDeviceFilter]
+        for device_filter in value:
+            if device_filter not in valid_filters:
+                raise ValueError(
+                    f"Device filter {device_filter} is not a valid device filter {valid_filters}."
+                )
+        return value
+
+    @field_validator("readout_filter")
+    @classmethod
+    def check_readout_filter(cls, value):
+        valid_filters = [entry.value for entry in ReadoutPriority]
+        for readout_filter in value:
+            if readout_filter not in valid_filters:
+                raise ValueError(
+                    f"Readout filter {readout_filter} is not a valid readout filter {valid_filters}."
+                )
+        return value
+
+
+class DeviceComboBox(BECWidget, QComboBox):
     """
-    Combobox widget for device input with autocomplete for device names.
+    Editable combobox for BEC device input.
 
     Args:
         parent: Parent widget.
         client: BEC client object.
         config: Device input configuration.
         gui_id: GUI ID.
-        device_filter: Device filter, name of the device class from BECDeviceFilter and BECReadoutPriority. Check DeviceInputBase for more details.
-        readout_priority_filter: Readout priority filter, name of the readout priority class from BECDeviceFilter and BECReadoutPriority. Check DeviceInputBase for more details.
-        available_devices: List of available devices, if passed, it sets apply filters to false and device/readout priority filters will not be applied.
+        device_filter: Device class filter from BECDeviceFilter.
+        readout_priority_filter: Readout priority filter from ReadoutPriority.
+        available_devices: Explicit list of devices. Passing this disables automatic filtering.
         default: Default device name.
-        arg_name: Argument name, can be used for the other widgets which has to call some other function in bec using correct argument names.
-        signal_class_filter: List of signal classes to filter the devices by. Only devices with signals of these classes will be shown.
+        arg_name: Argument name used by scan/input widgets.
+        signal_class_filter: Only show devices with signals of these classes.
     """
 
     ICON_NAME = "list_alt"
@@ -37,62 +85,91 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
     device_reset = Signal()
     device_config_update = Signal()
 
+    _device_handler = {
+        BECDeviceFilter.DEVICE: Device,
+        BECDeviceFilter.POSITIONER: Positioner,
+        BECDeviceFilter.SIGNAL: BECSignal,
+        BECDeviceFilter.COMPUTED_SIGNAL: ComputedSignal,
+    }
+
     def __init__(
         self,
         parent=None,
         client=None,
-        config: DeviceInputConfig = None,
+        config: DeviceInputConfig | dict | None = None,
         gui_id: str | None = None,
-        device_filter: BECDeviceFilter | list[BECDeviceFilter] | None = None,
-        readout_priority_filter: (
-            str | ReadoutPriority | list[str] | list[ReadoutPriority] | None
-        ) = None,
+        device_filter: BECDeviceFilter | str | list[BECDeviceFilter | str] | None = None,
+        readout_priority_filter: str | ReadoutPriority | list[str | ReadoutPriority] | None = None,
         available_devices: list[str] | None = None,
         default: str | None = None,
         arg_name: str | None = None,
         signal_class_filter: list[str] | None = None,
         **kwargs,
     ):
-        super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
-        if arg_name is not None:
-            self.config.arg_name = arg_name
-            self.arg_name = arg_name
-        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        self.setMinimumSize(QSize(100, 0))
+        self.config = self._process_config(config)
+        super().__init__(
+            parent=parent,
+            client=client,
+            config=self.config,
+            gui_id=gui_id,
+            theme_update=True,
+            **kwargs,
+        )
+        self.get_bec_shortcuts()
+
+        self._device_filter: list[BECDeviceFilter] = []
+        self._readout_filter: list[ReadoutPriority] = []
+        self._devices: list[str] = []
         self._callback_id = None
         self._is_valid_input = False
         self._accent_colors = get_accent_colors()
         self._set_first_element_as_empty = False
 
-        # We do not consider the config that is passed here, this produced problems
-        # with QtDesigner, since config and input arguments may differ and resolve properly
-        # Implementing this logic and config recoverage is postponed.
-        # Set available devices if passed
+        self.setEditable(True)
+        self.setInsertPolicy(QComboBox.NoInsert)
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.setMinimumSize(QSize(100, 0))
+
+        if arg_name is not None:
+            self.config.arg_name = arg_name
+            self.arg_name = arg_name
+
+        if available_devices is None and self.config.devices:
+            available_devices = self.config.devices
+        if device_filter is None and self.config.device_filter:
+            device_filter = self.config.device_filter
+        if readout_priority_filter is None and self.config.readout_filter:
+            readout_priority_filter = self.config.readout_filter
+        if signal_class_filter is None and self.config.signal_class_filter:
+            signal_class_filter = self.config.signal_class_filter
+        if default is None and self.config.default:
+            default = self.config.default
+
         if available_devices is not None:
             self.set_available_devices(available_devices)
-        # Set readout priority filter default is all
-        if readout_priority_filter is not None:
-            self.set_readout_priority_filter(readout_priority_filter)
-        else:
-            self.set_readout_priority_filter(
-                [
-                    ReadoutPriority.MONITORED,
-                    ReadoutPriority.BASELINE,
-                    ReadoutPriority.ASYNC,
-                    ReadoutPriority.CONTINUOUS,
-                    ReadoutPriority.ON_REQUEST,
-                ]
-            )
-        # Device filter default is None
+
+        self.set_readout_priority_filter(
+            readout_priority_filter
+            or [
+                ReadoutPriority.MONITORED,
+                ReadoutPriority.BASELINE,
+                ReadoutPriority.ASYNC,
+                ReadoutPriority.CONTINUOUS,
+                ReadoutPriority.ON_REQUEST,
+            ]
+        )
+
         if device_filter is not None:
             self.set_device_filter(device_filter)
 
         if signal_class_filter is not None:
             self.signal_class_filter = signal_class_filter
 
-        # Set default device if passed
         if default is not None:
             self.set_device(default)
+        else:
+            self.setCurrentText("")
+
         self._callback_id = self.bec_dispatcher.client.callbacks.register(
             EventType.DEVICE_UPDATE, self.on_device_update
         )
@@ -100,39 +177,236 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
         self.currentTextChanged.connect(self.check_validity)
         self.check_validity(self.currentText())
 
+    @staticmethod
+    def _process_config(config: DeviceInputConfig | dict | None) -> DeviceInputConfig:
+        if config is None:
+            return DeviceInputConfig(widget_class="DeviceComboBox")
+        return DeviceInputConfig.model_validate(config)
+
+    @SafeSlot(str)
+    def set_device(self, device: str):
+        """Set the current device if it is valid for the current filters."""
+        if self.validate_device(device):
+            self.setCurrentText(device)
+            self.config.default = device
+        else:
+            logger.warning(
+                f"Device {device} is not in the filtered selection of {self}: {self.devices}."
+            )
+
+    @SafeSlot()
+    def update_devices_from_filters(self):
+        """Refresh the available device list from current device/readout/signal filters."""
+        current_device = self.currentText()
+        self.config.device_filter = [entry.value for entry in self.device_filter]
+        self.config.readout_filter = [entry.value for entry in self.readout_filter]
+        self.config.signal_class_filter = self.signal_class_filter
+        if not self.apply_filter:
+            return
+
+        devices = self._filter_devices_by_signal_class(self.dev.enabled_devices)
+        devices = [device for device in devices if self._check_device_filter(device)]
+        devices = [device for device in devices if self._check_readout_filter(device)]
+        self.devices = [device.name for device in devices]
+        if current_device:
+            self.setCurrentText(current_device)
+            self.check_validity(current_device)
+
+    @SafeSlot(list)
+    def set_available_devices(self, devices: list[str]):
+        """Use an explicit device list and disable automatic BEC filtering."""
+        self.apply_filter = False
+        self.devices = devices
+
+    @SafeProperty("QStringList")
+    def devices(self) -> list[str]:
+        """Devices available after filtering."""
+        return self._devices
+
+    @devices.setter
+    def devices(self, value: list[str]):
+        self._devices = value
+        self.config.devices = value
+        self._replace_items(value)
+
+    @SafeProperty(str)
+    def default(self):
+        """Default selected device."""
+        return self.config.default
+
+    @default.setter
+    def default(self, value: str):
+        self.set_device(value)
+
+    @SafeProperty(bool)
+    def apply_filter(self):
+        """Whether BEC filters are applied to the device list."""
+        return self.config.apply_filter
+
+    @apply_filter.setter
+    def apply_filter(self, value: bool):
+        self.config.apply_filter = value
+        if value:
+            self.update_devices_from_filters()
+
+    @SafeProperty("QStringList")
+    def signal_class_filter(self) -> list[str]:
+        """Signal class names used to restrict devices."""
+        return self.config.signal_class_filter
+
+    @signal_class_filter.setter
+    def signal_class_filter(self, value: list[str] | None):
+        self.config.signal_class_filter = value or []
+        self.update_devices_from_filters()
+
+    @SafeProperty(bool)
+    def filter_to_device(self):
+        """Include generic Device objects."""
+        return BECDeviceFilter.DEVICE in self.device_filter
+
+    @filter_to_device.setter
+    def filter_to_device(self, value: bool):
+        self._set_device_filter_enabled(BECDeviceFilter.DEVICE, value)
+
+    @SafeProperty(bool)
+    def filter_to_positioner(self):
+        """Include Positioner devices."""
+        return BECDeviceFilter.POSITIONER in self.device_filter
+
+    @filter_to_positioner.setter
+    def filter_to_positioner(self, value: bool):
+        self._set_device_filter_enabled(BECDeviceFilter.POSITIONER, value)
+
+    @SafeProperty(bool)
+    def filter_to_signal(self):
+        """Include Signal devices."""
+        return BECDeviceFilter.SIGNAL in self.device_filter
+
+    @filter_to_signal.setter
+    def filter_to_signal(self, value: bool):
+        self._set_device_filter_enabled(BECDeviceFilter.SIGNAL, value)
+
+    @SafeProperty(bool)
+    def filter_to_computed_signal(self):
+        """Include ComputedSignal devices."""
+        return BECDeviceFilter.COMPUTED_SIGNAL in self.device_filter
+
+    @filter_to_computed_signal.setter
+    def filter_to_computed_signal(self, value: bool):
+        self._set_device_filter_enabled(BECDeviceFilter.COMPUTED_SIGNAL, value)
+
+    @SafeProperty(bool)
+    def readout_monitored(self):
+        """Include monitored devices."""
+        return ReadoutPriority.MONITORED in self.readout_filter
+
+    @readout_monitored.setter
+    def readout_monitored(self, value: bool):
+        self._set_readout_filter_enabled(ReadoutPriority.MONITORED, value)
+
+    @SafeProperty(bool)
+    def readout_baseline(self):
+        """Include baseline devices."""
+        return ReadoutPriority.BASELINE in self.readout_filter
+
+    @readout_baseline.setter
+    def readout_baseline(self, value: bool):
+        self._set_readout_filter_enabled(ReadoutPriority.BASELINE, value)
+
+    @SafeProperty(bool)
+    def readout_async(self):
+        """Include async devices."""
+        return ReadoutPriority.ASYNC in self.readout_filter
+
+    @readout_async.setter
+    def readout_async(self, value: bool):
+        self._set_readout_filter_enabled(ReadoutPriority.ASYNC, value)
+
+    @SafeProperty(bool)
+    def readout_continuous(self):
+        """Include continuous devices."""
+        return ReadoutPriority.CONTINUOUS in self.readout_filter
+
+    @readout_continuous.setter
+    def readout_continuous(self, value: bool):
+        self._set_readout_filter_enabled(ReadoutPriority.CONTINUOUS, value)
+
+    @SafeProperty(bool)
+    def readout_on_request(self):
+        """Include on-request devices."""
+        return ReadoutPriority.ON_REQUEST in self.readout_filter
+
+    @readout_on_request.setter
+    def readout_on_request(self, value: bool):
+        self._set_readout_filter_enabled(ReadoutPriority.ON_REQUEST, value)
+
     @SafeProperty(bool)
     def set_first_element_as_empty(self) -> bool:
-        """
-        Whether the first element in the combobox should be empty.
-        This is useful to allow the user to select a device from the list.
-        """
+        """Whether an empty choice is inserted as the first item."""
         return self._set_first_element_as_empty
 
     @set_first_element_as_empty.setter
     def set_first_element_as_empty(self, value: bool) -> None:
-        """
-        Set whether the first element in the combobox should be empty.
-        This is useful to allow the user to select a device from the list.
-
-        Args:
-            value (bool): True if the first element should be empty, False otherwise.
-        """
         self._set_first_element_as_empty = value
-        if self._set_first_element_as_empty:
-            self.insertItem(0, "")
+        current_text = self.currentText()
+        if value:
+            if self.count() == 0 or self.itemText(0) != "":
+                self.insertItem(0, "")
             self.setCurrentIndex(0)
-        else:
-            if self.count() > 0 and self.itemText(0) == "":
-                self.removeItem(0)
+        elif self.count() > 0 and self.itemText(0) == "":
+            self.removeItem(0)
+            if not current_text:
+                self.setCurrentText("")
+
+    @property
+    def device_filter(self) -> list[BECDeviceFilter]:
+        """Device class filters."""
+        return self._device_filter
+
+    @property
+    def readout_filter(self) -> list[ReadoutPriority]:
+        """Readout priority filters."""
+        return self._readout_filter
+
+    @property
+    def is_valid_input(self) -> bool:
+        """Whether the current text represents a valid device selection."""
+        return self._is_valid_input
+
+    def get_available_filters(self) -> list[BECDeviceFilter]:
+        """Return available device class filters."""
+        return list(BECDeviceFilter)
+
+    def get_readout_priority_filters(self) -> list[ReadoutPriority]:
+        """Return available readout priority filters."""
+        return list(ReadoutPriority)
+
+    def set_device_filter(
+        self, filter_selection: BECDeviceFilter | str | list[BECDeviceFilter | str]
+    ):
+        """Enable one or more device class filters."""
+        for device_filter in self._as_list(filter_selection):
+            normalized = self._normalize_device_filter(device_filter)
+            if normalized is None:
+                logger.warning(f"Device filter {device_filter} is not in the device filter list.")
+                continue
+            self._set_device_filter_enabled(normalized, True)
+
+    def set_readout_priority_filter(
+        self, filter_selection: ReadoutPriority | str | list[ReadoutPriority | str]
+    ):
+        """Enable one or more readout priority filters."""
+        for readout_filter in self._as_list(filter_selection):
+            normalized = self._normalize_readout_filter(readout_filter)
+            if normalized is None:
+                logger.warning(
+                    f"Readout priority filter {readout_filter} is not in the readout priority list."
+                )
+                continue
+            self._set_readout_filter_enabled(normalized, True)
 
     def on_device_update(self, action: str, content: dict) -> None:
-        """
-        Callback for device update events. Triggers the device_update signal.
-
-        Args:
-            action (str): The action that triggered the event.
-            content (dict): The content of the config update.
-        """
+        """Refresh filters when the BEC device configuration changes."""
         if action in ["add", "remove", "reload"]:
             self.device_config_update.emit()
 
@@ -143,21 +417,13 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
         super().cleanup()
 
     def get_current_device(self) -> object:
-        """
-        Get the current device object based on the current value.
-
-        Returns:
-            object: Device object, can be device of type Device, Positioner, Signal or ComputedSignal.
-        """
-        dev_name = self.currentText()
-        return self.get_device_object(dev_name)
+        """Return the current BEC device object."""
+        return self.get_device_object(self._device_name_from_text(self.currentText()))
 
     @Slot(str)
     def check_validity(self, input_text: str) -> None:
-        """
-        Check if the current value is a valid device name.
-        """
-        if self.validate_device(input_text) is True:
+        """Validate current text and update visual state."""
+        if self.validate_device(input_text):
             self._is_valid_input = True
             self.device_selected.emit(input_text)
             self.setStyleSheet("border: 1px solid transparent;")
@@ -167,33 +433,93 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
             if self.isEnabled():
                 self.setStyleSheet("border: 1px solid red;")
 
-    def validate_device(self, device: str) -> bool:  # type: ignore[override]
-        """
-        Extend validation so that preview‑signal pseudo‑devices (labels like
-        ``"eiger_preview"``) are accepted as valid choices.
+    def validate_device(self, device: str | None) -> bool:
+        """Validate a device against the current filtered device selection."""
+        if not device:
+            return False
+        device_name = self._device_name_from_text(device)
+        all_devices = [dev.name for dev in self.dev.enabled_devices]
+        return device_name in self.devices and device_name in all_devices
 
-        The validation run only on device not on the preview‑signal.
+    def get_device_object(self, device: str) -> object:
+        """Return a device object by name."""
+        dev = getattr(self.dev, device, None)
+        if dev is None:
+            raise ValueError(
+                f"Device {device} is not found in the device manager {self.dev} as enabled device."
+            )
+        return dev
 
-        Args:
-            device: The text currently entered/selected.
+    @staticmethod
+    def _as_list(value):
+        return value if isinstance(value, list) else [value]
 
-        Returns:
-            True if the device is a genuine BEC device *or* one of the
-            whitelisted preview‑signal entries.
-        """
-        idx = self.findText(device)
-        if idx >= 0 and isinstance(self.itemData(idx), tuple):
-            device = self.itemData(idx)[0]  # type: ignore[assignment]
-        return super().validate_device(device)
+    @staticmethod
+    def _normalize_device_filter(value: BECDeviceFilter | str) -> BECDeviceFilter | None:
+        if isinstance(value, BECDeviceFilter):
+            return value
+        return BECDeviceFilter._value2member_map_.get(value)
 
-    @property
-    def is_valid_input(self) -> bool:
-        """Whether the current text represents a valid device selection."""
-        return self._is_valid_input
+    @staticmethod
+    def _normalize_readout_filter(value: ReadoutPriority | str) -> ReadoutPriority | None:
+        if isinstance(value, ReadoutPriority):
+            return value
+        return ReadoutPriority._value2member_map_.get(value)
+
+    def _set_device_filter_enabled(self, device_filter: BECDeviceFilter, enabled: bool):
+        if enabled and device_filter not in self._device_filter:
+            self._device_filter.append(device_filter)
+        elif not enabled and device_filter in self._device_filter:
+            self._device_filter.remove(device_filter)
+        self.update_devices_from_filters()
+
+    def _set_readout_filter_enabled(self, readout_filter: ReadoutPriority, enabled: bool):
+        if enabled and readout_filter not in self._readout_filter:
+            self._readout_filter.append(readout_filter)
+        elif not enabled and readout_filter in self._readout_filter:
+            self._readout_filter.remove(readout_filter)
+        self.update_devices_from_filters()
+
+    def _check_device_filter(
+        self, device: Device | BECSignal | ComputedSignal | Positioner
+    ) -> bool:
+        if not self.device_filter:
+            return True
+        return any(isinstance(device, self._device_handler[entry]) for entry in self.device_filter)
+
+    def _check_readout_filter(
+        self, device: Device | BECSignal | ComputedSignal | Positioner
+    ) -> bool:
+        if not self.readout_filter:
+            return True
+        return device.readout_priority in self.readout_filter
+
+    def _filter_devices_by_signal_class(
+        self, devices: list[Device | BECSignal | ComputedSignal | Positioner]
+    ) -> list[Device | BECSignal | ComputedSignal | Positioner]:
+        if not self.config.signal_class_filter:
+            return devices
+        signals = get_bec_signals_for_classes(
+            client=self.client, signal_class_filter=self.config.signal_class_filter
+        )
+        allowed_devices = {device_name for device_name, _, _ in signals}
+        return [device for device in devices if device.name in allowed_devices]
+
+    def _replace_items(self, devices: list[str]):
+        current_text = self.currentText()
+        replace_combobox_items(self, devices)
+        if self._set_first_element_as_empty:
+            self.insertItem(0, "")
+        self.setCurrentText(current_text)
+
+    def _device_name_from_text(self, text: str) -> str:
+        index = self.findText(text)
+        if index >= 0 and isinstance(self.itemData(index), tuple):
+            return self.itemData(index)[0]
+        return text
 
 
 if __name__ == "__main__":  # pragma: no cover
-    # pylint: disable=import-outside-toplevel
     from qtpy.QtWidgets import (
         QApplication,
         QCheckBox,
@@ -235,10 +561,7 @@ if __name__ == "__main__":  # pragma: no cover
 
     def _apply_filters():
         raw = class_input.text().strip()
-        if raw:
-            combo.signal_class_filter = [entry.strip() for entry in raw.split(",") if entry.strip()]
-        else:
-            combo.signal_class_filter = []
+        combo.signal_class_filter = [entry.strip() for entry in raw.split(",") if entry.strip()]
         combo.filter_to_device = filter_device.isChecked()
         combo.filter_to_positioner = filter_positioner.isChecked()
         combo.filter_to_signal = filter_signal.isChecked()

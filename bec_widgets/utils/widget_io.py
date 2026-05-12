@@ -85,7 +85,11 @@ class ComboBoxHandler(WidgetHandler):
 
     def set_value(self, widget: QComboBox, value: int | str) -> None:
         if isinstance(value, str):
-            value = widget.findText(value)
+            index = widget.findText(value)
+            if index < 0 and widget.isEditable():
+                widget.setCurrentText(value)
+                return
+            value = index
         if isinstance(value, int):
             widget.setCurrentIndex(value)
 

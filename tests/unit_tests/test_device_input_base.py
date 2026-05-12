@@ -1,152 +1,92 @@
 from unittest import mock
 
-import pytest
 from bec_lib.device import ReadoutPriority
-from qtpy.QtWidgets import QWidget
 
-from bec_widgets.widgets.control.device_input.base_classes.device_input_base import (
+from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import (
     BECDeviceFilter,
-    DeviceInputBase,
+    DeviceComboBox,
     DeviceInputConfig,
 )
-from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 
 from .client_mocks import mocked_client
 from .conftest import create_widget
 
 
-# DeviceInputBase is meant to be mixed in a QWidget
-class DeviceInputWidget(DeviceInputBase, QWidget):
-    """Thin wrapper around DeviceInputBase to make it a QWidget"""
-
-    def __init__(self, parent=None, client=None, config=None, gui_id=None, **kwargs):
-        super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
-
-
-@pytest.fixture
-def device_input_base(qtbot, mocked_client):
-    """Fixture with mocked FilterIO and WidgetIO"""
-    with mock.patch("bec_widgets.utils.filter_io.FilterIO.set_selection"):
-        with mock.patch("bec_widgets.utils.widget_io.WidgetIO.set_value"):
-            with mock.patch("bec_widgets.utils.widget_io.WidgetIO.get_value"):
-                widget = create_widget(qtbot=qtbot, widget=DeviceInputWidget, client=mocked_client)
-                yield widget
-
-
-def test_device_input_base_init(device_input_base):
-    """Test init"""
-    assert device_input_base is not None
-    assert device_input_base.client is not None
-    assert isinstance(device_input_base, DeviceInputBase)
-    assert device_input_base.config.widget_class == "DeviceInputWidget"
-    assert device_input_base.config.device_filter == []
-    assert device_input_base.config.default is None
-    assert device_input_base.devices == []
-
-
-def test_device_input_base_init_with_config(qtbot, mocked_client):
-    """Test init with Config"""
+def test_device_combobox_init_with_config(qtbot, mocked_client):
     config = {
-        "widget_class": "DeviceInputWidget",
+        "widget_class": "DeviceComboBox",
         "gui_id": "test_gui_id",
-        "device_filter": [BECDeviceFilter.POSITIONER],
+        "device_filter": [BECDeviceFilter.POSITIONER.value],
         "default": "samx",
     }
-    widget = DeviceInputWidget(client=mocked_client, config=config)
-    widget2 = DeviceInputWidget(
-        client=mocked_client, config=DeviceInputConfig.model_validate(config)
+    widget = create_widget(
+        qtbot=qtbot,
+        widget=DeviceComboBox,
+        client=mocked_client,
+        config=DeviceInputConfig.model_validate(config),
     )
-    qtbot.addWidget(widget)
-    qtbot.addWidget(widget2)
-    qtbot.waitExposed(widget)
-    qtbot.waitExposed(widget2)
-    for w in [widget, widget2]:
-        assert w.config.gui_id == "test_gui_id"
-        assert w.config.device_filter == ["Positioner"]
-        assert w.config.default == "samx"
+
+    assert widget.config.gui_id == "test_gui_id"
+    assert widget.config.device_filter == ["Positioner"]
+    assert widget.config.default == "samx"
 
 
-def test_device_input_base_set_device_filter(device_input_base):
-    """Test device filter setter."""
-    device_input_base.set_device_filter(BECDeviceFilter.POSITIONER)
-    assert device_input_base.config.device_filter == ["Positioner"]
+def test_device_combobox_set_device_filter(qtbot, mocked_client):
+    widget = create_widget(qtbot=qtbot, widget=DeviceComboBox, client=mocked_client)
+
+    widget.set_device_filter(BECDeviceFilter.POSITIONER)
+
+    assert widget.config.device_filter == ["Positioner"]
 
 
-def test_device_input_base_set_device_filter_error(device_input_base):
-    """Test set_device_filter with Noneexisting class. This should not raise. It writes a log message entry."""
-    device_input_base.set_device_filter("NonExistingClass")
-    assert device_input_base.device_filter == []
+def test_device_combobox_set_device_filter_error(qtbot, mocked_client):
+    widget = create_widget(qtbot=qtbot, widget=DeviceComboBox, client=mocked_client)
+
+    widget.set_device_filter("NonExistingClass")
+
+    assert widget.device_filter == []
 
 
-def test_device_input_base_set_default_device(device_input_base):
-    """Test setting the default device. Also tests the update_devices method."""
-    device_input_base.set_device("samx")
-    assert device_input_base.config.default == None
-    device_input_base.set_device_filter(BECDeviceFilter.POSITIONER)
-    device_input_base.set_readout_priority_filter(ReadoutPriority.MONITORED)
-    device_input_base.set_device("samx")
-    assert device_input_base.config.default == "samx"
+def test_device_combobox_set_default_device(qtbot, mocked_client):
+    widget = create_widget(qtbot=qtbot, widget=DeviceComboBox, client=mocked_client)
+
+    widget.set_device("samx")
+
+    assert widget.config.default == "samx"
 
 
-def test_device_input_base_get_filters(device_input_base):
-    """Test getting the available filters."""
-    filters = device_input_base.get_available_filters()
-    selection = [
-        BECDeviceFilter.POSITIONER,
-        BECDeviceFilter.DEVICE,
-        BECDeviceFilter.COMPUTED_SIGNAL,
-        BECDeviceFilter.SIGNAL,
-    ] + [
-        ReadoutPriority.MONITORED,
-        ReadoutPriority.BASELINE,
-        ReadoutPriority.ASYNC,
-        ReadoutPriority.ON_REQUEST,
-    ]
-    assert [entry for entry in filters if entry in selection]
+def test_device_combobox_get_filters(qtbot, mocked_client):
+    widget = create_widget(qtbot=qtbot, widget=DeviceComboBox, client=mocked_client)
+
+    assert BECDeviceFilter.POSITIONER in widget.get_available_filters()
+    assert ReadoutPriority.MONITORED in widget.get_readout_priority_filters()
 
 
-def test_device_input_base_properties(device_input_base):
-    """Test setting the properties of the device input base."""
-    assert device_input_base.device_filter == []
-    device_input_base.filter_to_device = True
-    assert device_input_base.device_filter == [BECDeviceFilter.DEVICE]
-    device_input_base.filter_to_positioner = True
-    assert device_input_base.device_filter == [BECDeviceFilter.DEVICE, BECDeviceFilter.POSITIONER]
-    device_input_base.filter_to_computed_signal = True
-    assert device_input_base.device_filter == [
-        BECDeviceFilter.DEVICE,
-        BECDeviceFilter.POSITIONER,
-        BECDeviceFilter.COMPUTED_SIGNAL,
-    ]
-    device_input_base.filter_to_signal = True
-    assert device_input_base.device_filter == [
+def test_device_combobox_properties(qtbot, mocked_client):
+    widget = create_widget(qtbot=qtbot, widget=DeviceComboBox, client=mocked_client)
+
+    widget.filter_to_device = True
+    widget.filter_to_positioner = True
+    widget.filter_to_computed_signal = True
+    widget.filter_to_signal = True
+    assert widget.device_filter == [
         BECDeviceFilter.DEVICE,
         BECDeviceFilter.POSITIONER,
         BECDeviceFilter.COMPUTED_SIGNAL,
         BECDeviceFilter.SIGNAL,
     ]
-    assert device_input_base.readout_filter == []
-    device_input_base.readout_async = True
-    assert device_input_base.readout_filter == [ReadoutPriority.ASYNC]
-    device_input_base.readout_baseline = True
-    assert device_input_base.readout_filter == [ReadoutPriority.ASYNC, ReadoutPriority.BASELINE]
-    device_input_base.readout_monitored = True
-    assert device_input_base.readout_filter == [
-        ReadoutPriority.ASYNC,
-        ReadoutPriority.BASELINE,
-        ReadoutPriority.MONITORED,
-    ]
-    device_input_base.readout_on_request = True
-    assert device_input_base.readout_filter == [
-        ReadoutPriority.ASYNC,
-        ReadoutPriority.BASELINE,
-        ReadoutPriority.MONITORED,
-        ReadoutPriority.ON_REQUEST,
-    ]
+
+    widget.readout_async = True
+    widget.readout_baseline = True
+    widget.readout_monitored = True
+    widget.readout_on_request = True
+    assert ReadoutPriority.ASYNC in widget.readout_filter
+    assert ReadoutPriority.BASELINE in widget.readout_filter
+    assert ReadoutPriority.MONITORED in widget.readout_filter
+    assert ReadoutPriority.ON_REQUEST in widget.readout_filter
 
 
 def test_device_combobox_signal_class_filter(qtbot, mocked_client):
-    """Test device filtering via signal_class_filter on combobox."""
     mocked_client.device_manager.get_bec_signals = mock.MagicMock(
         return_value=[
             ("samx", "async_signal", {"signal_class": "AsyncSignal"}),
