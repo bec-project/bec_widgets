@@ -62,8 +62,8 @@ TEST_LOG_MESSAGES = [
 
 
 @pytest.fixture
-def log_panel(qtbot, mocked_client):
-    mocked_client.connector.xread = lambda *_, **__: TEST_LOG_MESSAGES
+def log_panel(qtbot, mocked_client, monkeypatch):
+    monkeypatch.setattr(mocked_client.connector, "xread", lambda *_, **__: TEST_LOG_MESSAGES)
     widget = LogPanel()
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
