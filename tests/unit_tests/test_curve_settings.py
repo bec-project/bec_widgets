@@ -58,6 +58,10 @@ def test_curve_setting_init(curve_setting_fixture):
     # Check that there's a curve_manager inside y_axis_box
     assert hasattr(curve_setting, "curve_manager")
     assert curve_setting.y_axis_box.layout.count() > 0
+    assert not curve_setting.device_x.isEnabled()
+    assert not curve_setting.signal_x.isEnabled()
+    assert "red" not in curve_setting.device_x.styleSheet()
+    assert "red" not in curve_setting.signal_x.styleSheet()
 
 
 def test_curve_setting_accept_changes(curve_setting_fixture, qtbot):

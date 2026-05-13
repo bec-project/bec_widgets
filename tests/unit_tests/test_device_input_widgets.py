@@ -83,6 +83,10 @@ def test_device_input_combobox_autocomplete(qtbot, mocked_client):
     widget = DeviceComboBox(client=mocked_client, autocomplete=True)
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
+    line_edit = widget.lineEdit()
+    text_changes: list[str] = []
+    line_edit.setPlaceholderText("Select Device")
+    line_edit.textChanged.connect(text_changes.append)
 
     assert widget.autocomplete is True
     assert widget.completer() is not None
@@ -93,6 +97,31 @@ def test_device_input_combobox_autocomplete(qtbot, mocked_client):
 
     assert widget.completer() is not None
     assert widget.completer().model() == widget.model()
+    assert widget.lineEdit().placeholderText() == "Select Device"
+
+    widget.lineEdit().setText("manual_device")
+
+    assert text_changes[-1] == "manual_device"
+
+
+def test_device_input_combobox_refresh_preserves_manual_text(device_input_combobox):
+    device_input_combobox.setCurrentText("manual_device")
+
+    device_input_combobox.update_devices_from_filters()
+
+    assert device_input_combobox.currentText() == "manual_device"
+    assert device_input_combobox.is_valid_input is False
+
+
+def test_device_input_combobox_disabled_invalid_has_neutral_border(device_input_combobox):
+    device_input_combobox.setCurrentText("manual_device")
+    assert "red" in device_input_combobox.styleSheet()
+
+    device_input_combobox.setEnabled(False)
+    assert "transparent" in device_input_combobox.styleSheet()
+
+    device_input_combobox.setEnabled(True)
+    assert "red" in device_input_combobox.styleSheet()
 
 
 def test_get_device_from_input_combobox_init(device_input_combobox):
