@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v3.10.0 (2026-05-13)
+
+### Documentation
+
+- Fix link to doc page
+  ([`0cd000d`](https://github.com/bec-project/bec_widgets/commit/0cd000dfa1bb6f1b4d286e5aab30299361f436f6))
+
+### Features
+
+- Bl plugin menu in BECDockArea
+  ([`e22ab7e`](https://github.com/bec-project/bec_widgets/commit/e22ab7e4c10552e22aaaa9dbc30d098fbfa9c49c))
+
+
 ## v3.9.1 (2026-05-12)
 
 ### Bug Fixes
