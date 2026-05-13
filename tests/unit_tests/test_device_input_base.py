@@ -1,6 +1,6 @@
 from unittest import mock
 
-from bec_lib.device import ReadoutPriority
+from bec_lib.device import Positioner, ReadoutPriority
 
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import (
     BECDeviceFilter,
@@ -55,13 +55,6 @@ def test_device_combobox_set_default_device(qtbot, mocked_client):
     assert widget.config.default == "samx"
 
 
-def test_device_combobox_get_filters(qtbot, mocked_client):
-    widget = create_widget(qtbot=qtbot, widget=DeviceComboBox, client=mocked_client)
-
-    assert BECDeviceFilter.POSITIONER in widget.get_available_filters()
-    assert ReadoutPriority.MONITORED in widget.get_readout_priority_filters()
-
-
 def test_device_combobox_properties(qtbot, mocked_client):
     widget = create_widget(qtbot=qtbot, widget=DeviceComboBox, client=mocked_client)
 
@@ -76,14 +69,35 @@ def test_device_combobox_properties(qtbot, mocked_client):
         BECDeviceFilter.SIGNAL,
     ]
 
+    widget.readout_async = False
+    assert ReadoutPriority.ASYNC not in widget.readout_filter
+
     widget.readout_async = True
-    widget.readout_baseline = True
-    widget.readout_monitored = True
-    widget.readout_on_request = True
     assert ReadoutPriority.ASYNC in widget.readout_filter
-    assert ReadoutPriority.BASELINE in widget.readout_filter
-    assert ReadoutPriority.MONITORED in widget.readout_filter
-    assert ReadoutPriority.ON_REQUEST in widget.readout_filter
+
+
+def test_device_combobox_multiple_device_filters_match_main_intersection(qtbot, mocked_client):
+    widget = create_widget(qtbot=qtbot, widget=DeviceComboBox, client=mocked_client)
+
+    widget.filter_to_device = True
+    widget.filter_to_positioner = True
+
+    assert widget.devices
+    assert all(isinstance(getattr(widget.dev, device), Positioner) for device in widget.devices)
+    assert "eiger" not in widget.devices
+
+
+def test_device_combobox_empty_readout_filter_matches_main_empty_selection(qtbot, mocked_client):
+    widget = create_widget(qtbot=qtbot, widget=DeviceComboBox, client=mocked_client)
+
+    widget.readout_monitored = False
+    widget.readout_baseline = False
+    widget.readout_async = False
+    widget.readout_continuous = False
+    widget.readout_on_request = False
+
+    assert widget.readout_filter == []
+    assert widget.devices == []
 
 
 def test_device_combobox_signal_class_filter(qtbot, mocked_client):

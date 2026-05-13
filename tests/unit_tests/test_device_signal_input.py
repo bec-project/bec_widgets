@@ -8,7 +8,10 @@ from bec_widgets.widgets.control.device_input.device_combobox.device_combobox im
     BECDeviceFilter,
     DeviceComboBox,
 )
-from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import SignalComboBox
+from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import (
+    SignalComboBox,
+    SignalComboBoxConfig,
+)
 
 from .client_mocks import mocked_client
 from .conftest import create_widget
@@ -16,6 +19,10 @@ from .conftest import create_widget
 
 class FakeSignal(Signal):
     """Fake signal used by SignalComboBox tests."""
+
+
+def signal_names(signals):
+    return [entry[0] if isinstance(entry, tuple) else entry for entry in signals]
 
 
 @pytest.fixture
@@ -49,10 +56,27 @@ def test_signal_combobox_init(device_signal_combobox):
     assert device_signal_combobox.completer().model() == device_signal_combobox.model()
 
 
+def test_signal_combobox_config_defaults_are_independent_lists():
+    config_a = SignalComboBoxConfig(widget_class="SignalComboBox")
+    config_b = SignalComboBoxConfig(widget_class="SignalComboBox")
+
+    config_a.signal_filter.append("hinted")
+    config_a.signal_class_filter.append("AsyncSignal")
+    config_a.signals.append("sig")
+
+    assert config_b.signal_filter == []
+    assert config_b.signal_class_filter == []
+    assert config_b.signals == []
+
+
 def test_signal_combobox_autocomplete(qtbot, mocked_client):
     widget = create_widget(
         qtbot=qtbot, widget=SignalComboBox, client=mocked_client, autocomplete=True
     )
+    line_edit = widget.lineEdit()
+    text_changes: list[str] = []
+    line_edit.setPlaceholderText("Select Signal")
+    line_edit.textChanged.connect(text_changes.append)
 
     widget.set_device("samx")
 
@@ -65,6 +89,11 @@ def test_signal_combobox_autocomplete(qtbot, mocked_client):
 
     assert widget.completer() is not None
     assert widget.completer().model() == widget.model()
+    assert widget.lineEdit().placeholderText() == "Select Signal"
+
+    widget.lineEdit().setText("manual_signal")
+
+    assert text_changes[-1] == "manual_signal"
 
 
 def test_signal_combobox_qproperties(device_signal_combobox):
@@ -80,6 +109,17 @@ def test_signal_combobox_qproperties(device_signal_combobox):
     assert device_signal_combobox._signal_filter == {Kind.config, Kind.normal, Kind.hinted}
     device_signal_combobox.include_hinted_signals = False
     assert device_signal_combobox._signal_filter == {Kind.config, Kind.normal}
+
+
+def test_signal_combobox_disabled_invalid_has_neutral_border(device_signal_combobox):
+    device_signal_combobox.setCurrentText("manual_signal")
+    assert "red" in device_signal_combobox.styleSheet()
+
+    device_signal_combobox.setEnabled(False)
+    assert "transparent" in device_signal_combobox.styleSheet()
+
+    device_signal_combobox.setEnabled(True)
+    assert "red" in device_signal_combobox.styleSheet()
 
 
 def test_signal_combobox(qtbot, device_signal_combobox):
@@ -115,6 +155,34 @@ def test_signal_combobox(qtbot, device_signal_combobox):
     assert device_signal_combobox._config_signals == []
     assert device_signal_combobox._normal_signals == []
     assert device_signal_combobox._hinted_signals == [("fake_signal", {})]
+
+
+def test_linked_device_combobox_updates_signal_combobox_on_each_text_change(
+    qtbot, test_device_signal_combo
+):
+    device, signal = test_device_signal_combo
+    device.currentTextChanged.connect(signal.set_device)
+
+    emitted_device_texts: list[str] = []
+    device.currentTextChanged.connect(emitted_device_texts.append)
+
+    device.setCurrentText("samx")
+    assert signal.device == "samx"
+    assert signal.currentText() == "samx (readback)"
+
+    device.setCurrentText("sa")
+
+    assert emitted_device_texts[-1] == "sa"
+    assert signal.device == ""
+    assert signal.signals == []
+    assert signal.currentText() == ""
+    assert signal.is_valid_input is False
+
+    device.setCurrentText("samx")
+
+    assert emitted_device_texts[-1] == "samx"
+    assert signal.device == "samx"
+    assert [entry[0] for entry in signal.signals] == ["samx (readback)", "setpoint", "velocity"]
 
 
 def test_device_signal_input_base_cleanup(qtbot, mocked_client):
@@ -224,11 +292,107 @@ def test_signal_combobox_signal_class_filter_by_device(qtbot, mocked_client):
         device="samx",
     )
 
-    assert widget.signals == ["samx_readback_async"]
+    assert signal_names(widget.signals) == ["samx_readback_async"]
     assert widget.signal_class_filter == ["AsyncSignal"]
 
     widget.set_device("samy")
-    assert widget.signals == ["samy_readback_async"]
+    assert signal_names(widget.signals) == ["samy_readback_async"]
+
+
+def test_signal_combobox_signal_class_filter_selects_by_metadata(qtbot, mocked_client):
+    """Class-based signal lists should support obj_name/component_name lookup."""
+    mocked_client.device_manager.get_bec_signals = mock.MagicMock(
+        return_value=[
+            (
+                "eiger",
+                "image",
+                {
+                    "obj_name": "eiger_image",
+                    "component_name": "det.image",
+                    "signal_class": "PreviewSignal",
+                    "describe": {"signal_info": {"ndim": 2}},
+                },
+            )
+        ]
+    )
+    widget = create_widget(
+        qtbot=qtbot,
+        widget=SignalComboBox,
+        client=mocked_client,
+        signal_class_filter=["PreviewSignal"],
+        ndim_filter=[2],
+        device="eiger",
+    )
+
+    assert widget.validate_signal("eiger_image") is True
+    assert widget.validate_signal("det.image") is True
+    assert widget.set_to_obj_name("eiger_image") is True
+    assert widget.currentText() == "image"
+
+    widget.set_signal("det.image")
+
+    assert widget.currentText() == "image"
+
+
+def test_signal_combobox_signal_class_update_revalidates_selected_signal(qtbot, mocked_client):
+    """Signal-class rebuilds should validate after items and signal metadata are in sync."""
+    mocked_client.device_manager.get_bec_signals = mock.MagicMock(
+        return_value=[
+            (
+                "eiger",
+                "img",
+                {
+                    "obj_name": "img",
+                    "signal_class": "PreviewSignal",
+                    "describe": {"signal_info": {"ndim": 2}},
+                },
+            )
+        ]
+    )
+    widget = create_widget(
+        qtbot=qtbot,
+        widget=SignalComboBox,
+        client=mocked_client,
+        signal_class_filter=["PreviewSignal"],
+        ndim_filter=[2],
+        require_device=True,
+    )
+
+    widget.set_device("eiger")
+
+    assert widget.currentText() == "img"
+    assert widget.is_valid_input is True
+
+
+def test_signal_combobox_signal_class_refresh_preserves_manual_text(qtbot, mocked_client):
+    mocked_client.device_manager.get_bec_signals = mock.MagicMock(
+        return_value=[
+            (
+                "eiger",
+                "img",
+                {
+                    "obj_name": "img",
+                    "signal_class": "PreviewSignal",
+                    "describe": {"signal_info": {"ndim": 2}},
+                },
+            )
+        ]
+    )
+    widget = create_widget(
+        qtbot=qtbot,
+        widget=SignalComboBox,
+        client=mocked_client,
+        signal_class_filter=["PreviewSignal"],
+        ndim_filter=[2],
+        require_device=True,
+    )
+
+    widget.set_device("eiger")
+    widget.setCurrentText("manual_signal")
+    widget.update_signals_from_signal_classes()
+
+    assert widget.currentText() == "manual_signal"
+    assert widget.is_valid_input is False
 
 
 def test_signal_class_filter_setter_clears_to_kind_filters(qtbot, mocked_client):
@@ -243,7 +407,7 @@ def test_signal_class_filter_setter_clears_to_kind_filters(qtbot, mocked_client)
         signal_class_filter=["AsyncSignal"],
         device="samx",
     )
-    assert widget.signals == ["samx_readback_async"]
+    assert signal_names(widget.signals) == ["samx_readback_async"]
 
     widget.signal_class_filter = []
     samx = widget.dev.samx
@@ -266,7 +430,7 @@ def test_signal_class_filter_setter_none_reverts_to_kind_filters(qtbot, mocked_c
         signal_class_filter=["AsyncSignal"],
         device="samx",
     )
-    assert widget.signals == ["samx_readback_async"]
+    assert signal_names(widget.signals) == ["samx_readback_async"]
 
     widget.signal_class_filter = None
     samx = widget.dev.samx
@@ -333,12 +497,12 @@ def test_signal_combobox_class_kind_ndim_filters(qtbot, mocked_client):
     )
 
     # Default kinds are hinted + normal, ndim=1, device=samx
-    assert widget.signals == ["sig1"]
+    assert signal_names(widget.signals) == ["sig1"]
 
     # Enable config kinds and widen ndim to include sig2
     widget.include_config_signals = True
     widget.ndim_filter = 2
-    assert widget.signals == ["sig2"]
+    assert signal_names(widget.signals) == ["sig2"]
 
 
 def test_signal_combobox_require_device_validation(qtbot, mocked_client):
@@ -366,7 +530,7 @@ def test_signal_combobox_require_device_validation(qtbot, mocked_client):
 
     assert widget.signals == []
     widget.set_device("samx")
-    assert widget.signals == ["sig1"]
+    assert signal_names(widget.signals) == ["sig1"]
 
     resets: list[str] = []
     widget.signal_reset.connect(lambda: resets.append("reset"))

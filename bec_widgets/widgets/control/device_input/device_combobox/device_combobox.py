@@ -1,3 +1,5 @@
+"""Editable combobox for selecting BEC devices."""
+
 from __future__ import annotations
 
 import enum
@@ -12,7 +14,6 @@ from qtpy.QtWidgets import QComboBox, QCompleter, QSizePolicy
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.filter_io import get_bec_signals_for_classes, replace_combobox_items
 
@@ -20,7 +21,7 @@ logger = bec_logger.logger
 
 
 class BECDeviceFilter(enum.Enum):
-    """Filter for BEC device classes."""
+    """Device class filters accepted by :class:`DeviceComboBox`."""
 
     DEVICE = "Device"
     POSITIONER = "Positioner"
@@ -29,6 +30,20 @@ class BECDeviceFilter(enum.Enum):
 
 
 class DeviceInputConfig(ConnectionConfig):
+    """Serializable configuration for :class:`DeviceComboBox`.
+
+    Attributes:
+        device_filter: Enabled device class filters as ``BECDeviceFilter.value`` strings.
+        readout_filter: Enabled readout priority filters as ``ReadoutPriority.value`` strings.
+        devices: Explicit device names shown by the combobox.
+        default: Device selected by default.
+        arg_name: Optional argument name used by scan/input widgets.
+        apply_filter: Whether the combobox should refresh devices from the BEC device manager.
+        signal_class_filter: Signal class names used to restrict listed devices.
+        autocomplete: Whether to use the explicit completer model instead of Qt's default
+            editable-combobox completer.
+    """
+
     device_filter: list[str] = Field(default_factory=list)
     readout_filter: list[str] = Field(default_factory=list)
     devices: list[str] = Field(default_factory=list)
@@ -41,6 +56,17 @@ class DeviceInputConfig(ConnectionConfig):
     @field_validator("device_filter")
     @classmethod
     def check_device_filter(cls, value):
+        """Validate configured device class filters.
+
+        Args:
+            value: Device class filter values from the persisted widget configuration.
+
+        Returns:
+            The validated filter values.
+
+        Raises:
+            ValueError: If any configured filter is not a valid ``BECDeviceFilter`` value.
+        """
         valid_filters = [entry.value for entry in BECDeviceFilter]
         for device_filter in value:
             if device_filter not in valid_filters:
@@ -52,6 +78,17 @@ class DeviceInputConfig(ConnectionConfig):
     @field_validator("readout_filter")
     @classmethod
     def check_readout_filter(cls, value):
+        """Validate configured readout priority filters.
+
+        Args:
+            value: Readout priority filter values from the persisted widget configuration.
+
+        Returns:
+            The validated filter values.
+
+        Raises:
+            ValueError: If any configured filter is not a valid ``ReadoutPriority`` value.
+        """
         valid_filters = [entry.value for entry in ReadoutPriority]
         for readout_filter in value:
             if readout_filter not in valid_filters:
@@ -62,20 +99,23 @@ class DeviceInputConfig(ConnectionConfig):
 
 
 class DeviceComboBox(BECWidget, QComboBox):
-    """
-    Editable combobox for BEC device input.
+    """Editable combobox for selecting a BEC device.
 
     Args:
-        parent: Parent widget.
-        client: BEC client object.
-        config: Device input configuration.
-        gui_id: GUI ID.
-        device_filter: Device class filter from BECDeviceFilter.
-        readout_priority_filter: Readout priority filter from ReadoutPriority.
-        available_devices: Explicit list of devices. Passing this disables automatic filtering.
-        default: Default device name.
-        arg_name: Argument name used by scan/input widgets.
-        signal_class_filter: Only show devices with signals of these classes.
+        parent: Optional parent widget.
+        client: Optional BEC client object.
+        config: Device input configuration as a ``DeviceInputConfig`` instance or dictionary.
+        gui_id: Optional GUI identifier.
+        device_filter: Device class filter or filters from ``BECDeviceFilter``.
+        readout_priority_filter: Readout priority filter or filters from ``ReadoutPriority``.
+        available_devices: Explicit device names to show. Passing this disables automatic
+            BEC filtering.
+        default: Device name selected during initialization.
+        arg_name: Optional argument name used by scan/input widgets.
+        signal_class_filter: Signal class names used to restrict listed devices.
+        autocomplete: If True, use the explicit line-edit style completer. If False, keep
+            Qt's default editable-combobox completion behavior.
+        **kwargs: Additional keyword arguments passed to ``BECWidget``.
     """
 
     ICON_NAME = "list_alt"
@@ -124,7 +164,6 @@ class DeviceComboBox(BECWidget, QComboBox):
         self._devices: list[str] = []
         self._callback_id = None
         self._is_valid_input = False
-        self._accent_colors = get_accent_colors()
         self._set_first_element_as_empty = False
         self._completer_model = QStringListModel(self)
 
@@ -186,13 +225,25 @@ class DeviceComboBox(BECWidget, QComboBox):
 
     @staticmethod
     def _process_config(config: DeviceInputConfig | dict | None) -> DeviceInputConfig:
+        """Normalize user-provided configuration.
+
+        Args:
+            config: Existing configuration, configuration dictionary, or None.
+
+        Returns:
+            A validated ``DeviceInputConfig`` instance.
+        """
         if config is None:
             return DeviceInputConfig(widget_class="DeviceComboBox")
         return DeviceInputConfig.model_validate(config)
 
     @SafeSlot(str)
     def set_device(self, device: str):
-        """Set the current device if it is valid for the current filters."""
+        """Set the current device if it is valid for the current filters.
+
+        Args:
+            device: Device name to select.
+        """
         if self.validate_device(device):
             self.setCurrentText(device)
             self.config.default = device
@@ -204,7 +255,6 @@ class DeviceComboBox(BECWidget, QComboBox):
     @SafeSlot()
     def update_devices_from_filters(self):
         """Refresh the available device list from current device/readout/signal filters."""
-        current_device = self.currentText()
         self.config.device_filter = [entry.value for entry in self.device_filter]
         self.config.readout_filter = [entry.value for entry in self.readout_filter]
         self.config.signal_class_filter = self.signal_class_filter
@@ -215,13 +265,14 @@ class DeviceComboBox(BECWidget, QComboBox):
         devices = [device for device in devices if self._check_device_filter(device)]
         devices = [device for device in devices if self._check_readout_filter(device)]
         self.devices = [device.name for device in devices]
-        if current_device:
-            self.setCurrentText(current_device)
-            self.check_validity(current_device)
 
     @SafeSlot(list)
     def set_available_devices(self, devices: list[str]):
-        """Use an explicit device list and disable automatic BEC filtering."""
+        """Use an explicit device list and disable automatic BEC filtering.
+
+        Args:
+            devices: Device names to show in the combobox.
+        """
         self.apply_filter = False
         self.devices = devices
 
@@ -374,10 +425,9 @@ class DeviceComboBox(BECWidget, QComboBox):
     def autocomplete(self, value: bool) -> None:
         self.config.autocomplete = value
         if value:
-            completer = QCompleter(self._completer_model, self)
-            self.setCompleter(completer)
+            self.setCompleter(QCompleter(self._completer_model, self))
         else:
-            self._restore_default_completer()
+            self.setCompleter(QCompleter(self.model(), self))
 
     @property
     def device_filter(self) -> list[BECDeviceFilter]:
@@ -394,18 +444,19 @@ class DeviceComboBox(BECWidget, QComboBox):
         """Whether the current text represents a valid device selection."""
         return self._is_valid_input
 
-    def get_available_filters(self) -> list[BECDeviceFilter]:
-        """Return available device class filters."""
-        return list(BECDeviceFilter)
-
-    def get_readout_priority_filters(self) -> list[ReadoutPriority]:
-        """Return available readout priority filters."""
-        return list(ReadoutPriority)
+    def setEnabled(self, enabled: bool) -> None:  # noqa: N802
+        super().setEnabled(enabled)
+        self._update_validity_style(self._is_valid_input)
 
     def set_device_filter(
         self, filter_selection: BECDeviceFilter | str | list[BECDeviceFilter | str]
     ):
-        """Enable one or more device class filters."""
+        """Enable one or more device class filters.
+
+        Args:
+            filter_selection: Filter or filters to enable. Strings must match
+                ``BECDeviceFilter.value``.
+        """
         for device_filter in self._as_list(filter_selection):
             normalized = self._normalize_device_filter(device_filter)
             if normalized is None:
@@ -416,7 +467,12 @@ class DeviceComboBox(BECWidget, QComboBox):
     def set_readout_priority_filter(
         self, filter_selection: ReadoutPriority | str | list[ReadoutPriority | str]
     ):
-        """Enable one or more readout priority filters."""
+        """Enable one or more readout priority filters.
+
+        Args:
+            filter_selection: Readout priority filter or filters to enable. Strings must match
+                ``ReadoutPriority.value``.
+        """
         for readout_filter in self._as_list(filter_selection):
             normalized = self._normalize_readout_filter(readout_filter)
             if normalized is None:
@@ -427,7 +483,12 @@ class DeviceComboBox(BECWidget, QComboBox):
             self._set_readout_filter_enabled(normalized, True)
 
     def on_device_update(self, action: str, content: dict) -> None:
-        """Refresh filters when the BEC device configuration changes."""
+        """Refresh filters when the BEC device configuration changes.
+
+        Args:
+            action: Device update action emitted by BEC.
+            content: Device update payload. Currently unused.
+        """
         if action in ["add", "remove", "reload"]:
             self.device_config_update.emit()
 
@@ -438,24 +499,38 @@ class DeviceComboBox(BECWidget, QComboBox):
         super().cleanup()
 
     def get_current_device(self) -> object:
-        """Return the current BEC device object."""
+        """Return the current BEC device object.
+
+        Returns:
+            Device object for the current combobox text.
+        """
         return self.get_device_object(self._device_name_from_text(self.currentText()))
 
     @Slot(str)
     def check_validity(self, input_text: str) -> None:
-        """Validate current text and update visual state."""
+        """Validate current text and update visual state.
+
+        Args:
+            input_text: Current combobox text.
+        """
         if self.validate_device(input_text):
             self._is_valid_input = True
             self.device_selected.emit(input_text)
-            self.setStyleSheet("border: 1px solid transparent;")
         else:
             self._is_valid_input = False
             self.device_reset.emit()
-            if self.isEnabled():
-                self.setStyleSheet("border: 1px solid red;")
+        self._update_validity_style(self._is_valid_input)
 
     def validate_device(self, device: str | None) -> bool:
-        """Validate a device against the current filtered device selection."""
+        """Validate a device against the current filtered device selection.
+
+        Args:
+            device: Device name or displayed device text to validate.
+
+        Returns:
+            True if the device exists in the current BEC device manager and is present in the
+            filtered combobox list.
+        """
         if not device:
             return False
         device_name = self._device_name_from_text(device)
@@ -463,7 +538,17 @@ class DeviceComboBox(BECWidget, QComboBox):
         return device_name in self.devices and device_name in all_devices
 
     def get_device_object(self, device: str) -> object:
-        """Return a device object by name."""
+        """Return a device object by name.
+
+        Args:
+            device: Device name.
+
+        Returns:
+            BEC device object.
+
+        Raises:
+            ValueError: If the device is not available in the device manager.
+        """
         dev = getattr(self.dev, device, None)
         if dev is None:
             raise ValueError(
@@ -506,14 +591,16 @@ class DeviceComboBox(BECWidget, QComboBox):
     ) -> bool:
         if not self.device_filter:
             return True
-        return any(isinstance(device, self._device_handler[entry]) for entry in self.device_filter)
+        return all(isinstance(device, self._device_handler[entry]) for entry in self.device_filter)
 
     def _check_readout_filter(
         self, device: Device | BECSignal | ComputedSignal | Positioner
     ) -> bool:
-        if not self.readout_filter:
-            return True
         return device.readout_priority in self.readout_filter
+
+    def _update_validity_style(self, is_valid: bool) -> None:
+        border_color = "transparent" if is_valid or not self.isEnabled() else "red"
+        self.setStyleSheet(f"border: 1px solid {border_color};")
 
     def _filter_devices_by_signal_class(
         self, devices: list[Device | BECSignal | ComputedSignal | Positioner]
@@ -527,23 +614,10 @@ class DeviceComboBox(BECWidget, QComboBox):
         return [device for device in devices if device.name in allowed_devices]
 
     def _replace_items(self, devices: list[str]):
-        current_text = self.currentText()
-        replace_combobox_items(self, devices)
-        self._update_completer_model(devices)
-        if self._set_first_element_as_empty:
-            self.insertItem(0, "")
-        self.setCurrentText(current_text)
-
-    def _update_completer_model(self, items: list[str]) -> None:
-        self._completer_model.setStringList(items)
-
-    def _restore_default_completer(self) -> None:
-        if self.completer() is not None and self.completer().model() == self.model():
-            return
-        current_text = self.currentText()
-        self.setEditable(False)
-        self.setEditable(True)
-        self.setCurrentText(current_text)
+        items = [""] + devices if self._set_first_element_as_empty else devices
+        replace_combobox_items(self, items, preserve_current_text=True, block_signals=True)
+        self._completer_model.setStringList(devices)
+        self.check_validity(self.currentText())
 
     def _device_name_from_text(self, text: str) -> str:
         index = self.findText(text)
