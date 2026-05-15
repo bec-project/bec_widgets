@@ -440,6 +440,37 @@ def test_scan_info_adapter_skips_duplicate_visible_kwargs():
     }
 
 
+def test_scan_info_adapter_rejects_unsupported_visible_inputs():
+    scan_info = {
+        "class": "UnsupportedScan",
+        "base_class": "ScanBaseV4",
+        "arg_input": {},
+        "arg_bundle_size": {"bundle": 0, "min": None, "max": None},
+        "gui_visibility": {"Regions": ["regions"]},
+        "signature": [
+            {
+                "name": "regions",
+                "kind": "KEYWORD_ONLY",
+                "default": "_empty",
+                "annotation": {
+                    "Generic": {
+                        "origin": "list",
+                        "args": [
+                            {"Generic": {"origin": "tuple", "args": ["float", "float", "int"]}}
+                        ],
+                    }
+                },
+            }
+        ],
+    }
+
+    gui_config = ScanInfoAdapter().build_scan_ui_config(scan_info)
+    unsupported_inputs = ScanInfoAdapter.unsupported_inputs(gui_config)
+
+    assert [input_spec["name"] for input_spec in unsupported_inputs] == ["regions"]
+    assert ScanInfoAdapter.has_scan_ui_config(scan_info) is False
+
+
 def test_scan_control_propagates_reference_units_across_kwarg_groups(qtbot, mocked_client):
     scan_info = {
         "class": "RoundScan",

@@ -12,6 +12,8 @@ ScanInputConfig = dict[str, Any]
 ScanInfo = dict[str, Any]
 ScanUIConfig = dict[str, Any]
 
+SUPPORTED_SCAN_INPUT_TYPES = {"device", "DeviceBase", "float", "int", "bool", "str"}
+
 
 class ScanInfoAdapter:
     """Normalize available-scan payloads into the structure consumed by ``ScanControl``."""
@@ -26,12 +28,41 @@ class ScanInfoAdapter:
         Returns:
             bool: ``True`` when a supported GUI metadata field is present.
         """
-        return bool(
+        if not (
             scan_info.get("gui_visibility")
             or scan_info.get("gui_config")
             or scan_info.get("gui_visualization")
             or scan_info.get("signature")
+        ):
+            return False
+
+        gui_config = ScanInfoAdapter().build_scan_ui_config(scan_info)
+        return not ScanInfoAdapter.unsupported_inputs(gui_config)
+
+    @staticmethod
+    def is_supported_input_type(input_type: AnnotationValue) -> bool:
+        """Return whether ``ScanGroupBox`` has a widget for this serialized type."""
+        return (
+            isinstance(input_type, str)
+            and input_type in SUPPORTED_SCAN_INPUT_TYPES
+            or isinstance(input_type, dict)
+            and "Literal" in input_type
         )
+
+    @staticmethod
+    def unsupported_inputs(gui_config: ScanUIConfig) -> list[ScanInputConfig]:
+        """Return input configs that cannot be rendered by ``ScanGroupBox``."""
+        inputs = []
+        arg_group = gui_config.get("arg_group")
+        if arg_group:
+            inputs.extend(arg_group.get("inputs", []))
+        for group in gui_config.get("kwarg_groups", []):
+            inputs.extend(group.get("inputs", []))
+        return [
+            input_config
+            for input_config in inputs
+            if not ScanInfoAdapter.is_supported_input_type(input_config.get("type"))
+        ]
 
     @staticmethod
     def format_display_name(name: str) -> str:
