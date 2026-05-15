@@ -406,6 +406,39 @@ def test_scan_control_uses_gui_visibility_and_signature(qtbot, mocked_client):
     assert widget.kwarg_boxes[1].layout.itemAtPosition(0, 0).widget().text() == "Exp Time"
     assert "Exposure time\nUnits: s" in widget.kwarg_boxes[1].widgets[0].toolTip()
 
+def test_scan_info_adapter_skips_duplicate_visible_kwargs():
+    scan_info = {
+        "class": "DuplicateScan",
+        "base_class": "ScanBaseV4",
+        "arg_input": {},
+        "arg_bundle_size": {"bundle": 0, "min": None, "max": None},
+        "gui_visibility": {
+            "Scan Parameters": ["relative", "burst_at_each_point"],
+            "Acquisition Parameters": ["exp_time", "burst_at_each_point"],
+        },
+        "signature": [
+            {"name": "relative", "kind": "KEYWORD_ONLY", "default": False, "annotation": "bool"},
+            {
+                "name": "burst_at_each_point",
+                "kind": "KEYWORD_ONLY",
+                "default": 1,
+                "annotation": "int",
+            },
+            {"name": "exp_time", "kind": "KEYWORD_ONLY", "default": 0, "annotation": "float"},
+        ],
+    }
+
+    gui_config = ScanInfoAdapter().build_scan_ui_config(scan_info)
+    groups = {
+        group["name"]: [input_spec["name"] for input_spec in group["inputs"]]
+        for group in gui_config["kwarg_groups"]
+    }
+
+    assert groups == {
+        "Scan Parameters": ["relative", "burst_at_each_point"],
+        "Acquisition Parameters": ["exp_time"],
+    }
+
 
 def test_scan_control_propagates_reference_units_across_kwarg_groups(qtbot, mocked_client):
     scan_info = {

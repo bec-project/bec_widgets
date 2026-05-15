@@ -229,15 +229,19 @@ class ScanInfoAdapter:
 
         kwarg_groups = []
         arg_names = set(arg_input) if isinstance(arg_input, dict) else set()
+        visible_kwarg_names = set()
         for group_name, input_names in gui_visualization.items():
             inputs = []
             for input_name in input_names:
                 if input_name in arg_names or input_name not in signature_by_name:
                     continue
+                if input_name in visible_kwarg_names:
+                    continue
                 param = signature_by_name[input_name]
                 if param.get("kind") in ("VAR_POSITIONAL", "VAR_KEYWORD"):
                     continue
                 inputs.append(self.scan_input_from_signature(param))
+                visible_kwarg_names.add(input_name)
             if inputs:
                 kwarg_groups.append({"name": group_name, "inputs": inputs})
 
