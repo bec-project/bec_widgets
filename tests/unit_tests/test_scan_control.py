@@ -11,6 +11,7 @@ from bec_widgets.utils.forms_from_types.items import StrFormItem
 from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.control.scan_control import ScanControl
+from bec_widgets.widgets.control.scan_control.scan_info_adapter import ScanInfoAdapter
 
 from .client_mocks import mocked_client
 
@@ -406,6 +407,7 @@ def test_scan_control_uses_gui_visibility_and_signature(qtbot, mocked_client):
     assert widget.kwarg_boxes[1].layout.itemAtPosition(0, 0).widget().text() == "Exp Time"
     assert "Exposure time\nUnits: s" in widget.kwarg_boxes[1].widgets[0].toolTip()
 
+
 def test_scan_info_adapter_skips_duplicate_visible_kwargs():
     scan_info = {
         "class": "DuplicateScan",
@@ -469,6 +471,38 @@ def test_scan_info_adapter_rejects_unsupported_visible_inputs():
 
     assert [input_spec["name"] for input_spec in unsupported_inputs] == ["regions"]
     assert ScanInfoAdapter.has_scan_ui_config(scan_info) is False
+
+
+def test_scan_info_adapter_skips_hidden_visible_kwargs():
+    scan_info = {
+        "class": "HiddenScan",
+        "base_class": "ScanBaseV4",
+        "arg_input": {},
+        "arg_bundle_size": {"bundle": 0, "min": None, "max": None},
+        "gui_visibility": {"Acquisition": ["exp_time", "internal_token"]},
+        "signature": [
+            {"name": "exp_time", "kind": "KEYWORD_ONLY", "default": 0, "annotation": "float"},
+            {
+                "name": "internal_token",
+                "kind": "KEYWORD_ONLY",
+                "default": None,
+                "annotation": {
+                    "Annotated": {
+                        "type": "str",
+                        "metadata": {
+                            "ScanArgument": {"display_name": "Internal Token", "hidden": True}
+                        },
+                    }
+                },
+            },
+        ],
+    }
+
+    gui_config = ScanInfoAdapter().build_scan_ui_config(scan_info)
+
+    assert [input_spec["name"] for input_spec in gui_config["kwarg_groups"][0]["inputs"]] == [
+        "exp_time"
+    ]
 
 
 def test_scan_control_propagates_reference_units_across_kwarg_groups(qtbot, mocked_client):
