@@ -1,6 +1,27 @@
 # CHANGELOG
 
 
+## v3.11.0 (2026-05-15)
+
+### Bug Fixes
+
+- Remove device/signal line edit and abstraction layer for combobox/lineEdit
+  ([`bb6c0bb`](https://github.com/bec-project/bec_widgets/commit/bb6c0bb08fc9802bec0d6b9994a76a5bcf2a3a81))
+
+- **scan_control**: Scangroupbox enforce correct device combobox type in correct order
+  ([`c47b246`](https://github.com/bec-project/bec_widgets/commit/c47b246a9fd5c9aff2512c2744b8ff19c87e6e03))
+
+### Features
+
+- **device_input**: Comboboxes can have line edit like autocomplete
+  ([`3d934a8`](https://github.com/bec-project/bec_widgets/commit/3d934a8c3825b17319c3cb99750b96042e0bc230))
+
+### Refactoring
+
+- **device_input**: Consolidation of device/signal combobox logic; docsrtings added
+  ([`daa1ba0`](https://github.com/bec-project/bec_widgets/commit/daa1ba020ce6d05800186d2467a496c1024e8aa5))
+
+
 ## v3.10.0 (2026-05-13)
 
 ### Documentation
