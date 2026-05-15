@@ -212,6 +212,7 @@ class ScanInfoAdapter:
             "tooltip": self.resolve_tooltip(scan_argument),
             "default": default,
             "expert": scan_argument.get("expert", False),
+            "hidden": scan_argument.get("hidden", False),
             "precision": scan_argument.get("precision"),
             "units": scan_argument.get("units"),
             "reference_units": scan_argument.get("reference_units"),
@@ -271,7 +272,10 @@ class ScanInfoAdapter:
                 param = signature_by_name[input_name]
                 if param.get("kind") in ("VAR_POSITIONAL", "VAR_KEYWORD"):
                     continue
-                inputs.append(self.scan_input_from_signature(param))
+                scan_input = self.scan_input_from_signature(param)
+                if scan_input.get("hidden"):
+                    continue
+                inputs.append(scan_input)
                 visible_kwarg_names.add(input_name)
             if inputs:
                 kwarg_groups.append({"name": group_name, "inputs": inputs})
