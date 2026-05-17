@@ -3,7 +3,9 @@ from unittest import mock
 import numpy as np
 import pytest
 from bec_lib import messages
+from bec_lib.endpoints import MessageEndpoints
 
+from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.progress.bec_progressbar.bec_progressbar import (
     BECProgressBar,
     ProgressState,
@@ -148,7 +150,6 @@ def test_source_label_updates(scan_progressbar):
 
 def test_set_progress_source_connections(scan_progressbar, monkeypatch):
     """ """
-    from bec_lib.endpoints import MessageEndpoints
 
     connect_calls = []
     disconnect_calls = []
@@ -185,6 +186,69 @@ def test_set_progress_source_connections(scan_progressbar, monkeypatch):
     prev_connect_count = len(connect_calls)
     scan_progressbar.set_progress_source(ProgressSource.DEVICE_PROGRESS, device=device)
     assert len(connect_calls) == prev_connect_count, "No extra connect made for same source"
+
+
+def test_set_progress_source_disconnects_previous_device_subscription(
+    scan_progressbar, monkeypatch
+):
+
+    disconnect_calls = []
+
+    monkeypatch.setattr(scan_progressbar.bec_dispatcher, "connect_slot", lambda *args: None)
+    monkeypatch.setattr(
+        scan_progressbar.bec_dispatcher,
+        "disconnect_slot",
+        lambda slot, endpoint: disconnect_calls.append(endpoint),
+    )
+
+    scan_progressbar.set_progress_source(ProgressSource.DEVICE_PROGRESS, device="motor1")
+    scan_progressbar.set_progress_source(ProgressSource.DEVICE_PROGRESS, device="motor2")
+
+    assert disconnect_calls == [MessageEndpoints.device_progress(device="motor1")]
+
+
+def test_set_progress_source_disconnects_device_when_switching_to_scan(
+    scan_progressbar, monkeypatch
+):
+
+    disconnect_calls = []
+
+    monkeypatch.setattr(scan_progressbar.bec_dispatcher, "connect_slot", lambda *args: None)
+    monkeypatch.setattr(
+        scan_progressbar.bec_dispatcher,
+        "disconnect_slot",
+        lambda slot, endpoint: disconnect_calls.append(endpoint),
+    )
+
+    scan_progressbar.set_progress_source(ProgressSource.DEVICE_PROGRESS, device="motor1")
+    scan_progressbar.set_progress_source(ProgressSource.SCAN_PROGRESS)
+
+    assert disconnect_calls == [MessageEndpoints.device_progress(device="motor1")]
+
+
+def test_cleanup_disconnects_active_device_subscription(scan_progressbar, monkeypatch):
+
+    disconnect_calls = []
+
+    monkeypatch.setattr(scan_progressbar.bec_dispatcher, "connect_slot", lambda *args: None)
+    monkeypatch.setattr(
+        scan_progressbar.bec_dispatcher,
+        "disconnect_slot",
+        lambda slot, endpoint: disconnect_calls.append(endpoint),
+    )
+    monkeypatch.setattr(scan_progressbar.progressbar, "close", lambda: None)
+    monkeypatch.setattr(scan_progressbar.progressbar, "deleteLater", lambda: None)
+    monkeypatch.setattr(BECWidget, "cleanup", lambda self: None)
+
+    scan_progressbar.set_progress_source(ProgressSource.DEVICE_PROGRESS, device="motor1")
+    ScanProgressBar.cleanup(scan_progressbar)
+
+    assert disconnect_calls == [
+        MessageEndpoints.device_progress(device="motor1"),
+        MessageEndpoints.scan_queue_status(),
+    ]
+    assert scan_progressbar._progress_source is None
+    assert scan_progressbar._progress_device is None
 
 
 def test_progressbar_queue_update(scan_progressbar):

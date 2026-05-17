@@ -152,6 +152,7 @@ class ScanProgressBar(BECWidget, QWidget):
 
         self.connect_to_queue()
         self._progress_source = None
+        self._progress_device = None
         self.task = None
         self.scan_number = None
         self.progress_started.connect(lambda: print("Scan progress started"))
@@ -166,7 +167,7 @@ class ScanProgressBar(BECWidget, QWidget):
         """
         Set the source of the progress.
         """
-        if self._progress_source == source:
+        if self._progress_source == source and self._progress_device == device:
             self.update_source_label(source, device=device)
             return
         if self._progress_source is not None:
@@ -175,10 +176,11 @@ class ScanProgressBar(BECWidget, QWidget):
                 (
                     MessageEndpoints.scan_progress()
                     if self._progress_source == ProgressSource.SCAN_PROGRESS
-                    else MessageEndpoints.device_progress(device=device)
+                    else MessageEndpoints.device_progress(device=self._progress_device)
                 ),
             )
         self._progress_source = source
+        self._progress_device = None if source == ProgressSource.SCAN_PROGRESS else device
         self.bec_dispatcher.connect_slot(
             self.on_progress_update,
             (
@@ -316,11 +318,16 @@ class ScanProgressBar(BECWidget, QWidget):
                 (
                     MessageEndpoints.scan_progress()
                     if self._progress_source == ProgressSource.SCAN_PROGRESS
-                    else MessageEndpoints.device_progress(device=self._progress_source.value)
+                    else MessageEndpoints.device_progress(device=self._progress_device)
                 ),
             )
+        self._progress_source = None
+        self._progress_device = None
         self.progressbar.close()
         self.progressbar.deleteLater()
+        self.bec_dispatcher.disconnect_slot(
+            self.on_queue_update, MessageEndpoints.scan_queue_status()
+        )
         super().cleanup()
 
 
