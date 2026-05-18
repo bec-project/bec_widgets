@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.11.1 (2026-05-18)
+
+### Bug Fixes
+
+- **scan progressbar**: Fix device subscription cleanup
+  ([`faa200b`](https://github.com/bec-project/bec_widgets/commit/faa200bf5c3cf0c5bebb9858700106899f583695))
+
+
 ## v3.11.0 (2026-05-15)
 
 ### Bug Fixes
