@@ -36,3 +36,26 @@ def test_toggle_click(qtbot, toggle):
     qtbot.mouseClick(toggle, Qt.LeftButton)
     toggle.paintEvent(None)
     assert toggle.checked is not init_state
+
+
+def test_toggle_disabled_state_blocks_clicks_and_restores_colors(qtbot, toggle):
+    toggle.checked = True
+    assert toggle._track_color == toggle.active_track_color
+    assert toggle._thumb_color == toggle.active_thumb_color
+
+    toggle.setEnabled(False)
+
+    assert toggle._track_color == toggle._disabled_track_color
+    assert toggle._thumb_color == toggle._disabled_thumb_color
+
+    qtbot.mouseClick(toggle, Qt.LeftButton)
+
+    assert toggle.checked is True
+    assert toggle._track_color == toggle._disabled_track_color
+    assert toggle._thumb_color == toggle._disabled_thumb_color
+
+    toggle.setEnabled(True)
+
+    assert toggle.checked is True
+    assert toggle._track_color == toggle.active_track_color
+    assert toggle._thumb_color == toggle.active_thumb_color
