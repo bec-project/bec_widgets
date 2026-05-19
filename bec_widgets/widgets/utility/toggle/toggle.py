@@ -1,6 +1,6 @@
 import sys
 
-from qtpy.QtCore import Property, QEasingCurve, QPointF, QPropertyAnimation, Qt, Signal
+from qtpy.QtCore import Property, QEasingCurve, QEvent, QPointF, QPropertyAnimation, Qt, Signal
 from qtpy.QtGui import QColor, QPainter
 from qtpy.QtWidgets import QApplication, QWidget
 
@@ -41,10 +41,22 @@ class ToggleSwitch(QWidget):
         theme = getattr(QApplication.instance(), "theme", None)
         colors = theme.colors if theme else {}
 
-        self._active_track_color = colors.get("PRIMARY", QColor(33, 150, 243))
-        self._active_thumb_color = colors.get("ON_PRIMARY", QColor(255, 255, 255))
-        self._inactive_track_color = colors.get("SEPARATOR", QColor(200, 200, 200))
-        self._inactive_thumb_color = colors.get("ON_PRIMARY", QColor(255, 255, 255))
+        self._active_track_color = self._theme_color(colors, "PRIMARY", QColor(33, 150, 243))
+        self._active_thumb_color = self._theme_color(colors, "ON_PRIMARY", QColor(255, 255, 255))
+        self._inactive_track_color = self._theme_color(colors, "SEPARATOR", QColor(200, 200, 200))
+        self._inactive_thumb_color = self._theme_color(colors, "ON_PRIMARY", QColor(255, 255, 255))
+        self._disabled_track_color = self._theme_color(colors, "DISABLED_BG", QColor(220, 220, 220))
+        self._disabled_thumb_color = self._theme_color(colors, "DISABLED_FG", QColor(150, 150, 150))
+        self._disabled_border_color = self._theme_color(
+            colors, "DISABLED_BORDER", QColor(170, 170, 170)
+        )
+        if hasattr(self, "_checked"):
+            self.update_colors()
+
+    @staticmethod
+    def _theme_color(colors: dict, key: str, fallback: QColor) -> QColor:
+        color = colors.get(key, fallback)
+        return color if isinstance(color, QColor) else QColor(color)
 
     @Property(bool)
     def checked(self):
@@ -119,28 +131,39 @@ class ToggleSwitch(QWidget):
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         # Draw track
         painter.setBrush(self._track_color)
-        painter.setPen(Qt.NoPen)
+        painter.setPen(self._disabled_border_color if not self.isEnabled() else Qt.PenStyle.NoPen)
         painter.drawRoundedRect(
             0, 0, self.width(), self.height(), self.height() / 2, self.height() / 2
         )
 
         # Draw thumb
         painter.setBrush(self._thumb_color)
+        painter.setPen(Qt.PenStyle.NoPen)
         diameter = int(self.height() * 0.8)
         painter.drawEllipse(int(self._thumb_pos.x()), int(self._thumb_pos.y()), diameter, diameter)
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        if self.isEnabled() and event.button() == Qt.MouseButton.LeftButton:
             self.checked = not self.checked
 
     def update_colors(self):
+        if not self.isEnabled():
+            self._thumb_color = self._disabled_thumb_color
+            self._track_color = self._disabled_track_color
+            return
 
         self._thumb_color = self.active_thumb_color if self._checked else self.inactive_thumb_color
         self._track_color = self.active_track_color if self._checked else self.inactive_track_color
+
+    def changeEvent(self, event):
+        if event.type() == QEvent.Type.EnabledChange:
+            self.update_colors()
+            self.update()
+        super().changeEvent(event)
 
     def get_thumb_pos(self, checked):
         return QPointF(self.width() - self.height() + 3, 2) if checked else QPointF(3, 2)
@@ -167,7 +190,7 @@ class ToggleSwitch(QWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    from qtpy.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
+    from qtpy.QtWidgets import QHBoxLayout, QWidget
 
     from bec_widgets.utils.colors import apply_theme
     from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
@@ -177,9 +200,12 @@ if __name__ == "__main__":  # pragma: no cover
     widget = QWidget()
     layout = QHBoxLayout(widget)
     toggle = ToggleSwitch()
+    toggle_disabled = ToggleSwitch()
     dark_mode_btn = DarkModeButton()
     layout.addWidget(toggle)
+    layout.addWidget(toggle_disabled)
     layout.addWidget(dark_mode_btn)
+    toggle_disabled.setEnabled(False)
     window = QWidget()
     window.setLayout(layout)
     window.show()
