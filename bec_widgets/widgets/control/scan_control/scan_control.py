@@ -186,12 +186,16 @@ class ScanControl(BECWidget, QWidget):
         ).resource
         if self.config.allowed_scans is None:
             supported_scans = ["ScanBase", "SyncFlyScanBase", "AsyncFlyScanBase", "ScanBaseV4"]
-            allowed_scans = [
-                scan_name
-                for scan_name, scan_info in self.available_scans.items()
-                if scan_info["base_class"] in supported_scans
-                and self._scan_info_adapter.has_scan_ui_config(scan_info)
-            ]
+
+            def _is_scan_supported(scan_name):
+                scan_info = self.available_scans[scan_name]
+                return (
+                    scan_info.get("base_class") in supported_scans
+                    and self._scan_info_adapter.has_scan_ui_config(scan_info)
+                    and not scan_name.startswith("_")
+                )
+
+            allowed_scans = filter(_is_scan_supported, self.available_scans.keys())
 
         else:
             allowed_scans = self.config.allowed_scans
