@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import enum
+import threading
 
 from bec_lib.callback_handler import EventType
 from bec_lib.device import ComputedSignal, Device, Positioner, ReadoutPriority
@@ -216,12 +217,27 @@ class DeviceComboBox(BECWidget, QComboBox):
         else:
             self.setCurrentText("")
 
+        self._log_callback_state("init: before DEVICE_UPDATE register")
         self._callback_id = self.bec_dispatcher.client.callbacks.register(
             EventType.DEVICE_UPDATE, self.on_device_update
         )
+        self._log_callback_state("init: after DEVICE_UPDATE register")
         self.device_config_update.connect(self.update_devices_from_filters)
+        self._log_callback_state("init: device_config_update connected")
         self.currentTextChanged.connect(self.check_validity)
         self.check_validity(self.currentText())
+        self._log_callback_state("init: finished")
+
+    def _log_callback_state(self, event: str, **details) -> None:
+        logger.warning(
+            "DEVICE COMBOBOX CALLBACK TRACE | "
+            f"event={event} | object={self.objectName()} | py_id={id(self)} | "
+            f"thread={threading.current_thread().name}:{threading.get_ident()} | "
+            f"callback_id={getattr(self, '_callback_id', None)} | "
+            f"destroyed={getattr(self, '_destroyed', None)} | "
+            f"current={self.currentText()} | devices_count={len(getattr(self, '_devices', []))} | "
+            f"details={details}"
+        )
 
     @staticmethod
     def _process_config(config: DeviceInputConfig | dict | None) -> DeviceInputConfig:
@@ -255,16 +271,25 @@ class DeviceComboBox(BECWidget, QComboBox):
     @SafeSlot()
     def update_devices_from_filters(self):
         """Refresh the available device list from current device/readout/signal filters."""
+        self._log_callback_state(
+            "update_devices_from_filters: enter",
+            apply_filter=self.apply_filter,
+            device_filter=[entry.value for entry in self.device_filter],
+            readout_filter=[entry.value for entry in self.readout_filter],
+            signal_class_filter=self.signal_class_filter,
+        )
         self.config.device_filter = [entry.value for entry in self.device_filter]
         self.config.readout_filter = [entry.value for entry in self.readout_filter]
         self.config.signal_class_filter = self.signal_class_filter
         if not self.apply_filter:
+            self._log_callback_state("update_devices_from_filters: apply-filter false return")
             return
 
         devices = self._filter_devices_by_signal_class(self.dev.enabled_devices)
         devices = [device for device in devices if self._check_device_filter(device)]
         devices = [device for device in devices if self._check_readout_filter(device)]
         self.devices = [device.name for device in devices]
+        self._log_callback_state("update_devices_from_filters: finished")
 
     @SafeSlot(list)
     def set_available_devices(self, devices: list[str]):
@@ -489,16 +514,26 @@ class DeviceComboBox(BECWidget, QComboBox):
             action: Device update action emitted by BEC.
             content: Device update payload. Currently unused.
         """
+        self._log_callback_state("on_device_update: enter", action=action, content=content)
         if action in ["add", "remove", "reload"]:
-            logger.warning(f"DEVICE COMBOBOX UPDATE: {action} : {content}")
+            self._log_callback_state("on_device_update: emitting device_config_update")
             self.device_config_update.emit()
+            self._log_callback_state("on_device_update: emitted device_config_update")
+        else:
+            self._log_callback_state("on_device_update: ignored action", action=action)
 
     def cleanup(self):
         """Cleanup the widget."""
+        self._log_callback_state("cleanup: start")
         if self._callback_id is not None:
+            self._log_callback_state("cleanup: removing callback")
             self.bec_dispatcher.client.callbacks.remove(self._callback_id)
             self._callback_id = None
+            self._log_callback_state("cleanup: callback removed")
+        else:
+            self._log_callback_state("cleanup: callback already None")
         super().cleanup()
+        self._log_callback_state("cleanup: after super")
 
     def get_current_device(self) -> object:
         """Return the current BEC device object.

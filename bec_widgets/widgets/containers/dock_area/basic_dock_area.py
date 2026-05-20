@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import threading
 from dataclasses import dataclass
 from typing import Any, Callable, Literal, Mapping, Sequence, cast
 
@@ -166,9 +167,31 @@ class DockAreaWidget(BECWidget, QWidget):
 
     def _default_close_handler(self, dock: CDockWidget, widget: QWidget) -> None:
         """Default dock close routine used when no custom handler is provided."""
+        logger.warning(
+            "DOCK AREA LIFECYCLE TRACE | "
+            f"event=default-close-handler:start | dock={dock.objectName()} | "
+            f"dock_py_id={id(dock)} | widget={widget.objectName()} | "
+            f"widget_class={widget.__class__.__name__} | widget_py_id={id(widget)} | "
+            f"thread={threading.current_thread().name}:{threading.get_ident()}"
+        )
         widget.close()
+        logger.warning(
+            "DOCK AREA LIFECYCLE TRACE | "
+            f"event=default-close-handler:after-widget-close | dock={dock.objectName()} | "
+            f"dock_valid={isValid(dock)} | widget={widget.objectName()} | "
+            f"widget_valid={isValid(widget)}"
+        )
         dock.closeDockWidget()
+        logger.warning(
+            "DOCK AREA LIFECYCLE TRACE | "
+            f"event=default-close-handler:after-closeDockWidget | dock={dock.objectName()} | "
+            f"dock_valid={isValid(dock)}"
+        )
         dock.deleteDockWidget()
+        logger.warning(
+            "DOCK AREA LIFECYCLE TRACE | "
+            f"event=default-close-handler:end | dock_py_id={id(dock)} | dock_valid={isValid(dock)}"
+        )
 
     def close_dock(self, dock: CDockWidget, widget: QWidget | None = None) -> None:
         """
@@ -372,12 +395,45 @@ class DockAreaWidget(BECWidget, QWidget):
         close_handler = self._resolve_close_handler(widget, on_close)
 
         def on_widget_destroyed():
+            logger.warning(
+                "DOCK AREA LIFECYCLE TRACE | "
+                f"event=widget_removed-signal:start | dock_py_id={id(dock)} | "
+                f"dock_valid={isValid(dock)} | widget={widget.objectName()} | "
+                f"widget_py_id={id(widget)} | thread={threading.current_thread().name}:{threading.get_ident()}"
+            )
             if not isValid(dock):
+                logger.warning(
+                    "DOCK AREA LIFECYCLE TRACE | "
+                    f"event=widget_removed-signal:dock-invalid-return | dock_py_id={id(dock)}"
+                )
                 return
             dock.closeDockWidget()
+            logger.warning(
+                "DOCK AREA LIFECYCLE TRACE | "
+                f"event=widget_removed-signal:after-closeDockWidget | dock={dock.objectName()} | "
+                f"dock_valid={isValid(dock)}"
+            )
             dock.deleteDockWidget()
+            logger.warning(
+                "DOCK AREA LIFECYCLE TRACE | "
+                f"event=widget_removed-signal:end | dock_py_id={id(dock)} | dock_valid={isValid(dock)}"
+            )
 
-        dock.closeRequested.connect(lambda: close_handler(dock))
+        def on_close_requested():
+            logger.warning(
+                "DOCK AREA LIFECYCLE TRACE | "
+                f"event=closeRequested:start | dock={dock.objectName()} | dock_py_id={id(dock)} | "
+                f"widget={widget.objectName()} | widget_class={widget.__class__.__name__} | "
+                f"widget_py_id={id(widget)} | thread={threading.current_thread().name}:{threading.get_ident()}"
+            )
+            close_handler(dock)
+            logger.warning(
+                "DOCK AREA LIFECYCLE TRACE | "
+                f"event=closeRequested:end | dock_py_id={id(dock)} | dock_valid={isValid(dock)} | "
+                f"widget_py_id={id(widget)} | widget_valid={isValid(widget)}"
+            )
+
+        dock.closeRequested.connect(on_close_requested)
         if hasattr(widget, "widget_removed"):
             widget.widget_removed.connect(on_widget_destroyed)
 
@@ -410,13 +466,50 @@ class DockAreaWidget(BECWidget, QWidget):
         return dock
 
     def _delete_dock(self, dock: CDockWidget) -> None:
+        logger.warning(
+            "DOCK AREA LIFECYCLE TRACE | "
+            f"event=delete-dock:start | dock={dock.objectName()} | dock_py_id={id(dock)} | "
+            f"dock_valid={isValid(dock)} | thread={threading.current_thread().name}:{threading.get_ident()}"
+        )
         widget = dock.widget()
+        logger.warning(
+            "DOCK AREA LIFECYCLE TRACE | "
+            f"event=delete-dock:widget-resolved | dock_py_id={id(dock)} | "
+            f"widget={widget.objectName() if widget else None} | "
+            f"widget_class={widget.__class__.__name__ if widget else None} | "
+            f"widget_py_id={id(widget) if widget else None} | "
+            f"widget_valid={isValid(widget) if widget else None}"
+        )
         if widget and isValid(widget):
             widget.close()
+            logger.warning(
+                "DOCK AREA LIFECYCLE TRACE | "
+                f"event=delete-dock:after-widget-close | dock_py_id={id(dock)} | "
+                f"widget={widget.objectName()} | widget_valid={isValid(widget)}"
+            )
             widget.deleteLater()
+            logger.warning(
+                "DOCK AREA LIFECYCLE TRACE | "
+                f"event=delete-dock:after-widget-deleteLater | dock_py_id={id(dock)} | "
+                f"widget_py_id={id(widget)} | widget_valid={isValid(widget)}"
+            )
         if isValid(dock):
             dock.closeDockWidget()
+            logger.warning(
+                "DOCK AREA LIFECYCLE TRACE | "
+                f"event=delete-dock:after-closeDockWidget | dock={dock.objectName()} | "
+                f"dock_valid={isValid(dock)}"
+            )
             dock.deleteDockWidget()
+            logger.warning(
+                "DOCK AREA LIFECYCLE TRACE | "
+                f"event=delete-dock:end | dock_py_id={id(dock)} | dock_valid={isValid(dock)}"
+            )
+        else:
+            logger.warning(
+                "DOCK AREA LIFECYCLE TRACE | "
+                f"event=delete-dock:dock-invalid-skip | dock_py_id={id(dock)}"
+            )
 
     def _resolve_dock_reference(
         self, ref: CDockWidget | QWidget | str | None, *, allow_none: bool = True

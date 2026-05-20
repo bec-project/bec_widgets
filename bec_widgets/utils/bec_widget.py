@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from datetime import datetime
 from typing import TYPE_CHECKING
 
@@ -327,17 +328,47 @@ class BECWidget(BECConnector):
 
     def cleanup(self):
         """Cleanup the widget."""
+        logger.warning(
+            "BEC WIDGET LIFECYCLE TRACE | "
+            f"event=cleanup:start | class={self.__class__.__name__} | "
+            f"object={self.objectName()} | py_id={id(self)} | "
+            f"thread={threading.current_thread().name}:{threading.get_ident()} | "
+            f"destroyed={getattr(self, '_destroyed', None)}"
+        )
         with RPCRegister.delayed_broadcast():
             # All widgets need to call super().cleanup() in their cleanup method
             logger.info(f"Registry cleanup for widget {self.__class__.__name__}")
             self.rpc_register.remove_rpc(self)
         children = self.findChildren(BECWidget)
+        logger.warning(
+            "BEC WIDGET LIFECYCLE TRACE | "
+            f"event=cleanup:children-found | class={self.__class__.__name__} | "
+            f"object={self.objectName()} | py_id={id(self)} | child_count={len(children)}"
+        )
         for child in children:
             if not shiboken6.isValid(child):
                 # If the child is not valid, it means it has already been deleted
+                logger.warning(
+                    "BEC WIDGET LIFECYCLE TRACE | "
+                    f"event=cleanup:skip-invalid-child | parent={self.objectName()} | "
+                    f"parent_py_id={id(self)} | child_py_id={id(child)}"
+                )
                 continue
+            logger.warning(
+                "BEC WIDGET LIFECYCLE TRACE | "
+                f"event=cleanup:closing-child | parent={self.objectName()} | "
+                f"parent_py_id={id(self)} | child_class={child.__class__.__name__} | "
+                f"child_object={child.objectName()} | child_py_id={id(child)} | "
+                f"child_destroyed={getattr(child, '_destroyed', None)}"
+            )
             child.close()
             child.deleteLater()
+            logger.warning(
+                "BEC WIDGET LIFECYCLE TRACE | "
+                f"event=cleanup:child-deleteLater-called | parent={self.objectName()} | "
+                f"parent_py_id={id(self)} | child_class={child.__class__.__name__} | "
+                f"child_object={child.objectName()} | child_py_id={id(child)}"
+            )
 
         # Tear down busy overlay explicitly to stop spinner and remove filters
         overlay = getattr(self, "_busy_overlay", None)
@@ -357,13 +388,54 @@ class BECWidget(BECConnector):
                 overlay.deleteLater()
             except Exception as exc:
                 logger.warning(f"Failed to delete busy overlay: {exc}")
+        logger.warning(
+            "BEC WIDGET LIFECYCLE TRACE | "
+            f"event=cleanup:end | class={self.__class__.__name__} | "
+            f"object={self.objectName()} | py_id={id(self)} | "
+            f"destroyed={getattr(self, '_destroyed', None)}"
+        )
 
     def closeEvent(self, event):
         """Wrap the close even to ensure the rpc_register is cleaned up."""
+        logger.warning(
+            "BEC WIDGET LIFECYCLE TRACE | "
+            f"event=closeEvent:enter | class={self.__class__.__name__} | "
+            f"object={self.objectName()} | py_id={id(self)} | "
+            f"thread={threading.current_thread().name}:{threading.get_ident()} | "
+            f"destroyed={getattr(self, '_destroyed', None)}"
+        )
         try:
             if not self._destroyed:
                 self.bec_dispatcher.disconnect_owner(self)
+                logger.warning(
+                    "BEC WIDGET LIFECYCLE TRACE | "
+                    f"event=closeEvent:before-cleanup | class={self.__class__.__name__} | "
+                    f"object={self.objectName()} | py_id={id(self)}"
+                )
                 self.cleanup()
                 self._destroyed = True
+                logger.warning(
+                    "BEC WIDGET LIFECYCLE TRACE | "
+                    f"event=closeEvent:after-cleanup-set-destroyed | "
+                    f"class={self.__class__.__name__} | object={self.objectName()} | "
+                    f"py_id={id(self)} | destroyed={self._destroyed}"
+                )
+            else:
+                logger.warning(
+                    "BEC WIDGET LIFECYCLE TRACE | "
+                    f"event=closeEvent:already-destroyed | class={self.__class__.__name__} | "
+                    f"object={self.objectName()} | py_id={id(self)}"
+                )
         finally:
+            logger.warning(
+                "BEC WIDGET LIFECYCLE TRACE | "
+                f"event=closeEvent:calling-super | class={self.__class__.__name__} | "
+                f"object={self.objectName()} | py_id={id(self)}"
+            )
             super().closeEvent(event)  # pylint: disable=no-member
+            logger.warning(
+                "BEC WIDGET LIFECYCLE TRACE | "
+                f"event=closeEvent:exit | class={self.__class__.__name__} | "
+                f"object={self.objectName()} | py_id={id(self)} | "
+                f"destroyed={getattr(self, '_destroyed', None)}"
+            )

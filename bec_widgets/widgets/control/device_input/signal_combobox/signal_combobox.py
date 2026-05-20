@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import threading
+
 from bec_lib.callback_handler import EventType
 from bec_lib.device import Signal as BECSignal
 from bec_lib.logger import bec_logger
@@ -137,10 +139,13 @@ class SignalComboBox(BECWidget, QComboBox):
         if self.config.autocomplete:
             self.autocomplete = True
 
+        self._log_callback_state("init: before DEVICE_UPDATE register")
         self._device_update_register = self.bec_dispatcher.client.callbacks.register(
-            EventType.DEVICE_UPDATE, self.update_signals_from_filters
+            EventType.DEVICE_UPDATE, self.on_device_update
         )
+        self._log_callback_state("init: after DEVICE_UPDATE register")
         self.currentTextChanged.connect(self.on_text_changed)
+        self._log_callback_state("init: currentTextChanged connected")
 
         self.set_filter(signal_filter or [Kind.hinted, Kind.normal, Kind.config])
 
@@ -149,6 +154,18 @@ class SignalComboBox(BECWidget, QComboBox):
         if default is not None:
             self.set_signal(default)
         self.check_validity(self.currentText())
+        self._log_callback_state("init: finished")
+
+    def _log_callback_state(self, event: str, **details) -> None:
+        logger.warning(
+            "SIGNAL COMBOBOX CALLBACK TRACE | "
+            f"event={event} | object={self.objectName()} | py_id={id(self)} | "
+            f"thread={threading.current_thread().name}:{threading.get_ident()} | "
+            f"callback_id={getattr(self, '_device_update_register', None)} | "
+            f"destroyed={getattr(self, '_destroyed', None)} | "
+            f"device={getattr(self, '_device', None)} | current={self.currentText()} | "
+            f"details={details}"
+        )
 
     @staticmethod
     def _process_config(config: SignalComboBoxConfig | dict | None) -> SignalComboBoxConfig:
@@ -190,11 +207,18 @@ class SignalComboBox(BECWidget, QComboBox):
         """
         previous_device = self._device
         valid_device = device if self.validate_device(device) else None
+        self._log_callback_state(
+            "set_device: before update_signals_from_filters",
+            requested_device=device,
+            previous_device=previous_device,
+            valid_device=valid_device,
+        )
         self._device = valid_device
         self.config.device = self._device
         if valid_device is None or valid_device != previous_device:
             self.setCurrentText("")
         self.update_signals_from_filters()
+        self._log_callback_state("set_device: after update_signals_from_filters")
 
     @SafeSlot()
     @SafeSlot(dict, dict)
@@ -207,15 +231,23 @@ class SignalComboBox(BECWidget, QComboBox):
             content: Optional callback payload from BEC device updates. Currently unused.
             metadata: Optional callback metadata from BEC device updates. Currently unused.
         """
+        self._log_callback_state(
+            "update_signals_from_filters: enter",
+            content=content,
+            metadata=metadata,
+            signal_class_filter=self._signal_class_filter,
+            require_device=self._require_device,
+        )
         self.config.signal_filter = [kind.name for kind in self.signal_filter]
 
-        logger.warning(f"SIGNAL COMBOBOX UPDATE: {content}")
-
         if self._signal_class_filter:
+            self._log_callback_state("update_signals_from_filters: class-filter path")
             self.update_signals_from_signal_classes()
+            self._log_callback_state("update_signals_from_filters: class-filter return")
             return
 
         if not self.validate_device(self._device):
+            self._log_callback_state("update_signals_from_filters: invalid-device return")
             self._device = None
             self.config.device = None
             self._set_signal_groups([], [], [])
@@ -225,6 +257,7 @@ class SignalComboBox(BECWidget, QComboBox):
         device_info = device._info.get("signals", {})
 
         if isinstance(device, BECSignal):
+            self._log_callback_state("update_signals_from_filters: bec-signal return")
             self._set_signal_groups([(self._device, {})], [], [])
             return
 
@@ -248,6 +281,23 @@ class SignalComboBox(BECWidget, QComboBox):
                 device_name=self._device,
             ),
         )
+        self._log_callback_state(
+            "update_signals_from_filters: finished",
+            signal_count=len(self._signals),
+            hinted_count=len(self._hinted_signals),
+            normal_count=len(self._normal_signals),
+            config_count=len(self._config_signals),
+        )
+
+    def on_device_update(self, action: str, content: dict) -> None:
+        """Log BEC device-update callback entry before refreshing filters."""
+        self._log_callback_state("on_device_update: enter", action=action, content=content)
+        if action in ["add", "remove", "reload", "update"]:
+            self._log_callback_state("on_device_update: before direct update")
+            self.update_signals_from_filters(action, content)
+            self._log_callback_state("on_device_update: after direct update")
+        else:
+            self._log_callback_state("on_device_update: ignored action", action=action)
 
     @Property(str)
     def device(self) -> str:
@@ -590,10 +640,16 @@ class SignalComboBox(BECWidget, QComboBox):
 
     def cleanup(self):
         """Cleanup the widget."""
+        self._log_callback_state("cleanup: start")
         if self._device_update_register is not None:
+            self._log_callback_state("cleanup: removing callback")
             self.bec_dispatcher.client.callbacks.remove(self._device_update_register)
             self._device_update_register = None
+            self._log_callback_state("cleanup: callback removed")
+        else:
+            self._log_callback_state("cleanup: callback already None")
         super().cleanup()
+        self._log_callback_state("cleanup: after super")
 
     @staticmethod
     def _normalize_kind(value: Kind | str) -> Kind | None:
