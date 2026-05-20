@@ -24,6 +24,7 @@ logger = bec_logger.logger
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.endpoints import EndpointInfo
 
+    from bec_widgets.utils.bec_widget import BECWidget
     from bec_widgets.utils.rpc_server import RPCServer
 
 
@@ -77,6 +78,7 @@ class QtThreadSafeCallback(QObject):
         self.cb_info = cb_info
 
         self.cb = cb
+        self.cb_owner = louie.saferef.safe_ref(cb.__self__) if hasattr(cb, "__self__") else None
         self.cb_ref = louie.saferef.safe_ref(cb)
         self.cb_signal.connect(self.cb)
         self.topics = set()
@@ -276,6 +278,22 @@ class BECDispatcher:
         """
         # pylint: disable=protected-access
         self.disconnect_topics(self.client.connector._topics_cb)
+
+    def disconnect_owner(self, owner: BECWidget):
+        """
+        Disconnect all slots owned by a particular widget.
+
+        Args:
+            owner(BECWidget): The owner widget whose slots should be disconnected
+        """
+        slots_to_disconnect = []
+        for connected_slot in self._registered_slots.values():
+            if connected_slot.cb_owner is not None and connected_slot.cb_owner() == owner:
+                slots_to_disconnect.append(connected_slot)
+        for slot in slots_to_disconnect:
+            topics = slot.topics.copy()
+            for topic in topics:
+                self.disconnect_slot(slot.cb, topic)
 
     def start_cli_server(self, gui_id: str | None = None):
         """
