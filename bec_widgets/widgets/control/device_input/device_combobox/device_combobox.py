@@ -191,6 +191,13 @@ class DeviceComboBox(BECWidget, QComboBox):
         if self.config.autocomplete:
             self.autocomplete = True
 
+        self._callback_id = self.bec_dispatcher.client.callbacks.register(
+            EventType.DEVICE_UPDATE, self.on_device_update
+        )
+        self.device_config_update.connect(
+            self.update_devices_from_filters, Qt.ConnectionType.QueuedConnection
+        )
+
         if available_devices is not None:
             self.set_available_devices(available_devices)
 
@@ -216,12 +223,6 @@ class DeviceComboBox(BECWidget, QComboBox):
         else:
             self.setCurrentText("")
 
-        self._callback_id = self.bec_dispatcher.client.callbacks.register(
-            EventType.DEVICE_UPDATE, self.on_device_update
-        )
-        self.device_config_update.connect(
-            self.update_devices_from_filters, Qt.ConnectionType.QueuedConnection
-        )
         self.currentTextChanged.connect(self.check_validity)
         self.check_validity(self.currentText())
 
@@ -257,6 +258,9 @@ class DeviceComboBox(BECWidget, QComboBox):
     @SafeSlot()
     def update_devices_from_filters(self):
         """Refresh the available device list from current device/readout/signal filters."""
+        if self._callback_id is None or getattr(self, "_destroyed", False):
+            return
+
         self.config.device_filter = [entry.value for entry in self.device_filter]
         self.config.readout_filter = [entry.value for entry in self.readout_filter]
         self.config.signal_class_filter = self.signal_class_filter
@@ -491,6 +495,8 @@ class DeviceComboBox(BECWidget, QComboBox):
             action: Device update action emitted by BEC.
             content: Device update payload. Currently unused.
         """
+        if self._callback_id is None or getattr(self, "_destroyed", False):
+            return
         if action in ["add", "remove", "reload"]:
             self.device_config_update.emit()
 

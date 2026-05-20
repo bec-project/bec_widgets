@@ -211,6 +211,9 @@ class SignalComboBox(BECWidget, QComboBox):
             content: Optional callback payload from BEC device updates. Currently unused.
             metadata: Optional callback metadata from BEC device updates. Currently unused.
         """
+        if self._device_update_register is None or getattr(self, "_destroyed", False):
+            return
+
         self.config.signal_filter = [kind.name for kind in self.signal_filter]
 
         if self._signal_class_filter:
@@ -253,6 +256,8 @@ class SignalComboBox(BECWidget, QComboBox):
 
     def on_device_update(self, action: str, content: dict) -> None:
         """Refresh filters when BEC reports device configuration changes."""
+        if self._device_update_register is None or getattr(self, "_destroyed", False):
+            return
         if action in ["add", "remove", "reload"]:
             self.device_config_update.emit()
 
