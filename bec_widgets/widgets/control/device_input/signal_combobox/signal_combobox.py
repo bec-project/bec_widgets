@@ -222,20 +222,23 @@ class SignalComboBox(BECWidget, QComboBox):
         self._log_callback_state("set_device: after update_signals_from_filters")
 
     @SafeSlot()
-    @SafeSlot(dict, dict)
-    def update_signals_from_filters(
-        self, content: dict | None = None, metadata: dict | None = None
-    ):
+    @SafeSlot(str, dict)
+    def update_signals_from_filters(self, action: str | None = None, content: dict | None = None):
         """Refresh available signals from the current device and filters.
 
         Args:
+            action: Optional BEC device update action. If provided, only device list changing
+                actions trigger a refresh.
             content: Optional callback payload from BEC device updates. Currently unused.
-            metadata: Optional callback metadata from BEC device updates. Currently unused.
         """
+        if action is not None and action not in ["add", "remove", "reload"]:
+            self._log_callback_state("update_signals_from_filters: ignored action", action=action)
+            return
+
         self._log_callback_state(
             "update_signals_from_filters: enter",
+            action=action,
             content=content,
-            metadata=metadata,
             signal_class_filter=self._signal_class_filter,
             require_device=self._require_device,
         )
@@ -293,12 +296,9 @@ class SignalComboBox(BECWidget, QComboBox):
     def on_device_update(self, action: str, content: dict) -> None:
         """Log BEC device-update callback entry before refreshing filters."""
         self._log_callback_state("on_device_update: enter", action=action, content=content)
-        if action in ["add", "remove", "reload", "update"]:
-            self._log_callback_state("on_device_update: before direct update")
-            self.update_signals_from_filters(action, content)
-            self._log_callback_state("on_device_update: after direct update")
-        else:
-            self._log_callback_state("on_device_update: ignored action", action=action)
+        self._log_callback_state("on_device_update: before update_signals_from_filters")
+        self.update_signals_from_filters(action, content)
+        self._log_callback_state("on_device_update: after update_signals_from_filters")
 
     @Property(str)
     def device(self) -> str:
