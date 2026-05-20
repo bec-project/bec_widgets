@@ -10,16 +10,18 @@ from qtpy.QtWidgets import (
     QDialogButtonBox,
     QDoubleSpinBox,
     QFormLayout,
-    QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
+    QSizePolicy,
     QSpinBox,
     QVBoxLayout,
+    QWidget,
 )
 
+from bec_widgets.utils.flow_layout import FlowLayoutWidget
 from bec_widgets.utils.scan_arg_metadata import (
     apply_numeric_limits,
     apply_numeric_precision,
@@ -195,11 +197,14 @@ class ScanGroupBox(QGroupBox):
         self.box_type = box_type
         self._hide_add_remove_buttons = False
 
-        vbox_layout = QVBoxLayout(self)
+        self._root_layout = QVBoxLayout(self)
+        self._root_layout.setContentsMargins(6, 6, 6, 6)
         hbox_layout = QHBoxLayout()
-        vbox_layout.addLayout(hbox_layout)
-        self.layout = QGridLayout()
-        vbox_layout.addLayout(self.layout)
+        self._root_layout.addLayout(hbox_layout)
+        self._bundles_layout = QVBoxLayout()
+        self._bundles_layout.setContentsMargins(0, 0, 0, 0)
+        self._bundles_layout.setSpacing(8)
+        self._root_layout.addLayout(self._bundles_layout)
 
         # Add bundle button
         self.button_add_bundle = QPushButton(self)
@@ -217,7 +222,10 @@ class ScanGroupBox(QGroupBox):
         self.labels = []
         self.widgets = []
         self._widget_configs = {}
-        self._column_labels = {}
+        self._widget_labels = {}
+        self._widget_bundle_indexes = {}
+        self._bundle_widgets = []
+        self._bundle_containers = []
         self.selected_devices = {}
 
         self.init_box(self.config)
@@ -225,48 +233,48 @@ class ScanGroupBox(QGroupBox):
         self.button_add_bundle.clicked.connect(self.add_widget_bundle)
         self.button_remove_bundle.clicked.connect(self.remove_widget_bundle)
 
+    # NOTE: no sizing overrides are needed. Qt propagates height-for-width natively
+    # (FlowLayout -> FlowLayoutWidget -> QVBoxLayout -> QGroupBox): QWidgetItem consults
+    # layout()->totalHeightForWidth(), which already includes the title-aware group box
+    # margins. Host layouts should top-align or stretch below the box; ScanControl uses
+    # layout.setAlignment(Qt.AlignTop).
+
     def init_box(self, config: dict):
         box_name = config.get("name", "ScanGroupBox")
         self.inputs = config.get("inputs", {})
         self.setTitle(box_name)
 
-        # Labels
-        self.add_input_labels(self.inputs, 0)
-
-        # Widgets
         if self.box_type == "args":
             min_bundle = self.config.get("min", 1)
-            for i in range(1, min_bundle + 1):
-                self.add_input_widgets(self.inputs, i)
+            for _ in range(1, min_bundle + 1):
+                self.add_input_widgets(self.inputs)
         else:
-            self.add_input_widgets(self.inputs, 1)
+            self.add_input_widgets(self.inputs)
             self.button_add_bundle.setVisible(False)
             self.button_remove_bundle.setVisible(False)
 
-    def add_input_labels(self, group_inputs: dict, row: int) -> None:
-        """
-        Adds the given arg_group from arg_bundle to the scan control layout. The input labels are always added to the first row.
-
-        Args:
-            group(dict): Dictionary containing the arg_group information.
-        """
-        for column_index, item in enumerate(group_inputs):
-            arg_name = item.get("name", None)
-            display_name = item.get("display_name", arg_name)
-            label = QLabel(text=display_name)
-            self.layout.addWidget(label, row, column_index)
-            self.labels.append(label)
-            self._column_labels[column_index] = label
-
-    def add_input_widgets(self, group_inputs: dict, row) -> None:
+    def add_input_widgets(self, group_inputs: dict) -> None:
         """
         Adds the given arg_group from arg_bundle to the scan control layout.
 
         Args:
             group_inputs(dict): Dictionary containing the arg_group information.
-            row(int): The row to add the widgets to.
         """
-        for column_index, item in enumerate(group_inputs):
+        bundle_index = len(self._bundle_widgets)
+        bundle_container = FlowLayoutWidget(
+            self,
+            horizontal_spacing=8,
+            vertical_spacing=8,
+            minimum_item_width=130,
+            normalize_item_sizes=True,
+        )
+        bundle_layout = bundle_container.flow_layout
+        bundle_widgets = []
+        self._bundles_layout.addWidget(bundle_container)
+        self._bundle_containers.append(bundle_container)
+        self._bundle_widgets.append(bundle_widgets)
+
+        for item in group_inputs:
             arg_name = item.get("name", None)
             default = item.get("default", None)
             item_type = item.get("type", None)
@@ -306,8 +314,23 @@ class ScanGroupBox(QGroupBox):
                 widget.set_literals(item["type"].get("Literal", []))
             self._widget_configs[widget] = item
             apply_unit_metadata(widget, item)
-            self.layout.addWidget(widget, row, column_index)
+
+            label = QLabel(text=item.get("display_name", item.get("name", None)), parent=self)
+            label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+            tile = QWidget(bundle_container)
+            tile.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+            tile_layout = QVBoxLayout(tile)
+            tile_layout.setContentsMargins(0, 0, 0, 0)
+            tile_layout.setSpacing(2)
+            tile_layout.addWidget(label)
+            tile_layout.addWidget(widget)
+            bundle_layout.addWidget(tile)
+
+            self.labels.append(label)
             self.widgets.append(widget)
+            bundle_widgets.append(widget)
+            self._widget_labels[widget] = label
+            self._widget_bundle_indexes[widget] = bundle_index
 
     @Slot(str)
     def emit_device_selected(self, device_name):
@@ -325,11 +348,10 @@ class ScanGroupBox(QGroupBox):
         Adds a new row of widgets to the scan control layout. Only usable for arg_groups.
         """
         arg_max = self.config.get("max", None)
-        row = self.layout.rowCount()
-        if arg_max is not None and row >= arg_max:
+        if arg_max is not None and self.count_arg_rows() >= arg_max:
             return
 
-        self.add_input_widgets(self.inputs, row)
+        self.add_input_widgets(self.inputs)
 
     def remove_widget_bundle(self):
         """
@@ -337,31 +359,46 @@ class ScanGroupBox(QGroupBox):
         """
         arg_min = self.config.get("min", None)
         row = self.count_arg_rows()
+        if row <= 0:
+            return
         if arg_min is not None and row <= arg_min:
             return
 
-        for widget in self.widgets[-len(self.inputs) :]:
-            if isinstance(widget, DeviceComboBox):
-                self.selected_devices[widget] = ""
-            self._widget_configs.pop(widget, None)
-            widget.close()
-            widget.deleteLater()
-        self.widgets = self.widgets[: -len(self.inputs)]
+        self._remove_bundle(row - 1)
 
         selected_devices_str = " ".join(self.selected_devices.values())
         self.device_selected.emit(selected_devices_str.strip())
 
     def remove_all_widget_bundles(self):
         """Remove every widget bundle from the scan control layout."""
-        for widget in list(self.widgets):
+        while self._bundle_widgets:
+            self._remove_bundle(len(self._bundle_widgets) - 1)
+        self.device_selected.emit("")
+
+    def _remove_bundle(self, bundle_index: int) -> None:
+        bundle_widgets = self._bundle_widgets.pop(bundle_index)
+        bundle_container = self._bundle_containers.pop(bundle_index)
+
+        for widget in bundle_widgets:
             if isinstance(widget, DeviceComboBox):
                 self.selected_devices.pop(widget, None)
             self._widget_configs.pop(widget, None)
+            label = self._widget_labels.pop(widget, None)
+            if label in self.labels:
+                self.labels.remove(label)
+            self._widget_bundle_indexes.pop(widget, None)
+            if widget in self.widgets:
+                self.widgets.remove(widget)
             widget.close()
             widget.deleteLater()
-            self.layout.removeWidget(widget)
-        self.widgets.clear()
-        self.device_selected.emit("")
+
+        self._bundles_layout.removeWidget(bundle_container)
+        bundle_container.close()
+        bundle_container.deleteLater()
+
+        for widget, index in list(self._widget_bundle_indexes.items()):
+            if index > bundle_index:
+                self._widget_bundle_indexes[widget] = index - 1
 
     @Property(bool)
     def hide_add_remove_buttons(self):
@@ -388,25 +425,20 @@ class ScanGroupBox(QGroupBox):
 
     def _get_arg_parameters(self, device_object: bool = True):
         args = []
-        for i in range(1, self.layout.rowCount()):
-            for j in range(self.layout.columnCount()):
-                try:  # In case that the bundle size changes
-                    widget = self.layout.itemAtPosition(i, j).widget()
-                    if isinstance(widget, DeviceComboBox) and device_object:
-                        value = widget.get_current_device()
-                    elif isinstance(widget, DeviceComboBox):
-                        value = widget.currentText()
-                    else:
-                        value = WidgetIO.get_value(widget)
-                    args.append(value)
-                except AttributeError:
-                    continue
+        for bundle_widgets in self._bundle_widgets:
+            for widget in bundle_widgets:
+                if isinstance(widget, DeviceComboBox) and device_object:
+                    value = widget.get_current_device()
+                elif isinstance(widget, DeviceComboBox):
+                    value = widget.currentText()
+                else:
+                    value = WidgetIO.get_value(widget)
+                args.append(value)
         return args
 
     def _get_kwarg_parameters(self, device_object: bool = True):
         kwargs = {}
-        for i in range(self.layout.columnCount()):
-            widget = self.layout.itemAtPosition(1, i).widget()
+        for widget in self.widgets:
             if isinstance(widget, DeviceComboBox) and device_object:
                 value = widget.get_current_device().name
             elif isinstance(widget, DeviceComboBox):
@@ -419,16 +451,23 @@ class ScanGroupBox(QGroupBox):
         return kwargs
 
     def count_arg_rows(self):
-        widget_rows = 0
-        for row in range(self.layout.rowCount()):
-            for col in range(self.layout.columnCount()):
-                item = self.layout.itemAtPosition(row, col)
-                if item is not None:
-                    widget = item.widget()
-                    if widget is not None:
-                        if isinstance(widget, DeviceComboBox):
-                            widget_rows += 1
-        return widget_rows
+        return len(self._bundle_widgets)
+
+    def label_for_widget(self, widget) -> QLabel | None:
+        """Return the label paired with a scan input widget."""
+        return self._widget_labels.get(widget)
+
+    def label_texts(self) -> list[str]:
+        """Return labels in the same order as ``widgets``."""
+        return [
+            self._widget_labels[widget].text()
+            for widget in self.widgets
+            if widget in self._widget_labels
+        ]
+
+    def get_bundle_widgets(self, index: int) -> list[QWidget]:
+        """Return input widgets for a positional-argument bundle."""
+        return list(self._bundle_widgets[index])
 
     def set_parameters(self, parameters: list | dict):
         if self.box_type == "args":
@@ -447,8 +486,8 @@ class ScanGroupBox(QGroupBox):
 
         bundles_needed = -(-len(parameters) // inputs_per_bundle)
 
-        for row in range(1, bundles_needed + 1):
-            self.add_input_widgets(self.inputs, row)
+        for _ in range(bundles_needed):
+            self.add_input_widgets(self.inputs)
 
         for i, value in enumerate(parameters):
             WidgetIO.set_value(self.widgets[i], value)
@@ -460,38 +499,26 @@ class ScanGroupBox(QGroupBox):
                     WidgetIO.set_value(widget, value)
                     break
 
-    def _refresh_column_label(self, column: int, item: dict) -> None:
-        if column not in self._column_labels:
+    def _refresh_widget_label(self, widget, item: dict) -> None:
+        label = self._widget_labels.get(widget)
+        if label is None:
             return
-        self._column_labels[column].setText(item.get("display_name", item.get("name", None)))
-
-    def _widget_position(self, widget) -> tuple[int, int] | None:
-        for row in range(self.layout.rowCount()):
-            for column in range(self.layout.columnCount()):
-                item = self.layout.itemAtPosition(row, column)
-                if item is not None and item.widget() is widget:
-                    return row, column
-        return None
+        label.setText(item.get("display_name", item.get("name", None)))
 
     def _update_reference_units(self, device_widget: DeviceComboBox, units: str | None) -> None:
-        position = self._widget_position(device_widget)
-        if position is None:
+        source_bundle = self._widget_bundle_indexes.get(device_widget)
+        if source_bundle is None:
             return
-        source_row, _ = position
         source_name = device_widget.arg_name
 
         for widget in self.widgets:
             item = self._widget_configs.get(widget, {})
             if item.get("reference_units") != source_name:
                 continue
-            widget_position = self._widget_position(widget)
-            if widget_position is None:
-                continue
-            row, column = widget_position
-            if self.box_type == "args" and row != source_row:
+            if self.box_type == "args" and self._widget_bundle_indexes.get(widget) != source_bundle:
                 continue
             apply_unit_metadata(widget, item, units)
-            self._refresh_column_label(column, item)
+            self._refresh_widget_label(widget, item)
 
     def apply_reference_units(self, reference_name: str, units: str | None) -> None:
         """
@@ -505,10 +532,7 @@ class ScanGroupBox(QGroupBox):
             if item.get("reference_units") != reference_name:
                 continue
             apply_unit_metadata(widget, item, units)
-            position = self._widget_position(widget)
-            if position is not None:
-                _, column = position
-                self._refresh_column_label(column, item)
+            self._refresh_widget_label(widget, item)
 
     def _emit_reference_units_changed(
         self, device_widget: DeviceComboBox, units: str | None

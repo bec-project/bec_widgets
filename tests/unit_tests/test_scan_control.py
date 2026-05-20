@@ -386,25 +386,29 @@ def test_scan_control_uses_gui_visibility_and_signature(qtbot, mocked_client):
     widget.comboBox_scan_selection.setCurrentText("annotated_scan")
 
     assert widget.comboBox_scan_selection.count() == 1
-    assert widget.arg_box.layout.itemAtPosition(0, 1).widget().text() == "Start Position"
+    assert widget.arg_box.label_for_widget(widget.arg_box.widgets[1]).text() == "Start Position"
     assert "Custom start tooltip\nUnits from: device" in widget.arg_box.widgets[1].toolTip()
     with patch.object(mocked_client.device_manager.devices.samx, "egu", return_value="mm"):
         WidgetIO.set_value(widget.arg_box.widgets[0], "samx")
-    assert widget.arg_box.layout.itemAtPosition(0, 1).widget().text() == "Start Position"
+    assert widget.arg_box.label_for_widget(widget.arg_box.widgets[1]).text() == "Start Position"
     assert widget.arg_box.widgets[1].suffix() == " mm"
     assert "Custom start tooltip\nUnits: mm" in widget.arg_box.widgets[1].toolTip()
     widget.arg_box.widgets[0].setCurrentText("not_a_device")
-    assert widget.arg_box.layout.itemAtPosition(0, 1).widget().text() == "Start Position"
+    assert widget.arg_box.label_for_widget(widget.arg_box.widgets[1]).text() == "Start Position"
     assert widget.arg_box.widgets[1].suffix() == ""
     assert "Custom start tooltip\nUnits from: device" in widget.arg_box.widgets[1].toolTip()
     assert [box.title() for box in widget.kwarg_boxes] == [
         "Movement Parameters",
         "Acquisition Parameters",
     ]
-    assert widget.kwarg_boxes[0].layout.itemAtPosition(0, 1).widget().text() == "Step Size Custom"
+    assert widget.kwarg_boxes[0].label_for_widget(widget.kwarg_boxes[0].widgets[1]).text() == (
+        "Step Size Custom"
+    )
     assert widget.kwarg_boxes[0].widgets[1].suffix() == " mm"
     assert "Custom step tooltip\nUnits: mm" in widget.kwarg_boxes[0].widgets[1].toolTip()
-    assert widget.kwarg_boxes[1].layout.itemAtPosition(0, 0).widget().text() == "Exp Time"
+    assert widget.kwarg_boxes[1].label_for_widget(widget.kwarg_boxes[1].widgets[0]).text() == (
+        "Exp Time"
+    )
     assert "Exposure time\nUnits: s" in widget.kwarg_boxes[1].widgets[0].toolTip()
 
 
@@ -650,13 +654,12 @@ def test_on_scan_selected(scan_control, scan_name):
     scan_control.comboBox_scan_selection.setCurrentText(scan_name)
 
     # Check arg_box labels and widgets
+    inputs_per_bundle = len(expected_scan_info["arg_input"])
     for index, (arg_key, arg_value) in enumerate(expected_scan_info["arg_input"].items()):
-        label = scan_control.arg_box.layout.itemAtPosition(0, index).widget()
-        assert label.text().lower() == arg_key
+        assert scan_control.arg_box.label_texts()[index].lower() == arg_key
 
-        for row in range(1, expected_scan_info["arg_bundle_size"]["min"] + 1):
-            widget = scan_control.arg_box.layout.itemAtPosition(row, index).widget()
-            assert widget is not None  # Confirm that a widget exists
+        for row in range(expected_scan_info["arg_bundle_size"]["min"]):
+            widget = scan_control.arg_box.get_bundle_widgets(row)[index]
             expected_widget_type = scan_control.arg_box.WIDGET_HANDLER.get(arg_value, None)
             assert isinstance(widget, expected_widget_type)  # Confirm the widget type matches
             if isinstance(widget, DeviceComboBox):
@@ -667,6 +670,9 @@ def test_on_scan_selected(scan_control, scan_name):
                 assert (
                     "async_device" in widget.devices
                 )  # async device should also be present in the device list
+    assert len(scan_control.arg_box.widgets) == (
+        inputs_per_bundle * expected_scan_info["arg_bundle_size"]["min"]
+    )
 
     # Check kwargs boxes
     kwargs_group = [param for param in expected_scan_info["gui_config"]["kwarg_groups"]]
@@ -675,9 +681,8 @@ def test_on_scan_selected(scan_control, scan_name):
     for kwarg_box, kwarg_group in zip(scan_control.kwarg_boxes, kwargs_group):
         assert kwarg_box.title() == kwarg_group["name"]
         for index, kwarg_info in enumerate(kwarg_group["inputs"]):
-            label = kwarg_box.layout.itemAtPosition(0, index).widget()
-            assert label.text() == kwarg_info["display_name"]
-            widget = kwarg_box.layout.itemAtPosition(1, index).widget()
+            widget = kwarg_box.widgets[index]
+            assert kwarg_box.label_for_widget(widget).text() == kwarg_info["display_name"]
             if isinstance(kwarg_info["type"], dict) and "Literal" in kwarg_info["type"]:
                 expected_widget_type = kwarg_box.WIDGET_HANDLER.get("dict", None)
             else:
