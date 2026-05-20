@@ -257,8 +257,8 @@ class DeviceComboBox(BECWidget, QComboBox):
     @SafeSlot()
     def update_devices_from_filters(self):
         """Refresh the available device list from current device/readout/signal filters."""
-        if getattr(self, "_destroyed", False):
-            return
+        # if getattr(self, "_destroyed", False):
+        #     return
 
         self.config.device_filter = [entry.value for entry in self.device_filter]
         self.config.readout_filter = [entry.value for entry in self.readout_filter]
@@ -494,8 +494,8 @@ class DeviceComboBox(BECWidget, QComboBox):
             action: Device update action emitted by BEC.
             content: Device update payload. Currently unused.
         """
-        if getattr(self, "_destroyed", False):
-            return
+        # if getattr(self, "_destroyed", False):
+        #     return
         if action in ["add", "remove", "reload"]:
             self.device_config_update.emit()
 

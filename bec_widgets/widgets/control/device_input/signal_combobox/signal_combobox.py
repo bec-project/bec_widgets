@@ -211,8 +211,8 @@ class SignalComboBox(BECWidget, QComboBox):
             content: Optional callback payload from BEC device updates. Currently unused.
             metadata: Optional callback metadata from BEC device updates. Currently unused.
         """
-        if getattr(self, "_destroyed", False):
-            return
+        # if getattr(self, "_destroyed", False):
+        #     return
 
         self.config.signal_filter = [kind.name for kind in self.signal_filter]
 
