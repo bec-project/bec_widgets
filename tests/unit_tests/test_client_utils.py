@@ -5,6 +5,7 @@ import pytest
 
 from bec_widgets.cli.client import BECDockArea
 from bec_widgets.cli.client_utils import BECGuiClient, _start_plot_process
+from bec_widgets.cli.rpc.rpc_base import RPCBase, RPCResponseTimeoutError, rpc_timeout
 
 
 @pytest.fixture
@@ -257,3 +258,11 @@ def test_client_utils_delete_falls_back_to_direct_close():
         gui.delete("dock")
 
     widget._run_rpc.assert_called_once_with("close")
+
+
+def test_client_utils_gui_client_set_rpc_timeout():
+    gui = BECGuiClient()
+    assert gui._rpc_timeout == 5
+
+    gui.set_rpc_timeout(10)
+    assert gui._rpc_timeout == 10

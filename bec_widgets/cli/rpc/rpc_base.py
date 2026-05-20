@@ -24,6 +24,8 @@ else:
 
 # pylint: disable=protected-access
 
+_DEFAULT_RPC_TIMEOUT = object()
+
 
 def _name_arg(arg):
     if isinstance(arg, DeviceBaseWithConfig):
@@ -154,6 +156,7 @@ class RPCReference:
 
 
 class RPCBase:
+
     def __init__(
         self,
         gui_id: str | None = None,
@@ -211,8 +214,8 @@ class RPCBase:
         self,
         method,
         *args,
-        wait_for_rpc_response=True,
-        timeout=5,
+        wait_for_rpc_response: bool = True,
+        timeout: float | None | object = _DEFAULT_RPC_TIMEOUT,
         gui_id: str | None = None,
         **kwargs,
     ) -> Any:
@@ -223,13 +226,16 @@ class RPCBase:
             method: The method to call.
             args: The arguments to pass to the method.
             wait_for_rpc_response: Whether to wait for the RPC response.
-            timeout: The timeout for the RPC response.
+            timeout: The timeout for the RPC response. If omitted, the client's default RPC
+                timeout is used. If explicitly set to None, wait indefinitely.
             gui_id: The GUI ID to use for the RPC call. If None, the default GUI ID is used.
             kwargs: The keyword arguments to pass to the method.
 
         Returns:
             The result of the RPC call.
         """
+        if timeout is _DEFAULT_RPC_TIMEOUT:
+            timeout = self._root._rpc_timeout
         if method in ["show", "hide", "raise"] and gui_id is None:
             obj = self._root._server_registry.get(self._gui_id)
             if obj is None:

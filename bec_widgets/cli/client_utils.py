@@ -222,6 +222,7 @@ class BECGuiClient(RPCBase):
         self._ipython_registry: dict[str, RPCReference] = {}
         self.available_widgets = AvailableWidgetsNamespace()
         register_serializer_extension()
+        self._rpc_timeout = 5
 
     ####################
     #### Client API ####
@@ -231,6 +232,16 @@ class BECGuiClient(RPCBase):
     def launcher(self) -> RPCBase:
         """The launcher object."""
         return RPCBase(gui_id=f"{self._gui_id}:launcher", parent=self, object_name="launcher")
+
+    def set_rpc_timeout(self, timeout: float):
+        """Set the timeout for RPC calls to the GUI server.
+
+        Args:
+            timeout(float): The timeout in seconds.
+        """
+        if not isinstance(timeout, (int, float)) or timeout < 0:
+            raise ValueError("Timeout must be a non-negative number.")
+        self._rpc_timeout = timeout
 
     def _safe_register_stream(self, endpoint: EndpointInfo, cb: Callable, **kwargs):
         """Check if already registered for registration in idempotent functions."""
