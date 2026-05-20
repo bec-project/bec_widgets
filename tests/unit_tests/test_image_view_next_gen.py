@@ -35,6 +35,17 @@ def test_initialization_defaults(qtbot, mocked_client):
     assert bec_image_view._color_bar is None
 
 
+def test_image_cleanup_cleans_toolbar_device_selection_callbacks(qtbot, mocked_client):
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    device_selection = bec_image_view.toolbar.components.get_action("device_selection").widget
+
+    bec_image_view.cleanup()
+
+    assert device_selection._cleanup_done is True
+    assert device_selection.device_combo_box._callback_id is None
+    assert device_selection.signal_combo_box._device_update_register is None
+
+
 def test_setting_color_map(qtbot, mocked_client):
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
     bec_image_view.color_map = "viridis"

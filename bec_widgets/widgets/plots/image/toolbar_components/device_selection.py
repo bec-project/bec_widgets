@@ -5,6 +5,9 @@ from bec_widgets.utils.toolbars.bundles import ToolbarBundle, ToolbarComponents
 from bec_widgets.utils.toolbars.connections import BundleConnection
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import SignalComboBox
+from bec_lib.logger import bec_logger
+
+logger = bec_logger.logger
 
 
 class DeviceSelection(QWidget):
@@ -139,18 +142,12 @@ class DeviceSelection(QWidget):
 
     def cleanup(self):
         """Clean up the widget resources."""
+        logger.error("Cleaning up DeviceSelection")
         if self._cleanup_done:
             return
         self._cleanup_done = True
         self.device_combo_box.close()
-        self.device_combo_box.deleteLater()
         self.signal_combo_box.close()
-        self.signal_combo_box.deleteLater()
-
-    def closeEvent(self, event):
-        """Ensure embedded BEC widgets clean up when the toolbar widget closes."""
-        self.cleanup()
-        super().closeEvent(event)
 
 
 def device_selection_bundle(components: ToolbarComponents, client=None) -> ToolbarBundle:
