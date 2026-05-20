@@ -362,6 +362,7 @@ class BECWidget(BECConnector):
         """Wrap the close even to ensure the rpc_register is cleaned up."""
         try:
             if not self._destroyed:
+                self.bec_dispatcher.disconnect_owner(self)
                 self.cleanup()
                 self._destroyed = True
         finally:
