@@ -490,6 +490,7 @@ class DeviceComboBox(BECWidget, QComboBox):
             content: Device update payload. Currently unused.
         """
         if action in ["add", "remove", "reload"]:
+            logger.warning(f"DEVICE COMBOBOX UPDATE: {action} : {content}")
             self.device_config_update.emit()
 
     def cleanup(self):

@@ -209,6 +209,8 @@ class SignalComboBox(BECWidget, QComboBox):
         """
         self.config.signal_filter = [kind.name for kind in self.signal_filter]
 
+        logger.warning(f"SIGNAL COMBOBOX UPDATE: {content}")
+
         if self._signal_class_filter:
             self.update_signals_from_signal_classes()
             return
