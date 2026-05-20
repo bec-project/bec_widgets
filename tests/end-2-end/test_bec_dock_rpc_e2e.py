@@ -143,11 +143,11 @@ def test_rpc_gui_obj(connected_client_gui_obj: BECGuiClient, qtbot):
     qtbot.wait(500)
     gui.kill_server()
     assert not gui._gui_is_alive()
-    gui.start(wait=True)
+    gui.show(wait=True)
     assert gui._gui_is_alive()
-    # calling start multiple times should not change anything
-    gui.start(wait=True)
-    gui.start(wait=True)
+    # calling show multiple times should not change anything
+    gui.show(wait=True)
+    gui.show(wait=True)
 
     def wait_for_gui_started():
         return "bec" in gui.windows

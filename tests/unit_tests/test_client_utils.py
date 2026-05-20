@@ -220,7 +220,7 @@ def test_client_utils_new_starts_server_when_not_alive():
         with mock.patch("bec_widgets.cli.client_utils.wait_for_server", _no_wait_for_server):
             with (
                 mock.patch.object(gui, "_check_if_server_is_alive", return_value=False),
-                mock.patch.object(gui, "start") as mock_start,
+                mock.patch.object(gui, "show") as mock_start,
             ):
                 gui.new(wait=False, startup_profile=None)
 

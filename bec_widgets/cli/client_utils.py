@@ -358,7 +358,7 @@ class BECGuiClient(RPCBase):
             )
 
         if not self._check_if_server_is_alive():
-            self.start(wait=True)
+            self.show(wait=True)
         if wait:
             with wait_for_server(self):
                 return self._new_impl(
