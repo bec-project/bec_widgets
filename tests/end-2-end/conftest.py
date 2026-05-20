@@ -45,7 +45,7 @@ def connected_client_gui_obj(qtbot, gui_id, bec_client_lib):
     """
     gui = BECGuiClient(gui_id=gui_id)
     try:
-        gui.start(wait=True)
+        gui.show(wait=True)
         qtbot.waitUntil(lambda: hasattr(gui, "bec"), timeout=5000)
         gui.bec.delete_all()  # ensure clean state
         qtbot.waitUntil(lambda: len(gui.bec.widget_list()) == 0, timeout=10000)
