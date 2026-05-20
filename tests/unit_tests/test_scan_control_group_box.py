@@ -1,7 +1,46 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
 
+from qtpy.QtCore import Qt
+from qtpy.QtWidgets import QVBoxLayout, QWidget
+
 from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.control.scan_control.scan_group_box import ScanGroupBox
+
+
+def _arg_group_input(min_bundles: int = 1) -> dict:
+    return {
+        "name": "Arg Test",
+        "min": min_bundles,
+        "inputs": [
+            {
+                "arg": True,
+                "name": "device",
+                "type": "str",
+                "display_name": "Device",
+                "tooltip": "Device to scan",
+                "default": "samx",
+                "expert": False,
+            },
+            {
+                "arg": True,
+                "name": "start",
+                "type": "float",
+                "display_name": "Start",
+                "tooltip": "Start position",
+                "default": 0,
+                "expert": False,
+            },
+            {
+                "arg": True,
+                "name": "stop",
+                "type": "int",
+                "display_name": "Stop",
+                "tooltip": "Stop position",
+                "default": 1,
+                "expert": False,
+            },
+        ],
+    }
 
 
 def test_kwarg_box(qtbot):
@@ -58,10 +97,7 @@ def test_kwarg_box(qtbot):
     assert kwarg_box.title() == "Kwarg Test"
 
     # Labels
-    assert kwarg_box.layout.itemAtPosition(0, 0).widget().text() == "Exp Time"
-    assert kwarg_box.layout.itemAtPosition(0, 1).widget().text() == "Num Points"
-    assert kwarg_box.layout.itemAtPosition(0, 2).widget().text() == "Relative"
-    assert kwarg_box.layout.itemAtPosition(0, 3).widget().text() == "Scan Type"
+    assert kwarg_box.label_texts() == ["Exp Time", "Num Points", "Relative", "Scan Type"]
 
     # Widget 0
     assert kwarg_box.widgets[0].__class__.__name__ == "ScanDoubleSpinBox"
@@ -95,41 +131,7 @@ def test_kwarg_box(qtbot):
 
 
 def test_arg_box(qtbot):
-    group_input = {
-        "name": "Arg Test",
-        "inputs": [
-            # Test device
-            {
-                "arg": True,
-                "name": "device",
-                "type": "str",
-                "display_name": "Device",
-                "tooltip": "Device to scan",
-                "default": "samx",
-                "expert": False,
-            },
-            # Test float
-            {
-                "arg": True,
-                "name": "start",
-                "type": "float",
-                "display_name": "Start",
-                "tooltip": "Start position",
-                "default": 0,
-                "expert": False,
-            },
-            # Test int
-            {
-                "arg": True,
-                "name": "stop",
-                "type": "int",
-                "display_name": "Stop",
-                "tooltip": "Stop position",
-                "default": 1,
-                "expert": False,
-            },
-        ],
-    }
+    group_input = _arg_group_input()
 
     arg_box = ScanGroupBox(box_type="args", config=group_input)
     assert arg_box is not None
@@ -138,9 +140,7 @@ def test_arg_box(qtbot):
     assert arg_box.title() == "Arg Test"
 
     # Labels
-    assert arg_box.layout.itemAtPosition(0, 0).widget().text() == "Device"
-    assert arg_box.layout.itemAtPosition(0, 1).widget().text() == "Start"
-    assert arg_box.layout.itemAtPosition(0, 2).widget().text() == "Stop"
+    assert arg_box.label_texts() == ["Device", "Start", "Stop"]
 
     # Widget 0
     assert arg_box.widgets[0].__class__.__name__ == "ScanLineEdit"
@@ -157,6 +157,59 @@ def test_arg_box(qtbot):
     # Widget 2
     assert arg_box.widgets[2].__class__.__name__ == "ScanSpinBox"
     assert arg_box.widgets[2].arg_name
+
+
+def test_arg_bundles_have_separate_flow_layouts(qtbot):
+    arg_box = ScanGroupBox(box_type="args", config=_arg_group_input(min_bundles=2))
+    qtbot.addWidget(arg_box)
+    arg_box.show()
+    qtbot.waitExposed(arg_box)
+
+    assert arg_box.count_arg_rows() == 2
+    assert arg_box.get_bundle_widgets(0) == arg_box.widgets[:3]
+    assert arg_box.get_bundle_widgets(1) == arg_box.widgets[3:6]
+    assert arg_box.get_bundle_widgets(0)[0] is not arg_box.get_bundle_widgets(1)[0]
+    assert arg_box.label_texts() == ["Device", "Start", "Stop", "Device", "Start", "Stop"]
+    bundle_layout = arg_box._bundle_containers[0].flow_layout
+    assert bundle_layout.heightForWidth(80) > bundle_layout.heightForWidth(500)
+
+
+def test_scan_group_box_reports_wrapped_height_for_width(qtbot):
+    arg_box = ScanGroupBox(box_type="args", config=_arg_group_input())
+    qtbot.addWidget(arg_box)
+    arg_box.show()
+    qtbot.waitExposed(arg_box)
+
+    assert arg_box.hasHeightForWidth()
+    assert arg_box.heightForWidth(180) > arg_box.heightForWidth(800)
+
+
+def test_scan_group_box_height_tracks_content(qtbot):
+    # Mirrors real usage: ScanControl hosts the boxes in a top-aligned QVBoxLayout, and
+    # Qt's native height-for-width propagation sizes the group box to its wrapped content.
+    container = QWidget()
+    layout = QVBoxLayout(container)
+    layout.setAlignment(Qt.AlignTop)
+    arg_box = ScanGroupBox(box_type="args", config=_arg_group_input())
+    layout.addWidget(arg_box)
+    qtbot.addWidget(container)
+    container.resize(800, 400)
+    container.show()
+    qtbot.waitExposed(container)
+
+    def height_tracks_hint(tolerance: int = 2) -> bool:
+        # Allow a small tolerance: style metrics can introduce off-by-1 rounding between
+        # the laid-out height and heightForWidth across platforms/styles.
+        return abs(arg_box.height() - arg_box.heightForWidth(arg_box.width())) <= tolerance
+
+    heights = {}
+    for width in (800, 300):
+        container.resize(width, 400)
+        qtbot.waitUntil(height_tracks_hint, timeout=1000)
+        heights[width] = arg_box.height()
+
+    # Narrower container -> more wrapped rows -> taller box.
+    assert heights[300] > heights[800]
 
 
 def test_spinbox_limits_from_scan_info(qtbot):

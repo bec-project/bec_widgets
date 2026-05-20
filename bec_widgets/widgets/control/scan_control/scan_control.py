@@ -4,7 +4,7 @@ from typing import Optional
 
 from bec_lib.endpoints import MessageEndpoints
 from pydantic import BaseModel, Field
-from qtpy.QtCore import Signal
+from qtpy.QtCore import Qt, Signal
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import (
     QApplication,
@@ -79,6 +79,7 @@ class ScanControl(BECWidget, QWidget):
         # Main layout
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(5, 5, 5, 5)
+        self.layout.setAlignment(Qt.AlignTop)
         self.arg_box = None
         self.kwarg_boxes = []
         self.expert_mode = False  # TODO implement in the future versions
@@ -162,8 +163,6 @@ class ScanControl(BECWidget, QWidget):
 
         # Append metadata form
         self._add_metadata_form()
-
-        self.layout.addStretch()
 
     def _add_metadata_form(self):
         # Wrap metadata form in a group box
@@ -421,7 +420,6 @@ class ScanControl(BECWidget, QWidget):
         for group in groups:
             box = ScanGroupBox(box_type="kwargs", config=group)
             box.reference_units_changed.connect(self._apply_reference_units_to_other_boxes)
-            box.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
             self.layout.insertWidget(position + len(self.kwarg_boxes), box)
             self.kwarg_boxes.append(box)
             box.setVisible(not self._hide_kwarg_boxes)
@@ -435,7 +433,6 @@ class ScanControl(BECWidget, QWidget):
         self.arg_box = ScanGroupBox(box_type="args", config=group)
         self.arg_box.device_selected.connect(self.emit_device_selected)
         self.arg_box.reference_units_changed.connect(self._apply_reference_units_to_other_boxes)
-        self.arg_box.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.arg_box.hide_add_remove_buttons = self._hide_add_remove_buttons
         self.layout.insertWidget(self.ARG_BOX_POSITION, self.arg_box)
         self.arg_box.setVisible(not self._hide_arg_box)
