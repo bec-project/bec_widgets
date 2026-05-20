@@ -665,9 +665,9 @@ class LaunchWindow(BECMainWindow):
             try:
                 parent = connection.parent()
                 if parent is None and connection.objectName() != self.objectName():
-                    logger.info(
-                        f"Found non-launcher connection without parent: {connection.objectName()}"
-                    )
+                    # logger.info(
+                    #     f"Found non-launcher connection without parent: {connection.objectName()}"
+                    # ) #TODO disabled due to high count
                     return False
             except Exception as e:
                 logger.error(f"Error getting parent of connection: {e}")

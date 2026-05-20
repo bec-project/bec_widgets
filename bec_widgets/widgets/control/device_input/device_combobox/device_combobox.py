@@ -236,6 +236,7 @@ class DeviceComboBox(BECWidget, QComboBox):
             f"callback_id={getattr(self, '_callback_id', None)} | "
             f"destroyed={getattr(self, '_destroyed', None)} | "
             f"current={self.currentText()} | devices_count={len(getattr(self, '_devices', []))} | "
+            f"bec_parent_chain={self._debug_bec_parent_chain()} | "
             f"details={details}"
         )
 

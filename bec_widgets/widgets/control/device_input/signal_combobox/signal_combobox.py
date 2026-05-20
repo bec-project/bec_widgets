@@ -164,6 +164,7 @@ class SignalComboBox(BECWidget, QComboBox):
             f"callback_id={getattr(self, '_device_update_register', None)} | "
             f"destroyed={getattr(self, '_destroyed', None)} | "
             f"device={getattr(self, '_device', None)} | current={self.currentText()} | "
+            f"bec_parent_chain={self._debug_bec_parent_chain()} | "
             f"details={details}"
         )
 
