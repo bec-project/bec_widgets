@@ -1,3 +1,5 @@
+from unittest import mock
+
 import pytest
 from bec_lib.device import ReadoutPriority
 
@@ -122,6 +124,19 @@ def test_device_input_combobox_disabled_invalid_has_neutral_border(device_input_
 
     device_input_combobox.setEnabled(True)
     assert "red" in device_input_combobox.styleSheet()
+
+
+def test_device_input_combobox_cleanup_unregisters_callback(qtbot, mocked_client):
+    with mock.patch.object(mocked_client.callbacks, "remove"):
+        widget = DeviceComboBox(client=mocked_client)
+        qtbot.addWidget(widget)
+        callback_id = widget._callback_id
+
+        widget.close()
+        widget.deleteLater()
+
+        mocked_client.callbacks.remove.assert_called_once_with(callback_id)
+        assert widget._callback_id is None
 
 
 def test_get_device_from_input_combobox_init(device_input_combobox):
