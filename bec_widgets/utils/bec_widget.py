@@ -406,6 +406,7 @@ class BECWidget(BECConnector):
         try:
             if not self._destroyed:
                 self._destroyed = True
+                self.bec_dispatcher.disconnect_owner(self)
                 self.cleanup()
         finally:
             super().closeEvent(event)  # pylint: disable=no-member
