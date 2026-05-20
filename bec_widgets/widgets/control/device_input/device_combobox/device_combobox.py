@@ -219,9 +219,10 @@ class DeviceComboBox(BECWidget, QComboBox):
         self._callback_id = self.bec_dispatcher.client.callbacks.register(
             EventType.DEVICE_UPDATE, self.on_device_update
         )
-        self.device_config_update.connect(
-            self.update_devices_from_filters, Qt.ConnectionType.QueuedConnection
-        )
+        # self.device_config_update.connect(
+        #     self.update_devices_from_filters, Qt.ConnectionType.QueuedConnection
+        # )
+        self.device_config_update.connect(self.update_devices_from_filters)
         self.currentTextChanged.connect(self.check_validity)
         self.check_validity(self.currentText())
 

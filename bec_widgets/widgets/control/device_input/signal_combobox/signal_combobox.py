@@ -141,9 +141,10 @@ class SignalComboBox(BECWidget, QComboBox):
         self._device_update_register = self.bec_dispatcher.client.callbacks.register(
             EventType.DEVICE_UPDATE, self.on_device_update
         )
-        self.device_config_update.connect(
-            self.update_signals_from_filters, Qt.ConnectionType.QueuedConnection
-        )
+        # self.device_config_update.connect(
+        #     self.update_signals_from_filters, Qt.ConnectionType.QueuedConnection
+        # )
+        self.device_config_update.connect(self.update_signals_from_filters)
         self.currentTextChanged.connect(self.on_text_changed)
 
         self.set_filter(signal_filter or [Kind.hinted, Kind.normal, Kind.config])
@@ -256,8 +257,8 @@ class SignalComboBox(BECWidget, QComboBox):
 
     def on_device_update(self, action: str, content: dict) -> None:
         """Refresh filters when BEC reports device configuration changes."""
-        if getattr(self, "_destroyed", False):
-            return
+        # if getattr(self, "_destroyed", False):
+        #     return
         if action in ["add", "remove", "reload"]:
             self.device_config_update.emit()
 
