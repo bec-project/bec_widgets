@@ -9,7 +9,7 @@ from bec_lib.device import ComputedSignal, Device, Positioner, ReadoutPriority
 from bec_lib.device import Signal as BECSignal
 from bec_lib.logger import bec_logger
 from pydantic import Field, field_validator
-from qtpy.QtCore import QSize, QStringListModel, Signal, Slot
+from qtpy.QtCore import QSize, QStringListModel, Qt, Signal, Slot
 from qtpy.QtWidgets import QComboBox, QCompleter, QSizePolicy
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
@@ -219,7 +219,9 @@ class DeviceComboBox(BECWidget, QComboBox):
         self._callback_id = self.bec_dispatcher.client.callbacks.register(
             EventType.DEVICE_UPDATE, self.on_device_update
         )
-        self.device_config_update.connect(self.update_devices_from_filters)
+        self.device_config_update.connect(
+            self.update_devices_from_filters, Qt.ConnectionType.QueuedConnection
+        )
         self.currentTextChanged.connect(self.check_validity)
         self.check_validity(self.currentText())
 
