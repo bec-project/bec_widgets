@@ -14,6 +14,7 @@ class DeviceSelection(QWidget):
         super().__init__(parent=parent)
 
         self.client = client
+        self._cleanup_done = False
         self.supported_signals = [
             "PreviewSignal",
             "AsyncSignal",
@@ -138,10 +139,18 @@ class DeviceSelection(QWidget):
 
     def cleanup(self):
         """Clean up the widget resources."""
+        if self._cleanup_done:
+            return
+        self._cleanup_done = True
         self.device_combo_box.close()
         self.device_combo_box.deleteLater()
         self.signal_combo_box.close()
         self.signal_combo_box.deleteLater()
+
+    def closeEvent(self, event):
+        """Ensure embedded BEC widgets clean up when the toolbar widget closes."""
+        self.cleanup()
+        super().closeEvent(event)
 
 
 def device_selection_bundle(components: ToolbarComponents, client=None) -> ToolbarBundle:
