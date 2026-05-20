@@ -1,6 +1,28 @@
 # CHANGELOG
 
 
+## v3.12.0 (2026-05-20)
+
+### Bug Fixes
+
+- **scan-control**: Filter out private scans from allowed scans
+  ([`2dc0227`](https://github.com/bec-project/bec_widgets/commit/2dc0227d38f0e217e252a5e5751bafd60363a5a4))
+
+- **scan-control**: Hide hidden scan arguments
+  ([`2d8e1ee`](https://github.com/bec-project/bec_widgets/commit/2d8e1eed4d6503c42a38c8de910ddaa54132405d))
+
+- **scan-control**: Reject unsupported scan input types
+  ([`3b579e7`](https://github.com/bec-project/bec_widgets/commit/3b579e740f36c60c3635681a9b2c35b518498f58))
+
+- **scan-control**: Skip duplicate visible scan kwargs
+  ([`b8740c9`](https://github.com/bec-project/bec_widgets/commit/b8740c95941d36102f07a51d74a50e6f262a6646))
+
+### Features
+
+- Add support for new scan signatures including units
+  ([`d5bf10e`](https://github.com/bec-project/bec_widgets/commit/d5bf10e21682ae8270078c7858a036bafbabf10e))
+
+
 ## v3.11.1 (2026-05-18)
 
 ### Bug Fixes
