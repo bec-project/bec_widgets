@@ -907,7 +907,14 @@ class Image(ImageBase):
             async_signal_name=config.async_signal_name,
         )
 
-        self.subscriptions["main"].async_signal_name = None
+        config.async_signal_name = None
+        if target_device == self._config.device and target_entry == self._config.signal:
+            config.device = ""
+            config.signal = ""
+            config.source = None
+            config.monitor_type = None
+            self._signal_configs.pop("main", None)
+            self._set_connection_status("disconnected")
         self.async_update = False
         self._sync_device_selection()
 

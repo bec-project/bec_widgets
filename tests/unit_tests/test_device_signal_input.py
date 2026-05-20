@@ -188,10 +188,12 @@ def test_linked_device_combobox_updates_signal_combobox_on_each_text_change(
 def test_device_signal_input_base_cleanup(qtbot, mocked_client):
     with mock.patch.object(mocked_client.callbacks, "remove"):
         widget = SignalComboBox(client=mocked_client)
+        callback_id = widget._device_update_register
         widget.close()
         widget.deleteLater()
 
-        mocked_client.callbacks.remove.assert_called_once_with(widget._device_update_register)
+        mocked_client.callbacks.remove.assert_called_once_with(callback_id)
+        assert widget._device_update_register is None
 
 
 def test_signal_combobox_get_signal_name_with_item_data(qtbot, device_signal_combobox):

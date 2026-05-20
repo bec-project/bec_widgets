@@ -77,6 +77,7 @@ class SignalComboBox(BECWidget, QComboBox):
 
     device_signal_changed = Signal(str)
     signal_reset = Signal()
+    device_config_update = Signal()
 
     def __init__(
         self,
@@ -138,7 +139,10 @@ class SignalComboBox(BECWidget, QComboBox):
             self.autocomplete = True
 
         self._device_update_register = self.bec_dispatcher.client.callbacks.register(
-            EventType.DEVICE_UPDATE, self.update_signals_from_filters
+            EventType.DEVICE_UPDATE, self.on_device_update
+        )
+        self.device_config_update.connect(
+            self.update_signals_from_filters, Qt.ConnectionType.QueuedConnection
         )
         self.currentTextChanged.connect(self.on_text_changed)
 
@@ -207,6 +211,9 @@ class SignalComboBox(BECWidget, QComboBox):
             content: Optional callback payload from BEC device updates. Currently unused.
             metadata: Optional callback metadata from BEC device updates. Currently unused.
         """
+        if getattr(self, "_destroyed", False):
+            return
+
         self.config.signal_filter = [kind.name for kind in self.signal_filter]
 
         if self._signal_class_filter:
@@ -246,6 +253,13 @@ class SignalComboBox(BECWidget, QComboBox):
                 device_name=self._device,
             ),
         )
+
+    def on_device_update(self, action: str, content: dict) -> None:
+        """Refresh filters when BEC reports device configuration changes."""
+        if getattr(self, "_destroyed", False):
+            return
+        if action in ["add", "remove", "reload"]:
+            self.device_config_update.emit()
 
     @Property(str)
     def device(self) -> str:
@@ -588,7 +602,9 @@ class SignalComboBox(BECWidget, QComboBox):
 
     def cleanup(self):
         """Cleanup the widget."""
-        self.bec_dispatcher.client.callbacks.remove(self._device_update_register)
+        if self._device_update_register is not None:
+            self.bec_dispatcher.client.callbacks.remove(self._device_update_register)
+            self._device_update_register = None
         super().cleanup()
 
     @staticmethod

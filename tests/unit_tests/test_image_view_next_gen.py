@@ -464,6 +464,10 @@ def test_disconnect_clears_async_state(qtbot, mocked_client, monkeypatch):
 
     assert view.subscriptions["main"].async_signal_name is None
     assert view.async_update is False
+    assert view.device == ""
+    assert view.signal == ""
+    assert view.subscriptions["main"].source is None
+    assert view.subscriptions["main"].monitor_type is None
 
 
 ##############################################

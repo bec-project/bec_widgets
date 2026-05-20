@@ -217,14 +217,14 @@ class Ring(BECWidget, QWidget):
 
         match mode:
             case "manual":
-                if self.config.mode == "manual":
+                if self.config.mode == "manual" and self.registered_slot is None:
                     return
                 if self.registered_slot is not None:
                     self.bec_dispatcher.disconnect_slot(*self.registered_slot)
                 self.config.mode = "manual"
                 self.registered_slot = None
             case "scan":
-                if self.config.mode == "scan":
+                if self.config.mode == "scan" and self.registered_slot is not None:
                     return
                 if self.registered_slot is not None:
                     self.bec_dispatcher.disconnect_slot(*self.registered_slot)
@@ -383,9 +383,9 @@ class Ring(BECWidget, QWidget):
         """
         current_RID = meta.get("RID", None)
         if current_RID != self.RID:
+            self.RID = current_RID
             self.set_min_max_values(0, msg.get("max_value", 100))
         self.set_value(msg.get("value", 0))
-        self.update()
 
     @SafeSlot(dict, dict)
     def on_device_readback(self, msg, meta):
@@ -404,7 +404,6 @@ class Ring(BECWidget, QWidget):
         if value is None:
             return
         self.set_value(value)
-        self.update()
 
     @SafeSlot(dict, dict)
     def on_device_progress(self, msg, meta):
@@ -424,7 +423,6 @@ class Ring(BECWidget, QWidget):
         if msg.get("done"):
             value = max_val
         self.set_value(value)
-        self.update()
 
     def paintEvent(self, event):
         if not self.progress_container:

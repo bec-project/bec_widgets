@@ -103,7 +103,6 @@ class RingProgressContainerWidget(QWidget):
             self._hovered_ring = None
             self._last_hover_global_pos = None
             self._hover_tooltip.hide()
-        ring.cleanup()
         ring.close()
         ring.deleteLater()
         self.rings.pop(index)
@@ -373,7 +372,7 @@ class RingProgressContainerWidget(QWidget):
         self._hovered_ring = None
         self._last_hover_global_pos = None
         self._hover_tooltip.hide()
-        for ring in self.rings:
+        for ring in list(self.rings):
             ring.close()
             ring.deleteLater()
         self.rings = []
