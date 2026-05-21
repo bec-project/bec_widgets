@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v3.12.1 (2026-05-21)
+
+### Bug Fixes
+
+- **device_input**: Correct cleanup unsubscribe
+  ([`56427a7`](https://github.com/bec-project/bec_widgets/commit/56427a7f0c3a89fe847d415c8b45212e663434c4))
+
+- **device_input**: Ensure callback is removed after cleanup
+  ([`d99db7d`](https://github.com/bec-project/bec_widgets/commit/d99db7d04208945b86a39d65022b211ba093caed))
+
+- **signal_combobox**: Signature matched for update_signals_from_filters
+  ([`a976837`](https://github.com/bec-project/bec_widgets/commit/a976837cff612349f2a3f17900903c203bc3d250))
+
+
 ## v3.12.0 (2026-05-20)
 
 ### Bug Fixes
