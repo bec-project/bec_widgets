@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.12.2 (2026-05-21)
+
+### Bug Fixes
+
+- **toggle**: Disable styling implemented
+  ([`9eb0541`](https://github.com/bec-project/bec_widgets/commit/9eb05416ab68dcb88732dca8974c665030d34e0b))
+
+
 ## v3.12.1 (2026-05-21)
 
 ### Bug Fixes
