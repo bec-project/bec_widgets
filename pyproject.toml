@@ -1,6 +1,6 @@
 [project]
 name = "bec_widgets"
-version = "3.13.0"
+version = "3.13.1"
 description = "BEC Widgets"
 requires-python = ">=3.11"
 classifiers = [
@@ -57,6 +57,7 @@ dev = [
   "pre_commit~=4.2",
 ]
 qtermwidget = ["pyside6_qtermwidget"]
+
 
 
 

@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v3.13.1 (2026-05-21)
+
+### Bug Fixes
+
+- Use .show instead of .start
+  ([`b4beb27`](https://github.com/bec-project/bec_widgets/commit/b4beb274da745da618f9b37ec241cd0109c088f1))
+
+- **gui**: Replace window.show() with window.raise_window() and add hide() method
+  ([`f7a48b5`](https://github.com/bec-project/bec_widgets/commit/f7a48b5f6a51d391dca26ca42d03bad4f278ff22))
+
+
 ## v3.13.0 (2026-05-21)
 
 ### Features
