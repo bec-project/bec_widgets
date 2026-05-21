@@ -197,16 +197,21 @@ class SignalComboBox(BECWidget, QComboBox):
         self.update_signals_from_filters()
 
     @SafeSlot()
-    @SafeSlot(dict, dict)
-    def update_signals_from_filters(
-        self, content: dict | None = None, metadata: dict | None = None
-    ):
+    @SafeSlot(str, dict)
+    def update_signals_from_filters(self, action: str | None = None, content: dict | None = None):
         """Refresh available signals from the current device and filters.
 
         Args:
+            action: Optional BEC device update action. If provided, only device list changing
+                actions trigger a refresh.
             content: Optional callback payload from BEC device updates. Currently unused.
-            metadata: Optional callback metadata from BEC device updates. Currently unused.
         """
+        if self._device_update_register is None or getattr(self, "_destroyed", False):
+            return
+
+        if action is not None and action not in ["add", "remove", "reload"]:
+            return
+
         self.config.signal_filter = [kind.name for kind in self.signal_filter]
 
         if self._signal_class_filter:

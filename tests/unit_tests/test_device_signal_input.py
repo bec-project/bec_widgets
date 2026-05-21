@@ -196,6 +196,15 @@ def test_device_signal_input_base_cleanup(qtbot, mocked_client):
         assert widget._device_update_register is None
 
 
+def test_signal_combobox_device_update_ignores_update_action(qtbot, mocked_client):
+    widget = create_widget(qtbot=qtbot, widget=SignalComboBox, client=mocked_client)
+
+    with mock.patch.object(widget, "_set_signal_groups") as set_signal_groups:
+        widget.update_signals_from_filters("update", {})
+
+    set_signal_groups.assert_not_called()
+
+
 def test_signal_combobox_get_signal_name_with_item_data(qtbot, device_signal_combobox):
     """Test get_signal_name returns obj_name from item data when available."""
     device_signal_combobox.include_normal_signals = True
