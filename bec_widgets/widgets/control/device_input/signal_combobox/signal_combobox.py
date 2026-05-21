@@ -594,8 +594,9 @@ class SignalComboBox(BECWidget, QComboBox):
     def cleanup(self):
         """Cleanup the widget."""
         if self._device_update_register is not None:
-            self.bec_dispatcher.client.callbacks.remove(self._device_update_register)
+            callback_id = self._device_update_register
             self._device_update_register = None
+            self.bec_dispatcher.client.callbacks.remove(callback_id)
         super().cleanup()
 
     @staticmethod

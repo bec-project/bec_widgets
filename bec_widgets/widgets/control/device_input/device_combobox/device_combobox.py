@@ -489,14 +489,17 @@ class DeviceComboBox(BECWidget, QComboBox):
             action: Device update action emitted by BEC.
             content: Device update payload. Currently unused.
         """
+        if self._callback_id is None or getattr(self, "_destroyed", False):
+            return
         if action in ["add", "remove", "reload"]:
             self.device_config_update.emit()
 
     def cleanup(self):
         """Cleanup the widget."""
         if self._callback_id is not None:
-            self.bec_dispatcher.client.callbacks.remove(self._callback_id)
+            callback_id = self._callback_id
             self._callback_id = None
+            self.bec_dispatcher.client.callbacks.remove(callback_id)
         super().cleanup()
 
     def get_current_device(self) -> object:

@@ -139,6 +139,23 @@ def test_device_input_combobox_cleanup_unregisters_callback(qtbot, mocked_client
         assert widget._callback_id is None
 
 
+def test_device_input_combobox_cleanup_clears_callback_before_unregister(qtbot, mocked_client):
+    widget = DeviceComboBox(client=mocked_client)
+    qtbot.addWidget(widget)
+    callback_id = widget._callback_id
+
+    def assert_callback_cleared(removed_callback_id):
+        assert removed_callback_id == callback_id
+        assert widget._callback_id is None
+
+    with mock.patch.object(
+        mocked_client.callbacks, "remove", side_effect=assert_callback_cleared
+    ) as remove_mock:
+        widget.cleanup()
+
+    remove_mock.assert_called_once_with(callback_id)
+
+
 def test_get_device_from_input_combobox_init(device_input_combobox):
     device_input_combobox.setCurrentIndex(0)
     device_text = device_input_combobox.currentText()

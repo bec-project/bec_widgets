@@ -196,6 +196,41 @@ def test_device_signal_input_base_cleanup(qtbot, mocked_client):
         assert widget._device_update_register is None
 
 
+def test_signal_combobox_cleanup_clears_callback_before_unregister(qtbot, mocked_client):
+    widget = create_widget(qtbot=qtbot, widget=SignalComboBox, client=mocked_client)
+    callback_id = widget._device_update_register
+
+    def assert_callback_cleared(removed_callback_id):
+        assert removed_callback_id == callback_id
+        assert widget._device_update_register is None
+
+    with mock.patch.object(
+        mocked_client.callbacks, "remove", side_effect=assert_callback_cleared
+    ) as remove_mock:
+        widget.cleanup()
+
+    remove_mock.assert_called_once_with(callback_id)
+
+
+def test_signal_combobox_cleanup_blocks_in_flight_device_update(qtbot, mocked_client):
+    widget = create_widget(qtbot=qtbot, widget=SignalComboBox, client=mocked_client)
+    callback_id = widget._device_update_register
+
+    def trigger_in_flight_update(_):
+        widget.update_signals_from_filters("reload", {})
+
+    with (
+        mock.patch.object(
+            mocked_client.callbacks, "remove", side_effect=trigger_in_flight_update
+        ) as remove_mock,
+        mock.patch.object(widget, "_set_signal_groups") as set_signal_groups,
+    ):
+        widget.cleanup()
+
+    remove_mock.assert_called_once_with(callback_id)
+    set_signal_groups.assert_not_called()
+
+
 def test_signal_combobox_device_update_ignores_update_action(qtbot, mocked_client):
     widget = create_widget(qtbot=qtbot, widget=SignalComboBox, client=mocked_client)
 
