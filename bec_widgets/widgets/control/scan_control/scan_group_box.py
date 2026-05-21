@@ -173,7 +173,7 @@ class ScanOptionalWidget(QGroupBox):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(widget)
 
-        self.none_checkbox = QCheckBox("None", self)
+        self.none_checkbox = QCheckBox(self)
         self.none_checkbox.setToolTip("Set this value to None.")
         self.none_checkbox.toggled.connect(self._on_none_toggled)
         layout.addWidget(self.none_checkbox)

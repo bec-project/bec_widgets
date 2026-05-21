@@ -257,7 +257,7 @@ def test_optional_kwarg_widget_round_trips_none(qtbot):
     kwarg_box = ScanGroupBox(box_type="kwargs", config=group_input)
 
     assert isinstance(kwarg_box.widgets[0], ScanOptionalWidget)
-    assert kwarg_box.widgets[0].none_checkbox.text() == "None"
+    assert kwarg_box.widgets[0].none_checkbox.text() == ""
     assert kwarg_box.widgets[0].is_none() is True
     assert kwarg_box.widgets[0].inner_widget.isEnabled() is False
     assert kwarg_box.get_parameters() == {"atol": None}
