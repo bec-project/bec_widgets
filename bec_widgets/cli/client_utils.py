@@ -550,7 +550,7 @@ class BECGuiClient(RPCBase):
         if self.launcher and len(self._top_level) == 0:
             self.launcher._run_rpc("show")  # pylint: disable=protected-access
         for window in self._top_level.values():
-            window.show()
+            window.raise_window()
 
     def _show_all(self):
         with wait_for_server(self):
@@ -569,7 +569,7 @@ class BECGuiClient(RPCBase):
         if self.launcher and len(self._top_level) == 0:
             self.launcher._run_rpc("raise")  # pylint: disable=protected-access
         for window in self._top_level.values():
-            window._run_rpc("raise")  # type: ignore[attr-defined]
+            window.raise_window()
 
     def _raise_all(self):
         with wait_for_server(self):

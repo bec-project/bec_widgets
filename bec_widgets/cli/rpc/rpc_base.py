@@ -207,6 +207,10 @@ class RPCBase:
         # Use explicit call to ensure action name is 'raise' (not 'raise_')
         return self._run_rpc("raise")
 
+    def hide(self):
+        """Hide this widget (or its container)."""
+        return self._run_rpc("hide")
+
     def _run_rpc(
         self,
         method,
