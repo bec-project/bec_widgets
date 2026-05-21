@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.13.0 (2026-05-21)
+
+### Features
+
+- **rpc-base**: Set default RPC timeout and allow customization
+  ([`f03a5d9`](https://github.com/bec-project/bec_widgets/commit/f03a5d9e853bd62b8ec1bad1c1e112fe01befe70))
+
+
 ## v3.12.2 (2026-05-21)
 
 ### Bug Fixes
