@@ -162,6 +162,47 @@ class ScanCheckBox(QCheckBox):
             self.setChecked(default)
 
 
+class ScanOptionalWidget(QGroupBox):
+    def __init__(self, widget, parent=None):
+        super().__init__(parent=parent)
+        self.inner_widget = widget
+        self.arg_name = getattr(widget, "arg_name", None)
+        self.setFlat(True)
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(widget)
+
+        self.none_checkbox = QCheckBox("None", self)
+        self.none_checkbox.setToolTip("Set this value to None.")
+        self.none_checkbox.toggled.connect(self._on_none_toggled)
+        layout.addWidget(self.none_checkbox)
+
+    def _on_none_toggled(self, checked: bool) -> None:
+        self.inner_widget.setEnabled(not checked)
+
+    def set_none(self, checked: bool) -> None:
+        self.none_checkbox.setChecked(checked)
+
+    def is_none(self) -> bool:
+        return self.none_checkbox.isChecked()
+
+    def setToolTip(self, text: str) -> None:  # noqa: N802
+        super().setToolTip(text)
+        self.inner_widget.setToolTip(text)
+        checkbox_tooltip = "Set this value to None."
+        if text:
+            checkbox_tooltip = f"{text}\n{checkbox_tooltip}"
+        self.none_checkbox.setToolTip(checkbox_tooltip)
+
+    def toolTip(self) -> str:  # noqa: N802
+        return self.inner_widget.toolTip()
+
+    def setSuffix(self, suffix: str) -> None:  # noqa: N802
+        if hasattr(self.inner_widget, "setSuffix"):
+            self.inner_widget.setSuffix(suffix)
+
+
 class ScanGroupBox(QGroupBox):
     WIDGET_HANDLER = {
         ScanArgType.DEVICE: DeviceComboBox,
@@ -211,6 +252,7 @@ class ScanGroupBox(QGroupBox):
         self.labels = []
         self.widgets = []
         self._widget_configs = {}
+        self._wrapped_widgets = {}
         self._column_labels = {}
         self.selected_devices = {}
 
@@ -297,10 +339,11 @@ class ScanGroupBox(QGroupBox):
                 )
             if isinstance(widget, ScanLiteralsComboBox):
                 widget.set_literals(item["type"].get("Literal", []))
-            self._widget_configs[widget] = item
-            self._apply_unit_metadata(widget, item)
-            self.layout.addWidget(widget, row, column_index)
-            self.widgets.append(widget)
+            display_widget = self._wrap_optional_widget(widget, item, default)
+            self._widget_configs[display_widget] = item
+            self._apply_unit_metadata(display_widget, item)
+            self.layout.addWidget(display_widget, row, column_index)
+            self.widgets.append(display_widget)
 
     @Slot(str)
     def emit_device_selected(self, device_name):
@@ -334,8 +377,10 @@ class ScanGroupBox(QGroupBox):
             return
 
         for widget in self.widgets[-len(self.inputs) :]:
-            if isinstance(widget, DeviceComboBox):
-                self.selected_devices[widget] = ""
+            inner_widget = self._inner_widget(widget)
+            if isinstance(inner_widget, DeviceComboBox):
+                self.selected_devices[inner_widget] = ""
+                self._wrapped_widgets.pop(inner_widget, None)
             self._widget_configs.pop(widget, None)
             widget.close()
             widget.deleteLater()
@@ -347,8 +392,10 @@ class ScanGroupBox(QGroupBox):
     def remove_all_widget_bundles(self):
         """Remove every widget bundle from the scan control layout."""
         for widget in list(self.widgets):
-            if isinstance(widget, DeviceComboBox):
-                self.selected_devices.pop(widget, None)
+            inner_widget = self._inner_widget(widget)
+            if isinstance(inner_widget, DeviceComboBox):
+                self.selected_devices.pop(inner_widget, None)
+                self._wrapped_widgets.pop(inner_widget, None)
             self._widget_configs.pop(widget, None)
             widget.close()
             widget.deleteLater()
@@ -385,12 +432,7 @@ class ScanGroupBox(QGroupBox):
             for j in range(self.layout.columnCount()):
                 try:  # In case that the bundle size changes
                     widget = self.layout.itemAtPosition(i, j).widget()
-                    if isinstance(widget, DeviceComboBox) and device_object:
-                        value = widget.get_current_device()
-                    elif isinstance(widget, DeviceComboBox):
-                        value = widget.currentText()
-                    else:
-                        value = WidgetIO.get_value(widget)
+                    value = self._widget_value(widget, device_object=device_object)
                     args.append(value)
                 except AttributeError:
                     continue
@@ -400,27 +442,23 @@ class ScanGroupBox(QGroupBox):
         kwargs = {}
         for i in range(self.layout.columnCount()):
             widget = self.layout.itemAtPosition(1, i).widget()
-            if isinstance(widget, DeviceComboBox) and device_object:
-                value = widget.get_current_device().name
-            elif isinstance(widget, DeviceComboBox):
-                value = widget.currentText()
-            elif isinstance(widget, ScanLiteralsComboBox):
-                value = widget.get_value()
-            else:
-                value = WidgetIO.get_value(widget)
+            value = self._widget_value(widget, device_object=device_object)
+            inner_widget = self._inner_widget(widget)
+            if isinstance(inner_widget, DeviceComboBox) and value is not None and device_object:
+                value = value.name
             kwargs[widget.arg_name] = value
         return kwargs
 
     def count_arg_rows(self):
         widget_rows = 0
         for row in range(self.layout.rowCount()):
+            if row == 0:
+                continue
             for col in range(self.layout.columnCount()):
                 item = self.layout.itemAtPosition(row, col)
-                if item is not None:
-                    widget = item.widget()
-                    if widget is not None:
-                        if isinstance(widget, DeviceComboBox):
-                            widget_rows += 1
+                if item is not None and item.widget() is not None:
+                    widget_rows += 1
+                    break
         return widget_rows
 
     def set_parameters(self, parameters: list | dict):
@@ -444,13 +482,13 @@ class ScanGroupBox(QGroupBox):
             self.add_input_widgets(self.inputs, row)
 
         for i, value in enumerate(parameters):
-            WidgetIO.set_value(self.widgets[i], value)
+            self._set_widget_value(self.widgets[i], value)
 
     def _set_kwarg_parameters(self, parameters: dict):
         for widget in self.widgets:
             for key, value in parameters.items():
                 if widget.arg_name == key:
-                    WidgetIO.set_value(widget, value)
+                    self._set_widget_value(widget, value)
                     break
 
     @staticmethod
@@ -505,6 +543,7 @@ class ScanGroupBox(QGroupBox):
             return None
 
     def _widget_position(self, widget) -> tuple[int, int] | None:
+        widget = self._display_widget(widget)
         for row in range(self.layout.rowCount()):
             for column in range(self.layout.columnCount()):
                 item = self.layout.itemAtPosition(row, column)
@@ -608,3 +647,43 @@ class ScanGroupBox(QGroupBox):
             if item.get("lt") is not None:
                 maximum = float(item["lt"]) - step
             widget.setRange(minimum, maximum)
+
+    def _wrap_optional_widget(self, widget, item: dict, default):
+        if not item.get("optional", False):
+            return widget
+
+        wrapped_widget = ScanOptionalWidget(widget, parent=self)
+        wrapped_widget.set_none(default is None)
+        self._wrapped_widgets[widget] = wrapped_widget
+        return wrapped_widget
+
+    @staticmethod
+    def _inner_widget(widget):
+        if isinstance(widget, ScanOptionalWidget):
+            return widget.inner_widget
+        return widget
+
+    def _display_widget(self, widget):
+        return self._wrapped_widgets.get(widget, widget)
+
+    def _widget_value(self, widget, *, device_object: bool = True):
+        if isinstance(widget, ScanOptionalWidget) and widget.is_none():
+            return None
+
+        inner_widget = self._inner_widget(widget)
+        if isinstance(inner_widget, DeviceComboBox) and device_object:
+            return inner_widget.get_current_device()
+        if isinstance(inner_widget, DeviceComboBox):
+            return inner_widget.currentText()
+        if isinstance(inner_widget, ScanLiteralsComboBox):
+            return inner_widget.get_value()
+        return WidgetIO.get_value(inner_widget)
+
+    def _set_widget_value(self, widget, value) -> None:
+        if isinstance(widget, ScanOptionalWidget):
+            widget.set_none(value is None)
+            if value is None:
+                return
+            WidgetIO.set_value(widget.inner_widget, value)
+            return
+        WidgetIO.set_value(widget, value)

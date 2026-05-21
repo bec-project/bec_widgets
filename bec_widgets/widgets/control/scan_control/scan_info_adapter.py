@@ -92,27 +92,34 @@ class ScanInfoAdapter:
     @staticmethod
     def parse_annotation(
         annotation: AnnotationValue,
-    ) -> tuple[AnnotationValue, ScanArgumentMetadata]:
+    ) -> tuple[AnnotationValue, ScanArgumentMetadata, bool]:
         """Extract the serialized base annotation and ``ScanArgument`` metadata.
 
         Args:
             annotation (AnnotationValue): Serialized annotation payload from BEC.
 
         Returns:
-            tuple[AnnotationValue, ScanArgumentMetadata]: The unwrapped annotation and parsed
-            ``ScanArgument`` metadata.
+            tuple[AnnotationValue, ScanArgumentMetadata, bool]: The unwrapped annotation,
+            parsed ``ScanArgument`` metadata, and whether ``None`` is an allowed value.
         """
         scan_argument: ScanArgumentMetadata = {}
-        if isinstance(annotation, list):
-            annotation = next(
-                (entry for entry in annotation if entry != "NoneType"),
-                annotation[0] if annotation else "_empty",
-            )
         if isinstance(annotation, dict) and "Annotated" in annotation:
             annotated = annotation["Annotated"]
             annotation = annotated.get("type", "_empty")
             scan_argument = annotated.get("metadata", {}).get("ScanArgument", {}) or {}
-        return annotation, scan_argument
+
+        allows_none = False
+        if isinstance(annotation, list):
+            allows_none = "NoneType" in annotation
+            annotation = next(
+                (entry for entry in annotation if entry != "NoneType"),
+                annotation[0] if annotation else "_empty",
+            )
+        elif annotation == "NoneType":
+            allows_none = True
+            annotation = "_empty"
+
+        return annotation, scan_argument, allows_none
 
     @staticmethod
     def scan_arg_type_from_annotation(annotation: AnnotationValue) -> AnnotationValue:
@@ -142,13 +149,14 @@ class ScanInfoAdapter:
         Returns:
             ScanInputConfig: Normalized input configuration for ``ScanControl``.
         """
-        annotation, scan_argument = self.parse_annotation(param.get("annotation"))
+        annotation, scan_argument, allows_none = self.parse_annotation(param.get("annotation"))
         return self._build_scan_input(
             name=param["name"],
             annotation=annotation,
             scan_argument=scan_argument,
             arg=arg,
             default=None if arg else param.get("default", None),
+            optional=allows_none,
         )
 
     def scan_input_from_arg_input(
@@ -171,13 +179,14 @@ class ScanInfoAdapter:
                 self.parse_annotation(signature_by_name[name].get("annotation"))[0]
             )
         else:
-            annotation, scan_argument = self.parse_annotation(item_type)
+            annotation, scan_argument, allows_none = self.parse_annotation(item_type)
             scan_input = self._build_scan_input(
                 name=name,
                 annotation=annotation,
                 scan_argument=scan_argument,
                 arg=True,
                 default=None,
+                optional=allows_none,
             )
         if scan_input["type"] in ("_empty", None):
             scan_input["type"] = item_type
@@ -191,6 +200,7 @@ class ScanInfoAdapter:
         *,
         arg: bool,
         default: Any,
+        optional: bool,
     ) -> ScanInputConfig:
         """Build one normalized ScanControl input configuration.
 
@@ -211,6 +221,7 @@ class ScanInfoAdapter:
             "display_name": scan_argument.get("display_name") or self.format_display_name(name),
             "tooltip": self.resolve_tooltip(scan_argument),
             "default": default,
+            "optional": optional,
             "expert": scan_argument.get("expert", False),
             "hidden": scan_argument.get("hidden", False),
             "precision": scan_argument.get("precision"),

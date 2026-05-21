@@ -1,7 +1,7 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
 
 from bec_widgets.utils.widget_io import WidgetIO
-from bec_widgets.widgets.control.scan_control.scan_group_box import ScanGroupBox
+from bec_widgets.widgets.control.scan_control.scan_group_box import ScanGroupBox, ScanOptionalWidget
 
 
 def test_kwarg_box(qtbot):
@@ -235,3 +235,41 @@ def test_spinbox_limits_from_scan_info(qtbot):
     assert settling_time.maximum() == 3.5
     assert steps.minimum() == 1
     assert steps.maximum() == 10
+
+
+def test_optional_kwarg_widget_round_trips_none(qtbot):
+    group_input = {
+        "name": "Kwarg Test",
+        "inputs": [
+            {
+                "arg": False,
+                "name": "atol",
+                "type": "float",
+                "display_name": "Tolerance",
+                "tooltip": "Optional tolerance used for position matching",
+                "default": None,
+                "optional": True,
+                "expert": False,
+            }
+        ],
+    }
+
+    kwarg_box = ScanGroupBox(box_type="kwargs", config=group_input)
+
+    assert isinstance(kwarg_box.widgets[0], ScanOptionalWidget)
+    assert kwarg_box.widgets[0].none_checkbox.text() == "None"
+    assert kwarg_box.widgets[0].is_none() is True
+    assert kwarg_box.widgets[0].inner_widget.isEnabled() is False
+    assert kwarg_box.get_parameters() == {"atol": None}
+
+    kwarg_box.set_parameters({"atol": 1.25})
+
+    assert kwarg_box.widgets[0].is_none() is False
+    assert kwarg_box.widgets[0].inner_widget.isEnabled() is True
+    assert WidgetIO.get_value(kwarg_box.widgets[0].inner_widget) == 1.25
+    assert kwarg_box.get_parameters() == {"atol": 1.25}
+
+    kwarg_box.set_parameters({"atol": None})
+
+    assert kwarg_box.widgets[0].is_none() is True
+    assert kwarg_box.get_parameters() == {"atol": None}

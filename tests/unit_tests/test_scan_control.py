@@ -442,6 +442,44 @@ def test_scan_info_adapter_skips_duplicate_visible_kwargs():
     }
 
 
+def test_scan_info_adapter_supports_optional_annotated_types():
+    scan_info = {
+        "class": "OptionalScan",
+        "base_class": "ScanBaseV4",
+        "arg_input": {},
+        "arg_bundle_size": {"bundle": 0, "min": None, "max": None},
+        "gui_visibility": {"Matching": ["atol"]},
+        "signature": [
+            {
+                "arg": False,
+                "name": "atol",
+                "annotation": {
+                    "Annotated": {
+                        "type": ["float", "NoneType"],
+                        "metadata": {
+                            "ScanArgument": {
+                                "display_name": "Tolerance",
+                                "tooltip": "Optional tolerance used for position matching",
+                            }
+                        },
+                    }
+                },
+                "default": None,
+                "kind": "KEYWORD_ONLY",
+            }
+        ],
+    }
+
+    gui_config = ScanInfoAdapter().build_scan_ui_config(scan_info)
+    input_spec = gui_config["kwarg_groups"][0]["inputs"][0]
+
+    assert input_spec["name"] == "atol"
+    assert input_spec["type"] == "float"
+    assert input_spec["optional"] is True
+    assert input_spec["default"] is None
+    assert input_spec["display_name"] == "Tolerance"
+
+
 def test_scan_info_adapter_rejects_unsupported_visible_inputs():
     scan_info = {
         "class": "UnsupportedScan",
