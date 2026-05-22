@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.13.3 (2026-05-22)
+
+### Bug Fixes
+
+- **tests**: Rename description attribute to _description in FakeDevice
+  ([`668b1bd`](https://github.com/bec-project/bec_widgets/commit/668b1bd9cd158fc12cff2c340d7317f30a212121))
+
+
 ## v3.13.2 (2026-05-22)
 
 ### Bug Fixes
