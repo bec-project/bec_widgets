@@ -357,7 +357,14 @@ class RPCServer:
                 res = self.serialize_object(res)
         except RegistryNotReadyError:
             try:
-                self._rpc_singleshot_repeats[request_id] += retry_delay
+                repeat = self._rpc_singleshot_repeats[request_id]
+                repeat += retry_delay
+                logger.warning(
+                    "GUI RPC result serialization delayed; retrying "
+                    f"request_id={request_id} retry_delay_ms={retry_delay} "
+                    f"accumulated_delay_ms={repeat.accumulated_delay} "
+                    f"max_delay_ms={repeat.max_delay}"
+                )
                 QTimer.singleShot(
                     retry_delay, lambda: self.serialize_result_and_send(request_id, res)
                 )

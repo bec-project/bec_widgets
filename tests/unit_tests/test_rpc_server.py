@@ -92,22 +92,34 @@ def test_serialize_result_and_send_with_singleshot_retry(rpc_server, qtbot, dumm
         # Third call succeeds
         return {"gui_id": dummy.gui_id, "success": True}
 
+    warning_mock = MagicMock()
+
     # Patch serialize_object to control when it raises RegistryNotReadyError
     with patch.object(rpc_server, "serialize_object", side_effect=serialize_side_effect):
         with patch.object(rpc_server, "send_response") as mock_send_response:
-            # Start the serialization process
-            rpc_server._rpc_singleshot_repeats[request_id] = SingleshotRPCRepeat()
-            rpc_server.serialize_result_and_send(request_id, dummy)
+            with patch.object(rpc_server_module.logger, "warning", warning_mock):
+                # Start the serialization process
+                rpc_server._rpc_singleshot_repeats[request_id] = SingleshotRPCRepeat()
+                rpc_server.serialize_result_and_send(request_id, dummy)
 
-            # Verify that serialize_object was called 3 times
-            qtbot.waitUntil(lambda: call_count >= 3, timeout=5000)
+                # Verify that serialize_object was called 3 times
+                qtbot.waitUntil(lambda: call_count >= 3, timeout=5000)
 
-            # Verify that send_response was called with success
-            mock_send_response.assert_called_once()
-            args = mock_send_response.call_args[0]
-            assert args[0] == request_id
-            assert args[1] is True  # accepted=True
-            assert "result" in args[2]
+                # Verify that send_response was called with success
+                mock_send_response.assert_called_once()
+                args = mock_send_response.call_args[0]
+                assert args[0] == request_id
+                assert args[1] is True  # accepted=True
+                assert "result" in args[2]
+
+    assert warning_mock.call_count == 2
+    warning_logs = "\n".join(call.args[0] for call in warning_mock.call_args_list)
+    assert "result serialization delayed; retrying" in warning_logs
+    assert "request_id=test_request_123" in warning_logs
+    assert "retry_delay_ms=100" in warning_logs
+    assert "accumulated_delay_ms=100" in warning_logs
+    assert "accumulated_delay_ms=200" in warning_logs
+    assert "max_delay_ms=2000" in warning_logs
 
 
 def test_serialize_result_and_send_max_delay_exceeded(rpc_server, qtbot, dummy_widget):
