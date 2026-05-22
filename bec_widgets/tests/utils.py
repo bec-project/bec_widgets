@@ -96,7 +96,7 @@ class FakePositioner(BECPositioner):
         self._limits = limits
         self._readout_priority = readout_priority
         self.signals = {self.name: {"value": 1.0}}
-        self.description = {self.name: {"source": self.name, "dtype": "number", "shape": []}}
+        self._description = {self.name: {"source": self.name, "dtype": "number", "shape": []}}
         self._config = {
             "readoutPriority": "baseline",
             "deviceClass": "ophyd_devices.SimPositioner",
@@ -176,7 +176,7 @@ class FakePositioner(BECPositioner):
         Returns:
             dict: Description of the device
         """
-        return self.description
+        return self._description
 
     @property
     def precision(self):
