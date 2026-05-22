@@ -262,7 +262,7 @@ def test_client_utils_delete_falls_back_to_direct_close():
 
 def test_client_utils_gui_client_set_rpc_timeout():
     gui = BECGuiClient()
-    assert gui._rpc_timeout == 5
+    assert gui._rpc_timeout == 60
 
     gui.set_rpc_timeout(10)
     assert gui._rpc_timeout == 10
