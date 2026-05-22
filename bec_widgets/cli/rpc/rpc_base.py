@@ -13,6 +13,8 @@ from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import, lazy_import_from
 
+from bec_widgets.utils.rpc_logging import format_rpc_payload
+
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib import messages
     from bec_lib.connector import MessageObject
@@ -42,16 +44,6 @@ def _name_arg(arg):
 
 def _transform_args_kwargs(args, kwargs) -> tuple[tuple, dict]:
     return tuple(_name_arg(arg) for arg in args), {k: _name_arg(v) for k, v in kwargs.items()}
-
-
-def _format_rpc_payload(value: Any, limit: int = 500) -> str:
-    try:
-        text = repr(value)
-    except Exception as exc:  # pragma: no cover - defensive logging helper
-        text = f"<unrepresentable {type(value).__name__}: {exc}>"
-    if len(text) <= limit:
-        return text
-    return f"{text[:limit]}...<truncated {len(text) - limit} chars>"
 
 
 def rpc_timeout(timeout):
@@ -275,8 +267,8 @@ class RPCBase:
             )
 
         target_gui_id = gui_id or self._gui_id
-        args_log = _format_rpc_payload(args)
-        kwargs_log = _format_rpc_payload(kwargs)
+        args_log = format_rpc_payload(args)
+        kwargs_log = format_rpc_payload(kwargs)
         sent_at = time.time()
         deadline = sent_at + timeout if timeout is not None else None
         rpc_msg.metadata.update(
