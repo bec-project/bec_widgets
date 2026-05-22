@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import inspect
 import threading
+import time
 import uuid
 from functools import wraps
 from typing import TYPE_CHECKING, Any, cast
@@ -9,6 +10,7 @@ from typing import TYPE_CHECKING, Any, cast
 from bec_lib.client import BECClient
 from bec_lib.device import DeviceBaseWithConfig
 from bec_lib.endpoints import MessageEndpoints
+from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import, lazy_import_from
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -25,6 +27,7 @@ else:
 # pylint: disable=protected-access
 
 _DEFAULT_RPC_TIMEOUT = object()
+logger = bec_logger.logger
 
 
 def _name_arg(arg):
@@ -39,6 +42,16 @@ def _name_arg(arg):
 
 def _transform_args_kwargs(args, kwargs) -> tuple[tuple, dict]:
     return tuple(_name_arg(arg) for arg in args), {k: _name_arg(v) for k, v in kwargs.items()}
+
+
+def _format_rpc_payload(value: Any, limit: int = 500) -> str:
+    try:
+        text = repr(value)
+    except Exception as exc:  # pragma: no cover - defensive logging helper
+        text = f"<unrepresentable {type(value).__name__}: {exc}>"
+    if len(text) <= limit:
+        return text
+    return f"{text[:limit]}...<truncated {len(text) - limit} chars>"
 
 
 def rpc_timeout(timeout):
@@ -261,12 +274,42 @@ class RPCBase:
                 MessageEndpoints.gui_instruction_response(request_id), cb=self._on_rpc_response
             )
 
+        target_gui_id = gui_id or self._gui_id
+        args_log = _format_rpc_payload(args)
+        kwargs_log = _format_rpc_payload(kwargs)
+        sent_at = time.time()
+        deadline = sent_at + timeout if timeout is not None else None
+        rpc_msg.metadata.update(
+            {
+                "method": method,
+                "receiver": receiver,
+                "target_gui_id": target_gui_id,
+                "object_name": self.object_name,
+                "wait_for_response": wait_for_rpc_response,
+                "timeout": timeout,
+                "sent_at": sent_at,
+                "deadline": deadline,
+            }
+        )
+        logger.info(
+            "Sending GUI RPC request "
+            f"request_id={request_id} method={method} receiver={receiver} "
+            f"target_gui_id={target_gui_id} object_name={self.object_name} "
+            f"wait_for_response={wait_for_rpc_response} timeout={timeout} "
+            f"args={args_log} kwargs={kwargs_log}"
+        )
         self._client.connector.set_and_publish(MessageEndpoints.gui_instructions(receiver), rpc_msg)
 
         if wait_for_rpc_response:
             try:
                 finished = self._msg_wait_event.wait(timeout)
                 if not finished:
+                    logger.error(
+                        "GUI RPC response timeout "
+                        f"request_id={request_id} method={method} receiver={receiver} "
+                        f"target_gui_id={target_gui_id} object_name={self.object_name} "
+                        f"timeout={timeout} args={args_log} kwargs={kwargs_log}"
+                    )
                     raise RPCResponseTimeoutError(request_id, timeout)
             finally:
                 self._msg_wait_event.clear()
@@ -278,6 +321,12 @@ class RPCBase:
             # the _on_rpc_response method
             assert isinstance(self._rpc_response, messages.RequestResponseMessage)
 
+            logger.info(
+                "Received GUI RPC response "
+                f"request_id={request_id} method={method} receiver={receiver} "
+                f"target_gui_id={target_gui_id} object_name={self.object_name} "
+                f"accepted={self._rpc_response.accepted} args={args_log} kwargs={kwargs_log}"
+            )
             if not self._rpc_response.accepted:
                 raise ValueError(self._rpc_response.message["error"])
             msg_result = self._rpc_response.message.get("result")
@@ -286,6 +335,7 @@ class RPCBase:
 
     def _on_rpc_response(self, msg_obj: MessageObject) -> None:
         msg = cast(messages.RequestResponseMessage, msg_obj.value)
+        logger.debug(f"GUI RPC response callback received: {msg}")
         self._rpc_response = msg
         self._msg_wait_event.set()
 
