@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.13.2 (2026-05-22)
+
+### Bug Fixes
+
+- **tests**: Rename description attribute to _description in FakePositioner
+  ([`c346bd0`](https://github.com/bec-project/bec_widgets/commit/c346bd0f18ce873ff5ca6c59150c9581c9edca8d))
+
+
 ## v3.13.1 (2026-05-21)
 
 ### Bug Fixes
