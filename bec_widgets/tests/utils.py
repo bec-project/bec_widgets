@@ -15,7 +15,7 @@ class FakeDevice(BECDevice):
         super().__init__(name=name)
         self._enabled = enabled
         self.signals = {self.name: {"value": 1.0}}
-        self.description = {self.name: {"source": self.name, "dtype": "number", "shape": []}}
+        self._description = {self.name: {"source": self.name, "dtype": "number", "shape": []}}
         self._readout_priority = readout_priority
         self._config = {
             "readoutPriority": "baseline",
@@ -74,7 +74,7 @@ class FakeDevice(BECDevice):
         Returns:
             dict: Description of the device
         """
-        return self.description
+        return self._description
 
 
 class FakePositioner(BECPositioner):
