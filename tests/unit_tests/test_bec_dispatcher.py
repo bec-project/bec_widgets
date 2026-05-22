@@ -1,6 +1,7 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
 import threading
 import time
+from types import SimpleNamespace
 from unittest import mock
 
 import pytest
@@ -213,3 +214,55 @@ def test_dispatcher_2_topic_same_cb_with_boundmethod(
 
     send_msg_event.set()
     qtbot.wait(10)
+
+
+def test_qt_redis_connector_logs_rpc_before_qt_callback(monkeypatch):
+    info_mock = mock.MagicMock()
+    warning_mock = mock.MagicMock()
+    monkeypatch.setattr("bec_widgets.utils.bec_dispatcher.logger.info", info_mock)
+    monkeypatch.setattr("bec_widgets.utils.bec_dispatcher.logger.warning", warning_mock)
+
+    def callback(_msg, _metadata):
+        pass
+
+    cb = QtThreadSafeCallback(callback)
+    connector = QtRedisConnector("localhost:1", mock.MagicMock())
+    rpc_msg = SimpleNamespace(
+        content={
+            "action": "set_value",
+            "parameter": {"args": [1], "kwargs": {"source": "test"}, "gui_id": "ring"},
+        },
+        metadata={
+            "request_id": "dispatcher-request",
+            "receiver": "gui",
+            "object_name": "progressbar",
+            "timeout": 0.1,
+            "sent_at": 1.0,
+            "deadline": 1.1,
+        },
+    )
+
+    try:
+        connector._execute_callback(cb, {"data": rpc_msg}, {})
+
+        info_mock.assert_called_once()
+        info_message = info_mock.call_args.args[0]
+        assert "GUI RPC dispatcher received request before Qt callback emit" in info_message
+        assert "request_id=dispatcher-request" in info_message
+        assert "method=set_value" in info_message
+        assert "receiver=gui" in info_message
+        assert "target_gui_id=ring" in info_message
+        assert "object_name=progressbar" in info_message
+        assert "timeout=0.1" in info_message
+        assert "stale_on_dispatch=True" in info_message
+        assert "args=[1]" in info_message
+        assert "kwargs={'source': 'test'}" in info_message
+
+        warning_mock.assert_called_once()
+        warning_message = warning_mock.call_args.args[0]
+        assert "received request after client timeout deadline" in warning_message
+        assert "request_id=dispatcher-request" in warning_message
+        assert "args=[1]" in warning_message
+        assert "kwargs={'source': 'test'}" in warning_message
+    finally:
+        connector.shutdown()
