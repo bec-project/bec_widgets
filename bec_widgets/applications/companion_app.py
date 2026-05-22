@@ -74,6 +74,7 @@ class GUIServer:
             bec_logger._stderr_log_level = bec_logger.LOGLEVEL.ERROR
             bec_logger._update_sinks()
 
+        bec_logger.disabled_modules = ["bec_lib.scan_items"]
         with redirect_stdout(SimpleFileLikeFromLogOutputFunc(logger.info)):  # type: ignore
             with redirect_stderr(SimpleFileLikeFromLogOutputFunc(logger.error)):  # type: ignore
                 self._run()
