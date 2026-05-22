@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import functools
+import time
 import traceback
 import types
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Callable, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar
 
 from bec_lib.client import BECClient
 from bec_lib.endpoints import MessageEndpoints
@@ -115,32 +116,115 @@ class RPCServer:
         if request_id is None:
             logger.error("Received RPC instruction without request_id")
             return
+        method = msg.get("action")
+        parameter = msg.get("parameter", {})
+        args = parameter.get("args", [])
+        kwargs = parameter.get("kwargs", {})
+        args_log = self._format_rpc_payload(args)
+        kwargs_log = self._format_rpc_payload(kwargs)
+        target_gui_id = parameter.get("gui_id")
+        sent_at = metadata.get("sent_at")
+        deadline = metadata.get("deadline")
+        timeout = metadata.get("timeout")
+        received_at = time.time()
+        receive_latency = self._elapsed_seconds(sent_at, received_at)
+        stale_on_receive = deadline is not None and received_at > deadline
+        logger.info(
+            "GUI RPC server received request "
+            f"request_id={request_id} method={method} gui_id={self.gui_id} "
+            f"target_gui_id={target_gui_id} timeout={timeout} "
+            f"receive_latency_s={self._format_elapsed(receive_latency)} "
+            f"stale_on_receive={stale_on_receive} args={args_log} kwargs={kwargs_log}"
+        )
+        if stale_on_receive:
+            logger.warning(
+                "GUI RPC server received request after client timeout deadline "
+                f"request_id={request_id} method={method} gui_id={self.gui_id} "
+                f"target_gui_id={target_gui_id} timeout={timeout} "
+                f"receive_latency_s={self._format_elapsed(receive_latency)} "
+                f"args={args_log} kwargs={kwargs_log}"
+            )
         logger.debug(f"Received RPC instruction: {msg}, metadata: {metadata}")
+        execution_start = time.perf_counter()
         with rpc_exception_hook(functools.partial(self.send_response, request_id, False)):
             try:
-                method = msg["action"]
-                args = msg["parameter"].get("args", [])
-                kwargs = msg["parameter"].get("kwargs", {})
                 if method.startswith("system."):
                     res = self.run_system_rpc(method, args, kwargs)
                 else:
-                    obj = self.get_object_from_config(msg["parameter"])
+                    obj = self.get_object_from_config(parameter)
                     res = self.run_rpc(obj, method, args, kwargs)
             except Exception:
+                execution_duration = time.perf_counter() - execution_start
                 content = traceback.format_exc()
-                logger.error(f"Error while executing RPC instruction: {content}")
+                logger.error(
+                    "GUI RPC server execution failed "
+                    f"request_id={request_id} method={method} gui_id={self.gui_id} "
+                    f"target_gui_id={target_gui_id} execution_duration_s={execution_duration:.3f} "
+                    f"args={args_log} kwargs={kwargs_log}\n"
+                    f"{content}"
+                )
                 self.send_response(request_id, False, {"error": content})
             else:
+                execution_duration = time.perf_counter() - execution_start
+                response_stale = deadline is not None and time.time() > deadline
+                logger.info(
+                    "GUI RPC server executed request "
+                    f"request_id={request_id} method={method} gui_id={self.gui_id} "
+                    f"target_gui_id={target_gui_id} execution_duration_s={execution_duration:.3f} "
+                    f"response_after_client_deadline={response_stale} "
+                    f"args={args_log} kwargs={kwargs_log}"
+                )
+                if response_stale:
+                    logger.warning(
+                        "GUI RPC server response is late for client timeout "
+                        f"request_id={request_id} method={method} gui_id={self.gui_id} "
+                        f"target_gui_id={target_gui_id} timeout={timeout} "
+                        f"execution_duration_s={execution_duration:.3f} "
+                        f"args={args_log} kwargs={kwargs_log}"
+                    )
                 logger.debug(f"RPC instruction executed successfully: {res}")
                 self._rpc_singleshot_repeats[request_id] = SingleshotRPCRepeat()
                 QTimer.singleShot(0, lambda: self.serialize_result_and_send(request_id, res))
 
     def send_response(self, request_id: str, accepted: bool, msg: dict):
+        log_message = (
+            "GUI RPC server publishing response "
+            f"request_id={request_id} gui_id={self.gui_id} accepted={accepted}"
+        )
+        if accepted:
+            logger.info(log_message)
+        else:
+            logger.error(log_message)
         self.client.connector.set_and_publish(
             MessageEndpoints.gui_instruction_response(request_id),
             messages.RequestResponseMessage(accepted=accepted, message=msg),
             expire=60,
         )
+
+    @staticmethod
+    def _elapsed_seconds(start: float | int | None, stop: float) -> float | None:
+        if start is None:
+            return None
+        try:
+            return max(0.0, stop - float(start))
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _format_elapsed(elapsed: float | None) -> str:
+        if elapsed is None:
+            return "unknown"
+        return f"{elapsed:.3f}"
+
+    @staticmethod
+    def _format_rpc_payload(value: Any, limit: int = 500) -> str:
+        try:
+            text = repr(value)
+        except Exception as exc:  # pragma: no cover - defensive logging helper
+            text = f"<unrepresentable {type(value).__name__}: {exc}>"
+        if len(text) <= limit:
+            return text
+        return f"{text[:limit]}...<truncated {len(text) - limit} chars>"
 
     def get_object_from_config(self, config: dict):
         gui_id = config.get("gui_id")

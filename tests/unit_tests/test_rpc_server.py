@@ -1,11 +1,12 @@
 import argparse
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from bec_lib.service_config import ServiceConfig
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.applications.companion_app import GUIServer
+from bec_widgets.utils import rpc_server as rpc_server_module
 from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.utils.rpc_server import RegistryNotReadyError, RPCServer, SingleshotRPCRepeat
 
@@ -138,6 +139,62 @@ def test_serialize_result_and_send_max_delay_exceeded(rpc_server, qtbot, dummy_w
             assert args[1] is False  # accepted=False
             assert "error" in args[2]
             assert "Max delay exceeded" in args[2]["error"]
+
+
+def test_send_response_logs_publish_status(rpc_server, monkeypatch):
+    info_mock = MagicMock()
+    error_mock = MagicMock()
+    monkeypatch.setattr(rpc_server_module.logger, "info", info_mock)
+    monkeypatch.setattr(rpc_server_module.logger, "error", error_mock)
+
+    with patch.object(rpc_server.client.connector, "set_and_publish") as publish_mock:
+        rpc_server.send_response("request-ok", True, {"result": None})
+        rpc_server.send_response("request-failed", False, {"error": "bad"})
+
+    assert publish_mock.call_count == 2
+    assert "request_id=request-ok" in info_mock.call_args.args[0]
+    assert "accepted=True" in info_mock.call_args.args[0]
+    assert "request_id=request-failed" in error_mock.call_args.args[0]
+    assert "accepted=False" in error_mock.call_args.args[0]
+
+
+def test_on_rpc_update_logs_late_client_deadline(rpc_server, monkeypatch):
+    info_mock = MagicMock()
+    warning_mock = MagicMock()
+    monkeypatch.setattr(rpc_server_module.logger, "info", info_mock)
+    monkeypatch.setattr(rpc_server_module.logger, "warning", warning_mock)
+
+    rpc_server.rpc_register.get_rpc_by_id = MagicMock()
+    rpc_server.run_rpc = MagicMock(return_value=None)
+    rpc_server.serialize_result_and_send = MagicMock()
+
+    rpc_server.on_rpc_update(
+        {
+            "action": "set_value",
+            "parameter": {"args": [1], "kwargs": {"source": "test"}, "gui_id": "ring"},
+        },
+        {"request_id": "late-request", "timeout": 0.1, "sent_at": 1.0, "deadline": 1.1},
+    )
+
+    received_log = info_mock.call_args_list[0].args[0]
+    executed_log = info_mock.call_args_list[1].args[0]
+    warning_logs = "\n".join(call.args[0] for call in warning_mock.call_args_list)
+
+    assert "GUI RPC server received request" in received_log
+    assert "request_id=late-request" in received_log
+    assert "method=set_value" in received_log
+    assert "target_gui_id=ring" in received_log
+    assert "timeout=0.1" in received_log
+    assert "stale_on_receive=True" in received_log
+    assert "args=[1]" in received_log
+    assert "kwargs={'source': 'test'}" in received_log
+    assert "response_after_client_deadline=True" in executed_log
+    assert "args=[1]" in executed_log
+    assert "kwargs={'source': 'test'}" in executed_log
+    assert "received request after client timeout deadline" in warning_logs
+    assert "response is late for client timeout" in warning_logs
+    assert "args=[1]" in warning_logs
+    assert "kwargs={'source': 'test'}" in warning_logs
 
 
 def test_run_rpc_delegates_to_rpc_content_class(rpc_server):
