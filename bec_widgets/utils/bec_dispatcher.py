@@ -16,6 +16,7 @@ from bec_lib.service_config import ServiceConfig
 from qtpy.QtCore import QObject
 from qtpy.QtCore import Signal as pyqtSignal
 
+from bec_widgets.utils.rpc_logging import elapsed_seconds, format_elapsed, format_rpc_payload
 from bec_widgets.utils.serialization import register_serializer_extension
 
 logger = bec_logger.logger
@@ -24,31 +25,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.endpoints import EndpointInfo
 
     from bec_widgets.utils.rpc_server import RPCServer
-
-
-def _format_rpc_payload(value: Any, limit: int = 500) -> str:
-    try:
-        text = repr(value)
-    except Exception as exc:  # pragma: no cover - defensive logging helper
-        text = f"<unrepresentable {type(value).__name__}: {exc}>"
-    if len(text) <= limit:
-        return text
-    return f"{text[:limit]}...<truncated {len(text) - limit} chars>"
-
-
-def _elapsed_seconds(start: float | int | None, stop: float) -> float | None:
-    if start is None:
-        return None
-    try:
-        return max(0.0, stop - float(start))
-    except (TypeError, ValueError):
-        return None
-
-
-def _format_elapsed(elapsed: float | None) -> str:
-    if elapsed is None:
-        return "unknown"
-    return f"{elapsed:.3f}"
 
 
 def _log_rpc_dispatcher_receive(msg_content: Any, metadata: Any) -> None:
@@ -64,17 +40,17 @@ def _log_rpc_dispatcher_receive(msg_content: Any, metadata: Any) -> None:
     sent_at = metadata.get("sent_at")
     deadline = metadata.get("deadline")
     timeout = metadata.get("timeout")
-    dispatch_latency = _elapsed_seconds(sent_at, dispatch_received_at)
+    dispatch_latency = elapsed_seconds(sent_at, dispatch_received_at)
     stale_on_dispatch = deadline is not None and dispatch_received_at > deadline
     target_gui_id = parameter.get("gui_id") or metadata.get("target_gui_id")
-    args_log = _format_rpc_payload(parameter.get("args", []))
-    kwargs_log = _format_rpc_payload(parameter.get("kwargs", {}))
+    args_log = format_rpc_payload(parameter.get("args", []))
+    kwargs_log = format_rpc_payload(parameter.get("kwargs", {}))
 
     logger.info(
         "GUI RPC dispatcher received request before Qt callback emit "
         f"request_id={request_id} method={method} receiver={metadata.get('receiver')} "
         f"target_gui_id={target_gui_id} object_name={metadata.get('object_name')} "
-        f"timeout={timeout} dispatch_latency_s={_format_elapsed(dispatch_latency)} "
+        f"timeout={timeout} dispatch_latency_s={format_elapsed(dispatch_latency)} "
         f"stale_on_dispatch={stale_on_dispatch} args={args_log} kwargs={kwargs_log}"
     )
     if stale_on_dispatch:
@@ -82,7 +58,7 @@ def _log_rpc_dispatcher_receive(msg_content: Any, metadata: Any) -> None:
             "GUI RPC dispatcher received request after client timeout deadline "
             f"request_id={request_id} method={method} receiver={metadata.get('receiver')} "
             f"target_gui_id={target_gui_id} object_name={metadata.get('object_name')} "
-            f"timeout={timeout} dispatch_latency_s={_format_elapsed(dispatch_latency)} "
+            f"timeout={timeout} dispatch_latency_s={format_elapsed(dispatch_latency)} "
             f"args={args_log} kwargs={kwargs_log}"
         )
 

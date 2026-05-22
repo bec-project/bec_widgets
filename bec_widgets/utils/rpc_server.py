@@ -5,7 +5,7 @@ import time
 import traceback
 import types
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar
+from typing import TYPE_CHECKING, Callable, Literal, TypeVar
 
 from bec_lib.client import BECClient
 from bec_lib.endpoints import MessageEndpoints
@@ -19,6 +19,7 @@ from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
 from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import ErrorPopupUtility
+from bec_widgets.utils.rpc_logging import elapsed_seconds, format_elapsed, format_rpc_payload
 from bec_widgets.utils.rpc_register import RPCRegister
 from bec_widgets.utils.screen_utils import apply_window_geometry
 from bec_widgets.widgets.containers.dock_area.dock_area import BECDockArea
@@ -120,20 +121,20 @@ class RPCServer:
         parameter = msg.get("parameter", {})
         args = parameter.get("args", [])
         kwargs = parameter.get("kwargs", {})
-        args_log = self._format_rpc_payload(args)
-        kwargs_log = self._format_rpc_payload(kwargs)
+        args_log = format_rpc_payload(args)
+        kwargs_log = format_rpc_payload(kwargs)
         target_gui_id = parameter.get("gui_id")
         sent_at = metadata.get("sent_at")
         deadline = metadata.get("deadline")
         timeout = metadata.get("timeout")
         received_at = time.time()
-        receive_latency = self._elapsed_seconds(sent_at, received_at)
+        receive_latency = elapsed_seconds(sent_at, received_at)
         stale_on_receive = deadline is not None and received_at > deadline
         logger.info(
             "GUI RPC server received request "
             f"request_id={request_id} method={method} gui_id={self.gui_id} "
             f"target_gui_id={target_gui_id} timeout={timeout} "
-            f"receive_latency_s={self._format_elapsed(receive_latency)} "
+            f"receive_latency_s={format_elapsed(receive_latency)} "
             f"stale_on_receive={stale_on_receive} args={args_log} kwargs={kwargs_log}"
         )
         if stale_on_receive:
@@ -141,7 +142,7 @@ class RPCServer:
                 "GUI RPC server received request after client timeout deadline "
                 f"request_id={request_id} method={method} gui_id={self.gui_id} "
                 f"target_gui_id={target_gui_id} timeout={timeout} "
-                f"receive_latency_s={self._format_elapsed(receive_latency)} "
+                f"receive_latency_s={format_elapsed(receive_latency)} "
                 f"args={args_log} kwargs={kwargs_log}"
             )
         logger.debug(f"Received RPC instruction: {msg}, metadata: {metadata}")
@@ -200,31 +201,6 @@ class RPCServer:
             messages.RequestResponseMessage(accepted=accepted, message=msg),
             expire=60,
         )
-
-    @staticmethod
-    def _elapsed_seconds(start: float | int | None, stop: float) -> float | None:
-        if start is None:
-            return None
-        try:
-            return max(0.0, stop - float(start))
-        except (TypeError, ValueError):
-            return None
-
-    @staticmethod
-    def _format_elapsed(elapsed: float | None) -> str:
-        if elapsed is None:
-            return "unknown"
-        return f"{elapsed:.3f}"
-
-    @staticmethod
-    def _format_rpc_payload(value: Any, limit: int = 500) -> str:
-        try:
-            text = repr(value)
-        except Exception as exc:  # pragma: no cover - defensive logging helper
-            text = f"<unrepresentable {type(value).__name__}: {exc}>"
-        if len(text) <= limit:
-            return text
-        return f"{text[:limit]}...<truncated {len(text) - limit} chars>"
 
     def get_object_from_config(self, config: dict):
         gui_id = config.get("gui_id")
