@@ -3,8 +3,9 @@ from __future__ import annotations
 import collections
 import random
 import string
+import time
 from collections.abc import Callable
-from typing import TYPE_CHECKING, DefaultDict, Hashable, Union
+from typing import TYPE_CHECKING, Any, DefaultDict, Hashable, Union
 
 import louie
 import redis
@@ -23,6 +24,67 @@ if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.endpoints import EndpointInfo
 
     from bec_widgets.utils.rpc_server import RPCServer
+
+
+def _format_rpc_payload(value: Any, limit: int = 500) -> str:
+    try:
+        text = repr(value)
+    except Exception as exc:  # pragma: no cover - defensive logging helper
+        text = f"<unrepresentable {type(value).__name__}: {exc}>"
+    if len(text) <= limit:
+        return text
+    return f"{text[:limit]}...<truncated {len(text) - limit} chars>"
+
+
+def _elapsed_seconds(start: float | int | None, stop: float) -> float | None:
+    if start is None:
+        return None
+    try:
+        return max(0.0, stop - float(start))
+    except (TypeError, ValueError):
+        return None
+
+
+def _format_elapsed(elapsed: float | None) -> str:
+    if elapsed is None:
+        return "unknown"
+    return f"{elapsed:.3f}"
+
+
+def _log_rpc_dispatcher_receive(msg_content: Any, metadata: Any) -> None:
+    if not isinstance(msg_content, dict) or not isinstance(metadata, dict):
+        return
+    request_id = metadata.get("request_id")
+    method = msg_content.get("action")
+    parameter = msg_content.get("parameter")
+    if request_id is None or method is None or not isinstance(parameter, dict):
+        return
+
+    dispatch_received_at = time.time()
+    sent_at = metadata.get("sent_at")
+    deadline = metadata.get("deadline")
+    timeout = metadata.get("timeout")
+    dispatch_latency = _elapsed_seconds(sent_at, dispatch_received_at)
+    stale_on_dispatch = deadline is not None and dispatch_received_at > deadline
+    target_gui_id = parameter.get("gui_id") or metadata.get("target_gui_id")
+    args_log = _format_rpc_payload(parameter.get("args", []))
+    kwargs_log = _format_rpc_payload(parameter.get("kwargs", {}))
+
+    logger.info(
+        "GUI RPC dispatcher received request before Qt callback emit "
+        f"request_id={request_id} method={method} receiver={metadata.get('receiver')} "
+        f"target_gui_id={target_gui_id} object_name={metadata.get('object_name')} "
+        f"timeout={timeout} dispatch_latency_s={_format_elapsed(dispatch_latency)} "
+        f"stale_on_dispatch={stale_on_dispatch} args={args_log} kwargs={kwargs_log}"
+    )
+    if stale_on_dispatch:
+        logger.warning(
+            "GUI RPC dispatcher received request after client timeout deadline "
+            f"request_id={request_id} method={method} receiver={metadata.get('receiver')} "
+            f"target_gui_id={target_gui_id} object_name={metadata.get('object_name')} "
+            f"timeout={timeout} dispatch_latency_s={_format_elapsed(dispatch_latency)} "
+            f"args={args_log} kwargs={kwargs_log}"
+        )
 
 
 class QtThreadSafeCallback(QObject):
@@ -88,10 +150,12 @@ class QtRedisConnector(RedisConnector):
 
             # we can notice kwargs are lost when passed to Qt slot
             metadata = msg.metadata
+            _log_rpc_dispatcher_receive(msg.content, metadata)
             cb(msg.content, metadata)
         else:
             # from stream
             msg = msg["data"]
+            _log_rpc_dispatcher_receive(msg.content, msg.metadata)
             cb(msg.content, msg.metadata)
 
 
