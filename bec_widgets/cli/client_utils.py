@@ -222,7 +222,7 @@ class BECGuiClient(RPCBase):
         self._ipython_registry: dict[str, RPCReference] = {}
         self.available_widgets = AvailableWidgetsNamespace()
         register_serializer_extension()
-        self._rpc_timeout = 5
+        self._rpc_timeout = 60
 
     ####################
     #### Client API ####
