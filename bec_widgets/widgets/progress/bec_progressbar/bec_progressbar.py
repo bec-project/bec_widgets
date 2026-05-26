@@ -17,22 +17,6 @@ class ProgressState(Enum):
     INTERRUPTED = "interrupted"
     COMPLETED = "completed"
 
-    @classmethod
-    def from_bec_status(cls, status: str) -> "ProgressState":
-        """
-        Map a BEC status string (open, paused, aborted, halted, closed)
-        to the corresponding ProgressState.
-        Any unknown status falls back to NORMAL.
-        """
-        mapping = {
-            "open": cls.NORMAL,
-            "paused": cls.PAUSED,
-            "aborted": cls.INTERRUPTED,
-            "halted": cls.PAUSED,
-            "closed": cls.COMPLETED,
-        }
-        return mapping.get(status.lower(), cls.NORMAL)
-
 
 class BECProgressBar(BECWidget, QWidget):
     """
@@ -40,6 +24,18 @@ class BECProgressBar(BECWidget, QWidget):
 
     The displayed text can be customized using a template with $value, $maximum,
     and $percentage placeholders.
+
+    Args:
+        parent: Parent Qt widget.
+        client: Optional BEC client instance.
+        config: Optional widget configuration.
+        gui_id: Optional GUI identifier used by the BEC widget infrastructure.
+        enable_dynamic_stylesheet: If True, adjust the chunk border radius while the
+            filled chunk is still too narrow for the target radius. This avoids Qt
+            stylesheet over-rounding artifacts on small progress values. Once the
+            target radius is usable, normal value updates no longer rebuild the
+            stylesheet.
+        **kwargs: Additional keyword arguments forwarded to BECWidget.
     """
 
     PLUGIN = True
@@ -103,9 +99,6 @@ class BECProgressBar(BECWidget, QWidget):
         self.progressbar.setRange(0, self._maximum)
         self.progressbar.setMinimumHeight(0)
         self.progressbar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Ignored)
-
-        # Backwards-compatible alias used by existing tests and downstream code.
-        self.center_label = self.progressbar
 
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(self._padding_left_right, 0, self._padding_left_right, 0)
@@ -339,6 +332,7 @@ class BECProgressBar(BECWidget, QWidget):
 
     def _setup_style_sheet(self, *, chunk_radius: int) -> None:
         radius = int(round(self._corner_radius))
+        chunk_color = self._state_colors[self._current_visual_state()].name()
         self.progressbar.setStyleSheet(f"""
             QProgressBar {{
                 background-color: palette(mid);
@@ -348,7 +342,7 @@ class BECProgressBar(BECWidget, QWidget):
                 text-align: center;
             }}
             QProgressBar::chunk {{
-                background-color: palette(highlight);
+                background-color: {chunk_color};
                 border-radius: {chunk_radius}px;
             }}
             """)
@@ -377,6 +371,11 @@ class BECProgressBar(BECWidget, QWidget):
         return 0 if self._enable_dynamic_stylesheet else self._target_chunk_radius()
 
     def _calculate_chunk_radius(self, target_radius: int) -> int:
+        """
+        This whole chunk logic is to calculater radius based on the current size.
+        If the radius is smaller than size of the progressbar it is just not applied.
+        The chunk stylesheet logic is smoothing it as much as possible.
+        """
         if target_radius <= 0 or self._maximum <= 0:
             return 0
         fill_width = self.progressbar.width() * min(1.0, max(0.0, self._value / self._maximum))
@@ -385,6 +384,16 @@ class BECProgressBar(BECWidget, QWidget):
         return min(target_radius, max(1, int(fill_width / 2)))
 
     def _apply_state_style(self) -> None:
+        chunk_radius = self._chunk_radius
+        if chunk_radius is None:
+            target_radius = self._target_chunk_radius()
+            chunk_radius = (
+                self._calculate_chunk_radius(target_radius)
+                if self._enable_dynamic_stylesheet
+                else target_radius
+            )
+            self._chunk_radius = chunk_radius
+        self._setup_style_sheet(chunk_radius=chunk_radius)
         color = self._state_colors[self._current_visual_state()]
         palette = self.progressbar.palette()
         palette.setColor(QPalette.ColorRole.Highlight, color)
@@ -406,20 +415,23 @@ class BECProgressBar(BECWidget, QWidget):
 if __name__ == "__main__":  # pragma: no cover
     app = QApplication(sys.argv)
 
-    progressBar = BECProgressBar()
-    progressBar.show()
-    progressBar.set_minimum(-100)
-    progressBar.set_maximum(0)
+    progress_bar = BECProgressBar()
+    progress_bar.setWindowTitle("BEC Progress Bar")
+    progress_bar.resize(360, 48)
+    progress_bar.set_minimum(-100)
+    progress_bar.set_maximum(0)
+    progress_bar.set_value(-100)
+    progress_bar.show()
 
     # Example of setting values
     def update_progress():
-        value = progressBar._user_value + 2.5
-        if value > progressBar._user_maximum:
-            value = -100  # progressBar._maximum / progressBar._upsampling_factor
-        progressBar.set_value(value)
+        value = progress_bar._user_value + 2.5
+        if value > progress_bar._user_maximum:
+            value = progress_bar._user_minimum
+        progress_bar.set_value(value)
 
-    timer = QTimer()
+    timer = QTimer(progress_bar)
     timer.timeout.connect(update_progress)
-    timer.start(200)  # Update every half second
+    timer.start(200)
 
     sys.exit(app.exec())

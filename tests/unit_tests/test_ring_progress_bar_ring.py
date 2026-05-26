@@ -79,7 +79,7 @@ def test_set_update_to_scan(ring_widget):
     # Verify that connect_slot was called
     ring_widget.bec_dispatcher.connect_slot.assert_called_once()
     call_args = ring_widget.bec_dispatcher.connect_slot.call_args
-    assert call_args[0][0] == ring_widget.on_scan_progress
+    assert call_args[0][0] == ring_widget.progress_tracker.process_progress_message
     assert "scan_progress" in str(call_args[0][1])
 
 
@@ -432,12 +432,13 @@ def test_update_device_connection_with_progress_signal(ring_widget_with_device):
 
     ring_widget.bec_dispatcher.connect_slot = MagicMock()
 
-    ring_widget._update_device_connection("samx", "progress")
+    signal = ring_widget._update_device_connection("samx", "progress")
 
-    # Should connect to device_progress endpoint
+    # Device mode always connects to device_readback, even if the explicit signal is a ProgressSignal.
+    assert signal == "samx_progress"
     ring_widget.bec_dispatcher.connect_slot.assert_called_once()
     call_args = ring_widget.bec_dispatcher.connect_slot.call_args
-    assert call_args[0][0] == ring_widget.on_device_progress
+    assert call_args[0][0] == ring_widget.on_device_readback
 
 
 def test_update_device_connection_with_hinted_signal(ring_widget):
@@ -477,39 +478,35 @@ def test_update_device_connection_device_not_found(ring_widget):
 
 
 ###################################
-# on_scan_progress tests
+# scan progress tests
 ###################################
 
 
-def test_on_scan_progress_updates_value(ring_widget):
+def test_scan_progress_updates_value(ring_widget):
     msg = {"value": 42, "max_value": 100}
     meta = {"RID": "test_rid_123"}
 
-    ring_widget.on_scan_progress(msg, meta)
+    ring_widget.progress_tracker.process_progress_message(msg, meta)
 
     assert ring_widget.config.value == 42
 
 
-def test_on_scan_progress_updates_min_max_on_new_rid(ring_widget):
+def test_scan_progress_updates_min_max_on_new_rid(ring_widget):
     msg = {"value": 50, "max_value": 200}
     meta = {"RID": "new_rid"}
 
-    ring_widget.RID = "old_rid"
-    ring_widget.on_scan_progress(msg, meta)
+    ring_widget.progress_tracker.process_progress_message(msg, meta)
 
     assert ring_widget.config.min_value == 0
     assert ring_widget.config.max_value == 200
     assert ring_widget.config.value == 50
 
 
-def test_on_scan_progress_same_rid_no_min_max_update(ring_widget):
-    msg = {"value": 75, "max_value": 300}
+def test_scan_progress_same_rid_no_min_max_update(ring_widget):
     meta = {"RID": "same_rid"}
 
-    ring_widget.RID = "same_rid"
-    ring_widget.set_min_max_values(0, 100)
-
-    ring_widget.on_scan_progress(msg, meta)
+    ring_widget.progress_tracker.process_progress_message({"value": 10, "max_value": 100}, meta)
+    ring_widget.progress_tracker.process_progress_message({"value": 75, "max_value": 300}, meta)
 
     # Max value should not be updated when RID is the same
     assert ring_widget.config.max_value == 100
@@ -570,63 +567,3 @@ def test_on_device_readback_missing_signal_data(ring_widget):
 
     # Value should not change when signal is missing
     assert ring_widget.config.value == initial_value
-
-
-###################################
-# on_device_progress tests
-###################################
-
-
-def test_on_device_progress_updates_value_and_max(ring_widget):
-    ring_widget.config.device = "samx"
-
-    msg = {"value": 30, "max_value": 150, "done": False}
-    meta = {}
-
-    ring_widget.on_device_progress(msg, meta)
-
-    assert ring_widget.config.value == 30
-    assert ring_widget.config.max_value == 150
-
-
-def test_on_device_progress_done_sets_to_max(ring_widget):
-    ring_widget.config.device = "samx"
-
-    msg = {"value": 80, "max_value": 100, "done": True}
-    meta = {}
-
-    ring_widget.on_device_progress(msg, meta)
-
-    # When done is True, value should be set to max_value
-    assert ring_widget.config.value == 100
-    assert ring_widget.config.max_value == 100
-
-
-def test_on_device_progress_no_device_returns_early(ring_widget):
-    ring_widget.config.device = None
-
-    msg = {"value": 50, "max_value": 100, "done": False}
-    meta = {}
-
-    initial_value = ring_widget.config.value
-    initial_max = ring_widget.config.max_value
-
-    ring_widget.on_device_progress(msg, meta)
-
-    # Nothing should change
-    assert ring_widget.config.value == initial_value
-    assert ring_widget.config.max_value == initial_max
-
-
-def test_on_device_progress_default_values(ring_widget):
-    ring_widget.config.device = "samx"
-
-    # Message without value and max_value
-    msg = {}
-    meta = {}
-
-    ring_widget.on_device_progress(msg, meta)
-
-    # Should use defaults: value=0, max_value=100
-    assert ring_widget.config.value == 0
-    assert ring_widget.config.max_value == 100

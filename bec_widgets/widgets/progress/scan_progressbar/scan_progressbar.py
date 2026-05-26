@@ -1,121 +1,27 @@
 from __future__ import annotations
 
-import enum
 import os
-import time
-from typing import Literal
 
-import numpy as np
-from bec_lib import messages
-from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import QObject, QTimer, Signal
+from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.error_popups import SafeProperty
 from bec_widgets.utils.ui_loader import UILoader
 from bec_widgets.widgets.progress.bec_progressbar.bec_progressbar import ProgressState
+from bec_widgets.widgets.progress.progress_backend import BECProgressTracker, ProgressSnapshot
 
 logger = bec_logger.logger
 
-
-class ProgressSource(enum.Enum):
-    """
-    Enum to define the source of the progress.
-    """
-
-    SCAN_PROGRESS = "scan_progress"
-    DEVICE_PROGRESS = "device_progress"
-
-
-class ProgressTask(QObject):
-    """
-    Class to store progress information.
-    Inspired by https://github.com/Textualize/rich/blob/master/rich/progress.py
-    """
-
-    def __init__(self, parent: QWidget, value: float = 0, max_value: float = 0, done: bool = False):
-        super().__init__(parent=parent)
-        self.start_time = time.monotonic()
-        self.done = done
-        self.value = value
-        self.max_value = max_value
-        self._elapsed_time = 0
-
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.update_elapsed_time)
-        self.timer.start(1000)
-
-    def update(self, value: float, max_value: float, done: bool = False):
-        """
-        Update the progress.
-        """
-        self.max_value = max_value
-        self.done = done
-        self.value = value
-        if done:
-            self.timer.stop()
-
-    def update_elapsed_time(self):
-        """
-        Update the time estimates. This is called every second by a QTimer.
-        """
-        self._elapsed_time = max(0.0, time.monotonic() - self.start_time)
-
-    @property
-    def percentage(self) -> float:
-        """float: Get progress of task as a percentage. If a None total was set, returns 0"""
-        if not self.max_value:
-            return 0.0
-        completed = (self.value / self.max_value) * 100.0
-        completed = min(100.0, max(0.0, completed))
-        return completed
-
-    @property
-    def speed(self) -> float:
-        """Get the estimated speed in steps per second."""
-        if self._elapsed_time == 0:
-            return 0.0
-
-        return self.value / self._elapsed_time
-
-    @property
-    def frequency(self) -> float:
-        """Get the estimated frequency in steps per second."""
-        if self.speed == 0:
-            return 0.0
-        return 1 / self.speed
-
-    @property
-    def time_elapsed(self) -> str:
-        # format the elapsed time to a string in the format HH:MM:SS
-        return self._format_time(int(self._elapsed_time))
-
-    @property
-    def remaining(self) -> float:
-        """Get the estimated remaining steps."""
-        if self.done:
-            return 0.0
-        remaining = self.max_value - self.value
-        return remaining
-
-    @property
-    def time_remaining(self) -> str:
-        """
-        Get the estimated remaining time in the format HH:MM:SS.
-        """
-        if self.done or not self.speed or not self.remaining:
-            return self._format_time(0)
-        estimate = int(np.round(self.remaining / self.speed))
-
-        return self._format_time(estimate)
-
-    def _format_time(self, seconds: float) -> str:
-        """
-        Format the time in seconds to a string in the format HH:MM:SS.
-        """
-        return f"{seconds // 3600:02}:{(seconds // 60) % 60:02}:{seconds % 60:02}"
+BEC_STATUS_TO_PROGRESS_STATE = {
+    "open": ProgressState.NORMAL,
+    "paused": ProgressState.PAUSED,
+    "aborted": ProgressState.INTERRUPTED,
+    "halted": ProgressState.PAUSED,
+    "closed": ProgressState.COMPLETED,
+    "user_completed": ProgressState.PAUSED,
+}
 
 
 class ScanProgressBar(BECWidget, QWidget):
@@ -158,101 +64,35 @@ class ScanProgressBar(BECWidget, QWidget):
         self._show_remaining_time = self.ui.remaining_time_label.isVisible()
         self._show_source_label = self.ui.source_label.isVisible()
 
-        self._progress_source = None
-        self._progress_device = None
-        self.task = None
-        self.scan_number = None
-        self._active_scan_id = None
-        self.connect_to_queue()
-
-    def connect_to_queue(self):
-        """
-        Connect to the queue status signal.
-        """
-        self.bec_dispatcher.connect_slot(self.on_queue_update, MessageEndpoints.scan_queue_status())
-
-    def set_progress_source(self, source: ProgressSource, device=None):
-        """
-        Set the source of the progress.
-        """
-        if self._progress_source == source and self._progress_device == device:
-            self.update_source_label(source, device=device)
-            return
-        if self._progress_source is not None:
-            self.bec_dispatcher.disconnect_slot(
-                self.on_progress_update,
-                (
-                    MessageEndpoints.scan_progress()
-                    if self._progress_source == ProgressSource.SCAN_PROGRESS
-                    else MessageEndpoints.device_progress(device=self._progress_device)
-                ),
-            )
-        self._progress_source = source
-        self._progress_device = None if source == ProgressSource.SCAN_PROGRESS else device
-        self.bec_dispatcher.connect_slot(
-            self.on_progress_update,
-            (
-                MessageEndpoints.scan_progress()
-                if source == ProgressSource.SCAN_PROGRESS
-                else MessageEndpoints.device_progress(device=device)
-            ),
+        self.progress_tracker = BECProgressTracker(self.bec_dispatcher, parent=self)
+        self.progress_tracker.progress_started.connect(self._on_progress_started)
+        self.progress_tracker.progress_updated.connect(self._on_progress_snapshot)
+        self.progress_tracker.progress_finished.connect(
+            lambda _snapshot: self.progress_finished.emit()
         )
-        self.update_source_label(source, device=device)
-        # self.progress_started.emit()
+        self.progress_tracker.start()
 
-    def _start_task(self, scan_id: str | None) -> None:
-        if self.task is not None:
-            self.task.timer.stop()
-            self.task.deleteLater()
-        self.task = ProgressTask(parent=self)
-        self.task.timer.timeout.connect(self.update_labels)
-        self._active_scan_id = scan_id
+    def update_source_label(self):
+        scan_number = self.progress_tracker.scan_number
+        scan_text = f"Scan {scan_number}" if scan_number is not None else "Scan"
+        if self.ui.source_label.text() == scan_text:
+            return
+        logger.info(f"Set progress source to {scan_text}")
+        self.ui.source_label.setText(scan_text)
+
+    def _on_progress_started(self, _snapshot: ProgressSnapshot):
+        if self.progress_tracker.task is not None:
+            self.progress_tracker.task.timer.timeout.connect(self.update_labels)
         self.progress_started.emit()
 
-    def _clear_task(self, *, emit_finished: bool = True) -> None:
-        if self.task is None:
-            self._active_scan_id = None
-            return
-        self.task.timer.stop()
-        self.task.deleteLater()
-        self.task = None
-        self._active_scan_id = None
-        if emit_finished:
-            self.progress_finished.emit()
-
-    def update_source_label(self, source: ProgressSource, device=None):
-        scan_text = f"Scan {self.scan_number}" if self.scan_number is not None else "Scan"
-        text = scan_text if source == ProgressSource.SCAN_PROGRESS else f"Device {device}"
-        if self.ui.source_label.text() == text:
-            return
-        logger.info(f"Set progress source to {text}")
-        self.ui.source_label.setText(text)
-
-    @SafeSlot(dict, dict)
-    def on_progress_update(self, msg_content: dict, metadata: dict):
-        """
-        Update the progress bar based on the progress message.
-        """
-        value = msg_content["value"]
-        max_value = msg_content.get("max_value", 100)
-        done = msg_content.get("done", False)
-        status: Literal["open", "paused", "aborted", "halted", "closed"] = metadata.get(
-            "status", "open"
-        )
-
-        if self.task is None:
-            return
-        self.task.update(value, max_value, done)
-
+    def _on_progress_snapshot(self, snapshot: ProgressSnapshot):
         self.update_labels()
-
-        self.progressbar.set_maximum(self.task.max_value)
-        self.progressbar.state = ProgressState.from_bec_status(status)
-        self.progressbar.set_value(self.task.value)
-
-        if done:
-            self._clear_task()
-            return
+        self.update_source_label()
+        self.progressbar.set_maximum(snapshot.max_value)
+        self.progressbar.state = BEC_STATUS_TO_PROGRESS_STATE.get(
+            snapshot.status.lower(), ProgressState.NORMAL
+        )
+        self.progressbar.set_value(snapshot.value)
 
     @SafeProperty(bool)
     def show_elapsed_time(self):
@@ -289,86 +129,17 @@ class ScanProgressBar(BECWidget, QWidget):
         """
         Update the labels based on the progress task.
         """
-        if self.task is None:
+        task = self.progress_tracker.task
+        if task is None:
             return
 
-        self.ui.elapsed_time_label.setText(self.task.time_elapsed)
-        self.ui.remaining_time_label.setText(self.task.time_remaining)
-
-    @SafeSlot(dict, dict, verify_sender=True)
-    def on_queue_update(self, msg_content, metadata):
-        """
-        Update the progress bar based on the queue status.
-        """
-        if not "queue" in msg_content:
-            self._clear_task()
-            return
-        if "primary" not in msg_content["queue"]:
-            self._clear_task()
-            return
-        if (primary_queue := msg_content.get("queue").get("primary")) is None:
-            self._clear_task()
-            return
-        if not isinstance(primary_queue, messages.ScanQueueStatus):
-            self._clear_task()
-            return
-        primary_queue_info = primary_queue.info
-        if len(primary_queue_info) == 0:
-            self._clear_task()
-            return
-        scan_info = primary_queue_info[0]
-        if scan_info is None:
-            self._clear_task()
-            return
-
-        active_request_block = scan_info.active_request_block
-        if active_request_block is None:
-            self._clear_task()
-            return
-
-        status = scan_info.status.lower()
-        if status != "running":
-            self._clear_task()
-            return
-
-        scan_id = active_request_block.scan_id or str(active_request_block.scan_number)
-        if self.task is None or self._active_scan_id != scan_id:
-            self._start_task(scan_id)
-
-        self.scan_number = active_request_block.scan_number
-        report_instructions = active_request_block.report_instructions
-        if not report_instructions:
-            return
-
-        # for now, let's just use the first instruction
-        instruction = report_instructions[0]
-
-        if "scan_progress" in instruction:
-            self.set_progress_source(ProgressSource.SCAN_PROGRESS)
-        elif "device_progress" in instruction:
-            if not instruction["device_progress"]:
-                return
-            device = instruction["device_progress"][0]
-            self.set_progress_source(ProgressSource.DEVICE_PROGRESS, device=device)
+        self.ui.elapsed_time_label.setText(task.time_elapsed)
+        self.ui.remaining_time_label.setText(task.time_remaining)
 
     def cleanup(self):
-        self._clear_task(emit_finished=False)
-        if self._progress_source is not None:
-            self.bec_dispatcher.disconnect_slot(
-                self.on_progress_update,
-                (
-                    MessageEndpoints.scan_progress()
-                    if self._progress_source == ProgressSource.SCAN_PROGRESS
-                    else MessageEndpoints.device_progress(device=self._progress_device)
-                ),
-            )
-        self._progress_source = None
-        self._progress_device = None
+        self.progress_tracker.cleanup()
         self.progressbar.close()
         self.progressbar.deleteLater()
-        self.bec_dispatcher.disconnect_slot(
-            self.on_queue_update, MessageEndpoints.scan_queue_status()
-        )
         super().cleanup()
 
 

@@ -117,13 +117,6 @@ def test_hidden_scan_progress_parent_blocks_children_namespace(bec_main_window):
     assert nested_progress.parent_id == hidden_progress.gui_id
 
 
-def test_compact_scan_progress_bar_uses_status_bar_sizing(bec_main_window):
-    progressbar = bec_main_window._scan_progress_bar_simple.progressbar
-
-    assert progressbar.height() == bec_main_window.SCAN_PROGRESS_HEIGHT
-    assert progressbar.progressbar.minimumHeight() == 0
-
-
 #################################################################
 # Tests for BECMainWindow Addons
 #################################################################

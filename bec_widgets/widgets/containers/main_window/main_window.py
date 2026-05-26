@@ -209,6 +209,7 @@ class BECMainWindow(BECWidget, QMainWindow):
         self._scan_progress_bar_simple.progressbar.label_template = ""
         self._scan_progress_bar_simple.progressbar.setFixedHeight(self.SCAN_PROGRESS_HEIGHT)
         self._scan_progress_bar_simple.progressbar.setFixedWidth(self.SCAN_PROGRESS_WIDTH)
+        # This one do not need dynamic styling on hover ScanProgressBar since user will hover on it probably later, when progress bar is big enough
         self._scan_progress_bar_full = ScanProgressBar(
             self, rpc_exposed=False, rpc_passthrough_children=False, enable_dynamic_stylesheet=False
         )
@@ -237,8 +238,8 @@ class BECMainWindow(BECWidget, QMainWindow):
 
         # The actual line
         line = QFrame()
-        line.setFrameShape(QFrame.VLine)
-        line.setFrameShadow(QFrame.Sunken)
+        line.setFrameShape(QFrame.Shape.VLine)
+        line.setFrameShadow(QFrame.Shadow.Sunken)
         line.setFixedHeight(status_bar.sizeHint().height() - 2)
 
         # Wrapper to center the line vertically -> work around for QFrame not being able to center itself
@@ -246,7 +247,7 @@ class BECMainWindow(BECWidget, QMainWindow):
         vbox = QVBoxLayout(wrapper)
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.addStretch()
-        vbox.addWidget(line, alignment=Qt.AlignHCenter)
+        vbox.addWidget(line, alignment=Qt.AlignmentFlag.AlignHCenter)
         vbox.addStretch()
         wrapper.setFixedWidth(line.sizeHint().width())
 

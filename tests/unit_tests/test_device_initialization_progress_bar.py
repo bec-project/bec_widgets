@@ -40,7 +40,7 @@ def test_update_device_initialization_progress(progress_bar, qtbot):
     assert progress_bar.progress_bar._user_value == 1
     assert progress_bar.progress_bar._user_maximum == 3
     assert progress_bar.progress_label.text() == f"{msg.device} initialization in progress..."
-    assert "1 / 3 - 33 %" == progress_bar.progress_bar.center_label.text()
+    assert "1 / 3 - 33 %" == progress_bar.progress_bar.progressbar.text()
 
     # II. Update with message of finished DeviceInitializationProgressMessage, finished=True, success=True
     msg.finished = True
@@ -49,7 +49,7 @@ def test_update_device_initialization_progress(progress_bar, qtbot):
     assert progress_bar.progress_bar._user_value == 1
     assert progress_bar.progress_bar._user_maximum == 3
     assert progress_bar.progress_label.text() == f"{msg.device} initialization succeeded!"
-    assert "1 / 3 - 33 %" == progress_bar.progress_bar.center_label.text()
+    assert "1 / 3 - 33 %" == progress_bar.progress_bar.progressbar.text()
 
     # III. Update with message of finished DeviceInitializationProgressMessage, finished=True, success=False
     msg.finished = True
@@ -59,7 +59,7 @@ def test_update_device_initialization_progress(progress_bar, qtbot):
     with qtbot.waitSignal(progress_bar.failed_devices_changed) as signal_blocker:
         progress_bar._update_device_initialization_progress(msg.model_dump(), {})
         assert progress_bar.progress_label.text() == f"{msg.device} initialization failed!"
-        assert "2 / 3 - 66 %" == progress_bar.progress_bar.center_label.text()
+        assert "2 / 3 - 66 %" == progress_bar.progress_bar.progressbar.text()
         assert progress_bar.progress_bar._user_value == 2
         assert progress_bar.progress_bar._user_maximum == 3
 
