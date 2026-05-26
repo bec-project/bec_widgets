@@ -12,7 +12,9 @@ from qtpy.QtWidgets import QWidget
 from bec_widgets import BECWidget
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.colors import Colors
+from bec_widgets.utils.entry_validator import EntryValidator
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.widgets.progress.progress_backend import BECProgressTracker, ProgressSnapshot
 
 logger = bec_logger.logger
 if TYPE_CHECKING:
@@ -81,6 +83,8 @@ class Ring(BECWidget, QWidget):
         self._color: QColor = self.convert_color(self.config.color)
         self._background_color: QColor = self.convert_color(self.config.background_color)
         self.registered_slot: tuple[Callable, str | EndpointInfo] | None = None
+        self.progress_tracker = BECProgressTracker(self.bec_dispatcher, parent=self)
+        self.progress_tracker.progress_updated.connect(self._on_progress_snapshot)
         self.RID = None
         self._gap = 5
         self._hovered = False
@@ -219,34 +223,31 @@ class Ring(BECWidget, QWidget):
             case "manual":
                 if self.config.mode == "manual":
                     return
-                if self.registered_slot is not None:
-                    self.bec_dispatcher.disconnect_slot(*self.registered_slot)
+                self._disconnect_registered_update()
                 self.config.mode = "manual"
-                self.registered_slot = None
             case "scan":
                 if self.config.mode == "scan":
                     return
-                if self.registered_slot is not None:
-                    self.bec_dispatcher.disconnect_slot(*self.registered_slot)
+                self._disconnect_registered_update()
                 self.config.mode = "scan"
-                self.bec_dispatcher.connect_slot(
-                    self.on_scan_progress, MessageEndpoints.scan_progress()
-                )
-                self.registered_slot = (self.on_scan_progress, MessageEndpoints.scan_progress())
+                self.progress_tracker.start()
             case "device":
-                if self.registered_slot is not None:
-                    self.bec_dispatcher.disconnect_slot(*self.registered_slot)
+                self._disconnect_registered_update()
                 self.config.mode = "device"
                 if device == "":
-                    self.registered_slot = None
                     return
                 self.config.device = device
-                # self.config.signal = self._get_signal_from_device(device, signal)
                 signal = self._update_device_connection(device, signal)
                 self.config.signal = signal
 
             case _:
                 raise ValueError(f"Unsupported mode: {mode}")
+
+    def _disconnect_registered_update(self):
+        if self.registered_slot is not None:
+            self.bec_dispatcher.disconnect_slot(*self.registered_slot)
+            self.registered_slot = None
+        self.progress_tracker.cleanup()
 
     def set_precision(self, precision: int):
         """
@@ -268,57 +269,12 @@ class Ring(BECWidget, QWidget):
         self.config.direction = direction
         self._request_update()
 
-    def _get_signals_for_device(self, device: str) -> dict[str, list[str]]:
-        """
-        Get the signals for the device.
-
-        Args:
-            device(str): Device name for the device
-
-        Returns:
-            dict[str, list[str]]: Dictionary with the signals for the device
-        """
-        dm = self.bec_dispatcher.client.device_manager
-        if not dm:
-            raise ValueError("Device manager is not available in the BEC client.")
-        dev_obj = dm.devices.get(device)
-        if dev_obj is None:
-            raise ValueError(f"Device '{device}' not found in device manager.")
-
-        progress_signals = [
-            obj["component_name"]
-            for obj in dev_obj._info["signals"].values()
-            if obj["signal_class"] == "ProgressSignal"
-        ]
-        hinted_signals = [
-            obj["obj_name"]
-            for obj in dev_obj._info["signals"].values()
-            if obj["kind_str"] == "hinted"
-            and obj["signal_class"]
-            not in ["ProgressSignal", "AsyncSignal", "AsyncMultiSignal", "DynamicSignal"]
-        ]
-
-        normal_signals = [
-            obj["component_name"]
-            for obj in dev_obj._info["signals"].values()
-            if obj["kind_str"] == "normal"
-        ]
-        return {
-            "progress_signals": progress_signals,
-            "hinted_signals": hinted_signals,
-            "normal_signals": normal_signals,
-        }
-
     def _update_device_connection(self, device: str, signal: str | None) -> str:
         """
         Update the device connection for the ring widget.
 
-        In general, we support two modes here:
-        - If signal is provided, we use that directly.
-        - If signal is not provided, we try to get the signal from the device manager.
-          We first check for progress signals, then for hinted signals, and finally for normal signals.
-
-        Depending on what type of signal we get (progress or hinted/normal), we subscribe to different endpoints.
+        Device mode always subscribes to the device readback endpoint. If no signal is provided,
+        the signal is resolved from the device hints, matching the plot widgets.
 
         Args:
             device(str): Device name for the device mode
@@ -335,57 +291,11 @@ class Ring(BECWidget, QWidget):
         if dev_obj is None:
             return ""
 
-        signals = self._get_signals_for_device(device)
-        progress_signals = signals["progress_signals"]
-        hinted_signals = signals["hinted_signals"]
-        normal_signals = signals["normal_signals"]
-
-        if not signal:
-            # If signal is not provided, we try to get it from the device manager
-            if len(progress_signals) > 0:
-                signal = progress_signals[0]
-                logger.info(
-                    f"Using progress signal '{signal}' for device '{device}' in ring progress bar."
-                )
-            elif len(hinted_signals) > 0:
-                signal = hinted_signals[0]
-                logger.info(
-                    f"Using hinted signal '{signal}' for device '{device}' in ring progress bar."
-                )
-            elif len(normal_signals) > 0:
-                signal = normal_signals[0]
-                logger.info(
-                    f"Using normal signal '{signal}' for device '{device}' in ring progress bar."
-                )
-            else:
-                logger.warning(f"No signals found for device '{device}' in ring progress bar.")
-                return ""
-
-        if signal in progress_signals:
-            endpoint = MessageEndpoints.device_progress(device)
-            self.bec_dispatcher.connect_slot(self.on_device_progress, endpoint)
-            self.registered_slot = (self.on_device_progress, endpoint)
-            return signal
-        if signal in hinted_signals or signal in normal_signals:
-            endpoint = MessageEndpoints.device_readback(device)
-            self.bec_dispatcher.connect_slot(self.on_device_readback, endpoint)
-            self.registered_slot = (self.on_device_readback, endpoint)
-            return signal
-
-    @SafeSlot(dict, dict)
-    def on_scan_progress(self, msg, meta):
-        """
-        Update the ring widget with the scan progress.
-
-        Args:
-            msg(dict): Message with the scan progress
-            meta(dict): Metadata for the message
-        """
-        current_RID = meta.get("RID", None)
-        if current_RID != self.RID:
-            self.set_min_max_values(0, msg.get("max_value", 100))
-        self.set_value(msg.get("value", 0))
-        self.update()
+        signal = EntryValidator(dm.devices).validate_signal(device, signal or None)
+        endpoint = MessageEndpoints.device_readback(device)
+        self.bec_dispatcher.connect_slot(self.on_device_readback, endpoint)
+        self.registered_slot = (self.on_device_readback, endpoint)
+        return signal
 
     @SafeSlot(dict, dict)
     def on_device_readback(self, msg, meta):
@@ -406,32 +316,23 @@ class Ring(BECWidget, QWidget):
         self.set_value(value)
         self.update()
 
-    @SafeSlot(dict, dict)
-    def on_device_progress(self, msg, meta):
-        """
-        Update the ring widget with the device progress.
-
-        Args:
-            msg(dict): Message with the device progress
-            meta(dict): Metadata for the message
-        """
-        device = self.config.device
-        if device is None:
-            return
-        max_val = msg.get("max_value", 100)
-        self.set_min_max_values(0, max_val)
-        value = msg.get("value", 0)
-        if msg.get("done"):
-            value = max_val
-        self.set_value(value)
+    def _on_progress_snapshot(self, snapshot: ProgressSnapshot):
+        if snapshot.is_new_scan:
+            self.set_min_max_values(0, snapshot.max_value)
+        self.RID = snapshot.rid
+        self.set_value(snapshot.value)
         self.update()
 
     def paintEvent(self, event):
         if not self.progress_container:
             return
-        painter = QtGui.QPainter(self)
-        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
         size = min(self.width(), self.height())
+        if size <= 0 or not self.isVisible():
+            return
+        painter = QtGui.QPainter(self)
+        if not painter.isActive():
+            return
+        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
 
         # Center the ring
         x_offset = (self.width() - size) // 2
@@ -508,15 +409,6 @@ class Ring(BECWidget, QWidget):
         if isinstance(color, (tuple, list)):
             return QtGui.QColor(*color)
         raise ValueError(f"Unsupported color format: {color}")
-
-    def cleanup(self):
-        """
-        Cleanup the ring widget.
-        Disconnect any registered slots.
-        """
-        if self.registered_slot is not None:
-            self.bec_dispatcher.disconnect_slot(*self.registered_slot)
-            self.registered_slot = None
 
     ###############################################
     ####### QProperties ###########################
@@ -666,6 +558,7 @@ class Ring(BECWidget, QWidget):
         if self.registered_slot is not None:
             self.bec_dispatcher.disconnect_slot(*self.registered_slot)
             self.registered_slot = None
+        self.progress_tracker.cleanup()
         self._hover_animation.stop()
         super().cleanup()
 
