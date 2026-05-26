@@ -460,7 +460,7 @@ class ImageBase(PlotBase):
                 self._color_bar = None
 
             def disable_autorange():
-                print("Disabling autorange")
+                logger.info("Disabling autorange")
                 self.setProperty("autorange", False)
 
             if style == "simple":
@@ -928,7 +928,7 @@ class ImageBase(PlotBase):
                 # if sync:
                 self._sync_colorbar_levels()
         self._sync_autorange_switch()
-        print(f"Autorange set to {enabled}")
+        logger.info(f"Autorange set to {enabled}")
 
     @SafeProperty(str)
     def autorange_mode(self) -> str:
