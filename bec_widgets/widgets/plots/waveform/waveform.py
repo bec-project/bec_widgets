@@ -2449,7 +2449,7 @@ class Waveform(PlotBase):
                 first_key = next(iter(info))
                 mem_bytes = info[first_key]["value"]["mem_size"]
             size_mb = mem_bytes / (1024 * 1024)
-            print(f"Dataset size: {size_mb:.1f} MB")
+            logger.info(f"Dataset size: {size_mb:.1f} MB")
         except Exception as exc:  # noqa: BLE001
             logger.error(f"Unable to evaluate dataset size: {exc}")
             return True

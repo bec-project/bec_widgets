@@ -1,9 +1,12 @@
+from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QHBoxLayout, QPushButton, QToolButton, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
+
+logger = bec_logger.logger
 
 
 class AbortButton(BECWidget, QWidget):
@@ -55,7 +58,7 @@ class AbortButton(BECWidget, QWidget):
             scan_id(str|None): The scan id to abort. If None, the current scan will be aborted.
         """
         if self.scan_id is not None:
-            print(f"Aborting scan with scan_id: {self.scan_id}")
+            logger.info(f"Aborting scan with scan_id: {self.scan_id}")
             self.queue.request_scan_abortion(scan_id=self.scan_id)
         else:
             self.queue.request_scan_abortion()

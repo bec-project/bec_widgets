@@ -155,7 +155,6 @@ class ScanProgressBar(BECWidget, QWidget):
         self._progress_device = None
         self.task = None
         self.scan_number = None
-        self.progress_started.connect(lambda: print("Scan progress started"))
 
     def connect_to_queue(self):
         """
