@@ -76,8 +76,6 @@ def test_run_rpc_logs_response_timeout(monkeypatch):
     assert publish_msg.metadata["deadline"] == publish_msg.metadata["sent_at"]
     assert info_mock.call_count == 1
     info_message = info_mock.call_args.args[0]
-    assert "args=(42,)" in info_message
-    assert "kwargs={'precision': 2}" in info_message
     error_mock.assert_called_once()
     error_message = error_mock.call_args.args[0]
     assert "GUI RPC response timeout" in error_message
@@ -85,5 +83,3 @@ def test_run_rpc_logs_response_timeout(monkeypatch):
     assert "target_gui_id=progress_widget" in error_message
     assert "object_name=progressbar" in error_message
     assert "timeout=0" in error_message
-    assert "args=(42,)" in error_message
-    assert "kwargs={'precision': 2}" in error_message

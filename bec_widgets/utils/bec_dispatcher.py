@@ -16,7 +16,7 @@ from bec_lib.service_config import ServiceConfig
 from qtpy.QtCore import QObject
 from qtpy.QtCore import Signal as pyqtSignal
 
-from bec_widgets.utils.rpc_logging import elapsed_seconds, format_elapsed, format_rpc_payload
+from bec_widgets.utils.rpc_logging import elapsed_seconds, format_elapsed
 from bec_widgets.utils.serialization import register_serializer_extension
 
 logger = bec_logger.logger
@@ -43,23 +43,20 @@ def _log_rpc_dispatcher_receive(msg_content: Any, metadata: Any) -> None:
     dispatch_latency = elapsed_seconds(sent_at, dispatch_received_at)
     stale_on_dispatch = deadline is not None and dispatch_received_at > deadline
     target_gui_id = parameter.get("gui_id") or metadata.get("target_gui_id")
-    args_log = format_rpc_payload(parameter.get("args", []))
-    kwargs_log = format_rpc_payload(parameter.get("kwargs", {}))
 
     logger.info(
         "GUI RPC dispatcher received request before Qt callback emit "
         f"request_id={request_id} method={method} receiver={metadata.get('receiver')} "
         f"target_gui_id={target_gui_id} object_name={metadata.get('object_name')} "
         f"timeout={timeout} dispatch_latency_s={format_elapsed(dispatch_latency)} "
-        f"stale_on_dispatch={stale_on_dispatch} args={args_log} kwargs={kwargs_log}"
+        f"stale_on_dispatch={stale_on_dispatch}"
     )
     if stale_on_dispatch:
         logger.warning(
             "GUI RPC dispatcher received request after client timeout deadline "
             f"request_id={request_id} method={method} receiver={metadata.get('receiver')} "
             f"target_gui_id={target_gui_id} object_name={metadata.get('object_name')} "
-            f"timeout={timeout} dispatch_latency_s={format_elapsed(dispatch_latency)} "
-            f"args={args_log} kwargs={kwargs_log}"
+            f"timeout={timeout} dispatch_latency_s={format_elapsed(dispatch_latency)}"
         )
 
 
