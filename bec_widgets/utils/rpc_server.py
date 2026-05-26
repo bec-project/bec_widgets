@@ -19,7 +19,7 @@ from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
 from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import ErrorPopupUtility
-from bec_widgets.utils.rpc_logging import elapsed_seconds, format_elapsed, format_rpc_payload
+from bec_widgets.utils.rpc_logging import elapsed_seconds, format_elapsed
 from bec_widgets.utils.rpc_register import RPCRegister
 from bec_widgets.utils.screen_utils import apply_window_geometry
 from bec_widgets.widgets.containers.dock_area.dock_area import BECDockArea
@@ -121,8 +121,6 @@ class RPCServer:
         parameter = msg.get("parameter", {})
         args = parameter.get("args", [])
         kwargs = parameter.get("kwargs", {})
-        args_log = format_rpc_payload(args)
-        kwargs_log = format_rpc_payload(kwargs)
         target_gui_id = parameter.get("gui_id")
         sent_at = metadata.get("sent_at")
         deadline = metadata.get("deadline")
@@ -135,15 +133,14 @@ class RPCServer:
             f"request_id={request_id} method={method} gui_id={self.gui_id} "
             f"target_gui_id={target_gui_id} timeout={timeout} "
             f"receive_latency_s={format_elapsed(receive_latency)} "
-            f"stale_on_receive={stale_on_receive} args={args_log} kwargs={kwargs_log}"
+            f"stale_on_receive={stale_on_receive}"
         )
         if stale_on_receive:
             logger.warning(
                 "GUI RPC server received request after client timeout deadline "
                 f"request_id={request_id} method={method} gui_id={self.gui_id} "
                 f"target_gui_id={target_gui_id} timeout={timeout} "
-                f"receive_latency_s={format_elapsed(receive_latency)} "
-                f"args={args_log} kwargs={kwargs_log}"
+                f"receive_latency_s={format_elapsed(receive_latency)}"
             )
         logger.debug(f"Received RPC instruction: {msg}, metadata: {metadata}")
         execution_start = time.perf_counter()
@@ -160,8 +157,7 @@ class RPCServer:
                 logger.error(
                     "GUI RPC server execution failed "
                     f"request_id={request_id} method={method} gui_id={self.gui_id} "
-                    f"target_gui_id={target_gui_id} execution_duration_s={execution_duration:.3f} "
-                    f"args={args_log} kwargs={kwargs_log}\n"
+                    f"target_gui_id={target_gui_id} execution_duration_s={execution_duration:.3f}\n"
                     f"{content}"
                 )
                 self.send_response(request_id, False, {"error": content})
@@ -172,16 +168,14 @@ class RPCServer:
                     "GUI RPC server executed request "
                     f"request_id={request_id} method={method} gui_id={self.gui_id} "
                     f"target_gui_id={target_gui_id} execution_duration_s={execution_duration:.3f} "
-                    f"response_after_client_deadline={response_stale} "
-                    f"args={args_log} kwargs={kwargs_log}"
+                    f"response_after_client_deadline={response_stale}"
                 )
                 if response_stale:
                     logger.warning(
                         "GUI RPC server response is late for client timeout "
                         f"request_id={request_id} method={method} gui_id={self.gui_id} "
                         f"target_gui_id={target_gui_id} timeout={timeout} "
-                        f"execution_duration_s={execution_duration:.3f} "
-                        f"args={args_log} kwargs={kwargs_log}"
+                        f"execution_duration_s={execution_duration:.3f}"
                     )
                 logger.debug(f"RPC instruction executed successfully: {res}")
                 self._rpc_singleshot_repeats[request_id] = SingleshotRPCRepeat()

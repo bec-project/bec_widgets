@@ -1,12 +1,11 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
 import threading
 import time
-from types import SimpleNamespace
 from unittest import mock
 
 import pytest
 from bec_lib import service_config
-from bec_lib.messages import ScanMessage
+from bec_lib.messages import GUIInstructionMessage, ScanMessage
 from bec_lib.serialization import MsgpackSerialization
 
 from bec_widgets.utils.bec_dispatcher import BECDispatcher, QtRedisConnector, QtThreadSafeCallback
@@ -227,11 +226,9 @@ def test_qt_redis_connector_logs_rpc_before_qt_callback(monkeypatch):
 
     cb = QtThreadSafeCallback(callback)
     connector = QtRedisConnector("localhost:1", mock.MagicMock())
-    rpc_msg = SimpleNamespace(
-        content={
-            "action": "set_value",
-            "parameter": {"args": [1], "kwargs": {"source": "test"}, "gui_id": "ring"},
-        },
+    rpc_msg = GUIInstructionMessage(
+        action="set_value",
+        parameter={"args": [1], "kwargs": {"source": "test"}, "gui_id": "ring"},
         metadata={
             "request_id": "dispatcher-request",
             "receiver": "gui",
@@ -255,14 +252,10 @@ def test_qt_redis_connector_logs_rpc_before_qt_callback(monkeypatch):
         assert "object_name=progressbar" in info_message
         assert "timeout=0.1" in info_message
         assert "stale_on_dispatch=True" in info_message
-        assert "args=[1]" in info_message
-        assert "kwargs={'source': 'test'}" in info_message
 
         warning_mock.assert_called_once()
         warning_message = warning_mock.call_args.args[0]
         assert "received request after client timeout deadline" in warning_message
         assert "request_id=dispatcher-request" in warning_message
-        assert "args=[1]" in warning_message
-        assert "kwargs={'source': 'test'}" in warning_message
     finally:
         connector.shutdown()

@@ -13,8 +13,6 @@ from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import, lazy_import_from
 
-from bec_widgets.utils.rpc_logging import format_rpc_payload
-
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib import messages
     from bec_lib.connector import MessageObject
@@ -267,8 +265,6 @@ class RPCBase:
             )
 
         target_gui_id = gui_id or self._gui_id
-        args_log = format_rpc_payload(args)
-        kwargs_log = format_rpc_payload(kwargs)
         sent_at = time.time()
         deadline = sent_at + timeout if timeout is not None else None
         rpc_msg.metadata.update(
@@ -287,8 +283,7 @@ class RPCBase:
             "Sending GUI RPC request "
             f"request_id={request_id} method={method} receiver={receiver} "
             f"target_gui_id={target_gui_id} object_name={self.object_name} "
-            f"wait_for_response={wait_for_rpc_response} timeout={timeout} "
-            f"args={args_log} kwargs={kwargs_log}"
+            f"wait_for_response={wait_for_rpc_response} timeout={timeout}"
         )
         self._client.connector.set_and_publish(MessageEndpoints.gui_instructions(receiver), rpc_msg)
 
@@ -300,7 +295,7 @@ class RPCBase:
                         "GUI RPC response timeout "
                         f"request_id={request_id} method={method} receiver={receiver} "
                         f"target_gui_id={target_gui_id} object_name={self.object_name} "
-                        f"timeout={timeout} args={args_log} kwargs={kwargs_log}"
+                        f"timeout={timeout}"
                     )
                     raise RPCResponseTimeoutError(request_id, timeout)
             finally:
@@ -317,7 +312,7 @@ class RPCBase:
                 "Received GUI RPC response "
                 f"request_id={request_id} method={method} receiver={receiver} "
                 f"target_gui_id={target_gui_id} object_name={self.object_name} "
-                f"accepted={self._rpc_response.accepted} args={args_log} kwargs={kwargs_log}"
+                f"accepted={self._rpc_response.accepted}"
             )
             if not self._rpc_response.accepted:
                 raise ValueError(self._rpc_response.message["error"])

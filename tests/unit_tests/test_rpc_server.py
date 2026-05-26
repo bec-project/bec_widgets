@@ -198,15 +198,9 @@ def test_on_rpc_update_logs_late_client_deadline(rpc_server, monkeypatch):
     assert "target_gui_id=ring" in received_log
     assert "timeout=0.1" in received_log
     assert "stale_on_receive=True" in received_log
-    assert "args=[1]" in received_log
-    assert "kwargs={'source': 'test'}" in received_log
     assert "response_after_client_deadline=True" in executed_log
-    assert "args=[1]" in executed_log
-    assert "kwargs={'source': 'test'}" in executed_log
     assert "received request after client timeout deadline" in warning_logs
     assert "response is late for client timeout" in warning_logs
-    assert "args=[1]" in warning_logs
-    assert "kwargs={'source': 'test'}" in warning_logs
 
 
 def test_run_rpc_delegates_to_rpc_content_class(rpc_server):
