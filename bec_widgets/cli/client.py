@@ -427,7 +427,7 @@ class BECMainWindow(RPCBase):
 
 
 class BECProgressBar(RPCBase):
-    """A custom progress bar with smooth transitions. The displayed text can be customized using a template."""
+    """A BEC progress bar backed by Qt's native QProgressBar."""
 
     _IMPORT_MODULE = "bec_widgets.widgets.progress.bec_progressbar.bec_progressbar"
 

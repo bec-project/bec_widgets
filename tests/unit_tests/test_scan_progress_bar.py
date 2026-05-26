@@ -71,9 +71,31 @@ def test_progress_task_basic():
     assert task.time_elapsed == "00:00:10"
 
 
+def test_progress_task_elapsed_time_uses_monotonic_clock(monkeypatch):
+    times = iter([100.0, 102.5])
+    monkeypatch.setattr(
+        "bec_widgets.widgets.progress.scan_progressbar.scan_progressbar.time.monotonic",
+        lambda: next(times),
+    )
+    task = ProgressTask(parent=None)
+    task.timer.stop()
+
+    task.update_elapsed_time()
+
+    assert task._elapsed_time == 2.5
+    assert task.time_elapsed == "00:00:02"
+
+
 def test_scan_progressbar_initialization(scan_progressbar):
     assert isinstance(scan_progressbar, ScanProgressBar)
     assert isinstance(scan_progressbar.progressbar, BECProgressBar)
+
+
+def test_scan_progressbar_passes_dynamic_stylesheet_setting(qtbot, mocked_client):
+    widget = ScanProgressBar(client=mocked_client, enable_dynamic_stylesheet=False)
+    qtbot.addWidget(widget)
+
+    assert widget.progressbar.enable_dynamic_stylesheet is False
 
 
 def test_update_labels_content(scan_progressbar):
@@ -146,6 +168,19 @@ def test_source_label_updates(scan_progressbar):
     scan_progressbar.scan_number = 5
     scan_progressbar.update_source_label(ProgressSource.SCAN_PROGRESS)
     assert scan_progressbar.ui.source_label.text() == "Scan 5"
+
+
+def test_source_label_update_logs_only_on_text_change(scan_progressbar):
+    scan_progressbar.scan_number = 5
+
+    with mock.patch(
+        "bec_widgets.widgets.progress.scan_progressbar.scan_progressbar.logger.info"
+    ) as mock_info:
+        scan_progressbar.set_progress_source(ProgressSource.SCAN_PROGRESS)
+        scan_progressbar.set_progress_source(ProgressSource.SCAN_PROGRESS)
+        scan_progressbar.set_progress_source(ProgressSource.SCAN_PROGRESS)
+
+    mock_info.assert_called_once_with("Set progress source to Scan 5")
 
 
 def test_set_progress_source_connections(scan_progressbar, monkeypatch):
@@ -241,7 +276,13 @@ def test_cleanup_disconnects_active_device_subscription(scan_progressbar, monkey
     monkeypatch.setattr(BECWidget, "cleanup", lambda self: None)
 
     scan_progressbar.set_progress_source(ProgressSource.DEVICE_PROGRESS, device="motor1")
-    ScanProgressBar.cleanup(scan_progressbar)
+    with (
+        mock.patch.object(scan_progressbar, "close", wraps=scan_progressbar.close) as close_mock,
+        mock.patch.object(
+            scan_progressbar, "deleteLater", wraps=scan_progressbar.deleteLater
+        ) as delete_later_mock,
+    ):
+        ScanProgressBar.cleanup(scan_progressbar)
 
     assert disconnect_calls == [
         MessageEndpoints.device_progress(device="motor1"),
@@ -249,6 +290,21 @@ def test_cleanup_disconnects_active_device_subscription(scan_progressbar, monkey
     ]
     assert scan_progressbar._progress_source is None
     assert scan_progressbar._progress_device is None
+    close_mock.assert_not_called()
+    delete_later_mock.assert_not_called()
+
+
+def test_cleanup_stops_active_task(scan_progressbar, monkeypatch):
+    monkeypatch.setattr(BECWidget, "cleanup", lambda self: None)
+    scan_progressbar.task = ProgressTask(parent=scan_progressbar)
+    scan_progressbar._active_scan_id = "scan-1"
+    timer = scan_progressbar.task.timer
+
+    ScanProgressBar.cleanup(scan_progressbar)
+
+    assert not timer.isActive()
+    assert scan_progressbar.task is None
+    assert scan_progressbar._active_scan_id is None
 
 
 def test_progressbar_queue_update(scan_progressbar):
@@ -263,6 +319,70 @@ def test_progressbar_queue_update(scan_progressbar):
             msg.content, msg.metadata, _override_slot_params={"verify_sender": False}
         )
         mock_set_source.assert_not_called()
+
+
+def test_progressbar_queue_update_clears_task_when_queue_is_empty(scan_progressbar):
+    scan_progressbar.task = ProgressTask(parent=scan_progressbar)
+    scan_progressbar._active_scan_id = "scan-1"
+    timer = scan_progressbar.task.timer
+    msg = messages.ScanQueueStatusMessage(
+        queue={"primary": messages.ScanQueueStatus(info=[], status="RUNNING")}
+    )
+
+    scan_progressbar.on_queue_update(
+        msg.content, msg.metadata, _override_slot_params={"verify_sender": False}
+    )
+
+    assert not timer.isActive()
+    assert scan_progressbar.task is None
+    assert scan_progressbar._active_scan_id is None
+
+
+def test_progressbar_queue_update_clears_task_when_scan_is_not_running(
+    scan_progressbar, scan_message
+):
+    scan_progressbar.task = ProgressTask(parent=scan_progressbar)
+    scan_progressbar._active_scan_id = "scan-1"
+    timer = scan_progressbar.task.timer
+    request_block = messages.RequestBlock(
+        msg=scan_message,
+        RID="some-rid",
+        scan_motors=["samx"],
+        readout_priority={"monitored": ["samx"]},
+        is_scan=True,
+        scan_number=1,
+        scan_id="scan-1",
+        report_instructions=[{"scan_progress": 20}],
+    )
+    msg = messages.ScanQueueStatusMessage(
+        metadata={},
+        queue={
+            "primary": messages.ScanQueueStatus(
+                info=[
+                    messages.QueueInfoEntry(
+                        queue_id="queue-1",
+                        scan_id=["scan-1"],
+                        status="completed",
+                        active_request_block=request_block,
+                        is_scan=[True],
+                        request_blocks=[request_block],
+                        scan_number=[1],
+                    )
+                ],
+                status="RUNNING",
+            )
+        },
+    )
+
+    with mock.patch.object(scan_progressbar, "set_progress_source") as mock_set_source:
+        scan_progressbar.on_queue_update(
+            msg.content, msg.metadata, _override_slot_params={"verify_sender": False}
+        )
+
+    assert not timer.isActive()
+    assert scan_progressbar.task is None
+    assert scan_progressbar._active_scan_id is None
+    mock_set_source.assert_not_called()
 
 
 def test_progressbar_queue_update_with_scan(scan_progressbar, scan_message):
@@ -306,6 +426,60 @@ def test_progressbar_queue_update_with_scan(scan_progressbar, scan_message):
         mock_set_source.assert_called_once_with(ProgressSource.SCAN_PROGRESS)
 
 
+def test_progressbar_queue_update_starts_new_task_for_new_scan(scan_progressbar, scan_message):
+    started = mock.Mock()
+    scan_progressbar.progress_started.connect(started)
+
+    def queue_msg(scan_id: str, scan_number: int):
+        request_block = messages.RequestBlock(
+            msg=scan_message,
+            RID=f"rid-{scan_number}",
+            scan_motors=["samx"],
+            readout_priority={"monitored": ["samx"]},
+            is_scan=True,
+            scan_number=scan_number,
+            scan_id=scan_id,
+            report_instructions=[{"scan_progress": 20}],
+        )
+        return messages.ScanQueueStatusMessage(
+            metadata={},
+            queue={
+                "primary": messages.ScanQueueStatus(
+                    info=[
+                        messages.QueueInfoEntry(
+                            queue_id=f"queue-{scan_number}",
+                            scan_id=[scan_id],
+                            status="RUNNING",
+                            active_request_block=request_block,
+                            is_scan=[True],
+                            request_blocks=[request_block],
+                            scan_number=[scan_number],
+                        )
+                    ],
+                    status="RUNNING",
+                )
+            },
+        )
+
+    first_msg = queue_msg("scan-1", 1)
+    scan_progressbar.on_queue_update(
+        first_msg.content, first_msg.metadata, _override_slot_params={"verify_sender": False}
+    )
+    first_task = scan_progressbar.task
+    assert first_task is not None
+    assert first_task.timer.isActive()
+
+    second_msg = queue_msg("scan-2", 2)
+    scan_progressbar.on_queue_update(
+        second_msg.content, second_msg.metadata, _override_slot_params={"verify_sender": False}
+    )
+
+    assert started.call_count == 2
+    assert not first_task.timer.isActive()
+    assert scan_progressbar.task is not first_task
+    assert scan_progressbar._active_scan_id == "scan-2"
+
+
 def test_progressbar_queue_update_with_device(scan_progressbar, scan_message):
     """
     Test that a queue update with a device changes the progress source to DEVICE_PROGRESS.
@@ -345,6 +519,44 @@ def test_progressbar_queue_update_with_device(scan_progressbar, scan_message):
             msg.content, msg.metadata, _override_slot_params={"verify_sender": False}
         )
         mock_set_source.assert_called_once_with(ProgressSource.DEVICE_PROGRESS, device="samx")
+
+
+def test_progressbar_queue_update_ignores_empty_device_progress(scan_progressbar, scan_message):
+    request_block = messages.RequestBlock(
+        msg=scan_message,
+        RID="some-rid",
+        scan_motors=["samx"],
+        readout_priority={"monitored": ["samx"]},
+        is_scan=True,
+        scan_number=1,
+        scan_id="e3f50794-852c-4bb1-965e-41c585ab0aa9",
+        report_instructions=[{"device_progress": []}],
+    )
+    msg = messages.ScanQueueStatusMessage(
+        metadata={},
+        queue={
+            "primary": messages.ScanQueueStatus(
+                info=[
+                    messages.QueueInfoEntry(
+                        queue_id="40831e2c-fbd1-4432-8072-ad168a7ad964",
+                        scan_id=["e3f50794-852c-4bb1-965e-41c585ab0aa9"],
+                        status="RUNNING",
+                        active_request_block=request_block,
+                        is_scan=[True],
+                        request_blocks=[request_block],
+                        scan_number=[1],
+                    )
+                ],
+                status="RUNNING",
+            )
+        },
+    )
+
+    with mock.patch.object(scan_progressbar, "set_progress_source") as mock_set_source:
+        scan_progressbar.on_queue_update(
+            msg.content, msg.metadata, _override_slot_params={"verify_sender": False}
+        )
+        mock_set_source.assert_not_called()
 
 
 def test_progressbar_queue_update_with_no_scan_or_device(scan_progressbar, scan_message):
