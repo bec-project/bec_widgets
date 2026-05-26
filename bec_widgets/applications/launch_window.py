@@ -660,19 +660,34 @@ class LaunchWindow(BECMainWindow):
         Check if the launcher is the last widget in the application.
         """
 
-        # get all parents of connections
         for connection in connections.values():
-            try:
-                parent = connection.parent()
-                if parent is None and connection.objectName() != self.objectName():
-                    logger.info(
-                        f"Found non-launcher connection without parent: {connection.objectName()}"
-                    )
-                    return False
-            except Exception as e:
-                logger.error(f"Error getting parent of connection: {e}")
+            if not self._connection_belongs_to_launcher(connection):
                 return False
         return True
+
+    def _connection_belongs_to_launcher(self, connection: QObject) -> bool:
+        """
+        Check whether a registered connection is the launcher itself or part of its Qt hierarchy.
+
+        Registered top-level windows such as BECMainWindowNoRPC are expected when another GUI is
+        open. They are not launcher children, but they are also not an error condition.
+        """
+        try:
+            if connection is self or getattr(connection, "gui_id", None) == self.gui_id:
+                return True
+            if connection.objectName() == self.objectName():
+                return True
+
+            parent = connection.parent()
+            while parent is not None:
+                if parent is self:
+                    return True
+                parent = parent.parent()
+        except Exception as e:
+            logger.error(f"Error checking launcher ownership of connection: {e}")
+            return False
+
+        return False
 
     def _turn_off_the_lights(self, connections: dict):
         """

@@ -153,6 +153,17 @@ def test_gui_server_turns_off_the_lights(bec_launch_window, connection_names, hi
             mock_set_quit_on_last_window_closed.assert_called_once_with(True)
 
 
+def test_launcher_detects_external_main_window_without_info_log(bec_launch_window):
+    connection = mock.MagicMock()
+    connection.parent.return_value = None
+    connection.objectName.return_value = "BECMainWindowNoRPC"
+
+    with mock.patch("bec_widgets.applications.launch_window.logger.info") as mock_info:
+        assert not bec_launch_window._launcher_is_last_widget({"window": connection})
+
+    mock_info.assert_not_called()
+
+
 @pytest.mark.parametrize(
     "connection_names, close_called",
     [
