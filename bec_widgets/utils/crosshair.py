@@ -493,7 +493,10 @@ class Crosshair(QObject):
         if event.button() != Qt.MouseButton.LeftButton:
             return
         self.update_markers()
-        scene_pos = event.scenePos() if hasattr(event, "scenePos") else event._scenePos
+        scene_pos_getter = getattr(event, "scenePos", None)
+        if not callable(scene_pos_getter):
+            return
+        scene_pos = scene_pos_getter()
         mouse_point = self.plot_item.vb.mapSceneToView(scene_pos)
         if self._is_within_view_range(mouse_point.x(), mouse_point.y()):
             x, y = mouse_point.x(), mouse_point.y()
