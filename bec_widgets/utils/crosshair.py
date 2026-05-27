@@ -429,10 +429,10 @@ class Crosshair(QObject):
             if event is None:
                 return  # nothing to do
             scene_pos = event[0]  # SignalProxy bundle
-            if not self.plot_item.vb.sceneBoundingRect().contains(scene_pos):
-                return
             view_pos = self.plot_item.vb.mapSceneToView(scene_pos)
             x, y = view_pos.x(), view_pos.y()
+            if not self._is_within_view_range(x, y):
+                return
 
         # Update cross‑hair visuals
         self.v_line.setPos(x)
@@ -493,8 +493,9 @@ class Crosshair(QObject):
         if event.button() != Qt.MouseButton.LeftButton:
             return
         self.update_markers()
-        if self.plot_item.vb.sceneBoundingRect().contains(event._scenePos):
-            mouse_point = self.plot_item.vb.mapSceneToView(event._scenePos)
+        scene_pos = event.scenePos() if hasattr(event, "scenePos") else event._scenePos
+        mouse_point = self.plot_item.vb.mapSceneToView(scene_pos)
+        if self._is_within_view_range(mouse_point.x(), mouse_point.y()):
             x, y = mouse_point.x(), mouse_point.y()
             scaled_x, scaled_y = self.scale_emitted_coordinates(mouse_point.x(), mouse_point.y())
             self.crosshairClicked.emit((scaled_x, scaled_y))
@@ -544,6 +545,10 @@ class Crosshair(QObject):
                     self.coordinatesClicked2D.emit(coordinate_to_emit)
                 else:
                     continue
+
+    def _is_within_view_range(self, x: float, y: float) -> bool:
+        x_range, y_range = self.plot_item.vb.viewRange()
+        return min(x_range) <= x <= max(x_range) and min(y_range) <= y <= max(y_range)
 
     def _get_transformed_position(
         self, x: float, y: float, transform: QTransform

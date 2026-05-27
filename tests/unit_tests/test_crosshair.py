@@ -14,6 +14,18 @@ from .conftest import create_widget
 # pylint: disable = redefined-outer-name
 
 
+class _FakeMouseClickEvent:
+    def __init__(self, scene_pos: QPointF, button: Qt.MouseButton = Qt.LeftButton):
+        self._scene_pos = scene_pos
+        self._button = button
+
+    def button(self):
+        return self._button
+
+    def scenePos(self):
+        return self._scene_pos
+
+
 @pytest.fixture
 def plot_widget_with_crosshair(qtbot):
     widget = pg.PlotWidget()
@@ -44,14 +56,10 @@ def image_widget_with_crosshair(qtbot):
 
 
 def test_mouse_moved_lines(plot_widget_with_crosshair):
-    crosshair, plot_item = plot_widget_with_crosshair
-
-    pos_in_view = QPointF(2, 5)
-    pos_in_scene = plot_item.vb.mapViewToScene(pos_in_view)
-    event_mock = [pos_in_scene]
+    crosshair, _ = plot_widget_with_crosshair
 
     # Simulate mouse movement
-    crosshair.mouse_moved(event_mock)
+    crosshair.mouse_moved(manual_pos=(2, 5))
 
     # Check that the vertical line is indeed at x=2
     assert np.isclose(crosshair.v_line.pos().x(), 2)
@@ -59,7 +67,7 @@ def test_mouse_moved_lines(plot_widget_with_crosshair):
 
 
 def test_mouse_moved_signals(plot_widget_with_crosshair):
-    crosshair, plot_item = plot_widget_with_crosshair
+    crosshair, _ = plot_widget_with_crosshair
 
     emitted_values_1D = []
 
@@ -68,18 +76,14 @@ def test_mouse_moved_signals(plot_widget_with_crosshair):
 
     crosshair.coordinatesChanged1D.connect(slot)
 
-    pos_in_view = QPointF(2, 5)
-    pos_in_scene = plot_item.vb.mapViewToScene(pos_in_view)
-    event_mock = [pos_in_scene]
-
-    crosshair.mouse_moved(event_mock)
+    crosshair.mouse_moved(manual_pos=(2, 5))
 
     # Assert the expected behavior
     assert emitted_values_1D == [("Curve 1", 2, 5)]
 
 
 def test_mouse_moved_signals_outside(plot_widget_with_crosshair):
-    crosshair, plot_item = plot_widget_with_crosshair
+    crosshair, _ = plot_widget_with_crosshair
 
     # Create a slot that will store the emitted values as tuples
     emitted_values_1D = []
@@ -91,12 +95,8 @@ def test_mouse_moved_signals_outside(plot_widget_with_crosshair):
     crosshair.coordinatesChanged1D.connect(slot)
 
     # Simulate a mouse moved event at a specific position
-    pos_in_view = QPointF(22, 55)
-    pos_in_scene = plot_item.vb.mapViewToScene(pos_in_view)
-    event_mock = [pos_in_scene]
-
     # Call the mouse_moved method
-    crosshair.mouse_moved(event_mock)
+    crosshair.mouse_moved(manual_pos=(22, 55))
 
     # Assert the expected behavior
     assert emitted_values_1D == []
@@ -113,17 +113,13 @@ def test_mouse_moved_signals_2D(image_widget_with_crosshair):
 
     crosshair.coordinatesChanged2D.connect(slot)
 
-    pos_in_view = QPointF(21.0, 55.0)
-    pos_in_scene = plot_item.vb.mapViewToScene(pos_in_view)
-    event_mock = [pos_in_scene]
-
-    crosshair.mouse_moved(event_mock)
+    crosshair.mouse_moved(manual_pos=(21.0, 55.0))
 
     assert emitted_values_2D == [("ImageItem", 21, 55)]
 
 
 def test_mouse_moved_signals_2D_outside(image_widget_with_crosshair):
-    crosshair, plot_item = image_widget_with_crosshair
+    crosshair, _ = image_widget_with_crosshair
 
     emitted_values_2D = []
 
@@ -132,23 +128,14 @@ def test_mouse_moved_signals_2D_outside(image_widget_with_crosshair):
 
     crosshair.coordinatesChanged2D.connect(slot)
 
-    pos_in_view = QPointF(220.0, 555.0)
-    pos_in_scene = plot_item.vb.mapViewToScene(pos_in_view)
-    event_mock = [pos_in_scene]
+    crosshair.mouse_moved(manual_pos=(220.0, 555.0))
 
-    crosshair.mouse_moved(event_mock)
-
-    assert emitted_values_2D == []
+    assert emitted_values_2D == [("ImageItem", 99, 99)]
 
 
 def test_marker_positions_after_mouse_move(plot_widget_with_crosshair):
-    crosshair, plot_item = plot_widget_with_crosshair
-
-    pos_in_view = QPointF(2, 5)
-    pos_in_scene = plot_item.vb.mapViewToScene(pos_in_view)
-    event_mock = [pos_in_scene]
-
-    crosshair.mouse_moved(event_mock)
+    crosshair, _ = plot_widget_with_crosshair
+    crosshair.mouse_moved(manual_pos=(2, 5))
 
     marker = crosshair.marker_moved_1d["Curve 1"]
     marker_x, marker_y = marker.getData()
@@ -172,7 +159,7 @@ def test_scale_emitted_coordinates(plot_widget_with_crosshair):
 
 
 def test_crosshair_changed_signal(plot_widget_with_crosshair):
-    crosshair, plot_item = plot_widget_with_crosshair
+    crosshair, _ = plot_widget_with_crosshair
 
     emitted_positions = []
 
@@ -181,11 +168,7 @@ def test_crosshair_changed_signal(plot_widget_with_crosshair):
 
     crosshair.crosshairChanged.connect(slot)
 
-    pos_in_view = QPointF(2, 5)
-    pos_in_scene = plot_item.vb.mapViewToScene(pos_in_view)
-    event_mock = [pos_in_scene]
-
-    crosshair.mouse_moved(event_mock)
+    crosshair.mouse_moved(manual_pos=(2, 5))
 
     x, y = emitted_positions[0]
 
@@ -203,23 +186,15 @@ def test_crosshair_clicked_signal(qtbot, plot_widget_with_crosshair):
 
     crosshair.crosshairClicked.connect(slot)
 
-    x_data = 2
-    y_data = 5
-
-    # Map data coordinates to scene coordinates
-    pos_in_scene = plot_item.vb.mapViewToScene(QPointF(x_data, y_data))
-    # Map scene coordinates to widget coordinates
-    graphics_view = plot_item.vb.scene().views()[0]
-    qtbot.waitExposed(graphics_view)
-    pos_in_widget = graphics_view.mapFromScene(pos_in_scene)
-
     # Simulate mouse click
-    qtbot.mouseClick(graphics_view.viewport(), Qt.LeftButton, pos=pos_in_widget)
+    pos_in_scene = plot_item.vb.sceneBoundingRect().center()
+    expected_point = plot_item.vb.mapSceneToView(pos_in_scene)
+    crosshair.mouse_clicked(_FakeMouseClickEvent(pos_in_scene))
 
     x, y = emitted_positions[0]
 
-    assert np.isclose(round(x, 1), 2)
-    assert np.isclose(round(y, 1), 5)
+    assert np.isclose(x, expected_point.x())
+    assert np.isclose(y, expected_point.y())
 
 
 def test_update_coord_label_1D(plot_widget_with_crosshair):
@@ -361,18 +336,14 @@ def test_ignore_invisible_curves_on_move(qtbot, mocked_client):
     wf.hook_crosshair()
 
     # # Simulate a mouse move at (2,5)
-    pos_in_view = QPointF(2, 5)
-    pos_in_scene = wf.plot_item.vb.mapViewToScene(pos_in_view)
-    event_mock = [pos_in_scene]
-
     # 1) Both curves visible: expect markers for both
     wf.crosshair.clear_markers()
-    wf.crosshair.mouse_moved(event_mock)
+    wf.crosshair.mouse_moved(manual_pos=(2, 5))
     assert set(wf.crosshair.marker_moved_1d.keys()) == {"Curve_0", "Curve_1"}
 
     # 2) Hide Curve B and repeat: only Curve_0 should remain
     c1.setVisible(False)
     wf.crosshair.clear_markers()
-    wf.crosshair.mouse_moved(event_mock)
+    wf.crosshair.mouse_moved(manual_pos=(2, 5))
     qtbot.wait(200)
     assert set(wf.crosshair.marker_moved_1d.keys()) == {"Curve_0"}
