@@ -118,7 +118,7 @@ def test_mouse_moved_signals_2D(image_widget_with_crosshair):
     assert emitted_values_2D == [("ImageItem", 21, 55)]
 
 
-def test_mouse_moved_signals_2D_outside(image_widget_with_crosshair):
+def test_mouse_moved_signals_2D_outside_clamps_to_bounds(image_widget_with_crosshair):
     crosshair, _ = image_widget_with_crosshair
 
     emitted_values_2D = []
