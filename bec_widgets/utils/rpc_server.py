@@ -12,7 +12,7 @@ from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import
 from qtpy.QtCore import Qt, QTimer
-from qtpy.QtWidgets import QWidget
+from qtpy.QtWidgets import QApplication, QWidget
 from redis.exceptions import RedisError
 
 from bec_widgets.utils.bec_connector import BECConnector
@@ -290,9 +290,22 @@ class RPCServer:
     def run_system_rpc(self, method: str, args: list, kwargs: dict):
         if method == "system.launch_dock_area":
             return self._launch_dock_area(*args, **kwargs)
+        if method == "system.shutdown":
+            return self._shutdown_gui_server()
         if method == "system.list_capabilities":
-            return {"system.launch_dock_area": True}
+            return {"system.launch_dock_area": True, "system.shutdown": True}
         raise ValueError(f"Unknown system RPC method: {method}")
+
+    @staticmethod
+    def _shutdown_gui_server() -> None:
+        app = QApplication.instance()
+        if app is None:
+            return
+        gui_server = getattr(app, "gui_server", None)
+        if gui_server is not None and hasattr(gui_server, "request_shutdown"):
+            QTimer.singleShot(0, gui_server.request_shutdown)
+            return
+        QTimer.singleShot(0, app.quit)
 
     @staticmethod
     def _launch_dock_area(
@@ -468,8 +481,9 @@ class RPCServer:
                 container_proxy = parent.gui_id
             else:
                 container_proxy = None
-        except Exception:
+        except Exception as e:
             container_proxy = None
+            logger.error(f"Error while serializing RPC result: {e}")
 
         if wait and not self.rpc_register.object_is_registered(connector):
             raise RegistryNotReadyError(f"Connector {connector} not registered yet")

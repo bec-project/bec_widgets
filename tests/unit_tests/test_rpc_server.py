@@ -5,6 +5,7 @@ import pytest
 from bec_lib.service_config import ServiceConfig
 from qtpy.QtWidgets import QWidget
 
+from bec_widgets.applications import companion_app as companion_app_module
 from bec_widgets.applications.companion_app import GUIServer
 from bec_widgets.utils import rpc_server as rpc_server_module
 from bec_widgets.utils.bec_connector import BECConnector
@@ -57,6 +58,52 @@ def test_gui_server_get_service_config(gui_server):
     Test that the server is started with the correct arguments.
     """
     assert gui_server._get_service_config().config == ServiceConfig().config
+
+
+def test_gui_server_signal_shutdown_closes_widgets_and_quits_app(gui_server):
+    widget = MagicMock()
+    gui_server.app = MagicMock()
+    gui_server.app.topLevelWidgets.return_value = [widget]
+
+    gui_server.request_shutdown()
+
+    widget.close.assert_called_once()
+    gui_server.app.quit.assert_called_once()
+
+
+def test_gui_server_shutdown_is_idempotent(gui_server):
+    gui_server.launcher_window = MagicMock()
+    gui_server.dispatcher = MagicMock()
+
+    with (
+        patch.object(companion_app_module.shiboken6, "isValid", return_value=True),
+        patch.object(companion_app_module.pylsp_server, "is_running", return_value=False),
+    ):
+        gui_server.shutdown()
+        gui_server.shutdown()
+
+    gui_server.launcher_window.close.assert_called_once()
+    gui_server.launcher_window.deleteLater.assert_called_once()
+    gui_server.dispatcher.stop_cli_server.assert_called_once()
+    gui_server.dispatcher.disconnect_all.assert_called_once()
+
+
+def test_rpc_server_system_capabilities_include_shutdown(rpc_server):
+    assert rpc_server.run_system_rpc("system.list_capabilities", [], {}) == {
+        "system.launch_dock_area": True,
+        "system.shutdown": True,
+    }
+
+
+def test_rpc_server_system_shutdown_requests_gui_server_shutdown(rpc_server, qapp):
+    gui_server = MagicMock()
+    qapp.gui_server = gui_server
+
+    rpc_server.run_system_rpc("system.shutdown", [], {})
+    qapp.processEvents()
+
+    gui_server.request_shutdown.assert_called_once()
+    del qapp.gui_server
 
 
 def test_singleshot_rpc_repeat_raises_on_repeated_singleshot(rpc_server):

@@ -1,3 +1,5 @@
+import signal
+import subprocess
 from contextlib import contextmanager
 from unittest import mock
 
@@ -266,3 +268,81 @@ def test_client_utils_gui_client_set_rpc_timeout():
 
     gui.set_rpc_timeout(10)
     assert gui._rpc_timeout == 10
+
+
+def test_client_utils_kill_server_waits_for_process_before_joining_output_thread():
+    gui = BECGuiClient()
+    gui._client = mock.MagicMock()
+    gui._process = mock.MagicMock(pid=123, stdout=None, stderr=None)
+    gui._process.poll.return_value = None
+    order = []
+    gui._process.wait.side_effect = lambda timeout: order.append("wait")
+    gui._process_output_processing_thread = mock.MagicMock()
+    gui._process_output_processing_thread.join.side_effect = lambda timeout: order.append("join")
+    gui._process_output_processing_thread.is_alive.return_value = False
+
+    with (
+        mock.patch.object(gui, "_request_server_shutdown", return_value=False),
+        mock.patch("bec_widgets.cli.client_utils.os.getpgid", return_value=123),
+        mock.patch("bec_widgets.cli.client_utils.os.killpg") as killpg,
+    ):
+        gui.kill_server()
+
+    killpg.assert_called_once_with(123, signal.SIGTERM)
+    assert order == ["wait", "join"]
+    assert gui._process is None
+    assert gui._process_output_processing_thread is None
+
+
+def test_client_utils_kill_server_requests_graceful_shutdown_before_signal():
+    gui = BECGuiClient()
+    gui._client = mock.MagicMock()
+    process = mock.MagicMock(stdout=None, stderr=None)
+    process.poll.return_value = None
+    gui._process = process
+    gui._process_output_processing_thread = mock.MagicMock()
+    gui._process_output_processing_thread.is_alive.return_value = False
+    launcher = mock.MagicMock()
+
+    with (
+        mock.patch.object(
+            BECGuiClient, "launcher", new_callable=mock.PropertyMock
+        ) as launcher_prop,
+        mock.patch("bec_widgets.cli.client_utils.os.killpg") as killpg,
+    ):
+        launcher_prop.return_value = launcher
+        gui.kill_server()
+
+    launcher._run_rpc.assert_called_once_with("system.shutdown", wait_for_rpc_response=False)
+    process.wait.assert_called_once_with(timeout=5)
+    killpg.assert_not_called()
+    assert gui._process is None
+    assert gui._process_output_processing_thread is None
+
+
+def test_client_utils_kill_server_kills_process_group_after_timeout():
+    gui = BECGuiClient()
+    gui._client = mock.MagicMock()
+    process = mock.MagicMock(pid=123, stdout=None, stderr=None, args=["bec-gui-server"])
+    process.poll.return_value = None
+    process.wait.side_effect = [subprocess.TimeoutExpired(cmd="bec-gui-server", timeout=10), None]
+    gui._process = process
+
+    with (
+        mock.patch.object(gui, "_request_server_shutdown", return_value=False),
+        mock.patch("bec_widgets.cli.client_utils.os.getpgid", return_value=123),
+        mock.patch("bec_widgets.cli.client_utils.os.killpg") as killpg,
+        mock.patch("bec_widgets.cli.client_utils.subprocess.run") as run,
+    ):
+        run.return_value.stdout = "PID PPID PGID STAT COMMAND\n123 1 123 S bec-gui-server"
+        gui.kill_server()
+
+    assert killpg.call_args_list == [mock.call(123, signal.SIGTERM), mock.call(123, signal.SIGKILL)]
+    assert process.wait.call_args_list == [mock.call(timeout=10), mock.call(timeout=10)]
+    run.assert_called_once_with(
+        ["ps", "-o", "pid,ppid,pgid,stat,command", "-g", "123"],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=2,
+    )

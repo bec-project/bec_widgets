@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import select
+import signal
 import subprocess
 import threading
 import time
@@ -33,6 +34,9 @@ else:
 logger = bec_logger.logger
 
 IGNORE_WIDGETS = ["LaunchWindow"]
+PROCESS_TERMINATION_TIMEOUT = 10
+PROCESS_OUTPUT_THREAD_JOIN_TIMEOUT = 2
+GRACEFUL_SERVER_SHUTDOWN_TIMEOUT = 5
 
 RegistryState: TypeAlias = dict[
     Literal["gui_id", "name", "widget_class", "config", "__rpc__", "container_proxy"],
@@ -73,6 +77,123 @@ def _get_output(process, logger) -> None:
                     buf.append(remaining)
     except Exception as e:
         logger.error(f"Error reading process output: {str(e)}")
+
+
+def _process_group_id(process) -> int | None:
+    pid = getattr(process, "pid", None)
+    if os.name != "posix" or not isinstance(pid, int):
+        return None
+    try:
+        return os.getpgid(pid)
+    except ProcessLookupError:
+        return None
+
+
+def _process_details(process) -> str:
+    args = getattr(process, "args", None)
+    if isinstance(args, list):
+        command = " ".join(str(arg) for arg in args)
+    else:
+        command = str(args)
+    return (
+        f"pid={getattr(process, 'pid', None)} pgid={_process_group_id(process)} command={command}"
+    )
+
+
+def _process_group_snapshot(process) -> str:
+    pgid = _process_group_id(process)
+    if pgid is None:
+        return "Process group snapshot unavailable: process group no longer exists"
+    try:
+        result = subprocess.run(
+            ["ps", "-o", "pid,ppid,pgid,stat,command", "-g", str(pgid)],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+    except Exception as exc:
+        return f"Process group snapshot unavailable: {exc}"
+    output = result.stdout.strip()
+    if not output:
+        return f"Process group snapshot empty for pgid={pgid}"
+    return output
+
+
+def _terminate_plot_process(process, logger, timeout: float = PROCESS_TERMINATION_TIMEOUT) -> None:
+    if process.poll() is not None:
+        return
+
+    process_details = _process_details(process)
+    try:
+        pgid = _process_group_id(process)
+        if pgid is not None:
+            logger.info(f"Terminating GUI process group {process_details}")
+            os.killpg(pgid, signal.SIGTERM)
+        else:
+            logger.info(f"Terminating GUI process {process_details}")
+            process.terminate()
+    except ProcessLookupError:
+        process.wait(timeout=timeout)
+        return
+    except Exception as exc:
+        logger.warning(
+            f"Failed to terminate GUI process group: {exc}; terminating process only. "
+            f"{process_details}"
+        )
+        process.terminate()
+
+    try:
+        process.wait(timeout=timeout)
+        return
+    except subprocess.TimeoutExpired:
+        logger.warning(
+            f"GUI process did not stop within {timeout}s; killing it. "
+            f"{process_details}\n{_process_group_snapshot(process)}"
+        )
+
+    try:
+        pgid = _process_group_id(process)
+        if pgid is not None:
+            os.killpg(pgid, signal.SIGKILL)
+        else:
+            process.kill()
+    except ProcessLookupError as e:
+        logger.error(f"Failed to kill GUI process group: {e}")
+        process.wait(timeout=timeout)
+        return
+    process.wait(timeout=timeout)
+
+
+def _wait_for_process_exit(process, timeout: float) -> bool:
+    try:
+        process.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return False
+    return True
+
+
+def _join_process_output_thread(process, thread: threading.Thread | None, logger) -> None:
+    if thread is None:
+        return
+    thread.join(timeout=PROCESS_OUTPUT_THREAD_JOIN_TIMEOUT)
+    if not thread.is_alive():
+        return
+
+    for stream in (process.stdout, process.stderr):
+        if stream is None:
+            continue
+        try:
+            stream.close()
+        except OSError as e:
+            logger.error(f"Failed to close stream {str(e)}")
+            pass
+    thread.join(timeout=PROCESS_OUTPUT_THREAD_JOIN_TIMEOUT)
+    if thread.is_alive():
+        logger.warning(
+            "GUI process output reader thread did not stop after process shutdown. "
+            f"{_process_details(process)}"
+        )
 
 
 def _start_plot_process(
@@ -465,11 +586,13 @@ class BECGuiClient(RPCBase):
 
         if self._process:
             logger.success("Stopping GUI...")
-            self._process.terminate()
-            if self._process_output_processing_thread:
-                self._process_output_processing_thread.join()
-            self._process.wait()
+            if not self._request_server_shutdown():
+                _terminate_plot_process(self._process, logger)
+            _join_process_output_thread(
+                self._process, self._process_output_processing_thread, logger
+            )
             self._process = None
+            self._process_output_processing_thread = None
 
         # Unregister the registry state
         self._client.connector.unregister(
@@ -487,6 +610,30 @@ class BECGuiClient(RPCBase):
     #########################
     #### Private methods ####
     #########################
+
+    def _request_server_shutdown(self) -> bool:
+        if self._process is None or self._process.poll() is not None:
+            return True
+        process_details = _process_details(self._process)
+        logger.info(f"Requesting graceful GUI shutdown {process_details}")
+        try:
+            self.launcher._run_rpc(  # pylint: disable=protected-access
+                "system.shutdown", wait_for_rpc_response=False
+            )
+        except Exception as exc:
+            logger.warning(
+                f"Could not request graceful GUI shutdown via RPC: {exc}. " f"{process_details}"
+            )
+            return False
+        if _wait_for_process_exit(self._process, GRACEFUL_SERVER_SHUTDOWN_TIMEOUT):
+            logger.info(f"GUI server exited after graceful shutdown {process_details}")
+            return True
+        logger.warning(
+            "GUI server did not exit after graceful shutdown request; "
+            f"falling back to process termination. {process_details}\n"
+            f"{_process_group_snapshot(self._process)}"
+        )
+        return False
 
     def _check_if_server_is_alive(self):
         """Checks if the process is alive"""
