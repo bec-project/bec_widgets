@@ -36,7 +36,9 @@ logger = bec_logger.logger
 IGNORE_WIDGETS = ["LaunchWindow"]
 PROCESS_TERMINATION_TIMEOUT = 10
 PROCESS_OUTPUT_THREAD_JOIN_TIMEOUT = 2
+PROCESS_OUTPUT_SELECT_TIMEOUT = 0.2
 GRACEFUL_SERVER_SHUTDOWN_TIMEOUT = 5
+OUTPUT_READER_STOP_EVENT_ATTR = "_bec_output_reader_stop_event"
 
 RegistryState: TypeAlias = dict[
     Literal["gui_id", "name", "widget_class", "config", "__rpc__", "container_proxy"],
@@ -57,14 +59,16 @@ def _filter_output(output: str) -> str:
     return output
 
 
-def _get_output(process, logger) -> None:
+def _get_output(process, logger, stop_event: threading.Event | None = None) -> None:
     log_func = {process.stdout: logger.debug, process.stderr: logger.info}
     stream_buffer = {process.stdout: [], process.stderr: []}
     try:
         os.set_blocking(process.stdout.fileno(), False)
         os.set_blocking(process.stderr.fileno(), False)
-        while process.poll() is None:
-            readylist, _, _ = select.select([process.stdout, process.stderr], [], [], 1)
+        while process.poll() is None and not (stop_event and stop_event.is_set()):
+            readylist, _, _ = select.select(
+                [process.stdout, process.stderr], [], [], PROCESS_OUTPUT_SELECT_TIMEOUT
+            )
             for stream in (process.stdout, process.stderr):
                 buf = stream_buffer[stream]
                 if stream in readylist:
@@ -180,6 +184,9 @@ def _join_process_output_thread(process, thread: threading.Thread | None, logger
     if not thread.is_alive():
         return
 
+    if stop_event := getattr(thread, OUTPUT_READER_STOP_EVENT_ATTR, None):
+        stop_event.set()
+
     for stream in (process.stdout, process.stderr):
         if stream is None:
             continue
@@ -187,7 +194,6 @@ def _join_process_output_thread(process, thread: threading.Thread | None, logger
             stream.close()
         except OSError as e:
             logger.error(f"Failed to close stream {str(e)}")
-            pass
     thread.join(timeout=PROCESS_OUTPUT_THREAD_JOIN_TIMEOUT)
     if thread.is_alive():
         logger.warning(
@@ -247,8 +253,14 @@ def _start_plot_process(
     if logger is None:
         process_output_processing_thread = None
     else:
+        process_output_stop_event = threading.Event()
         process_output_processing_thread = threading.Thread(
-            target=_get_output, args=(process, logger)
+            target=_get_output, args=(process, logger, process_output_stop_event)
+        )
+        setattr(
+            process_output_processing_thread,
+            OUTPUT_READER_STOP_EVENT_ATTR,
+            process_output_stop_event,
         )
         process_output_processing_thread.start()
     return process, process_output_processing_thread

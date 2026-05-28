@@ -69,7 +69,7 @@ def create_widget(
     return widget
 
 
-@pytest.mark.timeout(100)
+@pytest.mark.timeout(20)
 def test_available_widgets(qtbot, connected_client_gui_obj):
     """This test checks that all widgets that are available via gui.available_widgets can be created and removed."""
     gui = connected_client_gui_obj

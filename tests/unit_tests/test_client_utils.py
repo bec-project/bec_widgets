@@ -6,7 +6,12 @@ from unittest import mock
 import pytest
 
 from bec_widgets.cli.client import BECDockArea
-from bec_widgets.cli.client_utils import BECGuiClient, _start_plot_process
+from bec_widgets.cli.client_utils import (
+    OUTPUT_READER_STOP_EVENT_ATTR,
+    BECGuiClient,
+    _join_process_output_thread,
+    _start_plot_process,
+)
 from bec_widgets.cli.rpc.rpc_base import RPCBase, RPCResponseTimeoutError, rpc_timeout
 
 
@@ -346,3 +351,21 @@ def test_client_utils_kill_server_kills_process_group_after_timeout():
         text=True,
         timeout=2,
     )
+
+
+def test_join_process_output_thread_signals_reader_before_closing_streams():
+    process = mock.MagicMock(pid=123, args=["bec-gui-server"])
+    process.stdout = mock.MagicMock()
+    process.stderr = mock.MagicMock()
+    thread = mock.MagicMock()
+    stop_event = mock.MagicMock()
+    setattr(thread, OUTPUT_READER_STOP_EVENT_ATTR, stop_event)
+    thread.is_alive.side_effect = [True, False]
+    logger = mock.MagicMock()
+
+    _join_process_output_thread(process, thread, logger)
+
+    assert thread.join.call_args_list == [mock.call(timeout=2), mock.call(timeout=2)]
+    stop_event.set.assert_called_once_with()
+    process.stdout.close.assert_called_once_with()
+    process.stderr.close.assert_called_once_with()
