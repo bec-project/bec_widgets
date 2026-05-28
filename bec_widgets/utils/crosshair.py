@@ -431,8 +431,8 @@ class Crosshair(QObject):
             scene_pos = event[0]  # SignalProxy bundle
             view_pos = self.plot_item.vb.mapSceneToView(scene_pos)
             x, y = view_pos.x(), view_pos.y()
-            if not self._is_within_view_range(x, y):
-                return
+        if not self._is_within_view_range(x, y):
+            return
 
         # Update cross‑hair visuals
         self.v_line.setPos(x)
