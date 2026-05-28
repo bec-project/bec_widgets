@@ -5,6 +5,7 @@ import json
 import os
 import signal
 import sys
+import traceback
 from contextlib import redirect_stderr, redirect_stdout
 
 import darkdetect
@@ -63,6 +64,7 @@ class GUIServer:
         self.app: QApplication | None = None
         self.launcher_window: LaunchWindow | None = None
         self.dispatcher: BECDispatcher | None = None
+        self._shutdown_started = False
 
     def start(self):
         """
@@ -123,17 +125,8 @@ class GUIServer:
         self.app.aboutToQuit.connect(self.shutdown)
         self.app.setQuitOnLastWindowClosed(True)
 
-        def sigint_handler(*args):
-            # display message, for people to let it terminate gracefully
-            print("Caught SIGINT, exiting")
-            # Widgets should be all closed.
-            with RPCRegister.delayed_broadcast():
-                for widget in QApplication.instance().topLevelWidgets():  # type: ignore
-                    widget.close()
-            self.shutdown()
-
-        signal.signal(signal.SIGINT, sigint_handler)
-        signal.signal(signal.SIGTERM, sigint_handler)
+        signal.signal(signal.SIGINT, self.request_shutdown)
+        signal.signal(signal.SIGTERM, self.request_shutdown)
 
         sys.exit(self.app.exec())
 
@@ -150,16 +143,67 @@ class GUIServer:
         )
         self.app.setWindowIcon(icon)
 
+    def request_shutdown(self, signum=None, _frame=None):
+        """
+        Request Qt application shutdown from an RPC call or OS signal.
+
+        Cleanup itself is handled by ``shutdown()``, which is connected to
+        ``QApplication.aboutToQuit``. Calling it directly here would run BEC/RPC
+        teardown before Qt has processed the widget close events.
+        """
+        signal_name = signal.Signals(signum).name if signum is not None else "shutdown"
+        pid = os.getpid()
+        if self.app is None:
+            logger.info(f"Caught {signal_name}, shutting down GUI server pid={pid} without app")
+            self.shutdown()
+            return
+
+        widgets = [
+            f"{widget.__class__.__name__}(objectName={widget.objectName()!r})"
+            for widget in self.app.topLevelWidgets()
+        ]
+        logger.info(
+            f"Caught {signal_name}, requesting GUI server shutdown pid={pid} "
+            f"top_level_widgets={widgets}"
+        )
+        with RPCRegister.delayed_broadcast():
+            for widget in self.app.topLevelWidgets():
+                widget.close()
+        self.app.quit()
+
+    @staticmethod
+    def _run_shutdown_step(step: str, callback):
+        try:
+            callback()
+        except Exception as exc:
+            logger.error(
+                f"GUIServer shutdown step failed pid={os.getpid()} step={step}: {exc}\n"
+                f"{traceback.format_exc()}"
+            )
+
     def shutdown(self):
-        logger.info("Shutdown GUIServer", repr(self))
-        if self.launcher_window and shiboken6.isValid(self.launcher_window):
-            self.launcher_window.close()
-            self.launcher_window.deleteLater()
-        if pylsp_server.is_running():
-            pylsp_server.stop()
-        if self.dispatcher:
-            self.dispatcher.stop_cli_server()
-            self.dispatcher.disconnect_all()
+        if self._shutdown_started:
+            return
+        self._shutdown_started = True
+        logger.info(f"Shutdown GUIServer pid={os.getpid()} {repr(self)}")
+
+        def close_launcher_window():
+            if self.launcher_window and shiboken6.isValid(self.launcher_window):
+                self.launcher_window.close()
+                self.launcher_window.deleteLater()
+
+        def stop_pylsp_server():
+            if pylsp_server.is_running():
+                pylsp_server.stop()
+
+        def stop_dispatcher():
+            if self.dispatcher:
+                self.dispatcher.stop_cli_server()
+                self.dispatcher.disconnect_all()
+
+        self._run_shutdown_step("close_launcher_window", close_launcher_window)
+        self._run_shutdown_step("stop_pylsp_server", stop_pylsp_server)
+        self._run_shutdown_step("stop_dispatcher", stop_dispatcher)
 
 
 def main():
