@@ -7,6 +7,7 @@ import pytest
 
 from bec_widgets.cli.client import BECDockArea
 from bec_widgets.cli.client_utils import (
+    GRACEFUL_SERVER_SHUTDOWN_RPC_TIMEOUT,
     OUTPUT_READER_STOP_EVENT_ATTR,
     BECGuiClient,
     _join_process_output_thread,
@@ -318,7 +319,9 @@ def test_client_utils_kill_server_requests_graceful_shutdown_before_signal():
         launcher_prop.return_value = launcher
         gui.kill_server()
 
-    launcher._run_rpc.assert_called_once_with("system.shutdown", wait_for_rpc_response=False)
+    launcher._run_rpc.assert_called_once_with(
+        "system.shutdown", wait_for_rpc_response=True, timeout=GRACEFUL_SERVER_SHUTDOWN_RPC_TIMEOUT
+    )
     process.wait.assert_called_once_with(timeout=5)
     killpg.assert_not_called()
     assert gui._process is None

@@ -37,6 +37,7 @@ IGNORE_WIDGETS = ["LaunchWindow"]
 PROCESS_TERMINATION_TIMEOUT = 10
 PROCESS_OUTPUT_THREAD_JOIN_TIMEOUT = 2
 PROCESS_OUTPUT_SELECT_TIMEOUT = 0.2
+GRACEFUL_SERVER_SHUTDOWN_RPC_TIMEOUT = 3
 GRACEFUL_SERVER_SHUTDOWN_TIMEOUT = 5
 OUTPUT_READER_STOP_EVENT_ATTR = "_bec_output_reader_stop_event"
 
@@ -141,19 +142,18 @@ def _terminate_plot_process(process, logger, timeout: float = PROCESS_TERMINATIO
         process.wait(timeout=timeout)
         return
     except Exception as exc:
-        logger.warning(
-            f"Failed to terminate GUI process group: {exc}; terminating process only. "
-            f"{process_details}"
-        )
+        logger.warning("Failed to terminate GUI process group; terminating process only.")
+        logger.info(f"GUI process termination failure details: {exc}. {process_details}")
         process.terminate()
 
     try:
         process.wait(timeout=timeout)
         return
     except subprocess.TimeoutExpired:
-        logger.warning(
-            f"GUI process did not stop within {timeout}s; killing it. "
-            f"{process_details}\n{_process_group_snapshot(process)}"
+        logger.warning(f"GUI process did not stop within {timeout}s; killing it.")
+        logger.info(
+            f"GUI process force-kill details: {process_details}\n"
+            f"{_process_group_snapshot(process)}"
         )
 
     try:
@@ -196,10 +196,8 @@ def _join_process_output_thread(process, thread: threading.Thread | None, logger
             logger.error(f"Failed to close stream {str(e)}")
     thread.join(timeout=PROCESS_OUTPUT_THREAD_JOIN_TIMEOUT)
     if thread.is_alive():
-        logger.warning(
-            "GUI process output reader thread did not stop after process shutdown. "
-            f"{_process_details(process)}"
-        )
+        logger.warning("GUI process output reader thread did not stop after process shutdown.")
+        logger.info(f"GUI process output reader thread details: {_process_details(process)}")
 
 
 def _start_plot_process(
@@ -630,19 +628,26 @@ class BECGuiClient(RPCBase):
         logger.info(f"Requesting graceful GUI shutdown {process_details}")
         try:
             self.launcher._run_rpc(  # pylint: disable=protected-access
-                "system.shutdown", wait_for_rpc_response=False
+                "system.shutdown",
+                wait_for_rpc_response=True,
+                timeout=GRACEFUL_SERVER_SHUTDOWN_RPC_TIMEOUT,
             )
         except Exception as exc:
             logger.warning(
-                f"Could not request graceful GUI shutdown via RPC: {exc}. " f"{process_details}"
+                "Could not confirm graceful GUI shutdown via RPC; "
+                "falling back to process termination."
             )
+            logger.info(f"Graceful GUI shutdown RPC failure details: {exc}. {process_details}")
             return False
         if _wait_for_process_exit(self._process, GRACEFUL_SERVER_SHUTDOWN_TIMEOUT):
             logger.info(f"GUI server exited after graceful shutdown {process_details}")
             return True
         logger.warning(
             "GUI server did not exit after graceful shutdown request; "
-            f"falling back to process termination. {process_details}\n"
+            "falling back to process termination."
+        )
+        logger.info(
+            f"Graceful GUI shutdown timeout details: {process_details}\n"
             f"{_process_group_snapshot(self._process)}"
         )
         return False
