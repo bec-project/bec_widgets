@@ -2,7 +2,7 @@ from unittest import mock
 
 import pytest
 from bec_lib.endpoints import MessageEndpoints
-from bec_lib.messages import ScanQueueMessage
+from bec_lib.messages import VariableMessage
 from qtpy.QtCore import Qt, QTimer
 from qtpy.QtGui import QValidator
 from qtpy.QtWidgets import QPushButton
@@ -34,15 +34,11 @@ class PositionerWithoutPrecision(Positioner):
 def positioner_box(qtbot, mocked_client):
     """Fixture for PositionerBox widget"""
     with mock.patch(
-        "bec_widgets.widgets.control.device_control.positioner_box.positioner_box_base.uuid.uuid4"
-    ) as mock_uuid:
-        mock_uuid.return_value = "fake_uuid"
-        with mock.patch(
-            "bec_widgets.widgets.control.device_control.positioner_box.positioner_box_base.PositionerBoxBase._check_device_is_valid",
-            return_value=True,
-        ):
-            db = create_widget(qtbot, PositionerBox, device="samx", client=mocked_client)
-            yield db
+        "bec_widgets.widgets.control.device_control.positioner_box.positioner_box_base.PositionerBoxBase._check_device_is_valid",
+        return_value=True,
+    ):
+        db = create_widget(qtbot, PositionerBox, device="samx", client=mocked_client)
+        yield db
 
 
 def test_positioner_box(positioner_box):
@@ -89,16 +85,8 @@ def test_positioner_box_on_stop(positioner_box):
     """Test on stop button"""
     with mock.patch.object(positioner_box.client.connector, "send") as mock_send:
         positioner_box.on_stop()
-        params = {"device": "samx", "rpc_id": "fake_uuid", "func": "stop", "args": [], "kwargs": {}}
-        msg = ScanQueueMessage(
-            scan_type="device_rpc",
-            parameter=params,
-            queue="emergency",
-            metadata={"RID": "fake_uuid", "response": False},
-        )
-        mock_send.assert_called_once_with(
-            MessageEndpoints.scan_queue_request(positioner_box.client.username), msg
-        )
+        msg = VariableMessage(value=["samx"])
+        mock_send.assert_called_once_with(MessageEndpoints.stop_devices(), msg)
 
 
 def test_positioner_box_setpoint_change(positioner_box):
@@ -139,19 +127,15 @@ def test_positioner_control_line(qtbot, mocked_client):
     Inherits from PositionerBox, but the layout is changed. Check dimensions only
     """
     with mock.patch(
-        "bec_widgets.widgets.control.device_control.positioner_box.positioner_box_base.uuid.uuid4"
-    ) as mock_uuid:
-        mock_uuid.return_value = "fake_uuid"
-        with mock.patch(
-            "bec_widgets.widgets.control.device_control.positioner_box.positioner_box.positioner_box.PositionerBox._check_device_is_valid",
-            return_value=True,
-        ):
-            db = PositionerControlLine(device="samx", client=mocked_client)
-            qtbot.addWidget(db)
+        "bec_widgets.widgets.control.device_control.positioner_box.positioner_box.positioner_box.PositionerBox._check_device_is_valid",
+        return_value=True,
+    ):
+        db = PositionerControlLine(device="samx", client=mocked_client)
+        qtbot.addWidget(db)
 
-            assert db.ui.device_box.height() == db.height()
-            assert db.ui.device_box.height() >= db.dimensions[0]
-            assert db.ui.device_box.width() == 600
+        assert db.ui.device_box.height() == db.height()
+        assert db.ui.device_box.height() >= db.dimensions[0]
+        assert db.ui.device_box.width() == 600
 
 
 def test_positioner_box_open_dialog_selection(qtbot, positioner_box):

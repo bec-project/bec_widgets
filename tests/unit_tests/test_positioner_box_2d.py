@@ -1,6 +1,8 @@
 from unittest import mock
 
 import pytest
+from bec_lib.endpoints import MessageEndpoints
+from bec_lib.messages import VariableMessage
 
 from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox2D
 
@@ -12,17 +14,13 @@ from .conftest import create_widget
 def positioner_box_2d(qtbot, mocked_client):
     """Fixture for PositionerBox widget"""
     with mock.patch(
-        "bec_widgets.widgets.control.device_control.positioner_box.positioner_box_base.uuid.uuid4"
-    ) as mock_uuid:
-        mock_uuid.return_value = "fake_uuid"
-        with mock.patch(
-            "bec_widgets.widgets.control.device_control.positioner_box.positioner_box_base.PositionerBoxBase._check_device_is_valid",
-            return_value=True,
-        ):
-            db = create_widget(
-                qtbot, PositionerBox2D, device_hor="samx", device_ver="samy", client=mocked_client
-            )
-            yield db
+        "bec_widgets.widgets.control.device_control.positioner_box.positioner_box_base.PositionerBoxBase._check_device_is_valid",
+        return_value=True,
+    ):
+        db = create_widget(
+            qtbot, PositionerBox2D, device_hor="samx", device_ver="samy", client=mocked_client
+        )
+        yield db
 
 
 def test_positioner_box_2d(positioner_box_2d):
@@ -80,6 +78,14 @@ def test_positioner_box_setpoint_changes(positioner_box_2d: PositionerBox2D):
         positioner_box_2d.ui.setpoint_ver.setText("100")
         positioner_box_2d.on_setpoint_change_ver()
         mock_move.assert_called_once_with(100, relative=False)
+
+
+def test_positioner_box_2d_on_stop(positioner_box_2d: PositionerBox2D):
+    """Stop button sends both positioners to the immediate stop endpoint."""
+    with mock.patch.object(positioner_box_2d.client.connector, "send") as mock_send:
+        positioner_box_2d.on_stop()
+        msg = VariableMessage(value=["samx", "samy"])
+        mock_send.assert_called_once_with(MessageEndpoints.stop_devices(), msg)
 
 
 def _hor_buttons(widget: PositionerBox2D):

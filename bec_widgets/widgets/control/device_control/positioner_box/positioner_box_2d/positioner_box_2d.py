@@ -429,7 +429,7 @@ class PositionerBox2D(PositionerBoxBase):
 
     @SafeSlot()
     def on_stop(self):
-        self._stop_device(f"{self.device_hor} or {self.device_ver}")
+        self._stop_device([self.device_hor, self.device_ver])
 
     @SafeProperty(float)
     def step_size_hor(self):
