@@ -106,6 +106,22 @@ def test_rpc_server_system_shutdown_requests_gui_server_shutdown(rpc_server, qap
     del qapp.gui_server
 
 
+def test_on_rpc_update_system_shutdown_sends_response_before_return(rpc_server):
+    order = []
+    rpc_server.run_system_rpc = MagicMock(side_effect=lambda *_args: order.append("shutdown"))
+    rpc_server.send_response = MagicMock(side_effect=lambda *_args: order.append("response"))
+    rpc_server.serialize_result_and_send = MagicMock()
+
+    rpc_server.on_rpc_update(
+        {"action": "system.shutdown", "parameter": {"args": [], "kwargs": {}}},
+        {"request_id": "shutdown-request", "sent_at": 1.0, "deadline": 10.0, "timeout": 2},
+    )
+
+    assert order == ["shutdown", "response"]
+    rpc_server.send_response.assert_called_once_with("shutdown-request", True, {"result": None})
+    rpc_server.serialize_result_and_send.assert_not_called()
+
+
 def test_singleshot_rpc_repeat_raises_on_repeated_singleshot(rpc_server):
     """
     Test that a singleshot RPC method raises an error when called multiple times.

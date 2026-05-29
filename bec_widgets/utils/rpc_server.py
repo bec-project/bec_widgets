@@ -143,6 +143,34 @@ class RPCServer:
                 f"receive_latency_s={format_elapsed(receive_latency)}"
             )
         logger.debug(f"Received RPC instruction: {msg}, metadata: {metadata}")
+
+        # Shutdown must acknowledge before teardown starts. The generic RPC path
+        # below publishes successful responses through QTimer.singleShot(0);
+        # for system.shutdown that would race with the queued app quit and
+        # dispatcher shutdown scheduled by _shutdown_gui_server().
+        if method == "system.shutdown":
+            execution_start = time.perf_counter()
+            try:
+                self.run_system_rpc(method, args, kwargs)
+            except Exception:
+                execution_duration = time.perf_counter() - execution_start
+                content = traceback.format_exc()
+                logger.error(
+                    "GUI RPC server shutdown request failed "
+                    f"request_id={request_id} method={method} gui_id={self.gui_id} "
+                    f"execution_duration_s={execution_duration:.3f}\n{content}"
+                )
+                self.send_response(request_id, False, {"error": content})
+            else:
+                execution_duration = time.perf_counter() - execution_start
+                logger.info(
+                    "GUI RPC server acknowledged shutdown request "
+                    f"request_id={request_id} method={method} gui_id={self.gui_id} "
+                    f"execution_duration_s={execution_duration:.3f}"
+                )
+                self.send_response(request_id, True, {"result": None})
+            return
+
         execution_start = time.perf_counter()
         with rpc_exception_hook(functools.partial(self.send_response, request_id, False)):
             try:
