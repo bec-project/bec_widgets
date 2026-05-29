@@ -1,11 +1,10 @@
-import uuid
 from abc import abstractmethod
-from typing import Callable, TypedDict
+from typing import Callable, Sequence, TypedDict
 
 from bec_lib.device import Positioner
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
-from bec_lib.messages import ScanQueueMessage
+from bec_lib.messages import VariableMessage
 from qtpy.QtWidgets import (
     QDialog,
     QDoubleSpinBox,
@@ -116,17 +115,16 @@ class PositionerBoxBase(BECWidget, QWidget):
         else:
             ui["units"].setVisible(False)
 
-    def _stop_device(self, device: str):
+    def _stop_device(self, device: str | Sequence[str]):
         """Stop call"""
-        request_id = str(uuid.uuid4())
-        params = {"device": device, "rpc_id": request_id, "func": "stop", "args": [], "kwargs": {}}
-        msg = ScanQueueMessage(
-            scan_type="device_rpc",
-            parameter=params,
-            queue="emergency",
-            metadata={"RID": request_id, "response": False},
-        )
-        self.client.connector.send(MessageEndpoints.scan_queue_request(self.client.username), msg)
+        devices = [device] if isinstance(device, str) else list(device)
+        devices = [dev for dev in devices if dev]
+        if not devices:
+            logger.warning("Stop requested without a valid device.")
+            return
+
+        msg = VariableMessage(value=devices)
+        self.client.connector.send(MessageEndpoints.stop_devices(), msg)
 
     # pylint: disable=unused-argument
     def _on_device_readback(
