@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.13.4 (2026-05-29)
+
+### Bug Fixes
+
+- **positioner_box**: Fix STOP button
+  ([`9a58dba`](https://github.com/bec-project/bec_widgets/commit/9a58dba414d9eec32fd7de7fc64c97c38f020b84))
+
+
 ## v3.13.3 (2026-05-22)
 
 ### Bug Fixes
