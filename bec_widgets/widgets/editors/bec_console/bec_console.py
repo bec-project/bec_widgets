@@ -120,7 +120,12 @@ class BecConsoleRegistry:
             return None
 
         window = console.window()
-        if window is not None and window is not console and self._is_valid_qobject(window):
+        if (
+            window is not None
+            and window is not console
+            and self._is_valid_qobject(window)
+            and not getattr(window, "_destroyed", False)
+        ):
             return window
 
         if not avoid_console:

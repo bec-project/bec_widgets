@@ -1465,6 +1465,16 @@ class DockAreaWidget(BECWidget, QWidget):
         for dock in self.dock_list():
             self._delete_dock(dock)
 
+    def cleanup(self):
+        """Tear down all docks via the Qt ADS API before the base BECWidget cleanup runs.
+
+        Explicitly releasing dock widgets through the CDockManager API first prevents crashes
+        in PySide6 6.11.0 / PySide6-QtAds 4.5.x where the CDockManager destructor interacts
+        badly with dock widgets that are deleted outside of it.
+        """
+        self.delete_all()
+        super().cleanup()
+
 
 if __name__ == "__main__":  # pragma: no cover
     import sys
