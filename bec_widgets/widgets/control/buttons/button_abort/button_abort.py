@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from qtpy.QtCore import Qt
