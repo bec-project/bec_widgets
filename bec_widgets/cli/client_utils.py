@@ -84,31 +84,11 @@ def _get_output(process, logger, stop_event: threading.Event | None = None) -> N
         logger.error(f"Error reading process output: {str(e)}")
 
 
-def _process_group_id(process) -> int | None:
-    pid = getattr(process, "pid", None)
-    if os.name != "posix" or not isinstance(pid, int):
-        return None
-    try:
-        return os.getpgid(pid)
-    except ProcessLookupError:
-        return None
-
-
-def _process_details(process) -> str:
-    args = getattr(process, "args", None)
-    if isinstance(args, list):
-        command = " ".join(str(arg) for arg in args)
-    else:
-        command = str(args)
-    return (
-        f"pid={getattr(process, 'pid', None)} pgid={_process_group_id(process)} command={command}"
-    )
-
-
 def _process_group_snapshot(process) -> str:
-    pgid = _process_group_id(process)
-    if pgid is None:
-        return "Process group snapshot unavailable: process group no longer exists"
+    try:
+        pgid = os.getpgid(process.pid)
+    except ProcessLookupError:
+        return "Process group snapshot unavailable: process already exited"
     try:
         result = subprocess.run(
             ["ps", "-o", "pid,ppid,pgid,stat,command", "-g", str(pgid)],
@@ -129,21 +109,18 @@ def _terminate_plot_process(process, logger, timeout: float = PROCESS_TERMINATIO
     if process.poll() is not None:
         return
 
-    process_details = _process_details(process)
+    process_info = f"pid={process.pid} command={process.args}"
     try:
-        pgid = _process_group_id(process)
-        if pgid is not None:
-            logger.info(f"Terminating GUI process group {process_details}")
-            os.killpg(pgid, signal.SIGTERM)
-        else:
-            logger.info(f"Terminating GUI process {process_details}")
-            process.terminate()
+        pgid = os.getpgid(process.pid)
+        process_info = f"pid={process.pid} pgid={pgid} command={process.args}"
+        logger.info(f"Terminating GUI process group {process_info}")
+        os.killpg(pgid, signal.SIGTERM)
     except ProcessLookupError:
         process.wait(timeout=timeout)
         return
     except Exception as exc:
         logger.warning("Failed to terminate GUI process group; terminating process only.")
-        logger.info(f"GUI process termination failure details: {exc}. {process_details}")
+        logger.info(f"GUI process termination failure details: {exc}. pid={process.pid}")
         process.terminate()
 
     try:
@@ -152,16 +129,12 @@ def _terminate_plot_process(process, logger, timeout: float = PROCESS_TERMINATIO
     except subprocess.TimeoutExpired:
         logger.warning(f"GUI process did not stop within {timeout}s; killing it.")
         logger.info(
-            f"GUI process force-kill details: {process_details}\n"
+            f"GUI process force-kill details: {process_info}\n"
             f"{_process_group_snapshot(process)}"
         )
 
     try:
-        pgid = _process_group_id(process)
-        if pgid is not None:
-            os.killpg(pgid, signal.SIGKILL)
-        else:
-            process.kill()
+        os.killpg(os.getpgid(process.pid), signal.SIGKILL)
     except ProcessLookupError as e:
         logger.error(f"Failed to kill GUI process group: {e}")
         process.wait(timeout=timeout)
@@ -197,7 +170,7 @@ def _join_process_output_thread(process, thread: threading.Thread | None, logger
     thread.join(timeout=PROCESS_OUTPUT_THREAD_JOIN_TIMEOUT)
     if thread.is_alive():
         logger.warning("GUI process output reader thread did not stop after process shutdown.")
-        logger.info(f"GUI process output reader thread details: {_process_details(process)}")
+        logger.info(f"GUI process output reader thread details: pid={process.pid}")
 
 
 def _start_plot_process(
@@ -624,7 +597,7 @@ class BECGuiClient(RPCBase):
     def _request_server_shutdown(self) -> bool:
         if self._process is None or self._process.poll() is not None:
             return True
-        process_details = _process_details(self._process)
+        process_details = f"pid={self._process.pid} command={self._process.args}"
         logger.info(f"Requesting graceful GUI shutdown {process_details}")
         try:
             self.launcher._run_rpc(  # pylint: disable=protected-access
