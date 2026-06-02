@@ -6,6 +6,7 @@ from qtpy.QtCore import QObject
 from qtpy.QtWidgets import QApplication, QWidget
 
 from bec_widgets.utils.bec_connector import BECConnector
+from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeProperty
 from bec_widgets.utils.error_popups import SafeSlot as Slot
 
@@ -13,6 +14,9 @@ from .client_mocks import mocked_client
 
 
 class BECConnectorQObject(BECConnector, QObject): ...
+
+
+class _CleanupBroadcastWidget(BECWidget, QWidget): ...
 
 
 @pytest.fixture
@@ -144,6 +148,28 @@ def test_bec_connector_change_object_name(bec_connector):
     # Verify that the object with the previous name is no longer registered
     all_objects = bec_connector.rpc_register.list_all_connections().values()
     assert not any(obj.objectName() == previous_name for obj in all_objects)
+
+
+def test_bec_widget_cleanup_broadcasts_after_children_are_unregistered(mocked_client, qtbot):
+    parent = _CleanupBroadcastWidget(client=mocked_client, object_name="cleanup_parent")
+    child = _CleanupBroadcastWidget(
+        parent=parent, client=mocked_client, object_name="cleanup_child"
+    )
+    qtbot.addWidget(parent)
+
+    observed_connections = []
+    parent.rpc_register.callbacks.append(
+        lambda connections: observed_connections.append(set(connections))
+    )
+
+    parent.close()
+
+    assert parent._destroyed is True
+    assert child.gui_id not in parent.rpc_register.list_all_connections()
+    assert all(
+        parent.gui_id in snapshot or child.gui_id not in snapshot
+        for snapshot in observed_connections
+    )
 
 
 def test_bec_connector_export_settings():

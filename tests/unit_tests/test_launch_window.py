@@ -4,7 +4,9 @@ import os
 from unittest import mock
 
 import pytest
+from qtpy.QtCore import QObject
 from qtpy.QtGui import QFontMetrics
+from qtpy.QtWidgets import QWidget
 
 import bec_widgets
 from bec_widgets.applications.launch_window import START_EMPTY_PROFILE_OPTION, LaunchWindow
@@ -14,6 +16,28 @@ from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 from .client_mocks import mocked_client
 
 base_path = os.path.dirname(bec_widgets.__file__)
+
+
+def _launcher_child_connection(launcher: LaunchWindow, name: str) -> QObject:
+    connection = QObject(parent=launcher)
+    connection.gui_id = f"{launcher.gui_id}:{name}"
+    connection.setObjectName(name)
+    return connection
+
+
+def _top_level_connection(qtbot, name: str) -> QWidget:
+    connection = QWidget()
+    connection.gui_id = name
+    connection.setObjectName(name)
+    qtbot.addWidget(connection)
+    return connection
+
+
+def _unparented_connection(name: str) -> QObject:
+    connection = QObject()
+    connection.gui_id = name
+    connection.setObjectName(name)
+    return connection
 
 
 @pytest.fixture
@@ -117,20 +141,20 @@ def test_open_dock_area_with_start_empty_option_calls_launch(bec_launch_window):
         (["launcher", "dock_area", "scan_progress_simple", "scan_progress_full"], False),
         (
             ["launcher", "dock_area", "scan_progress_simple", "scan_progress_full", "hover_widget"],
-            True,
+            False,
         ),
+        (["launcher", "external_window"], True),
     ],
 )
-def test_gui_server_turns_off_the_lights(bec_launch_window, connection_names, hide):
+def test_gui_server_turns_off_the_lights(bec_launch_window, qtbot, connection_names, hide):
     connections = {}
     for name in connection_names:
-        conn = mock.MagicMock()
         if name == "hover_widget":
-            conn.parent.return_value = None
-            conn.objectName.return_value = "HoverWidget"
+            conn = _unparented_connection("HoverWidget")
+        elif name == "external_window":
+            conn = _top_level_connection(qtbot, "external_window")
         else:
-            conn.parent.return_value = mock.MagicMock()
-            conn.objectName.return_value = bec_launch_window.objectName()
+            conn = _launcher_child_connection(bec_launch_window, name)
         connections[name] = conn
     with (
         mock.patch.object(bec_launch_window, "show") as mock_show,
@@ -153,15 +177,21 @@ def test_gui_server_turns_off_the_lights(bec_launch_window, connection_names, hi
             mock_set_quit_on_last_window_closed.assert_called_once_with(True)
 
 
-def test_launcher_detects_external_main_window_without_info_log(bec_launch_window):
-    connection = mock.MagicMock()
-    connection.parent.return_value = None
-    connection.objectName.return_value = "BECMainWindowNoRPC"
+def test_launcher_detects_external_main_window(bec_launch_window, qtbot):
+    connection = _top_level_connection(qtbot, "BECMainWindowNoRPC")
 
-    with mock.patch("bec_widgets.applications.launch_window.logger.info") as mock_info:
-        assert not bec_launch_window._launcher_is_last_widget({"window": connection})
+    assert bec_launch_window._has_external_window({"window": connection})
 
-    mock_info.assert_not_called()
+
+def test_launcher_logs_unparented_non_window_connection_once(bec_launch_window):
+    connection = _unparented_connection("HoverWidget")
+
+    with mock.patch("bec_widgets.applications.launch_window.logger.warning") as mock_warning:
+        bec_launch_window._turn_off_the_lights({"window": connection})
+        bec_launch_window._turn_off_the_lights({"window": connection})
+
+    mock_warning.assert_called_once()
+    assert "HoverWidget" in mock_warning.call_args.args[0]
 
 
 @pytest.mark.parametrize(
@@ -174,11 +204,12 @@ def test_launcher_detects_external_main_window_without_info_log(bec_launch_windo
         (["launcher", "dock_area", "scan_progress_simple", "scan_progress_full"], True),
         (
             ["launcher", "dock_area", "scan_progress_simple", "scan_progress_full", "hover_widget"],
-            False,
+            True,
         ),
+        (["launcher", "external_window"], False),
     ],
 )
-def test_launch_window_closes(bec_launch_window, connection_names, close_called):
+def test_launch_window_closes(bec_launch_window, qtbot, connection_names, close_called):
     """
     Test that the close event is handled correctly based on the connections.
     If there are no connections or only the launcher connection, the window should close.
@@ -186,13 +217,12 @@ def test_launch_window_closes(bec_launch_window, connection_names, close_called)
     """
     connections = {}
     for name in connection_names:
-        conn = mock.MagicMock()
         if name == "hover_widget":
-            conn.parent.return_value = None
-            conn.objectName.return_value = "HoverWidget"
+            conn = _unparented_connection("HoverWidget")
+        elif name == "external_window":
+            conn = _top_level_connection(qtbot, "external_window")
         else:
-            conn.parent.return_value = mock.MagicMock()
-            conn.objectName.return_value = bec_launch_window.objectName()
+            conn = _launcher_child_connection(bec_launch_window, name)
         connections[name] = conn
     close_event = mock.MagicMock()
     with mock.patch.object(
