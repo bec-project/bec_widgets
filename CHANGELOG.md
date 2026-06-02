@@ -1,6 +1,61 @@
 # CHANGELOG
 
 
+## v3.13.5 (2026-06-02)
+
+### Bug Fixes
+
+- Change prints into proper logs
+  ([`c8275fc`](https://github.com/bec-project/bec_widgets/commit/c8275fcfd5c920393df3aa201c32a632ac8086a5))
+
+- **abort_button**: From __future__ import annotations
+  ([`3796984`](https://github.com/bec-project/bec_widgets/commit/37969841822c8c38c23a1d8fca8e38aec684957b))
+
+- **client_utils**: Increase default rpc timeout to 60s
+  ([`07515d2`](https://github.com/bec-project/bec_widgets/commit/07515d24be6e930b1b40170fc710255914cb7454))
+
+- **client_utils**: Stop output reader thread on shutdown
+  ([`4572760`](https://github.com/bec-project/bec_widgets/commit/4572760b56ca2ab6435db3a6a4ba0d270e9008d1))
+
+- **companion_app**: Disable logging of bec_lib.scan_items on widget side
+  ([`bd66afb`](https://github.com/bec-project/bec_widgets/commit/bd66afb98dcb76ca87b0db1334df3c1af0a9dbad))
+
+- **forms**: Gridlayout applied to widget which already has layout
+  ([`1427c70`](https://github.com/bec-project/bec_widgets/commit/1427c70cfb6f84bbced7f72ec5cfa55ac0b9b742))
+
+- **launch_window**: Exclude launcher check for non-parented widgets for BECMainWindow
+  ([`ed68eb5`](https://github.com/bec-project/bec_widgets/commit/ed68eb5ac6b20cfc7ca2c0b91864dc54fb579499))
+
+- **launcher**: Avoid orphan widgets detection and logging
+  ([`9f94ca7`](https://github.com/bec-project/bec_widgets/commit/9f94ca7748d73a30622ecbaef384f4bc73a3d2fb))
+
+- **logging**: Removed args/kwargs from logging messages
+  ([`2fb7fb2`](https://github.com/bec-project/bec_widgets/commit/2fb7fb2ff487863c3bc931498496da74b25e52d8))
+
+- **rpc**: Additional logs
+  ([`e41e609`](https://github.com/bec-project/bec_widgets/commit/e41e60956b54890b70b3390b981196c9477abd93))
+
+- **rpc**: Client/server rpc handshake for shutdown
+  ([`8a180ea`](https://github.com/bec-project/bec_widgets/commit/8a180eaa7be5c1603d893cf3b50585f88f9b0c83))
+
+- **rpc**: Log dispatcher receipt before qt callback
+  ([`878745b`](https://github.com/bec-project/bec_widgets/commit/878745b99ac1e22c0fbddecc294e599469a2adfe))
+
+- **rpc**: More robust shutdown section with PID logging
+  ([`e42a982`](https://github.com/bec-project/bec_widgets/commit/e42a9824ccd54b71a3141aaf2aa4e02af6a13782))
+
+- **rpc_server**: Log warning if rpc call is repeated
+  ([`859563a`](https://github.com/bec-project/bec_widgets/commit/859563abb3e94ff55886e72db3177522900a89b8))
+
+### Refactoring
+
+- **client_utils**: Simplify PID fetching
+  ([`154ae60`](https://github.com/bec-project/bec_widgets/commit/154ae6026a6471b7c1db42f7c2ff3dc7be4b4afb))
+
+- **rpc**: Share logging helpers
+  ([`8e1e282`](https://github.com/bec-project/bec_widgets/commit/8e1e282fac22ab6f726049758306c7ca17af70eb))
+
+
 ## v3.13.4 (2026-05-29)
 
 ### Bug Fixes
