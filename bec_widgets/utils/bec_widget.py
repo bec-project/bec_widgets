@@ -331,32 +331,34 @@ class BECWidget(BECConnector):
             # All widgets need to call super().cleanup() in their cleanup method
             logger.info(f"Registry cleanup for widget {self.__class__.__name__}")
             self.rpc_register.remove_rpc(self)
-        children = self.findChildren(BECWidget)
-        for child in children:
-            if not shiboken6.isValid(child):
-                # If the child is not valid, it means it has already been deleted
-                continue
-            child.close()
-            child.deleteLater()
+            children = self.findChildren(BECWidget)
+            for child in children:
+                if not shiboken6.isValid(child):
+                    # If the child is not valid, it means it has already been deleted
+                    continue
+                child.close()
+                child.deleteLater()
 
-        # Tear down busy overlay explicitly to stop spinner and remove filters
-        overlay = getattr(self, "_busy_overlay", None)
-        if overlay is not None and shiboken6.isValid(overlay):
-            try:
-                overlay.hide()
-                filt = getattr(overlay, "_filter", None)
-                if filt is not None and shiboken6.isValid(filt):
-                    try:
-                        self.removeEventFilter(filt)
-                    except Exception as exc:
-                        logger.warning(f"Failed to remove event filter from busy overlay: {exc}")
+            # Tear down busy overlay explicitly to stop spinner and remove filters
+            overlay = getattr(self, "_busy_overlay", None)
+            if overlay is not None and shiboken6.isValid(overlay):
+                try:
+                    overlay.hide()
+                    filt = getattr(overlay, "_filter", None)
+                    if filt is not None and shiboken6.isValid(filt):
+                        try:
+                            self.removeEventFilter(filt)
+                        except Exception as exc:
+                            logger.warning(
+                                f"Failed to remove event filter from busy overlay: {exc}"
+                            )
 
-                # Cleanup the overlay widget. This will call cleanup on the custom widget if present.
+                    # Cleanup the overlay widget. This will call cleanup on the custom widget if present.
 
-                overlay.cleanup()
-                overlay.deleteLater()
-            except Exception as exc:
-                logger.warning(f"Failed to delete busy overlay: {exc}")
+                    overlay.cleanup()
+                    overlay.deleteLater()
+                except Exception as exc:
+                    logger.warning(f"Failed to delete busy overlay: {exc}")
 
     def closeEvent(self, event):
         """Wrap the close even to ensure the rpc_register is cleaned up."""

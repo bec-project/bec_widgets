@@ -207,6 +207,7 @@ class LaunchWindow(BECMainWindow):
 
         self.app = QApplication.instance()
         self.tiles: dict[str, LaunchTile] = {}
+        self._logged_unparented_connections: set[str] = set()
         # Track the smallest main‑label font size chosen so far
         self._min_main_label_pt: int | None = None
 
@@ -655,37 +656,51 @@ class LaunchWindow(BECMainWindow):
         super().showEvent(event)
         self.setFixedSize(self.size())
 
-    def _launcher_is_last_widget(self, connections: dict) -> bool:
+    def _has_external_window(self, connections: dict) -> bool:
         """
-        Check if the launcher is the last widget in the application.
+        Check if any registered non-launcher connection owns a top-level Qt window.
         """
-
         for connection in connections.values():
-            if not self._connection_belongs_to_launcher(connection):
-                return False
-        return True
+            if self._connection_belongs_to_launcher(connection):
+                continue
+            if isinstance(connection, QWidget) and connection.isWindow():
+                return True
+        return False
+
+    def _log_unparented_connections(self, connections: dict) -> None:
+        """
+        Log non-launcher RPC connections that remain without an active top-level window.
+        """
+        for connection in connections.values():
+            if self._connection_belongs_to_launcher(connection):
+                continue
+            if isinstance(connection, QWidget) and connection.isWindow():
+                continue
+
+            connection_description = (
+                f"type={type(connection).__name__} objectName={connection.objectName()!r} "
+                f"gui_id={connection.gui_id!r}"
+            )
+            if connection_description in self._logged_unparented_connections:
+                continue
+            self._logged_unparented_connections.add(connection_description)
+            logger.warning(
+                "Registered non-launcher RPC connection has no active top-level window: "
+                f"{connection_description}"
+            )
 
     def _connection_belongs_to_launcher(self, connection: QObject) -> bool:
         """
         Check whether a registered connection is the launcher itself or part of its Qt hierarchy.
-
-        Registered top-level windows such as BECMainWindowNoRPC are expected when another GUI is
-        open. They are not launcher children, but they are also not an error condition.
         """
-        try:
-            if connection is self or getattr(connection, "gui_id", None) == self.gui_id:
-                return True
-            if connection.objectName() == self.objectName():
-                return True
+        if connection is self or connection.gui_id == self.gui_id:
+            return True
 
-            parent = connection.parent()
-            while parent is not None:
-                if parent is self:
-                    return True
-                parent = parent.parent()
-        except Exception as e:
-            logger.error(f"Error checking launcher ownership of connection: {e}")
-            return False
+        parent = connection.parent()
+        while parent is not None:
+            if parent is self:
+                return True
+            parent = parent.parent()
 
         return False
 
@@ -694,29 +709,30 @@ class LaunchWindow(BECMainWindow):
         If there is only one connection remaining, it is the launcher, so we show it.
         Once the launcher is closed as the last window, we quit the application.
         """
-        if self._launcher_is_last_widget(connections):
-            self.show()
-            self.activateWindow()
-            self.raise_()
+        if self._has_external_window(connections):
+            self.hide()
             if self.app:
-                self.app.setQuitOnLastWindowClosed(True)  # type: ignore
+                self.app.setQuitOnLastWindowClosed(False)  # type: ignore
             return
 
-        self.hide()
+        self._log_unparented_connections(connections)
+        self.show()
+        self.activateWindow()
+        self.raise_()
         if self.app:
-            self.app.setQuitOnLastWindowClosed(False)  # type: ignore
+            self.app.setQuitOnLastWindowClosed(True)  # type: ignore
 
     def closeEvent(self, event):
         """
         Close the launcher window.
         """
         connections = self.register.list_all_connections()
-        if self._launcher_is_last_widget(connections):
-            event.accept()
+        if self._has_external_window(connections):
+            event.ignore()
+            self.hide()
             return
 
-        event.ignore()
-        self.hide()
+        event.accept()
 
 
 if __name__ == "__main__":  # pragma: no cover
