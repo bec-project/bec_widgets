@@ -150,7 +150,7 @@ class TypedForm(BECWidget, QWidget):
         self.adjustSize()
 
     def _new_grid_layout(self):
-        new_grid = QGridLayout(self)
+        new_grid = QGridLayout()
         new_grid.setContentsMargins(0, 0, 0, 0)
         return new_grid
 

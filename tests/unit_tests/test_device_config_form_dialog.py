@@ -98,11 +98,15 @@ def test_waiting_display(update_dialog, qtbot):
         mock_spinner_stop.assert_called_once()
 
 
-def test_update_cycle(update_dialog, qtbot):
+def test_update_cycle(update_dialog):
     update = {"enabled": False, "readoutPriority": "baseline", "deviceTags": {"tag"}}
 
     def _mock_send(action="update", config=None, wait_for_response=True, timeout_s=None):
-        update_dialog.client.device_manager.devices["test_device"]._config = config["test_device"]  # type: ignore
+        device = update_dialog.client.device_manager.devices["test_device"]
+        device._config = {**device._config, **config["test_device"]}  # type: ignore
+
+    update_dialog._q_threadpool = MagicMock()
+    update_dialog._q_threadpool.start.side_effect = lambda runnable: runnable.run()
 
     update_dialog._config_helper.send_config_request = MagicMock(side_effect=_mock_send)
     for item in update_dialog._form.enumerate_form_widgets():
@@ -111,9 +115,7 @@ def test_update_cycle(update_dialog, qtbot):
 
     assert update_dialog.updated_config() == update
     update_dialog.apply()
-    qtbot.waitUntil(
-        lambda: update_dialog._config_helper.send_config_request.call_count == 1, timeout=100
-    )
+    update_dialog._q_threadpool.start.assert_called_once()
 
     update_dialog._config_helper.send_config_request.assert_called_with(
         action="update", config={"test_device": update}, wait_for_response=False
