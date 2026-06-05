@@ -192,7 +192,7 @@ class ScanGroupBox(QGroupBox):
         vbox_layout = QVBoxLayout(self)
         hbox_layout = QHBoxLayout()
         vbox_layout.addLayout(hbox_layout)
-        self.layout = QGridLayout(self)
+        self.layout = QGridLayout()
         vbox_layout.addLayout(self.layout)
 
         # Add bundle button
