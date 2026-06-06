@@ -12,7 +12,6 @@ from qtpy.QtWidgets import QWidget
 from bec_widgets import BECWidget
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.colors import Colors
-from bec_widgets.utils.entry_validator import EntryValidator
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.widgets.progress.progress_backend import BECProgressTracker, ProgressSnapshot
 
@@ -269,19 +268,59 @@ class Ring(BECWidget, QWidget):
         self.config.direction = direction
         self._request_update()
 
-    def _update_device_connection(self, device: str, signal: str | None) -> str:
+    def _get_signals_for_device(self, device: str) -> dict[str, list[str]]:
         """
-        Update the device connection for the ring widget.
-
-        Device mode always subscribes to the device readback endpoint. If no signal is provided,
-        the signal is resolved from the device hints, matching the plot widgets.
+        Get the appropriate signals for the device to be used in the ring widget, based on the signal infos from the device manager.
 
         Args:
-            device(str): Device name for the device mode
-            signal(str): Signal name for the device mode
+            device(str): Device name for the device readback mode
 
         Returns:
-            str: The selected signal name for the device mode
+            dict[str, list[str]]: Signal infos for the device to be used in the ring widget
+        """
+        dm = self.bec_dispatcher.client.device_manager
+        if not dm:
+            raise ValueError("Device manager is not available in the BEC client.")
+        dev_obj = dm.devices.get(device)
+        if dev_obj is None:
+            raise ValueError(f"Device '{device}' not found in device manager.")
+
+        signal_infos = getattr(dev_obj, "_info", {}).get("signals", {})
+        progress_signals = [
+            obj["component_name"]
+            for obj in signal_infos.values()
+            if obj.get("signal_class") == "ProgressSignal"
+        ]
+        hinted_signals = [
+            obj["obj_name"]
+            for obj in signal_infos.values()
+            if obj.get("kind_str") == "hinted"
+            and obj.get("signal_class")
+            not in ["ProgressSignal", "AsyncSignal", "AsyncMultiSignal", "DynamicSignal"]
+        ]
+        normal_signals = [
+            obj["component_name"]
+            for obj in signal_infos.values()
+            if obj.get("kind_str") == "normal"
+        ]
+
+        return {
+            "progress_signals": progress_signals,
+            "hinted_signals": hinted_signals,
+            "normal_signals": normal_signals,
+        }
+
+    def _update_device_connection(self, device: str, signal: str | None) -> str:
+        """
+        Subscribe device mode to the endpoint matching the selected signal.
+
+        When no signal is provided, the ring selects the first available progress
+        signal, then the first hinted readback signal, then the first normal
+        readback signal. Progress signals use the device_progress endpoint;
+        readback signals use the device_readback endpoint.
+
+        Returns:
+            The selected signal name, or an empty string if the device is not known.
         """
         logger.info(f"Updating device connection for device '{device}' and signal '{signal}'")
         dm = self.bec_dispatcher.client.device_manager
@@ -291,11 +330,48 @@ class Ring(BECWidget, QWidget):
         if dev_obj is None:
             return ""
 
-        signal = EntryValidator(dm.devices).validate_signal(device, signal or None)
-        endpoint = MessageEndpoints.device_readback(device)
-        self.bec_dispatcher.connect_slot(self.on_device_readback, endpoint)
-        self.registered_slot = (self.on_device_readback, endpoint)
-        return signal
+        signals = self._get_signals_for_device(device)
+        progress_signals = signals["progress_signals"]
+        hinted_signals = signals["hinted_signals"]
+        normal_signals = signals["normal_signals"]
+
+        if not signal:
+            if progress_signals:
+                signal = progress_signals[0]
+                logger.info(
+                    f"Using progress signal '{signal}' for device '{device}' in ring progress bar."
+                )
+            elif hinted_signals:
+                signal = hinted_signals[0]
+                logger.info(
+                    f"Using hinted signal '{signal}' for device '{device}' in ring progress bar."
+                )
+            elif normal_signals:
+                signal = normal_signals[0]
+                logger.info(
+                    f"Using normal signal '{signal}' for device '{device}' in ring progress bar."
+                )
+            else:
+                logger.warning(f"No signals found for device '{device}' in ring progress bar.")
+                return ""
+
+        if signal in progress_signals:
+            endpoint = MessageEndpoints.device_progress(device)
+            self.bec_dispatcher.connect_slot(self.on_device_progress, endpoint)
+            self.registered_slot = (self.on_device_progress, endpoint)
+            return signal
+
+        if signal in hinted_signals or signal in normal_signals:
+            endpoint = MessageEndpoints.device_readback(device)
+            self.bec_dispatcher.connect_slot(self.on_device_readback, endpoint)
+            self.registered_slot = (self.on_device_readback, endpoint)
+            return signal
+
+        raise ValueError(
+            f"Signal '{signal}' is not usable for ring progress device mode. "
+            f"Available progress signals: {progress_signals}; "
+            f"available readback signals: {hinted_signals + normal_signals}."
+        )
 
     @SafeSlot(dict, dict)
     def on_device_readback(self, msg, meta):
@@ -314,6 +390,16 @@ class Ring(BECWidget, QWidget):
         if value is None:
             return
         self.set_value(value)
+        self.update()
+
+    @SafeSlot(dict, dict)
+    def on_device_progress(self, msg, meta):
+        device = self.config.device
+        if device is None:
+            return
+        max_val = msg.get("max_value", 100)
+        self.set_min_max_values(0, max_val)
+        self.set_value(max_val if msg.get("done") else msg.get("value", 0))
         self.update()
 
     def _on_progress_snapshot(self, snapshot: ProgressSnapshot):

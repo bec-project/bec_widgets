@@ -3,6 +3,7 @@
 from unittest.mock import MagicMock
 
 import pytest
+from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtGui import QColor
 
 from bec_widgets.tests.utils import FakeDevice
@@ -97,6 +98,10 @@ def test_set_update_from_scan_to_manual(ring_widget):
 
     assert ring_widget.config.mode == "manual"
     assert ring_widget.registered_slot is None
+    ring_widget.bec_dispatcher.disconnect_slot.assert_called_once()
+    call_args = ring_widget.bec_dispatcher.disconnect_slot.call_args
+    assert call_args[0][0] == ring_widget.progress_tracker.process_progress_message
+    assert call_args[0][1] == MessageEndpoints.scan_progress()
 
 
 def test_set_update_to_device(ring_widget_with_device):
@@ -420,7 +425,28 @@ def test_set_direction_counter_clockwise(ring_widget):
 ###################################
 
 
-def test_update_device_connection_with_progress_signal(ring_widget_with_device):
+def test_update_device_connection_prefers_progress_signal(ring_widget_with_device):
+    ring_widget = ring_widget_with_device
+    samx = ring_widget.bec_dispatcher.client.device_manager.devices.samx
+    samx._info["signals"]["progress"] = {
+        "obj_name": "samx_progress",
+        "component_name": "progress",
+        "signal_class": "ProgressSignal",
+        "kind_str": "hinted",
+    }
+
+    ring_widget.bec_dispatcher.connect_slot = MagicMock()
+
+    signal = ring_widget._update_device_connection("samx", "")
+
+    assert signal == "progress"
+    ring_widget.bec_dispatcher.connect_slot.assert_called_once()
+    call_args = ring_widget.bec_dispatcher.connect_slot.call_args
+    assert call_args[0][0] == ring_widget.on_device_progress
+    assert call_args[0][1] == MessageEndpoints.device_progress("samx")
+
+
+def test_update_device_connection_accepts_explicit_progress_signal(ring_widget_with_device):
     ring_widget = ring_widget_with_device
     samx = ring_widget.bec_dispatcher.client.device_manager.devices.samx
     samx._info["signals"]["progress"] = {
@@ -434,14 +460,91 @@ def test_update_device_connection_with_progress_signal(ring_widget_with_device):
 
     signal = ring_widget._update_device_connection("samx", "progress")
 
-    # Device mode always connects to device_readback, even if the explicit signal is a ProgressSignal.
-    assert signal == "samx_progress"
+    assert signal == "progress"
+    ring_widget.bec_dispatcher.connect_slot.assert_called_once()
+    call_args = ring_widget.bec_dispatcher.connect_slot.call_args
+    assert call_args[0][0] == ring_widget.on_device_progress
+    assert call_args[0][1] == MessageEndpoints.device_progress("samx")
+
+
+def test_update_device_connection_resolves_component_name_to_readback_signal(
+    ring_widget_with_device,
+):
+    ring_widget = ring_widget_with_device
+    samx = ring_widget.bec_dispatcher.client.device_manager.devices.samx
+    samx._info["signals"]["setpoint"] = {
+        "obj_name": "samx_setpoint",
+        "component_name": "setpoint",
+        "signal_class": "Signal",
+        "kind_str": "normal",
+    }
+
+    ring_widget.bec_dispatcher.connect_slot = MagicMock()
+
+    signal = ring_widget._update_device_connection("samx", "setpoint")
+
+    assert signal == "setpoint"
     ring_widget.bec_dispatcher.connect_slot.assert_called_once()
     call_args = ring_widget.bec_dispatcher.connect_slot.call_args
     assert call_args[0][0] == ring_widget.on_device_readback
+    assert call_args[0][1] == MessageEndpoints.device_readback("samx")
 
 
-def test_update_device_connection_with_hinted_signal(ring_widget):
+def test_update_device_connection_falls_back_to_hinted_signal(ring_widget_with_device):
+    ring_widget = ring_widget_with_device
+    ring_widget.bec_dispatcher.connect_slot = MagicMock()
+
+    signal = ring_widget._update_device_connection("samx", "")
+
+    assert signal == "samx"
+    ring_widget.bec_dispatcher.connect_slot.assert_called_once()
+    call_args = ring_widget.bec_dispatcher.connect_slot.call_args
+    assert call_args[0][0] == ring_widget.on_device_readback
+    assert call_args[0][1] == MessageEndpoints.device_readback("samx")
+
+
+def test_update_device_connection_falls_back_to_normal_signal(ring_widget_with_device):
+    ring_widget = ring_widget_with_device
+    samx = ring_widget.bec_dispatcher.client.device_manager.devices.samx
+    samx._info["signals"] = {
+        "setpoint": {
+            "obj_name": "samx_setpoint",
+            "component_name": "setpoint",
+            "signal_class": "Signal",
+            "kind_str": "normal",
+        }
+    }
+
+    ring_widget.bec_dispatcher.connect_slot = MagicMock()
+
+    signal = ring_widget._update_device_connection("samx", "")
+
+    assert signal == "setpoint"
+    ring_widget.bec_dispatcher.connect_slot.assert_called_once()
+    call_args = ring_widget.bec_dispatcher.connect_slot.call_args
+    assert call_args[0][0] == ring_widget.on_device_readback
+    assert call_args[0][1] == MessageEndpoints.device_readback("samx")
+
+
+def test_update_device_connection_rejects_unusable_signal(ring_widget_with_device):
+    ring_widget = ring_widget_with_device
+    samx = ring_widget.bec_dispatcher.client.device_manager.devices.samx
+    samx._info["signals"]["async_signal"] = {
+        "obj_name": "samx_async",
+        "component_name": "async_signal",
+        "signal_class": "AsyncSignal",
+        "kind_str": "hinted",
+    }
+
+    ring_widget.bec_dispatcher.connect_slot = MagicMock()
+
+    with pytest.raises(ValueError, match="not usable for ring progress device mode"):
+        ring_widget._update_device_connection("samx", "samx_async")
+
+    ring_widget.bec_dispatcher.connect_slot.assert_not_called()
+
+
+def test_update_device_connection_accepts_explicit_hinted_signal(ring_widget):
     mock_device = FakeDevice(name="samx")
     mock_device._info = {
         "signals": {
@@ -453,12 +556,13 @@ def test_update_device_connection_with_hinted_signal(ring_widget):
 
     ring_widget.bec_dispatcher.connect_slot = MagicMock()
 
-    ring_widget._update_device_connection("samx", "samx")
+    signal = ring_widget._update_device_connection("samx", "samx")
 
-    # Should connect to device_readback endpoint
+    assert signal == "samx"
     ring_widget.bec_dispatcher.connect_slot.assert_called_once()
     call_args = ring_widget.bec_dispatcher.connect_slot.call_args
     assert call_args[0][0] == ring_widget.on_device_readback
+    assert call_args[0][1] == MessageEndpoints.device_readback("samx")
 
 
 def test_update_device_connection_no_device_manager(ring_widget):
@@ -473,8 +577,7 @@ def test_update_device_connection_device_not_found(ring_widget):
     mock_device = FakeDevice(name="samx")
     ring_widget.bec_dispatcher.client.device_manager.devices["samx"] = mock_device
 
-    # Should return without raising an error
-    ring_widget._update_device_connection("nonexistent", "signal")
+    assert ring_widget._update_device_connection("nonexistent", "signal") == ""
 
 
 ###################################
@@ -567,3 +670,63 @@ def test_on_device_readback_missing_signal_data(ring_widget):
 
     # Value should not change when signal is missing
     assert ring_widget.config.value == initial_value
+
+
+###################################
+# on_device_progress tests
+###################################
+
+
+def test_on_device_progress_updates_value_and_max(ring_widget):
+    ring_widget.config.device = "samx"
+
+    msg = {"value": 30, "max_value": 150, "done": False}
+    meta = {}
+
+    ring_widget.on_device_progress(msg, meta)
+
+    assert ring_widget.config.value == 30
+    assert ring_widget.config.max_value == 150
+
+
+def test_on_device_progress_done_sets_to_max(ring_widget):
+    ring_widget.config.device = "samx"
+
+    msg = {"value": 80, "max_value": 100, "done": True}
+    meta = {}
+
+    ring_widget.on_device_progress(msg, meta)
+
+    # When done is True, value should be set to max_value
+    assert ring_widget.config.value == 100
+    assert ring_widget.config.max_value == 100
+
+
+def test_on_device_progress_no_device_returns_early(ring_widget):
+    ring_widget.config.device = None
+
+    msg = {"value": 50, "max_value": 100, "done": False}
+    meta = {}
+
+    initial_value = ring_widget.config.value
+    initial_max = ring_widget.config.max_value
+
+    ring_widget.on_device_progress(msg, meta)
+
+    # Nothing should change
+    assert ring_widget.config.value == initial_value
+    assert ring_widget.config.max_value == initial_max
+
+
+def test_on_device_progress_default_values(ring_widget):
+    ring_widget.config.device = "samx"
+
+    # Message without value and max_value
+    msg = {}
+    meta = {}
+
+    ring_widget.on_device_progress(msg, meta)
+
+    # Should use defaults: value=0, max_value=100
+    assert ring_widget.config.value == 0
+    assert ring_widget.config.max_value == 100
