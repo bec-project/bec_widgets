@@ -106,10 +106,8 @@ class BECProgressBar(BECWidget, QWidget):
         self._layout.addWidget(self.progressbar)
         self.setLayout(self._layout)
 
-        self._setup_style_sheet(chunk_radius=self._initial_chunk_radius())
         self._sync_progressbar()
         self._apply_state_style()
-        self._update_chunk_radius(force=True)
 
     @SafeProperty(
         str, doc="The template for the center label. Use $value, $maximum, and $percentage."
@@ -134,6 +132,7 @@ class BECProgressBar(BECWidget, QWidget):
             ProgressState.INTERRUPTED: accent_colors.emergency,
             ProgressState.COMPLETED: accent_colors.success,
         }
+        self._chunk_radius = None
         self._apply_state_style()
 
     @label_template.setter
@@ -174,7 +173,7 @@ class BECProgressBar(BECWidget, QWidget):
         previous_value = self._value
         self._user_value = self._clamp_value(value)
         self._value = self.map_value(self._user_value)
-        if self._value < previous_value:
+        if self._enable_dynamic_stylesheet and self._value < previous_value:
             self._chunk_radius = None
         # Update state automatically unless paused or interrupted
         if self._state not in (ProgressState.PAUSED, ProgressState.INTERRUPTED):
@@ -184,10 +183,16 @@ class BECProgressBar(BECWidget, QWidget):
                 else ProgressState.NORMAL
             )
         self._sync_progressbar()
-        target_radius = self._target_chunk_radius()
-        if self._enable_dynamic_stylesheet and self._chunk_radius != target_radius:
+        visual_state_changed = self._current_visual_state() is not previous_visual_state
+        if visual_state_changed:
+            self._chunk_radius = None
+        if (
+            self._enable_dynamic_stylesheet
+            and not visual_state_changed
+            and (self._chunk_radius is None or self._chunk_radius != self._target_chunk_radius())
+        ):
             self._update_chunk_radius()
-        if self._current_visual_state() is not previous_visual_state:
+        if visual_state_changed:
             self._apply_state_style()
 
     @SafeProperty(object, doc="Current visual state of the progress bar.")
@@ -207,6 +212,7 @@ class BECProgressBar(BECWidget, QWidget):
         if not isinstance(state, ProgressState):
             raise ValueError("state must be a ProgressState or its value")
         self._state = state
+        self._chunk_radius = None
         self._apply_state_style()
 
     @SafeProperty(float, doc="Base corner radius in pixels (auto‑scaled down on small bars).")
@@ -217,7 +223,7 @@ class BECProgressBar(BECWidget, QWidget):
     def corner_radius(self, radius: float):
         self._corner_radius = max(0.0, radius)
         self._chunk_radius = None
-        self._update_chunk_radius(force=True)
+        self._apply_state_style()
 
     @SafeProperty(bool)
     def enable_dynamic_stylesheet(self) -> bool:
@@ -227,7 +233,7 @@ class BECProgressBar(BECWidget, QWidget):
     def enable_dynamic_stylesheet(self, enabled: bool):
         self._enable_dynamic_stylesheet = bool(enabled)
         self._chunk_radius = None
-        self._update_chunk_radius(force=True)
+        self._apply_state_style()
 
     @SafeProperty(float)
     def padding_left_right(self) -> float:
@@ -241,7 +247,7 @@ class BECProgressBar(BECWidget, QWidget):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._chunk_radius = None
-        self._update_chunk_radius(force=True)
+        self._update_chunk_radius()
 
     @SafeProperty(float)
     def maximum(self):
@@ -289,7 +295,7 @@ class BECProgressBar(BECWidget, QWidget):
         """
         previous_maximum = self._user_maximum
         self._user_maximum = maximum
-        if maximum != previous_maximum:
+        if self._enable_dynamic_stylesheet and maximum != previous_maximum:
             self._chunk_radius = None
         self.set_value(self._user_value)  # Update the value to fit the new range
 
@@ -303,7 +309,7 @@ class BECProgressBar(BECWidget, QWidget):
         """
         previous_minimum = self._user_minimum
         self._user_minimum = minimum
-        if minimum != previous_minimum:
+        if self._enable_dynamic_stylesheet and minimum != previous_minimum:
             self._chunk_radius = None
         self.set_value(self._user_value)  # Update the value to fit the new range
 
@@ -347,34 +353,37 @@ class BECProgressBar(BECWidget, QWidget):
             }}
             """)
 
-    def _update_chunk_radius(self, *, force: bool = False) -> None:
+    def _update_chunk_radius(self) -> None:
+        chunk_radius = self._current_chunk_radius()
+        if chunk_radius != self._chunk_radius:
+            self._chunk_radius = chunk_radius
+            self._setup_style_sheet(chunk_radius=chunk_radius)
+
+    def _apply_state_style(self) -> None:
+        if self._chunk_radius is None:
+            self._chunk_radius = self._current_chunk_radius()
+        self._setup_style_sheet(chunk_radius=self._chunk_radius)
+
+        color = self._state_colors[self._current_visual_state()]
+        palette = self.progressbar.palette()
+        palette.setColor(QPalette.ColorRole.Highlight, color)
+        palette.setColor(QPalette.ColorRole.HighlightedText, palette.color(QPalette.ColorRole.Text))
+        self.progressbar.setPalette(palette)
+
+    def _current_chunk_radius(self) -> int:
         target_radius = self._target_chunk_radius()
         if not self._enable_dynamic_stylesheet:
-            if not force and self._chunk_radius == target_radius:
-                return
-            self._chunk_radius = target_radius
-            self._setup_style_sheet(chunk_radius=target_radius)
-            return
-        if not force and self._chunk_radius == target_radius:
-            return
-        chunk_radius = self._calculate_chunk_radius(target_radius)
-        if not force and chunk_radius == self._chunk_radius:
-            return
-        self._chunk_radius = chunk_radius
-        self._setup_style_sheet(chunk_radius=chunk_radius)
+            return target_radius
+        return self._calculate_chunk_radius(target_radius)
 
     def _target_chunk_radius(self) -> int:
         radius = int(round(self._corner_radius))
         return max(0, radius - 1)
 
-    def _initial_chunk_radius(self) -> int:
-        return 0 if self._enable_dynamic_stylesheet else self._target_chunk_radius()
-
     def _calculate_chunk_radius(self, target_radius: int) -> int:
         """
-        This whole chunk logic is to calculater radius based on the current size.
-        If the radius is smaller than size of the progressbar it is just not applied.
-        The chunk stylesheet logic is smoothing it as much as possible.
+        Scale the chunk radius down while the filled part is narrower than the target radius.
+        Qt stylesheets otherwise over-round very small chunks.
         """
         if target_radius <= 0 or self._maximum <= 0:
             return 0
@@ -382,23 +391,6 @@ class BECProgressBar(BECWidget, QWidget):
         if fill_width <= 0:
             return 0
         return min(target_radius, max(1, int(fill_width / 2)))
-
-    def _apply_state_style(self) -> None:
-        chunk_radius = self._chunk_radius
-        if chunk_radius is None:
-            target_radius = self._target_chunk_radius()
-            chunk_radius = (
-                self._calculate_chunk_radius(target_radius)
-                if self._enable_dynamic_stylesheet
-                else target_radius
-            )
-            self._chunk_radius = chunk_radius
-        self._setup_style_sheet(chunk_radius=chunk_radius)
-        color = self._state_colors[self._current_visual_state()]
-        palette = self.progressbar.palette()
-        palette.setColor(QPalette.ColorRole.Highlight, color)
-        palette.setColor(QPalette.ColorRole.HighlightedText, palette.color(QPalette.ColorRole.Text))
-        self.progressbar.setPalette(palette)
 
     def _current_visual_state(self) -> ProgressState:
         if self._state in (ProgressState.PAUSED, ProgressState.INTERRUPTED):
