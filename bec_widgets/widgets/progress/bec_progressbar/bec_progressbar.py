@@ -14,6 +14,7 @@ from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 class ProgressState(Enum):
     NORMAL = "normal"
     PAUSED = "paused"
+    WARNING = "warning"
     INTERRUPTED = "interrupted"
     COMPLETED = "completed"
 
@@ -84,7 +85,8 @@ class BECProgressBar(BECWidget, QWidget):
 
         self._state_colors = {
             ProgressState.NORMAL: accent_colors.default,
-            ProgressState.PAUSED: accent_colors.warning,
+            ProgressState.PAUSED: accent_colors.highlight,
+            ProgressState.WARNING: accent_colors.warning,
             ProgressState.INTERRUPTED: accent_colors.emergency,
             ProgressState.COMPLETED: accent_colors.success,
         }
@@ -128,7 +130,8 @@ class BECProgressBar(BECWidget, QWidget):
         accent_colors = get_accent_colors()
         self._state_colors = {
             ProgressState.NORMAL: accent_colors.default,
-            ProgressState.PAUSED: accent_colors.warning,
+            ProgressState.PAUSED: accent_colors.highlight,
+            ProgressState.WARNING: accent_colors.warning,
             ProgressState.INTERRUPTED: accent_colors.emergency,
             ProgressState.COMPLETED: accent_colors.success,
         }
@@ -176,7 +179,11 @@ class BECProgressBar(BECWidget, QWidget):
         if self._enable_dynamic_stylesheet and self._value < previous_value:
             self._chunk_radius = None
         # Update state automatically unless paused or interrupted
-        if self._state not in (ProgressState.PAUSED, ProgressState.INTERRUPTED):
+        if self._state not in (
+            ProgressState.PAUSED,
+            ProgressState.WARNING,
+            ProgressState.INTERRUPTED,
+        ):
             self._state = (
                 ProgressState.COMPLETED
                 if self._user_value >= self._user_maximum
@@ -358,12 +365,15 @@ class BECProgressBar(BECWidget, QWidget):
         if chunk_radius != self._chunk_radius:
             self._chunk_radius = chunk_radius
             self._setup_style_sheet(chunk_radius=chunk_radius)
+            self._apply_state_palette()
 
     def _apply_state_style(self) -> None:
         if self._chunk_radius is None:
             self._chunk_radius = self._current_chunk_radius()
         self._setup_style_sheet(chunk_radius=self._chunk_radius)
+        self._apply_state_palette()
 
+    def _apply_state_palette(self) -> None:
         color = self._state_colors[self._current_visual_state()]
         palette = self.progressbar.palette()
         palette.setColor(QPalette.ColorRole.Highlight, color)
@@ -393,7 +403,7 @@ class BECProgressBar(BECWidget, QWidget):
         return min(target_radius, max(1, int(fill_width / 2)))
 
     def _current_visual_state(self) -> ProgressState:
-        if self._state in (ProgressState.PAUSED, ProgressState.INTERRUPTED):
+        if self._state in (ProgressState.PAUSED, ProgressState.WARNING, ProgressState.INTERRUPTED):
             return self._state
         if self._state == ProgressState.COMPLETED or self._value >= self._maximum:
             return ProgressState.COMPLETED

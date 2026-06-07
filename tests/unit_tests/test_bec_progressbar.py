@@ -172,3 +172,43 @@ def test_progressbar_state_setter(progressbar):
     """Setting .state reflects internally."""
     progressbar.state = ProgressState.PAUSED
     assert progressbar.state is ProgressState.PAUSED
+
+
+def test_progressbar_warning_state_has_own_color_and_persists_on_value_update(progressbar):
+    assert (
+        progressbar._state_colors[ProgressState.PAUSED]
+        != progressbar._state_colors[ProgressState.WARNING]
+    )
+    assert (
+        progressbar._state_colors[ProgressState.WARNING]
+        != progressbar._state_colors[ProgressState.INTERRUPTED]
+    )
+
+    progressbar.state = ProgressState.WARNING
+    progressbar.set_value(50)
+
+    assert progressbar.state is ProgressState.WARNING
+    assert (
+        progressbar.progressbar.palette().color(QPalette.ColorRole.Highlight)
+        == progressbar._state_colors[ProgressState.WARNING]
+    )
+
+
+def test_progressbar_warning_state_has_own_color_and_persists_on_value_update(progressbar):
+    assert (
+        progressbar._state_colors[ProgressState.PAUSED]
+        != progressbar._state_colors[ProgressState.WARNING]
+    )
+    assert (
+        progressbar._state_colors[ProgressState.WARNING]
+        != progressbar._state_colors[ProgressState.INTERRUPTED]
+    )
+
+    progressbar.state = ProgressState.WARNING
+    progressbar.set_value(50)
+
+    assert progressbar.state is ProgressState.WARNING
+    assert (
+        progressbar.progressbar.palette().color(QPalette.ColorRole.Highlight)
+        == progressbar._state_colors[ProgressState.WARNING]
+    )

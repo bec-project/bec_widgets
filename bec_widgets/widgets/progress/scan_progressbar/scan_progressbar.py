@@ -17,10 +17,10 @@ logger = bec_logger.logger
 BEC_STATUS_TO_PROGRESS_STATE = {
     "open": ProgressState.NORMAL,
     "paused": ProgressState.PAUSED,
-    "aborted": ProgressState.INTERRUPTED,
-    "halted": ProgressState.PAUSED,
+    "aborted": ProgressState.WARNING,
+    "halted": ProgressState.INTERRUPTED,
     "closed": ProgressState.COMPLETED,
-    "user_completed": ProgressState.PAUSED,
+    "user_completed": ProgressState.COMPLETED,
 }
 
 
@@ -87,12 +87,15 @@ class ScanProgressBar(BECWidget, QWidget):
 
     def _on_progress_snapshot(self, snapshot: ProgressSnapshot):
         self.update_labels()
+        if snapshot.is_new_scan and self.progress_tracker.task is None:
+            self.ui.elapsed_time_label.setText("00:00:00")
+            self.ui.remaining_time_label.setText("00:00:00")
         self.update_source_label()
         self.progressbar.set_maximum(snapshot.max_value)
+        self.progressbar.set_value(snapshot.value)
         self.progressbar.state = BEC_STATUS_TO_PROGRESS_STATE.get(
             snapshot.status.lower(), ProgressState.NORMAL
         )
-        self.progressbar.set_value(snapshot.value)
 
     @SafeProperty(bool)
     def show_elapsed_time(self):

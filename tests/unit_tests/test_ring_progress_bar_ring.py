@@ -1,6 +1,6 @@
 # pylint: disable=missing-function-docstring, missing-module-docstring
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 from bec_lib.endpoints import MessageEndpoints
@@ -77,11 +77,14 @@ def test_set_update_to_scan(ring_widget):
     ring_widget.set_update("scan")
 
     assert ring_widget.config.mode == "scan"
-    # Verify that connect_slot was called
-    ring_widget.bec_dispatcher.connect_slot.assert_called_once()
-    call_args = ring_widget.bec_dispatcher.connect_slot.call_args
-    assert call_args[0][0] == ring_widget.progress_tracker.process_progress_message
-    assert "scan_progress" in str(call_args[0][1])
+    assert ring_widget.bec_dispatcher.connect_slot.call_args_list == [
+        call(
+            ring_widget.progress_tracker.process_progress_message, MessageEndpoints.scan_progress()
+        ),
+        call(
+            ring_widget.progress_tracker.process_scan_status_message, MessageEndpoints.scan_status()
+        ),
+    ]
 
 
 def test_set_update_from_scan_to_manual(ring_widget):
@@ -98,10 +101,14 @@ def test_set_update_from_scan_to_manual(ring_widget):
 
     assert ring_widget.config.mode == "manual"
     assert ring_widget.registered_slot is None
-    ring_widget.bec_dispatcher.disconnect_slot.assert_called_once()
-    call_args = ring_widget.bec_dispatcher.disconnect_slot.call_args
-    assert call_args[0][0] == ring_widget.progress_tracker.process_progress_message
-    assert call_args[0][1] == MessageEndpoints.scan_progress()
+    assert ring_widget.bec_dispatcher.disconnect_slot.call_args_list == [
+        call(
+            ring_widget.progress_tracker.process_progress_message, MessageEndpoints.scan_progress()
+        ),
+        call(
+            ring_widget.progress_tracker.process_scan_status_message, MessageEndpoints.scan_status()
+        ),
+    ]
 
 
 def test_set_update_to_device(ring_widget_with_device):
@@ -592,6 +599,19 @@ def test_scan_progress_updates_value(ring_widget):
     ring_widget.progress_tracker.process_progress_message(msg, meta)
 
     assert ring_widget.config.value == 42
+
+
+def test_scan_status_open_resets_scan_progress_value(ring_widget):
+    ring_widget.set_min_max_values(0, 200)
+    ring_widget.set_value(80)
+
+    ring_widget.progress_tracker.process_scan_status_message(
+        {"scan_id": "scan-1", "scan_number": 7, "status": "open"}, {}
+    )
+
+    assert ring_widget.config.min_value == 0
+    assert ring_widget.config.max_value == 100
+    assert ring_widget.config.value == 0
 
 
 def test_scan_progress_updates_min_max_on_new_rid(ring_widget):

@@ -8,6 +8,8 @@ import numpy as np
 from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtCore import QObject, QTimer, Signal
 
+from bec_widgets.utils.error_popups import SafeSlot
+
 
 @dataclass(frozen=True)
 class ProgressSnapshot:
@@ -130,12 +132,17 @@ class BECProgressTracker(QObject):
         self.scan_number: int | None = None
         self._active_scan_id: str | None = None
         self._active_rid: str | None = None
+        self._last_reset_scan_id: str | None = None
+        self._last_progress_scan_id: str | None = None
 
     def start(self) -> None:
         if self._connected:
             return
         self.bec_dispatcher.connect_slot(
             self.process_progress_message, MessageEndpoints.scan_progress()
+        )
+        self.bec_dispatcher.connect_slot(
+            self.process_scan_status_message, MessageEndpoints.scan_status()
         )
         self._connected = True
 
@@ -183,6 +190,7 @@ class BECProgressTracker(QObject):
                 )
             )
 
+    @SafeSlot(dict, dict)
     def process_progress_message(
         self, msg_content: dict, metadata: dict
     ) -> ProgressSnapshot | None:
@@ -197,6 +205,8 @@ class BECProgressTracker(QObject):
         scan_number = metadata.get("scan_number")
         if scan_number is not None:
             self.scan_number = scan_number
+        if scan_id is not None:
+            self._last_progress_scan_id = scan_id
         is_new_scan = False
         previous_scan_id = self._active_scan_id
         previous_rid = self._active_rid
@@ -235,10 +245,44 @@ class BECProgressTracker(QObject):
             self.clear_task()
         return snapshot
 
+    @SafeSlot(dict, dict)
+    def process_scan_status_message(
+        self, msg_content: dict, metadata: dict
+    ) -> ProgressSnapshot | None:
+        if msg_content.get("status") != "open":
+            return None
+        scan_id = msg_content.get("scan_id") or metadata.get("scan_id") or metadata.get("RID")
+        if scan_id is None or scan_id == self._last_reset_scan_id:
+            return None
+        if scan_id == self._last_progress_scan_id:
+            self._last_reset_scan_id = scan_id
+            return None
+
+        self.clear_task(emit_finished=False)
+        self._last_reset_scan_id = scan_id
+        self.scan_number = msg_content.get("scan_number")
+        snapshot = ProgressSnapshot(
+            value=0,
+            max_value=100,
+            done=False,
+            status="open",
+            scan_id=scan_id,
+            scan_number=self.scan_number,
+            rid=metadata.get("RID"),
+            is_new_scan=True,
+        )
+        self.progress_updated.emit(snapshot)
+        return snapshot
+
     def cleanup(self) -> None:
         self.clear_task(emit_finished=False)
         if self._connected:
             self.bec_dispatcher.disconnect_slot(
                 self.process_progress_message, MessageEndpoints.scan_progress()
             )
+            self.bec_dispatcher.disconnect_slot(
+                self.process_scan_status_message, MessageEndpoints.scan_status()
+            )
             self._connected = False
+        self._last_reset_scan_id = None
+        self._last_progress_scan_id = None

@@ -2,6 +2,7 @@ from unittest import mock
 
 import numpy as np
 import pytest
+from bec_lib.endpoints import MessageEndpoints
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.progress.bec_progressbar.bec_progressbar import (
@@ -115,15 +116,57 @@ def test_progress_update(qtbot, scan_progressbar):
     assert bar.state is ProgressState.NORMAL
 
 
+def test_scan_status_open_resets_progress_before_first_progress_update(scan_progressbar):
+    scan_progressbar.progressbar.set_maximum(50)
+    scan_progressbar.progressbar.set_value(25)
+    scan_progressbar.progressbar.state = ProgressState.INTERRUPTED
+    scan_progressbar.ui.elapsed_time_label.setText("00:00:12")
+    scan_progressbar.ui.remaining_time_label.setText("00:00:34")
+
+    scan_progressbar.progress_tracker.process_scan_status_message(
+        {"scan_id": "scan-1", "scan_number": 7, "status": "open"}, {"RID": "rid-1"}
+    )
+
+    assert scan_progressbar.progressbar._user_value == 0
+    assert scan_progressbar.progressbar._user_maximum == 100
+    assert scan_progressbar.progressbar.state is ProgressState.NORMAL
+    assert scan_progressbar.ui.elapsed_time_label.text() == "00:00:00"
+    assert scan_progressbar.ui.remaining_time_label.text() == "00:00:00"
+    assert scan_progressbar.ui.source_label.text() == "Scan 7"
+
+
+def test_scan_status_open_reset_ignores_same_scan(scan_progressbar):
+    scan_progressbar.progress_tracker.process_scan_status_message(
+        {"scan_id": "scan-1", "status": "open"}, {}
+    )
+    scan_progressbar.progressbar.set_value(20)
+
+    scan_progressbar.progress_tracker.process_scan_status_message(
+        {"scan_id": "scan-1", "status": "open"}, {}
+    )
+
+    assert scan_progressbar.progressbar._user_value == 20
+
+
+def test_scan_status_non_open_does_not_reset_progress(scan_progressbar):
+    scan_progressbar.progressbar.set_value(25)
+
+    scan_progressbar.progress_tracker.process_scan_status_message(
+        {"scan_id": "scan-1", "status": "closed"}, {}
+    )
+
+    assert scan_progressbar.progressbar._user_value == 25
+
+
 @pytest.mark.parametrize(
     "status, value, max_val, expected_state",
     [
         ("open", 10, 100, ProgressState.NORMAL),
         ("paused", 25, 100, ProgressState.PAUSED),
-        ("aborted", 30, 100, ProgressState.INTERRUPTED),
-        ("halted", 40, 100, ProgressState.PAUSED),
+        ("aborted", 30, 100, ProgressState.WARNING),
+        ("halted", 40, 100, ProgressState.INTERRUPTED),
         ("closed", 100, 100, ProgressState.COMPLETED),
-        ("user_completed", 40, 100, ProgressState.PAUSED),
+        ("user_completed", 40, 100, ProgressState.COMPLETED),
         ("UNKNOWN", 10, 100, ProgressState.NORMAL),
     ],
 )
@@ -151,7 +194,7 @@ def test_aborted_done_scan_keeps_partial_progress(scan_progressbar):
 
     assert scan_progressbar.progressbar._user_value == 4
     assert scan_progressbar.progressbar._user_maximum == 10
-    assert scan_progressbar.progressbar.state is ProgressState.INTERRUPTED
+    assert scan_progressbar.progressbar.state is ProgressState.WARNING
     assert scan_progressbar.progress_tracker.task is None
 
 
@@ -197,7 +240,7 @@ def test_cleanup_disconnects_active_scan_subscription(scan_progressbar, monkeypa
     ):
         ScanProgressBar.cleanup(scan_progressbar)
 
-    assert len(disconnect_calls) == 1
+    assert disconnect_calls == [MessageEndpoints.scan_progress(), MessageEndpoints.scan_status()]
     assert scan_progressbar.progress_tracker._connected is False
     close_mock.assert_not_called()
     delete_later_mock.assert_not_called()
