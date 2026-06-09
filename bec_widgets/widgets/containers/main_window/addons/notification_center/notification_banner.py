@@ -11,7 +11,6 @@ Intended for use in desktop applications to provide user feedback, warnings, and
 
 from __future__ import annotations
 
-import json
 import sys
 from datetime import datetime
 from enum import Enum
@@ -21,6 +20,7 @@ from uuid import uuid4
 import pyqtgraph as pg
 from bec_lib.alarm_handler import Alarms  # external enum
 from bec_lib.endpoints import MessageEndpoints
+from bec_lib.logger import bec_logger
 from bec_lib.messages import ErrorInfo
 from bec_qthemes import material_icon
 from qtpy import QtCore, QtGui, QtWidgets
@@ -29,8 +29,10 @@ from qtpy.QtWidgets import QApplication, QFrame, QMainWindow, QScrollArea, QWidg
 
 from bec_widgets import SafeProperty, SafeSlot
 from bec_widgets.utils.bec_connector import BECConnector
-from bec_widgets.utils.colors import apply_theme
+from bec_widgets.utils.colors import apply_theme, get_theme_name
 from bec_widgets.utils.widget_io import WidgetIO
+
+logger = bec_logger.logger
 
 
 class SeverityKind(str, Enum):
@@ -258,8 +260,10 @@ class NotificationToast(QFrame):
     def _connect_to_theme_change(self):
         """Connect this toast to the global theme‑updated signal."""
         qapp = QApplication.instance()
-        if hasattr(qapp, "theme_signal"):
-            qapp.theme_signal.theme_updated.connect(self.apply_theme)
+        if hasattr(qapp, "theme"):
+            qapp.theme.theme_changed.connect(self.apply_theme)
+        else:
+            logger.warning("Theme could not be fetched form QApplication object.")
 
     # helper methods -----------------------------------------------------
     def _current_inner_width(self) -> int:
@@ -354,11 +358,9 @@ class NotificationToast(QFrame):
         Args:
             theme(str | None): "light" or "dark". If None, auto-detects from QApplication.
         """
-        # determine effective theme
-        if theme is None:
-            app = QApplication.instance()
-            theme = getattr(getattr(app, "theme", None), "theme", "dark")
-        theme = theme.lower()
+        theme = str(theme or get_theme_name()).lower()
+        if theme not in {"light", "dark"}:
+            theme = "dark"
         self._theme = theme
         palette = DARK_PALETTE if theme == "dark" else LIGHT_PALETTE
 
@@ -403,11 +405,18 @@ class NotificationToast(QFrame):
             #NotificationToast QPushButton:hover {{ color: {btn_hover}; }}
             """)
         # traceback panel colours
-        trace_bg = "#1e1e1e" if theme == "dark" else "#f0f0f0"
+        if theme == "dark":
+            trace_bg = "#1e1e1e"
+            trace_fg = palette["body"]
+            trace_border = "rgba(255,255,255,48)"
+        else:
+            trace_bg = "#ffffff"
+            trace_fg = palette["body"]
+            trace_border = "rgba(15,23,42,54)"
         self.trace_view.setStyleSheet(f"""
             background:{trace_bg};
-            color:{palette['body']};
-            border:none;
+            color:{trace_fg};
+            border: 1px solid {trace_border};
             border-radius:8px;
             """)
 
@@ -438,8 +447,8 @@ class NotificationToast(QFrame):
             }}
             """)
 
-        # stronger accent wash in light mode, slightly stronger in dark too
-        self._accent_alpha = 110 if theme == "light" else 60
+        self._accent_alpha = 6 if theme == "light" else 60
+        self._gradient_width_factor = 1.0 if theme == "light" else 0.70
         self.update()
 
     ########################################
@@ -519,7 +528,9 @@ class NotificationToast(QFrame):
         painter.fillPath(path, self._base_color)
 
         # accent gradient, fades to transparent
-        grad = QtGui.QLinearGradient(0, 0, self.width() * 0.7, 0)
+        grad = QtGui.QLinearGradient(
+            0, 0, self.width() * getattr(self, "_gradient_width_factor", 0.70), 0
+        )
         accent = QtGui.QColor(self._accent_color)
         if getattr(self, "_theme", "dark") == "light":
             accent = accent.darker(115)
@@ -543,7 +554,7 @@ class NotificationToast(QFrame):
 
     def close(self) -> None:
         self.closed.emit()
-        QtWidgets.QApplication.instance().removeEventFilter(self)
+        self.time_lbl.removeEventFilter(self)
         super().close()  # this will remove the widget from its parent
 
 
@@ -673,8 +684,10 @@ class NotificationCentre(QScrollArea):
     def _connect_to_theme_change(self):
         """Connect to the theme change signal."""
         qapp = QApplication.instance()
-        if hasattr(qapp, "theme_signal"):
-            qapp.theme_signal.theme_updated.connect(self.apply_theme)
+        if hasattr(qapp, "theme"):
+            qapp.theme.theme_changed.connect(self.apply_theme)
+        else:
+            logger.warning("Theme could not be fetched form QApplication object.")
 
     #  public API
     def add_notification(
