@@ -468,8 +468,7 @@ class SignalComboBox(BECWidget, QComboBox):
             True if an enabled item was found and selected.
         """
         for index in range(self.count()):
-            item = self.model().item(index)
-            if item is not None and item.isEnabled():
+            if self._item_is_enabled(index):
                 self.setCurrentIndex(index)
                 return True
         return False
@@ -626,8 +625,10 @@ class SignalComboBox(BECWidget, QComboBox):
         self.check_validity(self.currentText())
 
     def _update_validity_style(self, is_valid: bool) -> None:
-        border_color = "transparent" if is_valid or not self.isEnabled() else "red"
-        self.setStyleSheet(f"border: 1px solid {border_color};")
+        if is_valid or not self.isEnabled():
+            self.setStyleSheet("")
+            return
+        self.setStyleSheet("QComboBox { border: 1px solid red; }")
 
     def _replace_signal_items(self, items: list[str | tuple[str, dict]] | None = None):
         combo_items = self._signals if items is None else items
@@ -648,15 +649,37 @@ class SignalComboBox(BECWidget, QComboBox):
         if self._config_signals:
             index = offset + len(self._hinted_signals) + len(self._normal_signals)
             self.insertItem(index, "Config Signals")
-            self.model().item(index).setEnabled(False)
+            self._set_item_enabled(index, False)
         if self._normal_signals:
             index = offset + len(self._hinted_signals)
             self.insertItem(index, "Normal Signals")
-            self.model().item(index).setEnabled(False)
+            self._set_item_enabled(index, False)
         if self._hinted_signals:
             index = offset
             self.insertItem(index, "Hinted Signals")
-            self.model().item(index).setEnabled(False)
+            self._set_item_enabled(index, False)
+
+    def _standard_item(self, index: int):
+        model = self.model()
+        item_getter = getattr(model, "item", None)
+        if callable(item_getter):
+            return item_getter(index)
+        return None
+
+    def _item_is_enabled(self, index: int) -> bool:
+        item = self._standard_item(index)
+        if item is not None:
+            return item.isEnabled()
+
+        model_index = self.model().index(index, self.modelColumn())
+        if not model_index.isValid():
+            return True
+        return bool(self.model().flags(model_index) & Qt.ItemFlag.ItemIsEnabled)
+
+    def _set_item_enabled(self, index: int, enabled: bool) -> None:
+        item = self._standard_item(index)
+        if item is not None:
+            item.setEnabled(enabled)
 
     def _display_text_for_signal(self, signal: str) -> str | None:
         for entry in self._signals:

@@ -96,6 +96,22 @@ def test_signal_combobox_autocomplete(qtbot, mocked_client):
     assert text_changes[-1] == "manual_signal"
 
 
+def test_signal_combobox_group_headers_are_disabled(qtbot, mocked_client):
+    widget = create_widget(qtbot=qtbot, widget=SignalComboBox, client=mocked_client)
+
+    widget.set_device("samx")
+
+    assert widget.itemText(0) == "Hinted Signals"
+    assert widget.itemText(2) == "Normal Signals"
+    assert widget.itemText(4) == "Config Signals"
+    assert widget.model().item(0).isEnabled() is False
+    assert widget.model().item(2).isEnabled() is False
+    assert widget.model().item(4).isEnabled() is False
+
+    assert widget.set_to_first_enabled() is True
+    assert widget.currentText() == "samx (readback)"
+
+
 def test_signal_combobox_qproperties(device_signal_combobox):
     device_signal_combobox.include_config_signals = False
     device_signal_combobox.include_normal_signals = False
@@ -116,7 +132,7 @@ def test_signal_combobox_disabled_invalid_has_neutral_border(device_signal_combo
     assert "red" in device_signal_combobox.styleSheet()
 
     device_signal_combobox.setEnabled(False)
-    assert "transparent" in device_signal_combobox.styleSheet()
+    assert device_signal_combobox.styleSheet() == ""
 
     device_signal_combobox.setEnabled(True)
     assert "red" in device_signal_combobox.styleSheet()
