@@ -603,8 +603,10 @@ class DeviceComboBox(BECWidget, QComboBox):
         return device.readout_priority in self.readout_filter
 
     def _update_validity_style(self, is_valid: bool) -> None:
-        border_color = "transparent" if is_valid or not self.isEnabled() else "red"
-        self.setStyleSheet(f"border: 1px solid {border_color};")
+        if is_valid or not self.isEnabled():
+            self.setStyleSheet("")
+            return
+        self.setStyleSheet("QComboBox { border: 1px solid red; }")
 
     def _filter_devices_by_signal_class(
         self, devices: list[Device | BECSignal | ComputedSignal | Positioner]

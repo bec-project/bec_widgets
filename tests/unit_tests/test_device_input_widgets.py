@@ -120,7 +120,7 @@ def test_device_input_combobox_disabled_invalid_has_neutral_border(device_input_
     assert "red" in device_input_combobox.styleSheet()
 
     device_input_combobox.setEnabled(False)
-    assert "transparent" in device_input_combobox.styleSheet()
+    assert device_input_combobox.styleSheet() == ""
 
     device_input_combobox.setEnabled(True)
     assert "red" in device_input_combobox.styleSheet()
