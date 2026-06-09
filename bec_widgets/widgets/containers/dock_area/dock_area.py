@@ -385,6 +385,11 @@ class BECDockArea(DockAreaWidget):
             "bec_shell": (widget_icons["BECShell"], "Add BEC Shell", "BECShell"),
             "sbb_monitor": (widget_icons["SBBMonitor"], "Add SBB Monitor", "SBBMonitor"),
             "log_panel": (widget_icons["LogPanel"], "Add LogPanel", "LogPanel"),
+            "beamline_state_manager": (
+                widget_icons["BeamlineStateManager"],
+                "Add Beamline State Manager",
+                "BeamlineStateManager",
+            ),
         }
 
         # Create expandable menu actions (original behavior)

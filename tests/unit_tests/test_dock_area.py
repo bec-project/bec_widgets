@@ -869,7 +869,14 @@ class TestToolbarFunctionality:
 
     def test_toolbar_utils_actions(self, advanced_dock_area):
         """Test utils toolbar actions trigger widget creation."""
-        utils_actions = ["queue", "terminal", "status", "progress_bar", "sbb_monitor"]
+        utils_actions = [
+            "queue",
+            "terminal",
+            "status",
+            "progress_bar",
+            "sbb_monitor",
+            "beamline_state_manager",
+        ]
 
         for action_name in utils_actions:
             with patch.object(advanced_dock_area, "new") as mock_new:
@@ -2428,6 +2435,7 @@ class TestFlatToolbarActions:
             "flat_terminal",
             "flat_bec_shell",
             "flat_sbb_monitor",
+            "flat_beamline_state_manager",
         ]
 
         for action_name in utils_actions:
@@ -2472,6 +2480,7 @@ class TestFlatToolbarActions:
             "flat_terminal": "BecConsole",
             "flat_bec_shell": "BECShell",
             "flat_sbb_monitor": "SBBMonitor",
+            "flat_beamline_state_manager": "BeamlineStateManager",
         }
 
         for action_name, widget_type in utils_action_mapping.items():
