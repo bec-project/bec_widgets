@@ -40,9 +40,21 @@ def test_apply_theme_updates_colours(qtbot, toast):
     """apply_theme("light") should inject LIGHT palette colours into stylesheets."""
     toast.apply_theme("light")
     assert LIGHT_PALETTE["title"] in toast._title_lbl.styleSheet()
+    assert "border: 1px solid" in toast.trace_view.styleSheet()
+    assert "border:none" not in toast.trace_view.styleSheet()
 
     toast.apply_theme("dark")
     assert DARK_PALETTE["title"] in toast._title_lbl.styleSheet()
+
+
+def test_toast_updates_from_qapp_theme_changed_signal(qtbot, toast):
+    app = QtWidgets.QApplication.instance()
+    assert hasattr(app, "theme")
+
+    app.theme.theme_changed.emit("light")
+    qtbot.wait(10)
+
+    assert LIGHT_PALETTE["title"] in toast._title_lbl.styleSheet()
 
 
 def test_expired_signal(qtbot, toast):
@@ -248,6 +260,20 @@ def test_clear_all(qtbot, centre):
 def test_theme_propagation(qtbot, centre):
     toast = _post(centre, SeverityKind.INFO)
     centre.apply_theme("light")
+    assert LIGHT_PALETTE["title"] in toast._title_lbl.styleSheet()
+
+
+def test_centre_updates_from_qapp_theme_changed_signal(qtbot, centre):
+    toast = _post(centre, SeverityKind.INFO)
+    centre.apply_theme("dark")
+
+    app = QtWidgets.QApplication.instance()
+    assert hasattr(app, "theme")
+
+    app.theme.theme_changed.emit("light")
+    qtbot.wait(10)
+
+    assert centre._theme == "light"
     assert LIGHT_PALETTE["title"] in toast._title_lbl.styleSheet()
 
 
