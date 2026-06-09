@@ -32,6 +32,8 @@ _Widgets = {
     "BECQueue": "BECQueue",
     "BECShell": "BECShell",
     "BECStatusBox": "BECStatusBox",
+    "BeamlineStateManager": "BeamlineStateManager",
+    "BeamlineStatePill": "BeamlineStatePill",
     "BecConsole": "BecConsole",
     "DapComboBox": "DapComboBox",
     "DeviceBrowser": "DeviceBrowser",
@@ -714,6 +716,110 @@ class BaseROI(RPCBase):
         Args:
             x (float): The x-coordinate of the new position.
             y (float): The y-coordinate of the new position.
+        """
+
+
+class BeamlineStateManager(RPCBase):
+    """Widget displaying and managing all BEC beamline states."""
+
+    _IMPORT_MODULE = "bec_widgets.widgets.services.beamline_states.beamline_state_pill"
+
+    @property
+    @rpc_call
+    def idle_card_background(self) -> "bool":
+        """
+        Whether idle collapsed pills keep the status-tinted card background.
+        """
+
+    @rpc_call
+    def set_idle_card_background(self, enabled: "bool") -> "None":
+        """
+        Set whether idle collapsed pills keep the status-tinted card background.
+        """
+
+    @rpc_call
+    def refresh_states(self) -> "None":
+        """
+        Fetch the latest cached available beamline states and update the list immediately.
+        """
+
+    @rpc_call
+    def clear_filters(self) -> "None":
+        """
+        None
+        """
+
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
+    @rpc_timeout(None)
+    @rpc_call
+    def screenshot(self, file_name: "str | None" = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
+        """
+
+
+class BeamlineStatePill(RPCBase):
+    """Compact widget showing one BEC beamline state."""
+
+    _IMPORT_MODULE = "bec_widgets.widgets.services.beamline_states.beamline_state_pill"
+
+    @property
+    @rpc_call
+    def state_name(self) -> "str | None":
+        """
+        Name of the BEC beamline state displayed by this pill.
+        """
+
+    @rpc_call
+    def set_state_name(self, state_name: "str | None", title: "str | None" = None) -> "None":
+        """
+        Set the BEC beamline state this pill displays.
+
+        Args:
+            state_name: State name as published by ``AvailableBeamlineStatesMessage``.
+            title: Optional human-readable title for the state.
+        """
+
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
+    @rpc_timeout(None)
+    @rpc_call
+    def screenshot(self, file_name: "str | None" = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
         """
 
 
