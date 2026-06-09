@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from functools import lru_cache
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 import pyqtgraph as pg
@@ -21,8 +21,7 @@ logger = bec_logger.logger
 def get_theme_name():
     if QApplication.instance() is None or not hasattr(QApplication.instance(), "theme"):
         return "dark"
-    else:
-        return QApplication.instance().theme.theme
+    return QApplication.instance().theme.theme
 
 
 def get_theme_palette():
@@ -56,6 +55,25 @@ def apply_theme(theme: Literal["dark", "light"]):
     process_all_deferred_deletes(QApplication.instance())
     apply_theme_global(theme)
     process_all_deferred_deletes(QApplication.instance())
+
+
+def theme_color(theme: Any | None, key: str, fallback: QColor | str) -> QColor:
+    """
+    Return a QColor from a BEC theme, or the fallback when no theme is set.
+    """
+
+    fallback_color = fallback if isinstance(fallback, QColor) else QColor(str(fallback))
+    if theme is None:
+        return fallback_color
+    return theme.color(key, fallback_color.name())
+
+
+def rgba(color: QColor | str, alpha: int) -> str:
+    """
+    Return a QSS-compatible rgba string.
+    """
+    qcolor = color if isinstance(color, QColor) else QColor(str(color))
+    return f"rgba({qcolor.red()}, {qcolor.green()}, {qcolor.blue()}, {alpha})"
 
 
 class Colors:
@@ -151,25 +169,6 @@ class Colors:
         return ge.colorMap()
 
     @staticmethod
-    def golden_ratio(num: int) -> list:
-        """Calculate the golden ratio for a given number of angles.
-
-        Args:
-            num (int): Number of angles
-
-        Returns:
-            list: List of angles calculated using the golden ratio.
-        """
-        phi = 2 * np.pi * ((1 + np.sqrt(5)) / 2)
-        angles = []
-        for ii in range(num):
-            x = np.cos(ii * phi)
-            y = np.sin(ii * phi)
-            angle = np.arctan2(y, x)
-            angles.append(angle)
-        return angles
-
-    @staticmethod
     def set_theme_offset(theme: Literal["light", "dark"] | None = None, offset=0.2) -> tuple:
         """
         Set the theme offset to avoid colors too close to white or black with light or dark theme respectively for pyqtgraph plot background.
@@ -239,20 +238,7 @@ class Colors:
         else:
             positions = np.linspace(min_pos, max_pos, num)
 
-        # Sample colors from the colormap at the calculated positions
-        colors = cmap.map(positions, mode="float")
-        color_list = []
-
-        for color in colors:
-            if format.upper() == "HEX":
-                color_list.append(QColor.fromRgbF(*color).name())
-            elif format.upper() == "RGB":
-                color_list.append(tuple((np.array(color) * 255).astype(int)))
-            elif format.upper() == "QCOLOR":
-                color_list.append(QColor.fromRgbF(*color))
-            else:
-                raise ValueError("Unsupported format. Please choose 'RGB', 'HEX', or 'QColor'.")
-        return color_list
+        return Colors._format_mapped_colors(cmap.map(positions, mode="float"), format)
 
     @staticmethod
     def golden_angle_color(
@@ -288,20 +274,19 @@ class Colors:
         positions = np.mod(np.arange(num) * golden_angle_conjugate, 1)
         positions = min_pos + positions * (max_pos - min_pos)
 
-        # Sample colors from the colormap at the calculated positions
-        colors = cmap.map(positions, mode="float")
-        color_list = []
+        return Colors._format_mapped_colors(cmap.map(positions, mode="float"), format)
 
-        for color in colors:
-            if format.upper() == "HEX":
-                color_list.append(QColor.fromRgbF(*color).name())
-            elif format.upper() == "RGB":
-                color_list.append(tuple((np.array(color) * 255).astype(int)))
-            elif format.upper() == "QCOLOR":
-                color_list.append(QColor.fromRgbF(*color))
-            else:
-                raise ValueError("Unsupported format. Please choose 'RGB', 'HEX', or 'QColor'.")
-        return color_list
+    @staticmethod
+    def _format_mapped_colors(colors: np.ndarray, format: Literal["QColor", "HEX", "RGB"]) -> list:
+        color_format = format.upper()
+        if color_format not in {"QCOLOR", "HEX", "RGB"}:
+            raise ValueError("Unsupported format. Please choose 'RGB', 'HEX', or 'QColor'.")
+
+        if color_format == "QCOLOR":
+            return [QColor.fromRgbF(*color) for color in colors]
+        if color_format == "HEX":
+            return [QColor.fromRgbF(*color).name() for color in colors]
+        return [tuple((np.array(color) * 255).astype(int)) for color in colors]
 
     @staticmethod
     def hex_to_rgba(hex_color: str, alpha=255) -> tuple:
@@ -324,22 +309,6 @@ class Colors:
         else:
             raise ValueError("HEX color must be 6 or 8 characters long.")
         return (r, g, b, alpha)
-
-    @staticmethod
-    def rgba_to_hex(r: int, g: int, b: int, a: int = 255) -> str:
-        """
-        Convert RGBA color to HEX.
-
-        Args:
-            r(int): Red value (0-255).
-            g(int): Green value (0-255).
-            b(int): Blue value (0-255).
-            a(int): Alpha value (0-255). Default is 255 (opaque).
-
-        Returns:
-            hec_color(str): HEX color string.
-        """
-        return "#{:02X}{:02X}{:02X}{:02X}".format(r, g, b, a)
 
     @staticmethod
     def validate_color(color: tuple | str) -> tuple | str:
