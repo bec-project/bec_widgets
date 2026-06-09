@@ -2,11 +2,11 @@ import pyqtgraph as pg
 import pytest
 from pydantic import ValidationError
 from qtpy.QtGui import QColor
-from qtpy.QtWidgets import QVBoxLayout, QWidget
+from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.colors import Colors, apply_theme
+from bec_widgets.utils.colors import Colors, apply_theme, get_theme_name, rgba, theme_color
 from bec_widgets.widgets.plots.waveform.curve import CurveConfig
 from tests.unit_tests.client_mocks import mocked_client
 from tests.unit_tests.conftest import create_widget
@@ -76,10 +76,26 @@ def test_hex_to_rgba():
         Colors.hex_to_rgba("#FF573")
 
 
-def test_rgba_to_hex():
-    assert Colors.rgba_to_hex(255, 87, 51, 255) == "#FF5733FF"
-    assert Colors.rgba_to_hex(255, 87, 51, 128) == "#FF573380"
-    assert Colors.rgba_to_hex(255, 87, 51) == "#FF5733FF"
+def test_get_theme_name_uses_application_theme():
+    app = QApplication.instance()
+    assert app.theme.theme == "light"
+    assert get_theme_name() == "light"
+
+
+def test_theme_color_uses_theme_color_method():
+    app = QApplication.instance()
+    fallback = QColor("#ffffff")
+    expected = app.theme.color("FG", fallback.name())
+
+    assert theme_color(app.theme, "FG", fallback).name() == expected.name()
+
+
+def test_theme_color_returns_fallback_without_theme():
+    assert theme_color(None, "FG", QColor("#ffffff")).name() == "#ffffff"
+
+
+def test_qss_rgba_helper():
+    assert rgba(QColor("#010203"), 255) == "rgba(1, 2, 3, 255)"
 
 
 def test_canonical_colormap_name_case_insensitive():
