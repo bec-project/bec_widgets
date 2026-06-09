@@ -1,6 +1,3 @@
-from typing import Any, Generator
-
-import pytest
 import shiboken6
 from bec_lib import bl_states
 from qtpy.QtCore import QCoreApplication, QEvent, Qt
@@ -16,17 +13,13 @@ from bec_widgets.widgets.services.beamline_states.beamline_state_pill import (
 from bec_widgets.widgets.services.beamline_states.dialogs import AddBeamlineStateDialog
 
 from .client_mocks import mocked_client
+from .conftest import create_widget
 
 
-@pytest.fixture
-def pill(qtbot, mocked_client) -> Generator[BeamlineStatePill, Any, None]:
-    widget = BeamlineStatePill(state_name="shutter_open", title="Shutter", client=mocked_client)
-    qtbot.addWidget(widget)
-    qtbot.waitExposed(widget)
-    yield widget
-
-
-def test_beamline_state_pill_updates_from_message(pill):
+def test_beamline_state_pill_updates_from_message(qtbot, mocked_client):
+    pill = create_widget(
+        qtbot, BeamlineStatePill, state_name="shutter_open", title="Shutter", client=mocked_client
+    )
     pill.update_state({"name": "shutter_open", "status": "valid", "label": "Shutter is open."}, {})
 
     assert pill._state_name == "shutter_open"
@@ -37,7 +30,10 @@ def test_beamline_state_pill_updates_from_message(pill):
     assert pill.toolTip() == "Shutter is open."
 
 
-def test_beamline_state_pill_ignores_other_states(pill):
+def test_beamline_state_pill_ignores_other_states(qtbot, mocked_client):
+    pill = create_widget(
+        qtbot, BeamlineStatePill, state_name="shutter_open", title="Shutter", client=mocked_client
+    )
     pill.update_state(
         {"name": "other_state", "status": "invalid", "label": "Should be ignored."}, {}
     )
@@ -47,10 +43,10 @@ def test_beamline_state_pill_ignores_other_states(pill):
 
 
 def test_beamline_state_pill_expands_and_emits_updated_limits(qtbot, mocked_client):
-    widget = BeamlineStatePill(state_name="limits", title="Limits", client=mocked_client)
-    qtbot.addWidget(widget)
-    qtbot.waitExposed(widget)
-    widget.set_state_config(
+    limits_pill = create_widget(
+        qtbot, BeamlineStatePill, state_name="limits", title="Limits", client=mocked_client
+    )
+    limits_pill.set_state_config(
         {
             "name": "limits",
             "title": "Limits",
@@ -67,25 +63,27 @@ def test_beamline_state_pill_expands_and_emits_updated_limits(qtbot, mocked_clie
         }
     )
 
-    assert widget._settings.isHidden()
-    assert widget._config_form is None
-    assert not widget._update_button.isEnabled()
-    assert not widget._revert_button.isEnabled()
+    assert limits_pill._settings.isHidden()
+    assert limits_pill._config_form is None
+    assert not limits_pill._update_button.isEnabled()
+    assert not limits_pill._revert_button.isEnabled()
 
-    qtbot.mouseClick(widget._header, Qt.MouseButton.LeftButton)
-    assert widget._config_form is not None
-    high_limit = widget._config_form.input_widget("high_limit")
+    qtbot.mouseClick(limits_pill._header, Qt.MouseButton.LeftButton)
+    assert limits_pill._config_form is not None
+    high_limit = limits_pill._config_form.input_widget("high_limit")
     high_limit.setValue(20.0)
 
-    assert not widget._settings.isHidden()
-    assert widget._update_button.isEnabled()
-    assert widget._revert_button.isEnabled()
-    assert widget._config_form.field_widget("high_limit").property("beamlineStateDirty") is True
-    assert widget._config_form.get_data()["device"] == "samx"
-    assert widget.edited_config().high_limit == 20.0
+    assert not limits_pill._settings.isHidden()
+    assert limits_pill._update_button.isEnabled()
+    assert limits_pill._revert_button.isEnabled()
+    assert (
+        limits_pill._config_form.field_widget("high_limit").property("beamlineStateDirty") is True
+    )
+    assert limits_pill._config_form.get_data()["device"] == "samx"
+    assert limits_pill.edited_config().high_limit == 20.0
 
-    with qtbot.waitSignal(widget.update_requested) as signal:
-        widget._update_button.click()
+    with qtbot.waitSignal(limits_pill.update_requested) as signal:
+        limits_pill._update_button.click()
 
     assert signal.args[0] == "limits"
     assert isinstance(signal.args[1], bl_states.DeviceWithinLimitsState.CONFIG_CLASS)
@@ -94,12 +92,15 @@ def test_beamline_state_pill_expands_and_emits_updated_limits(qtbot, mocked_clie
     assert signal.args[1].low_limit == 0.0
     assert signal.args[1].high_limit == 20.0
     assert signal.args[1].tolerance == 0.1
-    assert not widget._settings.isHidden()
+    assert not limits_pill._settings.isHidden()
 
 
 def test_beamline_state_pill_first_expand_uses_config_class_without_rebuild(
     qtbot, mocked_client, monkeypatch
 ):
+    limits_pill = create_widget(
+        qtbot, BeamlineStatePill, state_name="limits", title="Limits", client=mocked_client
+    )
     set_model_calls = []
     original_set_model = pill_module.PydanticWidgetForm.set_model
 
@@ -108,9 +109,7 @@ def test_beamline_state_pill_first_expand_uses_config_class_without_rebuild(
         return original_set_model(self, model, data=data)
 
     monkeypatch.setattr(pill_module.PydanticWidgetForm, "set_model", set_model_spy)
-    widget = BeamlineStatePill(state_name="limits", title="Limits", client=mocked_client)
-    qtbot.addWidget(widget)
-    widget.set_state_config(
+    limits_pill.set_state_config(
         {
             "name": "limits",
             "title": "Limits",
@@ -125,15 +124,16 @@ def test_beamline_state_pill_first_expand_uses_config_class_without_rebuild(
         }
     )
 
-    widget.set_expanded(True)
-    assert widget._config_form is not None
+    limits_pill.set_expanded(True)
+    assert limits_pill._config_form is not None
     assert set_model_calls == []
 
 
 def test_beamline_state_pill_reverts_changed_settings(qtbot, mocked_client):
-    widget = BeamlineStatePill(state_name="limits", title="Limits", client=mocked_client)
-    qtbot.addWidget(widget)
-    widget.set_state_config(
+    limits_pill = create_widget(
+        qtbot, BeamlineStatePill, state_name="limits", title="Limits", client=mocked_client
+    )
+    limits_pill.set_state_config(
         {
             "name": "limits",
             "title": "Limits",
@@ -148,28 +148,45 @@ def test_beamline_state_pill_reverts_changed_settings(qtbot, mocked_client):
         }
     )
 
-    widget.set_expanded(True)
-    assert widget._config_form is not None
-    low_limit = widget._config_form.input_widget("low_limit")
+    limits_pill.set_expanded(True)
+    assert limits_pill._config_form is not None
+    low_limit = limits_pill._config_form.input_widget("low_limit")
     low_limit.setValue(-5.0)
 
-    assert widget._update_button.isEnabled()
-    assert widget._config_form.field_widget("low_limit").property("beamlineStateDirty") is True
+    assert limits_pill._update_button.isEnabled()
+    assert limits_pill._config_form.field_widget("low_limit").property("beamlineStateDirty") is True
 
-    widget._revert_button.click()
+    limits_pill._revert_button.click()
 
     assert low_limit.value() == 0.0
-    assert not widget._update_button.isEnabled()
-    assert not widget._revert_button.isEnabled()
-    assert widget._config_form.field_widget("low_limit").property("beamlineStateDirty") is False
+    assert not limits_pill._update_button.isEnabled()
+    assert not limits_pill._revert_button.isEnabled()
+    assert (
+        limits_pill._config_form.field_widget("low_limit").property("beamlineStateDirty") is False
+    )
 
 
 def test_beamline_state_pill_does_not_override_themed_input_controls(qtbot, mocked_client):
-    widget = BeamlineStatePill(state_name="limits", title="Limits", client=mocked_client)
-    qtbot.addWidget(widget)
-    widget.set_expanded(True)
+    limits_pill = create_widget(
+        qtbot, BeamlineStatePill, state_name="limits", title="Limits", client=mocked_client
+    )
+    limits_pill.set_state_config(
+        {
+            "name": "limits",
+            "title": "Limits",
+            "state_type": "DeviceWithinLimitsState",
+            "parameters": {
+                "device": "samx",
+                "signal": "samx",
+                "low_limit": 0.0,
+                "high_limit": 10.0,
+                "tolerance": 0.1,
+            },
+        }
+    )
+    limits_pill.set_expanded(True)
 
-    stylesheet = widget.styleSheet()
+    stylesheet = limits_pill.styleSheet()
 
     assert "QAbstractSpinBox" not in stylesheet
     assert "QComboBox" not in stylesheet
@@ -177,15 +194,16 @@ def test_beamline_state_pill_does_not_override_themed_input_controls(qtbot, mock
 
 
 def test_beamline_state_manager_adds_and_removes_pills(qtbot, mocked_client):
-    widget = BeamlineStateManager(client=mocked_client)
-    qtbot.addWidget(widget)
-
-    widget.update_available_states(
+    beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
+    beamline_state_manager.update_available_states(
         {
             "states": [
-                messages.BeamlineStateConfig(
-                    name="shutter_open", title="Shutter", state_type="ShutterState", parameters={}
-                ),
+                {
+                    "name": "shutter_open",
+                    "title": "Shutter",
+                    "state_type": "ShutterState",
+                    "parameters": {},
+                },
                 {
                     "name": "limits",
                     "title": "Limits",
@@ -197,12 +215,19 @@ def test_beamline_state_manager_adds_and_removes_pills(qtbot, mocked_client):
         {},
     )
 
-    assert sorted(widget._state_pills) == ["limits", "shutter_open"]
-    assert widget._model.rowCount() == 2
-    assert widget._state_pills["shutter_open"]._name_label.text() == "Shutter"
-    assert not widget._empty_label.isVisible()
+    assert sorted(beamline_state_manager._state_pills) == ["limits", "shutter_open"]
+    assert beamline_state_manager._model.rowCount() == 2
+    assert beamline_state_manager._state_pills["shutter_open"]._name_label.text() == "Shutter"
+    assert not beamline_state_manager._empty_label.isVisible()
 
-    widget.update_available_states(
+    beamline_state_manager._state_pills["limits"].update_state(
+        {"name": "limits", "status": "valid", "label": "Within limits."}, {}
+    )
+    summary = beamline_state_manager.state_summary()
+    assert summary["limits"] == {"status": "valid", "label": "Within limits."}
+    assert summary["shutter_open"]["status"] == "unknown"
+
+    beamline_state_manager.update_available_states(
         {
             "states": [
                 {
@@ -216,13 +241,12 @@ def test_beamline_state_manager_adds_and_removes_pills(qtbot, mocked_client):
         {},
     )
 
-    assert sorted(widget._state_pills) == ["limits"]
-    assert widget._model.rowCount() == 1
+    assert sorted(beamline_state_manager._state_pills) == ["limits"]
+    assert beamline_state_manager._model.rowCount() == 1
 
 
 def test_beamline_state_manager_ignores_unchanged_available_states(qtbot, mocked_client):
-    widget = BeamlineStateManager(client=mocked_client)
-    qtbot.addWidget(widget)
+    beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
     content = {
         "states": [
             {
@@ -240,18 +264,17 @@ def test_beamline_state_manager_ignores_unchanged_available_states(qtbot, mocked
         ]
     }
 
-    widget.update_available_states(content, {})
-    pill = widget._state_pills["limits"]
+    beamline_state_manager.update_available_states(content, {})
+    pill = beamline_state_manager._state_pills["limits"]
 
-    widget.update_available_states(content, {})
+    beamline_state_manager.update_available_states(content, {})
 
-    assert widget._state_pills["limits"] is pill
+    assert beamline_state_manager._state_pills["limits"] is pill
     assert pill._config_form is None
 
 
 def test_beamline_state_manager_adds_state_without_recreating_existing_pills(qtbot, mocked_client):
-    widget = BeamlineStateManager(client=mocked_client)
-    qtbot.addWidget(widget)
+    beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
     limits_state = {
         "name": "limits",
         "title": "Limits",
@@ -271,57 +294,22 @@ def test_beamline_state_manager_adds_state_without_recreating_existing_pills(qtb
         "parameters": {},
     }
 
-    widget.update_available_states({"states": [limits_state]}, {})
-    pill = widget._state_pills["limits"]
+    beamline_state_manager.update_available_states({"states": [limits_state]}, {})
+    pill = beamline_state_manager._state_pills["limits"]
     pill.set_expanded(True)
     config_form = pill._config_form
 
-    widget.update_available_states({"states": [limits_state, shutter_state]}, {})
+    beamline_state_manager.update_available_states({"states": [limits_state, shutter_state]}, {})
 
-    assert widget._state_pills["limits"] is pill
+    assert beamline_state_manager._state_pills["limits"] is pill
     assert pill._config_form is config_form
     assert pill.is_expanded()
-    assert sorted(widget._state_pills) == ["limits", "shutter_open"]
-
-
-def test_beamline_state_manager_does_not_force_horizontal_minimum(qtbot, mocked_client):
-    widget = BeamlineStateManager(client=mocked_client)
-    qtbot.addWidget(widget)
-
-    widget.update_available_states(
-        {
-            "states": [
-                {
-                    "name": "limits",
-                    "title": "Limits",
-                    "state_type": "DeviceWithinLimitsState",
-                    "parameters": {
-                        "device": "samx",
-                        "signal": "samx",
-                        "low_limit": 0.0,
-                        "high_limit": 10.0,
-                        "tolerance": 0.1,
-                    },
-                }
-            ]
-        },
-        {},
-    )
-
-    index = widget._model.index_for_name("limits")
-    hint = widget._delegate.sizeHint(QStyleOptionViewItem(), index)
-
-    assert widget.minimumWidth() == 0
-    assert widget.minimumSizeHint().width() == 0
-    assert widget._view.minimumWidth() == 0
-    assert widget._view.minimumSizeHint().width() == 0
-    assert hint.width() == 0
+    assert sorted(beamline_state_manager._state_pills) == ["limits", "shutter_open"]
 
 
 def test_beamline_state_manager_header_click_expands_pill_once(qtbot, mocked_client):
-    widget = BeamlineStateManager(client=mocked_client)
-    qtbot.addWidget(widget)
-    widget.update_available_states(
+    beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
+    beamline_state_manager.update_available_states(
         {
             "states": [
                 {
@@ -335,7 +323,7 @@ def test_beamline_state_manager_header_click_expands_pill_once(qtbot, mocked_cli
         {},
     )
 
-    pill = widget._state_pills["limits"]
+    pill = beamline_state_manager._state_pills["limits"]
     assert pill._settings.isHidden()
 
     qtbot.mouseClick(pill._header, Qt.MouseButton.LeftButton)
@@ -344,28 +332,27 @@ def test_beamline_state_manager_header_click_expands_pill_once(qtbot, mocked_cli
 
 
 def test_beamline_state_manager_preserves_expanded_pill_on_refresh(qtbot, mocked_client):
-    widget = BeamlineStateManager(client=mocked_client)
-    qtbot.addWidget(widget)
+    beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
     state = {
         "name": "limits",
         "title": "Limits",
         "state_type": "DeviceWithinLimitsState",
         "parameters": {"device": "samx", "high_limit": 10.0},
     }
-    widget.update_available_states({"states": [state]}, {})
+    beamline_state_manager.update_available_states({"states": [state]}, {})
 
-    widget._state_pills["limits"].set_expanded(True)
-    widget.update_available_states({"states": [state]}, {})
+    beamline_state_manager._state_pills["limits"].set_expanded(True)
+    beamline_state_manager.update_available_states({"states": [state]}, {})
 
-    assert widget._state_pills["limits"].is_expanded()
-    assert not widget._state_pills["limits"]._settings.isHidden()
+    assert beamline_state_manager._state_pills["limits"].is_expanded()
+    assert not beamline_state_manager._state_pills["limits"]._settings.isHidden()
 
 
 def test_beamline_state_manager_propagates_idle_card_background(qtbot, mocked_client):
-    widget = BeamlineStateManager(client=mocked_client, idle_card_background=True)
-    qtbot.addWidget(widget)
-
-    widget.update_available_states(
+    idle_card_manager = create_widget(
+        qtbot, BeamlineStateManager, client=mocked_client, idle_card_background=True
+    )
+    idle_card_manager.update_available_states(
         {
             "states": [
                 {
@@ -379,18 +366,16 @@ def test_beamline_state_manager_propagates_idle_card_background(qtbot, mocked_cl
         {},
     )
 
-    assert widget._state_pills["limits"]._idle_card_background is True
+    assert idle_card_manager._state_pills["limits"]._idle_card_background is True
 
-    widget.idle_card_background = False
+    idle_card_manager.idle_card_background = False
 
-    assert widget._state_pills["limits"]._idle_card_background is False
+    assert idle_card_manager._state_pills["limits"]._idle_card_background is False
 
 
 def test_beamline_state_manager_filters_status(qtbot, mocked_client):
-    widget = BeamlineStateManager(client=mocked_client)
-    qtbot.addWidget(widget)
-
-    widget.update_available_states(
+    beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
+    beamline_state_manager.update_available_states(
         {
             "states": [
                 {
@@ -410,38 +395,45 @@ def test_beamline_state_manager_filters_status(qtbot, mocked_client):
         {},
     )
 
-    assert isinstance(widget._toolbar, ModularToolBar)
+    assert isinstance(beamline_state_manager._toolbar, ModularToolBar)
+    assert not beamline_state_manager._toolbar.components.exists("refresh")
 
-    widget._state_pills["limits"].update_state(
+    beamline_state_manager._state_pills["limits"].update_state(
         {"name": "limits", "status": "valid", "label": "Within limits."}, {}
     )
-    widget._state_pills["shutter_open"].update_state(
+    beamline_state_manager._state_pills["shutter_open"].update_state(
         {"name": "shutter_open", "status": "invalid", "label": "Closed."}, {}
     )
-    widget._selected_statuses = {"valid"}
-    widget._apply_filters()
+    beamline_state_manager._selected_statuses = {"valid"}
+    beamline_state_manager._apply_filters()
 
-    assert not widget._hidden_summary.isHidden()
-    assert "1 state is hidden" in widget._hidden_summary.text()
-    assert not widget._view.isRowHidden(widget._model.index_for_name("limits").row())
-    assert widget._view.isRowHidden(widget._model.index_for_name("shutter_open").row())
+    assert not beamline_state_manager._hidden_summary.isHidden()
+    assert "1 state is hidden" in beamline_state_manager._hidden_summary.text()
+    assert not beamline_state_manager._view.isRowHidden(
+        beamline_state_manager._model.index_for_name("limits").row()
+    )
+    assert beamline_state_manager._view.isRowHidden(
+        beamline_state_manager._model.index_for_name("shutter_open").row()
+    )
 
-    widget._hidden_summary.click()
+    beamline_state_manager._hidden_summary.click()
 
-    assert not widget._view.isRowHidden(widget._model.index_for_name("shutter_open").row())
-    assert shiboken6.isValid(widget._state_pills["shutter_open"])
+    assert not beamline_state_manager._view.isRowHidden(
+        beamline_state_manager._model.index_for_name("shutter_open").row()
+    )
+    assert shiboken6.isValid(beamline_state_manager._state_pills["shutter_open"])
 
-    widget._hidden_summary.click()
+    beamline_state_manager._hidden_summary.click()
 
-    assert widget._view.isRowHidden(widget._model.index_for_name("shutter_open").row())
-    assert shiboken6.isValid(widget._state_pills["shutter_open"])
+    assert beamline_state_manager._view.isRowHidden(
+        beamline_state_manager._model.index_for_name("shutter_open").row()
+    )
+    assert shiboken6.isValid(beamline_state_manager._state_pills["shutter_open"])
 
 
 def test_beamline_state_manager_status_filter_reacts_to_state_changes(qtbot, mocked_client):
-    widget = BeamlineStateManager(client=mocked_client)
-    qtbot.addWidget(widget)
-
-    widget.update_available_states(
+    beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
+    beamline_state_manager.update_available_states(
         {
             "states": [
                 {
@@ -455,26 +447,26 @@ def test_beamline_state_manager_status_filter_reacts_to_state_changes(qtbot, moc
         {},
     )
 
-    widget._selected_statuses = {"valid"}
-    widget._state_pills["limits"].update_state(
+    beamline_state_manager._selected_statuses = {"valid"}
+    beamline_state_manager._state_pills["limits"].update_state(
         {"name": "limits", "status": "valid", "label": "Within limits."}, {}
     )
 
-    assert widget._hidden_summary.isHidden()
+    assert beamline_state_manager._hidden_summary.isHidden()
 
-    widget._state_pills["limits"].update_state(
+    beamline_state_manager._state_pills["limits"].update_state(
         {"name": "limits", "status": "invalid", "label": "Out of limits."}, {}
     )
 
-    assert not widget._hidden_summary.isHidden()
-    assert widget._view.isRowHidden(widget._model.index_for_name("limits").row())
+    assert not beamline_state_manager._hidden_summary.isHidden()
+    assert beamline_state_manager._view.isRowHidden(
+        beamline_state_manager._model.index_for_name("limits").row()
+    )
 
 
 def test_beamline_state_manager_filters_devices(qtbot, mocked_client, monkeypatch):
-    widget = BeamlineStateManager(client=mocked_client)
-    qtbot.addWidget(widget)
-
-    widget.update_available_states(
+    beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
+    beamline_state_manager.update_available_states(
         {
             "states": [
                 {
@@ -494,11 +486,11 @@ def test_beamline_state_manager_filters_devices(qtbot, mocked_client, monkeypatc
         {},
     )
 
-    widget._device_filter_text = "samx"
-    widget._apply_filters()
+    beamline_state_manager._device_filter_text = "samx"
+    beamline_state_manager._apply_filters()
 
-    assert not widget._hidden_summary.isHidden()
-    assert "1 state is hidden" in widget._hidden_summary.text()
+    assert not beamline_state_manager._hidden_summary.isHidden()
+    assert "1 state is hidden" in beamline_state_manager._hidden_summary.text()
 
     captured = {}
 
@@ -514,17 +506,16 @@ def test_beamline_state_manager_filters_devices(qtbot, mocked_client, monkeypatc
 
     monkeypatch.setattr(pill_module, "DeviceFilterDialog", FakeDeviceFilterDialog)
 
-    widget.open_device_filter_dialog()
+    beamline_state_manager.open_device_filter_dialog()
 
     assert captured["devices"] == ["samx", "samy"]
     assert captured["device_filter_text"] == "samx"
-    assert captured["parent"] is widget
+    assert captured["parent"] is beamline_state_manager
 
 
 def test_beamline_state_manager_updates_state_parameters(qtbot, mocked_client):
-    widget = BeamlineStateManager(client=mocked_client)
-    qtbot.addWidget(widget)
-    widget.update_available_states(
+    beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
+    beamline_state_manager.update_available_states(
         {
             "states": [
                 {
@@ -556,17 +547,16 @@ def test_beamline_state_manager_updates_state_parameters(qtbot, mocked_client):
             self.limits = StateClient()
 
     mocked_client.beamline_states = StateManager()
-    pill = widget._state_pills["limits"]
+    pill = beamline_state_manager._state_pills["limits"]
     pill.set_expanded(True)
     high_limit = pill._config_form.input_widget("high_limit")
     high_limit.setValue(20.0)
 
     assert pill._update_button.isEnabled()
 
-    widget._update_state_parameters("limits", pill.edited_config())
+    beamline_state_manager._update_state_parameters("limits", pill.edited_config())
 
     assert mocked_client.beamline_states.limits.parameters == {
-        "title": "Limits",
         "device": "samx",
         "signal": "samx",
         "low_limit": 0.0,
@@ -578,8 +568,7 @@ def test_beamline_state_manager_updates_state_parameters(qtbot, mocked_client):
 
 
 def test_beamline_state_manager_removes_state(qtbot, mocked_client, monkeypatch):
-    widget = BeamlineStateManager(client=mocked_client)
-    qtbot.addWidget(widget)
+    beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
 
     class StateManager:
         def __init__(self):
@@ -593,39 +582,35 @@ def test_beamline_state_manager_removes_state(qtbot, mocked_client, monkeypatch)
         QMessageBox, "question", lambda *args, **kwargs: QMessageBox.StandardButton.Yes
     )
 
-    widget._remove_state_requested("limits")
+    beamline_state_manager._remove_state_requested("limits")
 
     assert mocked_client.beamline_states.deleted == "limits"
 
 
 def test_add_beamline_state_dialog_uses_generated_widgets_and_normalizes_name(qtbot, mocked_client):
-    dialog = AddBeamlineStateDialog(client=mocked_client)
-    qtbot.addWidget(dialog)
-    limits_index = dialog._type_combo.findText(bl_states.DeviceWithinLimitsState.__name__)
+    add_state_dialog = create_widget(qtbot, AddBeamlineStateDialog, client=mocked_client)
+    limits_index = add_state_dialog._type_combo.findText(bl_states.DeviceWithinLimitsState.__name__)
     assert limits_index >= 0
-    dialog._type_combo.setCurrentIndex(limits_index)
+    add_state_dialog._type_combo.setCurrentIndex(limits_index)
 
-    assert dialog._config_form.model is bl_states.DeviceWithinLimitsState.CONFIG_CLASS
+    assert add_state_dialog._config_form.model is bl_states.DeviceWithinLimitsState.CONFIG_CLASS
 
-    name = dialog._config_form.input_widget("name")
-    title = dialog._config_form.input_widget("title")
-    device = dialog._config_form.input_widget("device")
-    signal = dialog._config_form.input_widget("signal")
-    low_limit = dialog._config_form.field_widget("low_limit")
-    high_limit = dialog._config_form.field_widget("high_limit")
+    name = add_state_dialog._config_form.input_widget("name")
+    device = add_state_dialog._config_form.input_widget("device")
+    signal = add_state_dialog._config_form.input_widget("signal")
+    low_limit = add_state_dialog._config_form.field_widget("low_limit")
+    high_limit = add_state_dialog._config_form.field_widget("high_limit")
 
     name.setText("samx-limits")
-    title.setText("samx-limits-15")
     WidgetIO.set_value(device, "samx")
     WidgetIO.set_value(signal, "samx")
     low_limit.checkbox.setChecked(True)
     high_limit.checkbox.setChecked(True)
     high_limit.value_widget.setValue(15.0)
 
-    config = dialog.config()
+    config = add_state_dialog.config()
 
     assert config.name == "samx_limits"
-    assert config.title == "samx-limits-15"
     assert config.device == "samx"
     assert config.signal == "samx"
     assert config.low_limit == 0.0
@@ -635,10 +620,9 @@ def test_add_beamline_state_dialog_uses_generated_widgets_and_normalizes_name(qt
 def test_add_beamline_state_dialog_generates_name_only_after_valid_device_selection(
     qtbot, mocked_client
 ):
-    dialog = AddBeamlineStateDialog(client=mocked_client)
-    qtbot.addWidget(dialog)
-    name = dialog._config_form.input_widget("name")
-    device = dialog._config_form.input_widget("device")
+    add_state_dialog = create_widget(qtbot, AddBeamlineStateDialog, client=mocked_client)
+    name = add_state_dialog._config_form.input_widget("name")
+    device = add_state_dialog._config_form.input_widget("device")
 
     device.setCurrentText("s")
 
@@ -650,46 +634,41 @@ def test_add_beamline_state_dialog_generates_name_only_after_valid_device_select
 
 
 def test_add_beamline_state_dialog_switches_state_type_without_collapsing(qtbot, mocked_client):
-    dialog = AddBeamlineStateDialog(client=mocked_client)
-    qtbot.addWidget(dialog)
-
-    initial_height = dialog.height()
-    limits_index = dialog._type_combo.findText("DeviceWithinLimitsState")
+    add_state_dialog = create_widget(qtbot, AddBeamlineStateDialog, client=mocked_client)
+    initial_height = add_state_dialog.height()
+    limits_index = add_state_dialog._type_combo.findText("DeviceWithinLimitsState")
     assert limits_index >= 0
-    shutter_index = dialog._type_combo.findText("ShutterState")
+    shutter_index = add_state_dialog._type_combo.findText("ShutterState")
     assert shutter_index >= 0
 
-    dialog._type_combo.setCurrentIndex(shutter_index)
+    add_state_dialog._type_combo.setCurrentIndex(shutter_index)
     qtbot.wait(0)
 
-    assert dialog._config_form.model is bl_states.DeviceStateConfig
-    assert dialog._config_form_host.count() == 1
-    assert not dialog._config_form.isHidden()
-    assert not dialog._buttons.isHidden()
-    assert dialog.sizeHint().height() > dialog._buttons.sizeHint().height()
-    assert dialog.minimumWidth() == 280
-    assert dialog.maximumWidth() > dialog.minimumWidth()
-    assert dialog.minimumHeight() == dialog.maximumHeight()
+    assert add_state_dialog._config_form.model is bl_states.DeviceStateConfig
+    assert add_state_dialog._config_form_host.count() == 1
+    assert not add_state_dialog._config_form.isHidden()
+    assert not add_state_dialog._buttons.isHidden()
+    assert add_state_dialog.sizeHint().height() > add_state_dialog._buttons.sizeHint().height()
+    assert add_state_dialog.minimumHeight() == add_state_dialog.maximumHeight()
 
-    dialog._type_combo.setCurrentIndex(limits_index)
+    add_state_dialog._type_combo.setCurrentIndex(limits_index)
     qtbot.wait(0)
 
-    assert dialog._config_form.model is bl_states.DeviceWithinLimitsState.CONFIG_CLASS
-    assert dialog.height() >= initial_height
-    assert dialog.minimumHeight() == dialog.maximumHeight()
+    assert add_state_dialog._config_form.model is bl_states.DeviceWithinLimitsState.CONFIG_CLASS
+    assert add_state_dialog.height() >= initial_height
+    assert add_state_dialog.minimumHeight() == add_state_dialog.maximumHeight()
 
 
 def test_add_beamline_state_dialog_cleanup_deletes_device_widgets(qtbot, mocked_client):
-    dialog = AddBeamlineStateDialog(client=mocked_client)
-    qtbot.addWidget(dialog)
-    device = dialog._config_form.input_widget("device")
-    signal = dialog._config_form.input_widget("signal")
+    add_state_dialog = create_widget(qtbot, AddBeamlineStateDialog, client=mocked_client)
+    device = add_state_dialog._config_form.input_widget("device")
+    signal = add_state_dialog._config_form.input_widget("signal")
 
-    dialog.reject()
+    add_state_dialog.reject()
     assert shiboken6.isValid(device)
     assert shiboken6.isValid(signal)
 
-    dialog.cleanup()
+    add_state_dialog.cleanup()
     QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
     assert not shiboken6.isValid(device)

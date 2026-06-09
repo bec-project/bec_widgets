@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
-import re
 from typing import Any
+
+from bec_widgets.utils.scan_arg_metadata import format_display_name as format_scan_display_name
+from bec_widgets.utils.scan_arg_metadata import resolve_tooltip as resolve_scan_tooltip
+from bec_widgets.utils.scan_arg_metadata import ui_config_from_metadata
 
 AnnotationValue = str | dict[str, Any] | list[Any] | None
 ScanArgumentMetadata = dict[str, Any]
@@ -74,8 +77,7 @@ class ScanInfoAdapter:
         Returns:
             str: Formatted display label such as ``Exp Time``.
         """
-        parts = re.split(r"(_|\d+)", name)
-        return " ".join(part.capitalize() for part in parts if part.isalnum()).strip()
+        return format_scan_display_name(name)
 
     @staticmethod
     def resolve_tooltip(scan_argument: ScanArgumentMetadata) -> str | None:
@@ -87,7 +89,7 @@ class ScanInfoAdapter:
         Returns:
             str | None: Explicit tooltip text if provided, otherwise the description fallback.
         """
-        return scan_argument.get("tooltip") or scan_argument.get("description")
+        return resolve_scan_tooltip(scan_argument)
 
     @staticmethod
     def parse_annotation(
@@ -204,24 +206,13 @@ class ScanInfoAdapter:
         Returns:
             ScanInputConfig: Normalized input configuration.
         """
-        return {
-            "arg": arg,
-            "name": name,
-            "type": self.scan_arg_type_from_annotation(annotation),
-            "display_name": scan_argument.get("display_name") or self.format_display_name(name),
-            "tooltip": self.resolve_tooltip(scan_argument),
-            "default": default,
-            "expert": scan_argument.get("expert", False),
-            "hidden": scan_argument.get("hidden", False),
-            "precision": scan_argument.get("precision"),
-            "units": scan_argument.get("units"),
-            "reference_units": scan_argument.get("reference_units"),
-            "gt": scan_argument.get("gt"),
-            "ge": scan_argument.get("ge"),
-            "lt": scan_argument.get("lt"),
-            "le": scan_argument.get("le"),
-            "alternative_group": scan_argument.get("alternative_group"),
-        }
+        return ui_config_from_metadata(
+            name=name,
+            metadata=scan_argument,
+            input_type=self.scan_arg_type_from_annotation(annotation),
+            default=default,
+            arg=arg,
+        )
 
     def build_scan_ui_config(self, scan_info: ScanInfo) -> ScanUIConfig:
         """Normalize one available-scan entry into the widget UI configuration.

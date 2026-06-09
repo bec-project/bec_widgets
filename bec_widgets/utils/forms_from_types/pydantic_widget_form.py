@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from types import NoneType, UnionType
-from typing import Any, Literal, Union, get_args, get_origin
+from types import NoneType
+from typing import Any, Literal, get_args, get_origin
 
 from bec_lib.device import DeviceBase, Signal
 from pydantic import BaseModel, ValidationError
 from pydantic.fields import FieldInfo
-from pydantic_core import PydanticUndefined
 from qtpy.QtCore import Qt
 from qtpy.QtCore import Signal as QtSignal
 from qtpy.QtWidgets import (
@@ -20,6 +19,16 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from bec_widgets.utils.forms_from_types.pydantic_model_info_adapter import (
+    NUMERIC_BOUND_KEYS,
+    pydantic_model_input_configs,
+)
+from bec_widgets.utils.scan_arg_metadata import (
+    apply_numeric_limits,
+    apply_numeric_precision,
+    apply_unit_metadata,
+    device_units,
+)
 from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import SignalComboBox
@@ -27,11 +36,22 @@ from bec_widgets.widgets.utility.spinbox.decimal_spinbox import BECSpinBox
 
 
 class OptionalValueWidget(QWidget):
-    """Generic optional-value wrapper preserving ``None`` for editor widgets."""
+    """Wrap a value widget with an enable checkbox for optional Pydantic fields.
+
+    Attributes:
+        value_changed: Signal emitted with the current value whenever the checkbox
+            state or wrapped widget value changes.
+    """
 
     value_changed = QtSignal(object)
 
     def __init__(self, value_widget: QWidget, parent: QWidget | None = None) -> None:
+        """Create an optional-value wrapper.
+
+        Args:
+            value_widget: Input widget used when the optional value is enabled.
+            parent: Optional parent widget.
+        """
         super().__init__(parent=parent)
         self._value_widget = value_widget
         self._checkbox = QCheckBox(self)
@@ -50,18 +70,38 @@ class OptionalValueWidget(QWidget):
 
     @property
     def value_widget(self) -> QWidget:
+        """Return the wrapped input widget.
+
+        Returns:
+            The widget that edits the non-``None`` value.
+        """
         return self._value_widget
 
     @property
     def checkbox(self) -> QCheckBox:
+        """Return the checkbox controlling whether the value is enabled.
+
+        Returns:
+            The enable checkbox.
+        """
         return self._checkbox
 
     def value(self) -> Any:
+        """Return the current optional value.
+
+        Returns:
+            ``None`` when the checkbox is unchecked; otherwise the wrapped widget value.
+        """
         if not self._checkbox.isChecked():
             return None
         return WidgetIO.get_value(self._value_widget)
 
     def set_value(self, value: Any) -> None:
+        """Set the optional value.
+
+        Args:
+            value: Value to set on the wrapped widget. ``None`` disables the value.
+        """
         enabled = value is not None
         self._checkbox.setChecked(enabled)
         self._value_widget.setEnabled(enabled)
@@ -77,7 +117,17 @@ class OptionalValueWidget(QWidget):
 
 
 class PydanticWidgetForm(QWidget):
-    """Qt form generated from a Pydantic model using type-based widget selection."""
+    """Generate a Qt form from a Pydantic model.
+
+    The form maps Pydantic field annotations to Qt widgets, applies supported
+    field metadata, and exposes typed and raw data accessors for the generated
+    fields.
+
+    Attributes:
+        changed: Signal emitted whenever a generated input widget changes.
+        validity_changed: Signal emitted by :meth:`validate` with the current
+            validation result.
+    """
 
     changed = QtSignal()
     validity_changed = QtSignal(bool)
@@ -91,11 +141,22 @@ class PydanticWidgetForm(QWidget):
         read_only_fields: set[str] | None = None,
         client=None,
     ) -> None:
+        """Create a generated form for a Pydantic model.
+
+        Args:
+            model: Pydantic model class used to generate fields and validate data.
+            parent: Optional parent widget.
+            data: Optional initial model instance or raw field-value mapping.
+            read_only_fields: Field names that should be displayed but not editable.
+            client: Optional BEC client passed to domain-specific widgets such as
+                device and signal combo boxes.
+        """
         super().__init__(parent=parent)
         self._model = model
         self._client = client
         self._read_only_fields = set(read_only_fields or set())
         self._widgets: dict[str, QWidget] = {}
+        self._field_configs: dict[str, dict[str, Any]] = {}
         self._baseline: dict[str, Any] = {}
 
         self._layout = QFormLayout()
@@ -113,32 +174,87 @@ class PydanticWidgetForm(QWidget):
 
     @property
     def model(self) -> type[BaseModel]:
+        """Return the active Pydantic model class.
+
+        Returns:
+            The model class currently used by this form.
+        """
         return self._model
 
     @property
     def widgets(self) -> dict[str, QWidget]:
+        """Return generated field widgets keyed by model field name.
+
+        Returns:
+            A shallow copy of the field-widget mapping. Optional fields return
+            their outer :class:`OptionalValueWidget`.
+        """
         return dict(self._widgets)
 
     def field_widget(self, name: str) -> QWidget:
+        """Return the generated widget for a field.
+
+        Args:
+            name: Model field name.
+
+        Returns:
+            The generated field widget. Optional fields return their outer
+            :class:`OptionalValueWidget`.
+
+        Raises:
+            KeyError: If no widget exists for ``name``.
+        """
         return self._widgets[name]
 
     def input_widget(self, name: str) -> QWidget:
+        """Return the direct input widget for a field.
+
+        Args:
+            name: Model field name.
+
+        Returns:
+            The editable input widget. Optional fields return the wrapped value
+            widget instead of the outer optional wrapper.
+
+        Raises:
+            KeyError: If no widget exists for ``name``.
+        """
         widget = self._widgets[name]
         if isinstance(widget, OptionalValueWidget):
             return widget.value_widget
         return widget
 
     def input_widgets(self) -> dict[str, QWidget]:
+        """Return direct input widgets keyed by model field name.
+
+        Returns:
+            Mapping of field names to editable input widgets.
+        """
         return {name: self.input_widget(name) for name in self._widgets}
 
     def input_widgets_by_type(self, widget_type: type[QWidget]) -> list[QWidget]:
+        """Return direct input widgets matching a widget type.
+
+        Args:
+            widget_type: Qt widget class to match with ``isinstance``.
+
+        Returns:
+            List of input widgets matching ``widget_type``.
+        """
         return [
             widget for widget in self.input_widgets().values() if isinstance(widget, widget_type)
         ]
 
     def set_model(self, model: type[BaseModel], data: dict[str, Any] | None = None) -> None:
+        """Replace the active model and rebuild the form.
+
+        Args:
+            model: New Pydantic model class.
+            data: Optional initial data for the new model. When omitted, values
+                from fields shared with the previous model are preserved.
+        """
         old_data = self.raw_data()
-        self._clear()
+        self.cleanup()
         self._model = model
         self._populate()
         if data is None:
@@ -147,27 +263,69 @@ class PydanticWidgetForm(QWidget):
         self.mark_clean()
 
     def set_data(self, data: BaseModel | dict[str, Any]) -> None:
+        """Set form values from a model instance or mapping.
+
+        Args:
+            data: Pydantic model instance or raw field-value mapping.
+        """
         values = data.model_dump() if isinstance(data, BaseModel) else dict(data)
         self.set_partial_data(values)
 
     def set_partial_data(self, data: dict[str, Any]) -> None:
+        """Set values for fields present in the form.
+
+        Unknown keys are ignored, which allows callers to pass larger model
+        dumps or backend payloads safely.
+
+        Args:
+            data: Field-value mapping to apply.
+        """
         for name, value in data.items():
             if name not in self._widgets:
                 continue
             self._set_widget_value(name, value)
+        self._refresh_reference_units()
         self.changed.emit()
 
     def raw_data(self) -> dict[str, Any]:
+        """Return current widget values without Pydantic validation.
+
+        Returns:
+            Mapping of model field names to raw widget values.
+        """
         return {name: self._read_widget_value(name) for name in self._widgets}
 
     def get_data(self) -> dict[str, Any]:
+        """Return current data after Pydantic validation.
+
+        Returns:
+            Validated model data as a dictionary.
+
+        Raises:
+            ValidationError: If Pydantic validation fails.
+            ValueError: If domain widget validation fails.
+        """
         return self.model_instance().model_dump()
 
     def model_instance(self) -> BaseModel:
+        """Return the current values as a Pydantic model instance.
+
+        Returns:
+            Validated instance of the active model class.
+
+        Raises:
+            ValidationError: If Pydantic validation fails.
+            ValueError: If domain widget validation fails.
+        """
         self._validate_domain_widgets()
         return self._model.model_validate(self.raw_data())
 
     def validate(self) -> bool:
+        """Validate the current form values.
+
+        Returns:
+            ``True`` when current values validate successfully, otherwise ``False``.
+        """
         try:
             self.get_data()
         except (ValidationError, ValueError):
@@ -177,21 +335,33 @@ class PydanticWidgetForm(QWidget):
         return True
 
     def dirty_fields(self) -> set[str]:
+        """Return fields whose raw values differ from the clean baseline.
+
+        Returns:
+            Set of dirty field names.
+        """
         current = self.raw_data()
         fields = set(current) | set(self._baseline)
-        dirty = set()
-        for field in fields:
-            if self._values_differ(current.get(field), self._baseline.get(field)):
-                dirty.add(field)
-        return dirty
+        return {field for field in fields if current.get(field) != self._baseline.get(field)}
 
     def mark_clean(self) -> None:
+        """Store the current raw values as the clean baseline."""
         self._baseline = self.raw_data()
 
     def reset_to_baseline(self) -> None:
+        """Restore the form values to the current clean baseline."""
         self.set_partial_data(self._baseline)
 
     def editable_data(self) -> dict[str, Any]:
+        """Return validated data excluding read-only fields.
+
+        Returns:
+            Validated editable field values.
+
+        Raises:
+            ValidationError: If Pydantic validation fails.
+            ValueError: If domain widget validation fails.
+        """
         return {
             key: value
             for key, value in self.get_data().items()
@@ -199,6 +369,11 @@ class PydanticWidgetForm(QWidget):
         }
 
     def raw_editable_data(self) -> dict[str, Any]:
+        """Return raw widget data excluding read-only fields.
+
+        Returns:
+            Raw editable field values.
+        """
         return {
             key: value
             for key, value in self.raw_data().items()
@@ -206,62 +381,83 @@ class PydanticWidgetForm(QWidget):
         }
 
     def cleanup(self) -> None:
-        self._clear(delete_later=False)
+        """Close and schedule deletion of all generated field widgets."""
+        while self._layout.rowCount():
+            row = self._layout.takeRow(0)
+            for item in (row.labelItem, row.fieldItem):
+                widget = item.widget() if item is not None else None
+                if widget is not None:
+                    widget.close()
+                    # Detach before deleteLater: a child pending deletion that still has a
+                    # signal connection into this form crashes if the form is garbage
+                    # collected before the deferred delete is processed.
+                    widget.setParent(None)
+                    widget.deleteLater()
+        self._widgets.clear()
+        self._field_configs.clear()
 
     def closeEvent(self, event) -> None:  # noqa: N802
         self.cleanup()
         super().closeEvent(event)
 
     def _populate(self) -> None:
-        for name, info in self._model.model_fields.items():
+        for config in pydantic_model_input_configs(self._model):
+            name = config["name"]
+            info = self._model.model_fields[name]
             widget = self._create_widget(name, info)
-            label_text = info.title or self._format_label(name)
+            label_text = config["display_name"]
             self._layout.addRow(label_text, widget)
             label = self._layout.labelForField(widget)
             if label is not None:
                 label.setProperty("_model_field_name", name)
-            if info.description:
-                widget.setToolTip(info.description)
-                if label is not None:
-                    label.setToolTip(info.description)
+            if config.get("tooltip") and label is not None:
+                label.setToolTip(config["tooltip"])
             widget.setEnabled(name not in self._read_only_fields)
             self._widgets[name] = widget
-            self._set_widget_value(name, self._field_default(info))
-            self._connect_widget(name, widget)
+            self._field_configs[name] = config
+            self._set_widget_value(name, config["default"])
+            self._apply_field_metadata(name)
+            self._connect_widget(widget)
 
         self._connect_device_signal_widgets()
-
-    def _clear(self, *, delete_later: bool = True) -> None:
-        while self._layout.count():
-            item = self._layout.takeAt(0)
-            widget = item.widget()
-            if widget is not None:
-                widget.close()
-                if delete_later:
-                    widget.deleteLater()
-        self._widgets.clear()
+        self._connect_reference_unit_widgets()
+        self._refresh_reference_units()
 
     def _create_widget(self, name: str, info: FieldInfo) -> QWidget:
         annotation = info.annotation
-        optional = self._is_optional(annotation)
-        value_annotation = self._without_none(annotation)
+        args = get_args(annotation)
+        optional = NoneType in args
+        non_none_args = tuple(arg for arg in args if arg is not NoneType)
+        value_annotation = non_none_args[0] if len(non_none_args) == 1 else annotation
 
-        widget = self._create_value_widget(name, value_annotation, info)
-        if optional and (self._is_numeric_annotation(value_annotation) or value_annotation is bool):
+        widget = self._create_value_widget(name, value_annotation)
+        numeric = value_annotation in (int, float) or any(
+            arg in (int, float) for arg in get_args(value_annotation)
+        )
+        if optional and (numeric or value_annotation is bool):
             return OptionalValueWidget(widget, parent=self)
         return widget
 
-    def _create_value_widget(self, name: str, annotation: Any, info: FieldInfo) -> QWidget:
-        if self._contains_type(annotation, Signal):
+    def _create_value_widget(self, name: str, annotation: Any) -> QWidget:
+        args = get_args(annotation)
+        if (
+            isinstance(annotation, type)
+            and issubclass(annotation, Signal)
+            or any(isinstance(arg, type) and issubclass(arg, Signal) for arg in args)
+        ):
             return SignalComboBox(
                 parent=self,
                 client=self._client,
                 require_device=self._model_has_device_field(),
                 arg_name=name,
             )
-        if self._contains_type(annotation, DeviceBase):
+        if (
+            isinstance(annotation, type)
+            and issubclass(annotation, DeviceBase)
+            or any(isinstance(arg, type) and issubclass(arg, DeviceBase) for arg in args)
+        ):
             return DeviceComboBox(parent=self, client=self._client, arg_name=name)
-        if self._is_literal(annotation):
+        if get_origin(annotation) is Literal:
             widget = QComboBox(self)
             widget.addItems([str(value) for value in get_args(annotation)])
             return widget
@@ -274,11 +470,24 @@ class PydanticWidgetForm(QWidget):
         if annotation is float:
             spin_box = BECSpinBox(self)
             spin_box.setRange(-1_000_000_000, 1_000_000_000)
-            spin_box.setDecimals(int((info.json_schema_extra or {}).get("precision", 6)))
             return spin_box
         return QLineEdit(self)
 
-    def _connect_widget(self, _name: str, widget: QWidget) -> None:
+    def _apply_field_metadata(self, name: str) -> None:
+        config = self._field_configs[name]
+        field_widget = self._widgets[name]
+        input_widget = self.input_widget(name)
+
+        if config.get("precision") is not None:
+            apply_numeric_precision(input_widget, config)
+        if any(config.get(key) is not None for key in NUMERIC_BOUND_KEYS):
+            apply_numeric_limits(input_widget, config)
+
+        apply_unit_metadata(field_widget, config)
+        if input_widget is not field_widget:
+            apply_unit_metadata(input_widget, config)
+
+    def _connect_widget(self, widget: QWidget) -> None:
         if isinstance(widget, OptionalValueWidget):
             widget.value_changed.connect(lambda _value: self.changed.emit())
             return
@@ -300,6 +509,47 @@ class PydanticWidgetForm(QWidget):
             if device_widget.currentText().strip():
                 signal_widget.set_device(device_widget.currentText().strip())
 
+    def _connect_reference_unit_widgets(self) -> None:
+        for name, widget in self.input_widgets().items():
+            if not isinstance(widget, DeviceComboBox):
+                continue
+            widget.device_selected.connect(
+                lambda _device_name, field_name=name: self._update_reference_units(field_name)
+            )
+            widget.device_reset.connect(
+                lambda field_name=name: self._apply_reference_units(field_name, None)
+            )
+            widget.currentTextChanged.connect(
+                lambda text, field_name=name: self._handle_reference_device_text(field_name, text)
+            )
+
+    def _refresh_reference_units(self) -> None:
+        for name, widget in self.input_widgets().items():
+            if isinstance(widget, DeviceComboBox):
+                self._update_reference_units(name)
+
+    def _update_reference_units(self, source_name: str) -> None:
+        widget = self.input_widget(source_name)
+        if not isinstance(widget, DeviceComboBox) or not widget.is_valid_input:
+            self._apply_reference_units(source_name, None)
+            return
+        self._apply_reference_units(source_name, device_units(widget.get_current_device()))
+
+    def _apply_reference_units(self, source_name: str, units: str | None) -> None:
+        for field_name, config in self._field_configs.items():
+            if config.get("reference_units") != source_name:
+                continue
+            field_widget = self.field_widget(field_name)
+            input_widget = self.input_widget(field_name)
+            apply_unit_metadata(field_widget, config, units)
+            if input_widget is not field_widget:
+                apply_unit_metadata(input_widget, config, units)
+
+    def _handle_reference_device_text(self, source_name: str, device_name: str) -> None:
+        widget = self.input_widget(source_name)
+        if isinstance(widget, DeviceComboBox) and not widget.validate_device(device_name):
+            self._apply_reference_units(source_name, None)
+
     def _validate_domain_widgets(self) -> None:
         for widget in self._widgets.values():
             if isinstance(widget, DeviceComboBox):
@@ -320,8 +570,8 @@ class PydanticWidgetForm(QWidget):
             return widget.value()
         if isinstance(widget, QLineEdit):
             value = WidgetIO.get_value(widget)
-            return None if self._is_optional(info.annotation) and value == "" else value
-        if isinstance(widget, QComboBox) and self._is_literal(self._without_none(info.annotation)):
+            return None if NoneType in get_args(info.annotation) and value == "" else value
+        if isinstance(widget, QComboBox) and get_origin(info.annotation) is Literal:
             return WidgetIO.get_value(widget, as_string=True)
         return WidgetIO.get_value(widget)
 
@@ -339,91 +589,45 @@ class PydanticWidgetForm(QWidget):
                 value = 0
         WidgetIO.set_value(widget, value)
 
-    @staticmethod
-    def _values_differ(current: Any, baseline: Any) -> bool:
-        if current is None or baseline is None:
-            return current is not None or baseline is not None
-        if isinstance(current, float) or isinstance(baseline, float):
-            return abs(float(current) - float(baseline)) >= 1e-9
-        return current != baseline
-
-    @staticmethod
-    def _field_default(info: FieldInfo) -> Any:
-        if info.default is not PydanticUndefined:
-            return info.default
-        if info.default_factory is not None:
-            return info.get_default(call_default_factory=True)
-        return None
-
-    @staticmethod
-    def _format_label(name: str) -> str:
-        return name.replace("_", " ").capitalize()
-
-    @staticmethod
-    def _is_literal(annotation: Any) -> bool:
-        return get_origin(annotation) is Literal
-
-    @classmethod
-    def _is_optional(cls, annotation: Any) -> bool:
-        return NoneType in cls._annotation_args(annotation)
-
-    @classmethod
-    def _without_none(cls, annotation: Any) -> Any:
-        args = [arg for arg in cls._annotation_args(annotation) if arg is not NoneType]
-        if not args:
-            return annotation
-        if len(args) == 1:
-            return args[0]
-        return annotation
-
-    @classmethod
-    def _annotation_args(cls, annotation: Any) -> tuple[Any, ...]:
-        origin = get_origin(annotation)
-        if origin in (Union, UnionType) or isinstance(annotation, UnionType):
-            return get_args(annotation)
-        return ()
-
-    @classmethod
-    def _contains_type(cls, annotation: Any, expected: type) -> bool:
-        if isinstance(annotation, type):
-            return issubclass(annotation, expected)
-        return any(
-            isinstance(arg, type) and issubclass(arg, expected)
-            for arg in cls._annotation_args(annotation)
-        )
-
     def _model_has_device_field(self) -> bool:
-        return any(
-            self._is_device_annotation(field.annotation)
-            for field in self._model.model_fields.values()
-        )
-
-    @classmethod
-    def _is_device_annotation(cls, annotation: Any) -> bool:
-        return cls._contains_type(annotation, DeviceBase) and not cls._contains_type(
-            annotation, Signal
-        )
-
-    @classmethod
-    def _is_numeric_annotation(cls, annotation: Any) -> bool:
-        if annotation in (int, float):
-            return True
-        return any(arg in (int, float) for arg in cls._annotation_args(annotation))
+        for field in self._model.model_fields.values():
+            annotation = field.annotation
+            args = get_args(annotation)
+            has_device = (
+                isinstance(annotation, type)
+                and issubclass(annotation, DeviceBase)
+                or any(isinstance(arg, type) and issubclass(arg, DeviceBase) for arg in args)
+            )
+            has_signal = (
+                isinstance(annotation, type)
+                and issubclass(annotation, Signal)
+                or any(isinstance(arg, type) and issubclass(arg, Signal) for arg in args)
+            )
+            if has_device and not has_signal:
+                return True
+        return False
 
 
 if __name__ == "__main__":  # pragma: no cover
     import json
     import sys
 
+    from bec_lib.scan_args import ScanArgument
     from pydantic import Field
     from qtpy.QtWidgets import QApplication, QLabel, QPushButton, QTabWidget, QTextEdit, QVBoxLayout
 
+    from bec_widgets.utils.colors import apply_theme
+
     class BasicScanConfig(BaseModel):
+        """Plain Pydantic fields without GUI metadata."""
+
         sample_name: str
         enabled: bool = True
         repeats: int = 3
 
     class LimitConfig(BaseModel):
+        """Normal Pydantic Field metadata."""
+
         mode: Literal["monitor", "scan", "calibration"] = "scan"
         low_limit: (
             float | None
@@ -439,6 +643,58 @@ if __name__ == "__main__":  # pragma: no cover
             title="Tolerance",
             description="Warning tolerance around configured limits.",
             json_schema_extra={"precision": 4},
+        )
+
+    class ScanArgumentConfig(BaseModel):
+        """ScanArgument metadata applied through Field extras."""
+
+        settling_time: float = Field(
+            default=0.0,
+            **ScanArgument(
+                display_name="Settling time",
+                description="Time to wait after moving.",
+                units="s",
+                precision=3,
+                ge=0,
+            ).model_dump(),
+        )
+        frames: int = Field(
+            default=1,
+            **ScanArgument(
+                display_name="Frames", description="Number of frames per trigger.", ge=1
+            ).model_dump(),
+        )
+
+    class DeviceSignalLimitsConfig(BaseModel):
+        """Device, signal, and numeric fields whose units follow the selected device."""
+
+        model_config = {"arbitrary_types_allowed": True}
+
+        device: DeviceBase | str = Field(
+            default="",
+            **ScanArgument(display_name="Device", description="Positioner device.").model_dump(),
+        )
+        signal: Signal | str | None = Field(
+            default=None,
+            **ScanArgument(display_name="Signal", description="Device signal.").model_dump(),
+        )
+        low_limit: float | None = Field(
+            default=None,
+            **ScanArgument(
+                display_name="Low limit",
+                description="Optional lower limit.",
+                reference_units="device",
+                precision=4,
+            ).model_dump(),
+        )
+        high_limit: float | None = Field(
+            default=None,
+            **ScanArgument(
+                display_name="High limit",
+                description="Optional upper limit.",
+                reference_units="device",
+                precision=4,
+            ).model_dump(),
         )
 
     class DisplayConfig(BaseModel):
@@ -500,7 +756,6 @@ if __name__ == "__main__":  # pragma: no cover
         def __init__(self) -> None:
             super().__init__()
             self.setWindowTitle("PydanticWidgetForm example")
-            self.resize(720, 520)
 
             self._tabs = QTabWidget(self)
             self._output = QTextEdit(self)
@@ -510,8 +765,10 @@ if __name__ == "__main__":  # pragma: no cover
 
             self._add_form("Basic", PydanticWidgetForm(BasicScanConfig))
             self._add_form("Limits", PydanticWidgetForm(LimitConfig))
+            self._add_form("ScanArgument", PydanticWidgetForm(ScanArgumentConfig))
             self._add_form("Display", PydanticWidgetForm(DisplayConfig))
             self._add_form("Device + signal", PydanticWidgetForm(DeviceAndSignalConfig))
+            self._add_form("Device limits", PydanticWidgetForm(DeviceSignalLimitsConfig))
             self._add_form("Device only", PydanticWidgetForm(DeviceOnlyConfig))
             self._add_form("Signal only", PydanticWidgetForm(SignalOnlyConfig))
 
@@ -552,6 +809,7 @@ if __name__ == "__main__":  # pragma: no cover
                 self._show_current_data(validate=False)
 
     app = QApplication(sys.argv)
+    apply_theme("dark")
     window = ExampleWindow()
     window.show()
     sys.exit(app.exec())

@@ -33,7 +33,6 @@ _Widgets = {
     "BECShell": "BECShell",
     "BECStatusBox": "BECStatusBox",
     "BeamlineStateManager": "BeamlineStateManager",
-    "BeamlineStatePill": "BeamlineStatePill",
     "BecConsole": "BecConsole",
     "DapComboBox": "DapComboBox",
     "DeviceBrowser": "DeviceBrowser",
@@ -738,63 +737,18 @@ class BeamlineStateManager(RPCBase):
         """
 
     @rpc_call
-    def refresh_states(self) -> "None":
-        """
-        Fetch the latest cached available beamline states and update the list immediately.
-        """
-
-    @rpc_call
     def clear_filters(self) -> "None":
         """
         None
         """
 
     @rpc_call
-    def remove(self):
+    def state_summary(self) -> "dict[str, dict[str, str]]":
         """
-        Cleanup the BECConnector
-        """
+        Return the displayed beamline states with their current status and label.
 
-    @rpc_call
-    def attach(self):
-        """
-        None
-        """
-
-    @rpc_call
-    def detach(self):
-        """
-        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
-        """
-
-    @rpc_timeout(None)
-    @rpc_call
-    def screenshot(self, file_name: "str | None" = None):
-        """
-        Take a screenshot of the dock area and save it to a file.
-        """
-
-
-class BeamlineStatePill(RPCBase):
-    """Compact widget showing one BEC beamline state."""
-
-    _IMPORT_MODULE = "bec_widgets.widgets.services.beamline_states.beamline_state_pill"
-
-    @property
-    @rpc_call
-    def state_name(self) -> "str | None":
-        """
-        Name of the BEC beamline state displayed by this pill.
-        """
-
-    @rpc_call
-    def set_state_name(self, state_name: "str | None", title: "str | None" = None) -> "None":
-        """
-        Set the BEC beamline state this pill displays.
-
-        Args:
-            state_name: State name as published by ``AvailableBeamlineStatesMessage``.
-            title: Optional human-readable title for the state.
+        Returns:
+            dict: Mapping of state name to a dictionary with ``status`` and ``label`` keys.
         """
 
     @rpc_call

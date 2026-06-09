@@ -20,6 +20,12 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
 )
 
+from bec_widgets.utils.scan_arg_metadata import (
+    apply_numeric_limits,
+    apply_numeric_precision,
+    apply_unit_metadata,
+    device_units,
+)
 from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import (
     BECDeviceFilter,
@@ -285,8 +291,8 @@ class ScanGroupBox(QGroupBox):
                 )
             else:
                 widget = widget_class(parent=self.parent(), arg_name=arg_name, default=default)
-            self._apply_numeric_precision(widget, item)
-            self._apply_numeric_limits(widget, item)
+            apply_numeric_precision(widget, item)
+            apply_numeric_limits(widget, item)
             if isinstance(widget, DeviceComboBox):
                 self.selected_devices[widget] = ""
                 widget.device_selected.connect(self.emit_device_selected)
@@ -298,7 +304,7 @@ class ScanGroupBox(QGroupBox):
             if isinstance(widget, ScanLiteralsComboBox):
                 widget.set_literals(item["type"].get("Literal", []))
             self._widget_configs[widget] = item
-            self._apply_unit_metadata(widget, item)
+            apply_unit_metadata(widget, item)
             self.layout.addWidget(widget, row, column_index)
             self.widgets.append(widget)
 
@@ -307,7 +313,7 @@ class ScanGroupBox(QGroupBox):
         sender = self.sender()
         self.selected_devices[sender] = device_name.strip()
         if isinstance(sender, DeviceComboBox):
-            units = self._device_units(sender.get_current_device())
+            units = device_units(sender.get_current_device())
             self._update_reference_units(sender, units)
             self._emit_reference_units_changed(sender, units)
         selected_devices_str = " ".join(self.selected_devices.values())
@@ -453,56 +459,10 @@ class ScanGroupBox(QGroupBox):
                     WidgetIO.set_value(widget, value)
                     break
 
-    @staticmethod
-    def _unit_tooltip(item: dict, units: str | None = None) -> str | None:
-        tooltip = item.get("tooltip", None)
-        reference_units = item.get("reference_units", None)
-        units = units or item.get("units", None)
-        tooltip_parts = [tooltip] if tooltip else []
-        if units:
-            tooltip_parts.append(f"Units: {units}")
-        elif reference_units:
-            tooltip_parts.append(f"Units from: {reference_units}")
-        if tooltip_parts:
-            return "\n".join(tooltip_parts)
-        return None
-
-    def _apply_unit_metadata(self, widget, item: dict, units: str | None = None) -> None:
-        units = units or item.get("units", None)
-        tooltip = self._unit_tooltip(item, units)
-        existing_tooltip = widget.toolTip()
-
-        if existing_tooltip:
-            # strip the existing unit info from the tooltip if it exists
-            # to avoid tooltip bloat on multiple updates
-            existing_tooltip = "\n".join(
-                line
-                for line in existing_tooltip.splitlines()
-                if not (line.startswith("Units:") or line.startswith("Units from:"))
-            ).strip()
-        if tooltip:
-            if existing_tooltip:
-                widget.setToolTip(f"{existing_tooltip}\n{tooltip}")
-            else:
-                widget.setToolTip(tooltip)
-        if hasattr(widget, "setSuffix"):
-            widget.setSuffix(f" {units}" if units else "")
-
     def _refresh_column_label(self, column: int, item: dict) -> None:
         if column not in self._column_labels:
             return
         self._column_labels[column].setText(item.get("display_name", item.get("name", None)))
-
-    @staticmethod
-    def _device_units(device) -> str | None:
-        egu = getattr(device, "egu", None)
-        if not callable(egu):
-            return None
-        try:
-            return egu()
-        except Exception:
-            logger.exception("Failed to fetch engineering units from device %s", device)
-            return None
 
     def _widget_position(self, widget) -> tuple[int, int] | None:
         for row in range(self.layout.rowCount()):
@@ -529,7 +489,7 @@ class ScanGroupBox(QGroupBox):
             row, column = widget_position
             if self.box_type == "args" and row != source_row:
                 continue
-            self._apply_unit_metadata(widget, item, units)
+            apply_unit_metadata(widget, item, units)
             self._refresh_column_label(column, item)
 
     def apply_reference_units(self, reference_name: str, units: str | None) -> None:
@@ -543,7 +503,7 @@ class ScanGroupBox(QGroupBox):
             item = self._widget_configs.get(widget, {})
             if item.get("reference_units") != reference_name:
                 continue
-            self._apply_unit_metadata(widget, item, units)
+            apply_unit_metadata(widget, item, units)
             position = self._widget_position(widget)
             if position is not None:
                 _, column = position
@@ -562,49 +522,3 @@ class ScanGroupBox(QGroupBox):
             self.selected_devices[device_widget] = ""
             self._update_reference_units(device_widget, None)
             self._emit_reference_units_changed(device_widget, None)
-
-    @staticmethod
-    def _apply_numeric_precision(widget: ScanDoubleSpinBox, item: dict) -> None:
-        if not isinstance(widget, ScanDoubleSpinBox):
-            return
-
-        precision = item.get("precision")
-        if precision is None:
-            return
-
-        try:
-            widget.setDecimals(max(0, int(precision)))
-        except (TypeError, ValueError):
-            logger.warning(
-                "Ignoring invalid precision %r for parameter %s", precision, item.get("name")
-            )
-
-    @staticmethod
-    def _apply_numeric_limits(widget: ScanDoubleSpinBox | ScanSpinBox, item: dict) -> None:
-        if isinstance(widget, ScanSpinBox):
-            minimum = -2147483647  # largest int which qt allows
-            maximum = 2147483647
-            if item.get("ge") is not None:
-                minimum = int(item["ge"])
-            if item.get("gt") is not None:
-                minimum = int(item["gt"]) + 1
-            if item.get("le") is not None:
-                maximum = int(item["le"])
-            if item.get("lt") is not None:
-                maximum = int(item["lt"]) - 1
-            widget.setRange(minimum, maximum)
-            return
-
-        if isinstance(widget, ScanDoubleSpinBox):
-            minimum = -float("inf")
-            maximum = float("inf")
-            step = 10 ** (-widget.decimals())
-            if item.get("ge") is not None:
-                minimum = float(item["ge"])
-            if item.get("gt") is not None:
-                minimum = float(item["gt"]) + step
-            if item.get("le") is not None:
-                maximum = float(item["le"])
-            if item.get("lt") is not None:
-                maximum = float(item["lt"]) - step
-            widget.setRange(minimum, maximum)
