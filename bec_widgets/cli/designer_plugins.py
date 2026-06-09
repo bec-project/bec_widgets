@@ -23,10 +23,6 @@ designer_plugins = {
         "bec_widgets.widgets.services.beamline_states.beamline_state_pill",
         "BeamlineStateManager",
     ),
-    "BeamlineStatePill": (
-        "bec_widgets.widgets.services.beamline_states.beamline_state_pill",
-        "BeamlineStatePill",
-    ),
     "BecConsole": ("bec_widgets.widgets.editors.bec_console.bec_console", "BecConsole"),
     "ColorButton": ("bec_widgets.widgets.utility.visual.color_button.color_button", "ColorButton"),
     "ColorButtonNative": (
@@ -127,7 +123,6 @@ widget_icons = {
     "BECSpinBox": "123",
     "BECStatusBox": "widgets",
     "BeamlineStateManager": "format_list_bulleted",
-    "BeamlineStatePill": "info",
     "BecConsole": "terminal",
     "ColorButton": "colors",
     "ColorButtonNative": "colors",

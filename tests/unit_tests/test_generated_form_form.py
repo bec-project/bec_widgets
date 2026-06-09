@@ -1,7 +1,9 @@
 from decimal import Decimal
+from unittest.mock import patch
 
 import pytest
 from bec_lib.device import Device, Signal
+from bec_lib.scan_args import ScanArgument
 from pydantic import BaseModel, Field
 from qtpy.QtWidgets import QCheckBox, QLabel, QLineEdit
 
@@ -11,6 +13,7 @@ from bec_widgets.utils.forms_from_types.pydantic_widget_form import (
     OptionalValueWidget,
     PydanticWidgetForm,
 )
+from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import SignalComboBox
 from bec_widgets.widgets.utility.spinbox.decimal_spinbox import BECSpinBox
@@ -72,6 +75,35 @@ class GeneratedDeviceOnlySchema(BaseModel):
 
 class GeneratedSignalOnlySchema(BaseModel):
     signal: Signal | str | None = Field(default=None, title="Signal")
+
+    model_config = {"arbitrary_types_allowed": True}
+
+
+class GeneratedScanArgumentSchema(BaseModel):
+    device: Device | str = Field(
+        default="", **ScanArgument(display_name="Device", description="Device source.").model_dump()
+    )
+    signal: Signal | str | None = Field(
+        default=None,
+        **ScanArgument(display_name="Signal", description="Signal source.").model_dump(),
+    )
+    low_limit: float | None = Field(
+        default=None,
+        **ScanArgument(
+            display_name="Low limit",
+            description="Optional lower bound.",
+            reference_units="device",
+            precision=4,
+            ge=-5,
+            le=5,
+        ).model_dump(),
+    )
+    exposure: float = Field(
+        default=0.1,
+        **ScanArgument(
+            display_name="Exposure", tooltip="Camera exposure.", units="s", precision=3, gt=0
+        ).model_dump(),
+    )
 
     model_config = {"arbitrary_types_allowed": True}
 
@@ -180,6 +212,37 @@ def test_pydantic_widget_form_plain_field_has_generated_label_and_no_tooltip(qtb
     assert label.text() == "Sample name"
     assert label.toolTip() == ""
     assert form.field_widget("sample_name").toolTip() == ""
+
+
+def test_pydantic_widget_form_uses_scan_argument_metadata(qtbot, mocked_client):
+    form = PydanticWidgetForm(GeneratedScanArgumentSchema, client=mocked_client)
+    qtbot.addWidget(form)
+
+    low_limit = form.field_widget("low_limit")
+    low_limit_input = form.input_widget("low_limit")
+    exposure = form.input_widget("exposure")
+
+    low_limit_label = form.layout().labelForField(low_limit)
+    assert isinstance(low_limit_label, QLabel)
+    assert low_limit_label.text() == "Low limit"
+    assert low_limit.toolTip() == "Optional lower bound.\nUnits from: device"
+    assert low_limit_input.toolTip() == "Optional lower bound.\nUnits from: device"
+    assert low_limit_input.decimals() == 4
+    assert low_limit_input.minimum() == pytest.approx(-5)
+    assert low_limit_input.maximum() == pytest.approx(5)
+
+    assert form.field_widget("exposure").toolTip() == "Camera exposure.\nUnits: s"
+    assert exposure.toolTip() == "Camera exposure.\nUnits: s"
+    assert exposure.suffix() == " s"
+    assert exposure.decimals() == 3
+    assert exposure.minimum() == pytest.approx(0.001)
+
+    with patch.object(mocked_client.device_manager.devices.samx, "egu", return_value="mm"):
+        WidgetIO.set_value(form.input_widget("device"), "samx")
+
+    assert low_limit.toolTip() == "Optional lower bound.\nUnits: mm"
+    assert low_limit_input.toolTip() == "Optional lower bound.\nUnits: mm"
+    assert low_limit_input.suffix() == " mm"
 
 
 def test_pydantic_widget_form_cleans_up_on_close(qtbot):
