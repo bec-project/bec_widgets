@@ -16,7 +16,11 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets.utils.widget_io import WidgetHierarchy, WidgetIO, WidgetTreeNode
+from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
+from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import SignalComboBox
 from bec_widgets.widgets.utility.toggle.toggle import ToggleSwitch
+
+from .client_mocks import mocked_client
 
 
 @pytest.fixture(scope="function")
@@ -194,6 +198,58 @@ def test_widget_io_signal(qtbot, example_widget):
     toggle.checked = False
     qtbot.waitUntil(lambda: len(changes) > 4)
     assert changes[-1][1] == False
+
+
+def test_widget_io_device_combobox_handler(qtbot, mocked_client):
+    widget = DeviceComboBox(client=mocked_client)
+    qtbot.addWidget(widget)
+    changes = []
+
+    WidgetIO.connect_widget_change_signal(widget, lambda _widget, value: changes.append(value))
+    WidgetIO.set_value(widget, "samx")
+
+    assert WidgetIO.get_value(widget) == "samx"
+    assert changes[-1] == "samx"
+
+
+def test_widget_io_device_combobox_handler_accepts_subclasses(qtbot, mocked_client):
+    class PromotedDeviceComboBox(DeviceComboBox):
+        pass
+
+    widget = PromotedDeviceComboBox(client=mocked_client)
+    qtbot.addWidget(widget)
+
+    WidgetIO.set_value(widget, "samx")
+
+    assert WidgetIO.get_value(widget) == "samx"
+
+
+def test_widget_io_signal_combobox_handler(qtbot, mocked_client):
+    widget = SignalComboBox(client=mocked_client, require_device=True)
+    qtbot.addWidget(widget)
+    changes = []
+
+    widget.set_device("samx")
+    WidgetIO.connect_widget_change_signal(widget, lambda _widget, value: changes.append(value))
+    WidgetIO.set_value(widget, "samx")
+
+    assert WidgetIO.get_value(widget) == "samx"
+    widget.setCurrentText("")
+    widget.setCurrentText("samx")
+    assert changes[-1] == "samx"
+
+
+def test_widget_io_signal_combobox_handler_accepts_subclasses(qtbot, mocked_client):
+    class PromotedSignalComboBox(SignalComboBox):
+        pass
+
+    widget = PromotedSignalComboBox(client=mocked_client, require_device=True)
+    qtbot.addWidget(widget)
+    widget.set_device("samx")
+
+    WidgetIO.set_value(widget, "samx")
+
+    assert WidgetIO.get_value(widget) == "samx"
 
 
 def test_find_widgets(example_widget):
