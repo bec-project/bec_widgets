@@ -405,7 +405,7 @@ class NotificationToast(QFrame):
             #NotificationToast QPushButton:hover {{ color: {btn_hover}; }}
             """)
         # traceback panel colours
-        if theme == "dark":
+        if theme == "dark":  # FIXME Unify stylesheets and move them to BECQThemes issue #1189
             trace_bg = "#1e1e1e"
             trace_fg = palette["body"]
             trace_border = "rgba(255,255,255,48)"
@@ -480,6 +480,8 @@ class NotificationToast(QFrame):
     # Event Filters
     ########################################
     def eventFilter(self, watched, event):
+        if not isinstance(event, QtCore.QEvent):
+            return False
         # timestamp label → toggle absolute time
         if watched is self.time_lbl:
             if event.type() == QtCore.QEvent.Enter and not self._showing_absolute:
@@ -901,6 +903,8 @@ class NotificationCentre(QScrollArea):
         self.setFixedHeight(min(content_h, avail))
 
     def eventFilter(self, watched, event):
+        if not isinstance(event, QtCore.QEvent):
+            return False
         if watched is self.parent() and event.type() == QtCore.QEvent.Resize:
             self._adjust_height()
         return super().eventFilter(watched, event)
