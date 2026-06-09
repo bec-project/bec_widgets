@@ -69,11 +69,6 @@ def test_display_app_id_connected(bec_main_window):
         assert bec_main_window._app_id_label.text() == "App ID: gui_123"
 
 
-def test_event_consumes_status_tip(bec_main_window):
-    status_tip_event = QEvent(QEvent.Type.StatusTip)
-    assert bec_main_window.event(status_tip_event) is True
-
-
 def test_get_launcher_from_qapp_returns_none_when_absent(bec_main_window):
     with patch.object(
         QApplication, "instance", return_value=SimpleNamespace(topLevelWidgets=lambda: [])

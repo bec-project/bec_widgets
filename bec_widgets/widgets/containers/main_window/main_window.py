@@ -4,7 +4,7 @@ import os
 
 from bec_lib import bec_logger
 from bec_lib.endpoints import MessageEndpoints
-from qtpy.QtCore import QEvent, QSize, Qt, QTimer
+from qtpy.QtCore import QSize, Qt, QTimer
 from qtpy.QtGui import QAction, QActionGroup, QIcon
 from qtpy.QtWidgets import (
     QApplication,
@@ -416,11 +416,6 @@ class BECMainWindow(BECWidget, QMainWindow):
             theme(str): Either "light" or "dark".
         """
         apply_theme(theme)  # emits theme_updated and applies palette globally
-
-    def event(self, event):
-        if event.type() == QEvent.Type.StatusTip:
-            return True
-        return super().event(event)
 
     def _show_widget_hierarchy_dialog(self):
         if self._widget_hierarchy_dialog is None:
