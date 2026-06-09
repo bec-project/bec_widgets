@@ -99,6 +99,45 @@ class ComboBoxHandler(WidgetHandler):
         widget.currentIndexChanged.connect(lambda idx, w=widget: slot(w, self.get_value(w)))
 
 
+class DeviceComboBoxHandler(ComboBoxHandler):
+    """Handler for BEC device comboboxes."""
+
+    def get_value(self, widget, **kwargs) -> str:
+        return widget.currentText().strip()
+
+    def set_value(self, widget, value: str | None) -> None:
+        device = "" if value is None else str(value)
+        if not device:
+            widget.setCurrentText("")
+            return
+        widget.set_device(device)
+        if widget.currentText() != device:
+            widget.setCurrentText(device)
+
+    def connect_change_signal(self, widget, slot):
+        widget.currentTextChanged.connect(lambda text, w=widget: slot(w, text.strip()))
+
+
+class SignalComboBoxHandler(ComboBoxHandler):
+    """Handler for BEC signal comboboxes."""
+
+    def get_value(self, widget, **kwargs) -> str | None:
+        signal = widget.get_signal_name().strip()
+        return signal or None
+
+    def set_value(self, widget, value: str | None) -> None:
+        signal = "" if value is None else str(value)
+        if not signal:
+            widget.setCurrentText("")
+            return
+        widget.set_signal(signal)
+        if widget.currentText() != signal and widget.get_signal_name() != signal:
+            widget.setCurrentText(signal)
+
+    def connect_change_signal(self, widget, slot):
+        widget.currentTextChanged.connect(lambda _text, w=widget: slot(w, self.get_value(w)))
+
+
 class TableWidgetHandler(WidgetHandler):
     """Handler for QTableWidget widgets."""
 
@@ -290,6 +329,18 @@ class WidgetIO:
         Returns:
             handler_class: The handler class if found, otherwise None.
         """
+        if (
+            isinstance(widget, QComboBox)
+            and hasattr(widget, "set_signal")
+            and hasattr(widget, "get_signal_name")
+        ):
+            return SignalComboBoxHandler
+        if (
+            isinstance(widget, QComboBox)
+            and hasattr(widget, "set_device")
+            and hasattr(widget, "device_selected")
+        ):
+            return DeviceComboBoxHandler
         for base in type(widget).__mro__:
             if base in WidgetIO._handlers:
                 return WidgetIO._handlers[base]

@@ -1,10 +1,21 @@
 from decimal import Decimal
 
 import pytest
+from bec_lib.device import Device, Signal
 from pydantic import BaseModel, Field
+from qtpy.QtWidgets import QCheckBox, QLabel, QLineEdit
 
 from bec_widgets.utils.forms_from_types.forms import PydanticModelForm, TypedForm
 from bec_widgets.utils.forms_from_types.items import FloatDecimalFormItem, IntFormItem, StrFormItem
+from bec_widgets.utils.forms_from_types.pydantic_widget_form import (
+    OptionalValueWidget,
+    PydanticWidgetForm,
+)
+from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
+from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import SignalComboBox
+from bec_widgets.widgets.utility.spinbox.decimal_spinbox import BECSpinBox
+
+from .client_mocks import mocked_client
 
 # pylint: disable=no-member
 # pylint: disable=missing-function-docstring
@@ -24,6 +35,51 @@ class ExampleSchema(BaseModel):
     int_nodefault_optional: int | None = Field(lt=-1, ge=-44)
     float_nodefault: float
     decimal_dp_limits_nodefault: Decimal = Field(decimal_places=2, gt=1, le=34.5)
+
+
+class GeneratedBeamlineSchema(BaseModel):
+    name: str = Field(title="State name", description="Unique state identifier.")
+    title: str | None = Field(default=None, title="Display title", description="Visible title.")
+    device: Device | str = Field(title="Device", description="BEC device.")
+    signal: Signal | str | None = Field(
+        default=None, title="Signal", description="Optional device signal."
+    )
+    limit: float | None = Field(
+        default=None,
+        title="Limit",
+        description="Optional numeric limit.",
+        json_schema_extra={"precision": 6},
+    )
+    tolerance: float = Field(
+        default=0.1,
+        title="Tolerance",
+        description="Warning tolerance.",
+        json_schema_extra={"precision": 6},
+    )
+
+    model_config = {"arbitrary_types_allowed": True}
+
+
+class GeneratedPlainSchema(BaseModel):
+    sample_name: str
+
+
+class GeneratedDeviceOnlySchema(BaseModel):
+    device: Device | str = Field(default="", title="Device")
+
+    model_config = {"arbitrary_types_allowed": True}
+
+
+class GeneratedSignalOnlySchema(BaseModel):
+    signal: Signal | str | None = Field(default=None, title="Signal")
+
+    model_config = {"arbitrary_types_allowed": True}
+
+
+class GeneratedRequiredNumericAndOptionalBoolSchema(BaseModel):
+    enabled: bool | None = None
+    retry_count: int
+    scale: float
 
 
 TEST_DICT = {
@@ -74,3 +130,115 @@ def test_widget_set_data(model_widget: PydanticModelForm):
         "decimal_dp_limits_nodefault",
     ]:
         assert model_widget.widget_dict[key].getValue() == TEST_DICT[key]
+
+
+def test_pydantic_widget_form_uses_field_metadata_and_type_widgets(qtbot, mocked_client):
+    form = PydanticWidgetForm(GeneratedBeamlineSchema, client=mocked_client)
+    qtbot.addWidget(form)
+
+    assert isinstance(form.input_widget("name"), QLineEdit)
+    assert isinstance(form.input_widget("device"), DeviceComboBox)
+    assert isinstance(form.input_widget("signal"), SignalComboBox)
+    assert isinstance(form.field_widget("limit"), OptionalValueWidget)
+    assert isinstance(form.input_widget("limit"), BECSpinBox)
+    assert form.input_widgets_by_type(DeviceComboBox) == [form.input_widget("device")]
+    assert form.input_widgets_by_type(SignalComboBox) == [form.input_widget("signal")]
+
+    label = form.layout().labelForField(form.field_widget("device"))
+    assert isinstance(label, QLabel)
+    assert label.text() == "Device"
+    assert label.toolTip() == "BEC device."
+    assert form.field_widget("limit").toolTip() == "Optional numeric limit."
+
+
+def test_pydantic_widget_form_device_signal_variants(qtbot, mocked_client):
+    device_signal_form = PydanticWidgetForm(GeneratedBeamlineSchema, client=mocked_client)
+    device_only_form = PydanticWidgetForm(GeneratedDeviceOnlySchema, client=mocked_client)
+    signal_only_form = PydanticWidgetForm(GeneratedSignalOnlySchema, client=mocked_client)
+    qtbot.addWidget(device_signal_form)
+    qtbot.addWidget(device_only_form)
+    qtbot.addWidget(signal_only_form)
+
+    assert isinstance(device_signal_form.input_widget("device"), DeviceComboBox)
+    assert isinstance(device_signal_form.input_widget("signal"), SignalComboBox)
+    assert device_signal_form.input_widget("signal").require_device is True
+
+    assert isinstance(device_only_form.input_widget("device"), DeviceComboBox)
+    assert device_only_form.input_widgets_by_type(SignalComboBox) == []
+
+    assert isinstance(signal_only_form.input_widget("signal"), SignalComboBox)
+    assert signal_only_form.input_widget("signal").require_device is False
+    assert signal_only_form.input_widgets_by_type(DeviceComboBox) == []
+
+
+def test_pydantic_widget_form_plain_field_has_generated_label_and_no_tooltip(qtbot):
+    form = PydanticWidgetForm(GeneratedPlainSchema)
+    qtbot.addWidget(form)
+
+    label = form.layout().labelForField(form.field_widget("sample_name"))
+    assert isinstance(label, QLabel)
+    assert label.text() == "Sample name"
+    assert label.toolTip() == ""
+    assert form.field_widget("sample_name").toolTip() == ""
+
+
+def test_pydantic_widget_form_cleans_up_on_close(qtbot):
+    form = PydanticWidgetForm(GeneratedPlainSchema)
+    qtbot.addWidget(form)
+
+    form.close()
+
+    assert form.widgets == {}
+    assert form.layout().count() == 0
+
+
+def test_pydantic_widget_form_round_trips_optional_numeric_and_dirty_state(qtbot, mocked_client):
+    form = PydanticWidgetForm(
+        GeneratedBeamlineSchema,
+        client=mocked_client,
+        data={"name": "state_1", "title": "State", "device": "samx", "signal": "samx"},
+    )
+    qtbot.addWidget(form)
+
+    assert form.get_data()["limit"] is None
+
+    limit = form.field_widget("limit")
+    limit.checkbox.setChecked(True)
+    form.input_widget("limit").setValue(5.0)
+
+    assert form.get_data()["limit"] == 5.0
+    assert form.model_instance().limit == 5.0
+    assert "limit" in form.dirty_fields()
+
+    form.reset_to_baseline()
+
+    assert form.get_data()["limit"] is None
+    assert form.dirty_fields() == set()
+
+
+def test_pydantic_widget_form_initializes_required_numeric_fields(qtbot):
+    form = PydanticWidgetForm(GeneratedRequiredNumericAndOptionalBoolSchema)
+    qtbot.addWidget(form)
+
+    assert form.raw_data()["retry_count"] == 0
+    assert form.raw_data()["scale"] == 0.0
+    assert form.model_instance().retry_count == 0
+    assert form.model_instance().scale == 0.0
+
+
+def test_pydantic_widget_form_preserves_optional_bool_none(qtbot):
+    form = PydanticWidgetForm(GeneratedRequiredNumericAndOptionalBoolSchema)
+    qtbot.addWidget(form)
+
+    enabled = form.field_widget("enabled")
+
+    assert isinstance(enabled, OptionalValueWidget)
+    assert isinstance(form.input_widget("enabled"), QCheckBox)
+    assert form.raw_data()["enabled"] is None
+    assert form.model_instance().enabled is None
+
+    enabled.checkbox.setChecked(True)
+    form.input_widget("enabled").setChecked(True)
+
+    assert form.raw_data()["enabled"] is True
+    assert form.model_instance().enabled is True
