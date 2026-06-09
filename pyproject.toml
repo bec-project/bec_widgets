@@ -24,6 +24,7 @@ dependencies = [
   "pydantic~=2.0",
   "pylsp-bec~=1.2",
   "pyqtgraph==0.13.7",
+  "python-slugify~=8.0",
   "qtconsole~=5.5, >=5.5.1",             # needed for jupyter console
   "qtmonaco~=0.8, >=0.8.1",
   "qtpy~=2.4",

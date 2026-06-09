@@ -19,6 +19,14 @@ designer_plugins = {
     "BECShell": ("bec_widgets.widgets.editors.bec_console.bec_console", "BECShell"),
     "BECSpinBox": ("bec_widgets.widgets.utility.spinbox.decimal_spinbox", "BECSpinBox"),
     "BECStatusBox": ("bec_widgets.widgets.services.bec_status_box.bec_status_box", "BECStatusBox"),
+    "BeamlineStateManager": (
+        "bec_widgets.widgets.services.beamline_states.beamline_state_pill",
+        "BeamlineStateManager",
+    ),
+    "BeamlineStatePill": (
+        "bec_widgets.widgets.services.beamline_states.beamline_state_pill",
+        "BeamlineStatePill",
+    ),
     "BecConsole": ("bec_widgets.widgets.editors.bec_console.bec_console", "BecConsole"),
     "ColorButton": ("bec_widgets.widgets.utility.visual.color_button.color_button", "ColorButton"),
     "ColorButtonNative": (
@@ -118,6 +126,8 @@ widget_icons = {
     "BECShell": "hub",
     "BECSpinBox": "123",
     "BECStatusBox": "widgets",
+    "BeamlineStateManager": "format_list_bulleted",
+    "BeamlineStatePill": "info",
     "BecConsole": "terminal",
     "ColorButton": "colors",
     "ColorButtonNative": "colors",
