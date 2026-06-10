@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections import defaultdict
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
@@ -2307,13 +2308,19 @@ class Waveform(PlotBase):
 
         readout_priority_async = self._ensure_str_list(readout_priority.get("async", []))
         readout_priority_sync = self._ensure_str_list(readout_priority.get("monitored", []))
+        async_signals = self.client.device_manager.get_bec_signals(
+            ["AsyncSignal", "AsyncMultiSignal", "DynamicSignal"]
+        )
+        async_signal_objs = defaultdict(list)
+        for device, _, entry_data in async_signals:
+            async_signal_objs[device].append(entry_data.get("obj_name"))
 
         # Iterate over all curves
         for curve in self.curves:
             if curve.config.source != "device":
                 continue
             dev_name = curve.config.signal.device
-            if dev_name in readout_priority_async:
+            if dev_name in readout_priority_async or dev_name in async_signal_objs:
                 self._async_curves.append(curve)
                 if hasattr(self.scan_item, "live_data"):
                     self._setup_async_curve(curve)
