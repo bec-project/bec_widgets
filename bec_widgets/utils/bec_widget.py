@@ -20,7 +20,6 @@ from bec_widgets.widgets.utility.spinner.spinner import SpinnerWidget
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_widgets.utils.busy_loader import BusyLoaderOverlay
-    from bec_widgets.widgets.containers.dock import BECDock
 
 logger = bec_logger.logger
 
