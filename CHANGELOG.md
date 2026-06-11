@@ -1,6 +1,44 @@
 # CHANGELOG
 
 
+## v3.14.0 (2026-06-11)
+
+### Bug Fixes
+
+- **bec_progress_bar**: Replace the custom paint event progressbar with native QProgressBar
+  ([`007f930`](https://github.com/bec-project/bec_widgets/commit/007f9306a62f60cf66a268f608984b6a954b8653))
+
+- **progress**: Scan progress reset on_scan_status in unified backend
+  ([`3d93cf2`](https://github.com/bec-project/bec_widgets/commit/3d93cf2f01778a9825a94adcba44a26fbeaf4be4))
+
+- **ring**: Progresssignal fetch logic back
+  ([`e8bd803`](https://github.com/bec-project/bec_widgets/commit/e8bd80377e0bee40142c5cd0d4a9c35d35f2d950))
+
+- **scan_control**: Remove parent from layout to prevent `QLayout: Attempting to add QLayout "" to
+  ScanGroupBox "", which already has a layout`
+  ([`e8e67f6`](https://github.com/bec-project/bec_widgets/commit/e8e67f68a2912c69a7df3d82daaa67fab3ae1139))
+
+### Continuous Integration
+
+- **child_repos**: Artifact logs upload if child pipelines fail
+  ([`acfc1b4`](https://github.com/bec-project/bec_widgets/commit/acfc1b4b883b2a3cf0596c881489cb2c953dd219))
+
+### Features
+
+- **progress**: Progress is tracked from bec; unified progress backend
+  ([`51f7652`](https://github.com/bec-project/bec_widgets/commit/51f7652b1fe59db6bf94a8183ae0e3a715601aa6))
+
+### Refactoring
+
+- **bec_progress**: Simplification of chunk radius calculation
+  ([`e547ec7`](https://github.com/bec-project/bec_widgets/commit/e547ec71ae1f45db72d9b8cde0b5fe564466333c))
+
+### Testing
+
+- **e2e**: Increase rpc test_available_widgets timout back to 100
+  ([`af125e2`](https://github.com/bec-project/bec_widgets/commit/af125e2222ff11a73f28dadb3a5d93e409ad010e))
+
+
 ## v3.13.5 (2026-06-02)
 
 ### Bug Fixes
