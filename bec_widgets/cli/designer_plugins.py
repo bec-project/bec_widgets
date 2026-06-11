@@ -20,7 +20,7 @@ designer_plugins = {
     "BECSpinBox": ("bec_widgets.widgets.utility.spinbox.decimal_spinbox", "BECSpinBox"),
     "BECStatusBox": ("bec_widgets.widgets.services.bec_status_box.bec_status_box", "BECStatusBox"),
     "BeamlineStateManager": (
-        "bec_widgets.widgets.services.beamline_states.beamline_state_pill",
+        "bec_widgets.widgets.services.beamline_states.beamline_state_manager",
         "BeamlineStateManager",
     ),
     "BecConsole": ("bec_widgets.widgets.editors.bec_console.bec_console", "BecConsole"),

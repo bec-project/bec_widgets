@@ -5,11 +5,10 @@ from qtpy.QtWidgets import QMessageBox, QStyleOptionViewItem
 
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.utils.widget_io import WidgetIO
+from bec_widgets.widgets.services.beamline_states import beamline_state_manager as manager_module
 from bec_widgets.widgets.services.beamline_states import beamline_state_pill as pill_module
-from bec_widgets.widgets.services.beamline_states.beamline_state_pill import (
-    BeamlineStateManager,
-    BeamlineStatePill,
-)
+from bec_widgets.widgets.services.beamline_states.beamline_state_manager import BeamlineStateManager
+from bec_widgets.widgets.services.beamline_states.beamline_state_pill import BeamlineStatePill
 from bec_widgets.widgets.services.beamline_states.dialogs import AddBeamlineStateDialog
 
 from .client_mocks import mocked_client
@@ -504,7 +503,7 @@ def test_beamline_state_manager_filters_devices(qtbot, mocked_client, monkeypatc
         def exec(self):
             return 0
 
-    monkeypatch.setattr(pill_module, "DeviceFilterDialog", FakeDeviceFilterDialog)
+    monkeypatch.setattr(manager_module, "DeviceFilterDialog", FakeDeviceFilterDialog)
 
     beamline_state_manager.open_device_filter_dialog()
 
