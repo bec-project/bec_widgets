@@ -730,6 +730,12 @@ class BeamlineStateManager(RPCBase):
         """
 
     @rpc_call
+    def collapse_all(self) -> "None":
+        """
+        Collapse the settings panel of all displayed state pills.
+        """
+
+    @rpc_call
     def state_summary(self) -> "dict[str, dict[str, str]]":
         """
         Return the displayed beamline states with their current status and label.

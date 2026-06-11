@@ -410,7 +410,14 @@ class BeamlineStatePill(BECWidget, QWidget):
         return self._expanded
 
     def set_expanded(self, expanded: bool) -> None:
-        """Set the editable settings panel expanded state."""
+        """
+        Set the editable settings panel expanded state.
+
+        The settings form is built on demand when the panel expands and released again on
+        collapse, so collapsed pills do not keep live device/signal widgets and their BEC
+        subscriptions around. Unsaved edits are discarded on collapse.
+        """
+
         expanded = bool(expanded)
         if expanded == self._expanded:
             return
@@ -418,6 +425,8 @@ class BeamlineStatePill(BECWidget, QWidget):
             self._ensure_settings_form_current()
         self._expanded = expanded
         self._settings.setVisible(expanded)
+        if not expanded:
+            self._release_config_form()
         self._apply_visual_state()
         self.row_height_changed.emit()
 
@@ -437,6 +446,18 @@ class BeamlineStatePill(BECWidget, QWidget):
             self._populate_settings()
             self.mark_current_settings_clean()
         return self._ensure_config_form()
+
+    def _release_config_form(self) -> None:
+        if self._config_form is None:
+            return
+        self._config_form_host.removeWidget(self._config_form)
+        self._config_form.cleanup()
+        self._config_form.setParent(None)
+        self._config_form.deleteLater()
+        self._config_form = None
+        self._settings_baseline = {}
+        self._settings_form_stale = True
+        self._update_settings_dirty_state()
 
     def _populate_settings(self) -> None:
         self._populating_settings = True
