@@ -45,6 +45,18 @@ jobs:
           cd ./bec
           pip install pytest pytest-random-order
           pytest -v --maxfail=2 --junitxml=report.xml --random-order ./bec_server/tests ./bec_ipython_client/tests/client_tests ./bec_lib/tests
+
+      - name: Upload BEC unit test artifacts if job fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bec-unit-test-artifacts
+          path: |
+            ./bec/report.xml
+            ./bec/logs/*.log
+          if-no-files-found: ignore
+          retention-days: 7
+
   bec-e2e-test:
     name: BEC End2End Tests
     runs-on: ubuntu-latest
@@ -62,3 +74,12 @@ jobs:
           OPHYD_DEVICES_BRANCH: ${{ inputs.OPHYD_DEVICES_BRANCH }}
           BEC_WIDGETS_BRANCH: ${{ inputs.BEC_WIDGETS_BRANCH }}
           PYTHON_VERSION: '3.11'
+
+      - name: Upload BEC e2e logs if job fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bec-e2e-test-logs
+          path: ./_e2e_test_checkout_/bec/logs/*.log
+          if-no-files-found: ignore
+          retention-days: 7
