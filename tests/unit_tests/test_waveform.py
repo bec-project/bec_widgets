@@ -1642,3 +1642,48 @@ def test_history_curve_scan_not_found_returns_none(qtbot, mocked_client):
     # No history scans injected for this widget
     c = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="unknown_scan")
     assert c is None
+
+
+def test_categorise_device_curves_monitored_device_with_async_signal(qtbot, mocked_client):
+    """Device listed under 'monitored'
+    readout priority may expose an asynchronous signal; the curve must be
+    classified by the signal class, not the parent device's readout priority."""
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    dummy_scan = create_dummy_scan_item()
+    wf.scan_item = dummy_scan
+
+    # bpm4i is listed under 'monitored' in the dummy scan; give it an
+    # additional async signal, as a mixed device would have.
+    device = mocked_client.device_manager.devices["bpm4i"]
+    device.signals["bpm4i_stream"] = {"value": 0.0}
+    device._info["signals"]["bpm4i_stream"] = {
+        "kind_str": "hinted",
+        "component_name": "bpm4i_stream",
+        "obj_name": "bpm4i_stream",
+        "signal_class": "AsyncSignal",
+    }
+
+    c_sync = wf.plot(arg1="bpm4i", label="sync-curve")
+    c_async = wf.plot(device_y="bpm4i", signal_y="bpm4i_stream", label="async-curve")
+
+    mode = wf._categorise_device_curves()
+
+    assert mode == "mixed"
+    assert c_sync in wf._sync_curves
+    assert c_async in wf._async_curves
+
+
+def test_categorise_device_curves_falls_back_to_readout_priority(qtbot, mocked_client):
+    """When no signal info is available (e.g. history data for a removed
+    device), classification falls back to the scan's readout-priority lists."""
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    dummy_scan = create_dummy_scan_item()
+    wf.scan_item = dummy_scan
+
+    c_async = wf.plot(arg1="async_device", label="fallback-curve")
+    # Simulate the device's signal info being unavailable.
+    mocked_client.device_manager.devices["async_device"]._info = {}
+
+    wf._categorise_device_curves()
+
+    assert c_async in wf._async_curves

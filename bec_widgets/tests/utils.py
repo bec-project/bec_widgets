@@ -11,7 +11,13 @@ from bec_lib.devicemanager import DeviceContainer
 class FakeDevice(BECDevice):
     """Fake minimal positioner class for testing."""
 
-    def __init__(self, name, enabled=True, readout_priority=ReadoutPriority.MONITORED):
+    def __init__(
+        self,
+        name,
+        enabled=True,
+        readout_priority=ReadoutPriority.MONITORED,
+        signal_class: str | None = None,
+    ):
         super().__init__(name=name)
         self._enabled = enabled
         self.signals = {self.name: {"value": 1.0}}
@@ -26,13 +32,15 @@ class FakeDevice(BECDevice):
             "readOnly": False,
             "name": self.name,
         }
+        if signal_class is None:
+            signal_class = "AsyncSignal" if readout_priority == ReadoutPriority.ASYNC else "Signal"
         self._info = {
             "signals": {
                 self.name: {
                     "kind_str": "hinted",
                     "component_name": self.name,
                     "obj_name": self.name,
-                    "signal_class": "Signal",
+                    "signal_class": signal_class,
                 }
             }
         }
