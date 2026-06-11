@@ -1,7 +1,7 @@
-name: 'Close stale issues and PRs'
+name: "Close stale issues and PRs"
 on:
   schedule:
-    - cron: '00 10 * * *'
+    - cron: "00 10 * * *"
   workflow_dispatch:
 
 jobs:
@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/stale@v9
         with:
-          stale-issue-message: 'This issue is stale because it has been open 120 days with no activity. Remove stale label or comment or this will be closed in 14 days.'
-          stale-pr-message: 'This PR is stale because it has been open 120 days with no activity. Remove stale label or comment or this will be closed in 14 days.'
+          stale-issue-message: "This issue is stale because it has been open 120 days with no activity."
+          stale-pr-message: "This PR is stale because it has been open 120 days with no activity."
           days-before-stale: 120
-          days-before-close: 14
+          days-before-close: -1
