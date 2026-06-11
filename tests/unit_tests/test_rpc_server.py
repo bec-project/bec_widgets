@@ -297,3 +297,45 @@ def test_run_rpc_delegates_to_rpc_content_class(rpc_server):
     assert rpc_server.run_rpc(view, "mode", [], {}) == "initial"
     assert rpc_server.run_rpc(view, "mode", ["creator"], {}) is None
     assert view.content.mode == "creator"
+
+
+def test_rpc_server_shutdown_releases_registrations(mocked_client):
+    """Regression test for BW-008/BW-009: shutdown must disconnect the
+    gui_instructions dispatcher slot and remove the registry callback so a
+    restarted server does not duplicate registrations and the old server can
+    be collected."""
+    from bec_widgets.utils.rpc_register import RPCRegister
+
+    register = RPCRegister()
+    callbacks_before = len(register.callbacks)
+
+    server = RPCServer(gui_id="lifecycle_gui", client=mocked_client)
+    assert len(register.callbacks) == callbacks_before + 1
+
+    dispatcher_slots_with_topic = [
+        slot
+        for slot in server.dispatcher._registered_slots.values()
+        if any("lifecycle_gui" in topic for topic in slot.topics)
+    ]
+    assert len(dispatcher_slots_with_topic) == 1
+
+    server.shutdown()
+
+    assert len(register.callbacks) == callbacks_before
+    dispatcher_slots_with_topic = [
+        slot
+        for slot in server.dispatcher._registered_slots.values()
+        if any("lifecycle_gui" in topic for topic in slot.topics)
+    ]
+    assert dispatcher_slots_with_topic == []
+
+    # Shutdown must be idempotent.
+    server.shutdown()
+    assert len(register.callbacks) == callbacks_before
+
+
+def test_rpc_register_remove_callback_is_noop_for_unknown(rpc_register=None):
+    from bec_widgets.utils.rpc_register import RPCRegister
+
+    register = RPCRegister()
+    register.remove_callback(lambda connections: None)  # must not raise

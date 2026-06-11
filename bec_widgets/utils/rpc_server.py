@@ -105,7 +105,6 @@ class RPCServer:
         self._heartbeat_timer = QTimer()
         self._heartbeat_timer.timeout.connect(self.emit_heartbeat)
         self._heartbeat_timer.start(200)
-        self._registry_update_callbacks = []
         self._broadcasted_data = {}
         self._rpc_singleshot_repeats: dict[str, SingleshotRPCRepeat] = {}
 
@@ -529,21 +528,18 @@ class RPCServer:
             "__rpc__": getattr(connector, "rpc_exposed", True),
         }
 
-    # Suppose clients register callbacks to receive updates
-    def add_registry_update_callback(self, cb: Callable) -> None:
+    def shutdown(self):
         """
-        Add a callback to be called whenever the registry is updated.
-        The specified callback is called whenever the registry is updated.
-
-        Args:
-            cb (Callable): The callback to be added. It should accept a dictionary of all the
-            registered RPC objects as an argument.
+        Shut the RPC server down: stop the heartbeat, release the dispatcher
+        subscription and the registry callback, and shut the client down.
+        Safe to call multiple times.
         """
-        self._registry_update_callbacks.append(cb)
-
-    def shutdown(self):  # TODO not sure if needed when cleanup is done at level of BECConnector
         self.status = messages.BECStatus.IDLE
         self._heartbeat_timer.stop()
         self.emit_heartbeat()
+        self.dispatcher.disconnect_slot(
+            self.on_rpc_update, MessageEndpoints.gui_instructions(self.gui_id)
+        )
+        self.rpc_register.remove_callback(self.broadcast_registry_update)
         logger.info("Succeeded in shutting down CLI server")
         self.client.shutdown()
