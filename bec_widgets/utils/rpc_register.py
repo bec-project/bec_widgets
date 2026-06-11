@@ -178,6 +178,19 @@ class RPCRegister:
         """
         self.callbacks.append(callback)
 
+    def remove_callback(self, callback: Callable[[dict], None]):
+        """
+        Remove a previously added registry-update callback. Removing a callback
+        that is not registered is a no-op.
+
+        Args:
+            callback(Callable[[dict], None]): The callback to be removed.
+        """
+        try:
+            self.callbacks.remove(callback)
+        except ValueError:
+            pass
+
     @classmethod
     def reset_singleton(cls):
         """
