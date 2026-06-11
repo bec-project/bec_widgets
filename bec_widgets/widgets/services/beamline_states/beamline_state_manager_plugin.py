@@ -5,7 +5,7 @@ from qtpy.QtDesigner import QDesignerCustomWidgetInterface
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.bec_designer import designer_material_icon
-from bec_widgets.widgets.services.beamline_states.beamline_state_pill import BeamlineStateManager
+from bec_widgets.widgets.services.beamline_states.beamline_state_manager import BeamlineStateManager
 
 DOM_XML = """
 <ui language='c++'>

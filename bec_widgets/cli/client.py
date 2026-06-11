@@ -721,20 +721,7 @@ class BaseROI(RPCBase):
 class BeamlineStateManager(RPCBase):
     """Widget displaying and managing all BEC beamline states."""
 
-    _IMPORT_MODULE = "bec_widgets.widgets.services.beamline_states.beamline_state_pill"
-
-    @property
-    @rpc_call
-    def idle_card_background(self) -> "bool":
-        """
-        Whether idle collapsed pills keep the status-tinted card background.
-        """
-
-    @rpc_call
-    def set_idle_card_background(self, enabled: "bool") -> "None":
-        """
-        Set whether idle collapsed pills keep the status-tinted card background.
-        """
+    _IMPORT_MODULE = "bec_widgets.widgets.services.beamline_states.beamline_state_manager"
 
     @rpc_call
     def clear_filters(self) -> "None":
