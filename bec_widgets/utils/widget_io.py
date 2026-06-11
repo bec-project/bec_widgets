@@ -208,6 +208,14 @@ class WidgetIO:
         QSlider: SlideHandler,
     }
 
+    @classmethod
+    def register_handler(cls, widget_class: type[QWidget], handler: type[WidgetHandler]) -> None:
+        """
+        Register a handler for a widget class. Widget modules that cannot be imported here
+        (e.g. to avoid circular imports) register their handlers on import.
+        """
+        cls._handlers[widget_class] = handler
+
     @staticmethod
     def get_value(widget, ignore_errors=False, **kwargs):
         """

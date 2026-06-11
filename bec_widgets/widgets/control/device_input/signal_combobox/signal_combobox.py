@@ -18,6 +18,7 @@ from bec_widgets.utils.filter_io import (
     signal_items_for_kind,
 )
 from bec_widgets.utils.ophyd_kind_util import Kind
+from bec_widgets.utils.widget_io import SignalComboBoxHandler, WidgetIO
 
 logger = bec_logger.logger
 
@@ -468,7 +469,8 @@ class SignalComboBox(BECWidget, QComboBox):
             True if an enabled item was found and selected.
         """
         for index in range(self.count()):
-            if self._item_is_enabled(index):
+            item = self.model().item(index)
+            if item is not None and item.isEnabled():
                 self.setCurrentIndex(index)
                 return True
         return False
@@ -649,37 +651,15 @@ class SignalComboBox(BECWidget, QComboBox):
         if self._config_signals:
             index = offset + len(self._hinted_signals) + len(self._normal_signals)
             self.insertItem(index, "Config Signals")
-            self._set_item_enabled(index, False)
+            self.model().item(index).setEnabled(False)
         if self._normal_signals:
             index = offset + len(self._hinted_signals)
             self.insertItem(index, "Normal Signals")
-            self._set_item_enabled(index, False)
+            self.model().item(index).setEnabled(False)
         if self._hinted_signals:
             index = offset
             self.insertItem(index, "Hinted Signals")
-            self._set_item_enabled(index, False)
-
-    def _standard_item(self, index: int):
-        model = self.model()
-        item_getter = getattr(model, "item", None)
-        if callable(item_getter):
-            return item_getter(index)
-        return None
-
-    def _item_is_enabled(self, index: int) -> bool:
-        item = self._standard_item(index)
-        if item is not None:
-            return item.isEnabled()
-
-        model_index = self.model().index(index, self.modelColumn())
-        if not model_index.isValid():
-            return True
-        return bool(self.model().flags(model_index) & Qt.ItemFlag.ItemIsEnabled)
-
-    def _set_item_enabled(self, index: int, enabled: bool) -> None:
-        item = self._standard_item(index)
-        if item is not None:
-            item.setEnabled(enabled)
+            self.model().item(index).setEnabled(False)
 
     def _display_text_for_signal(self, signal: str) -> str | None:
         for entry in self._signals:
@@ -709,6 +689,9 @@ class SignalComboBox(BECWidget, QComboBox):
             if isinstance(signal_info, dict) and self._signal_info_matches(signal_info, signal):
                 return item_index
         return -1
+
+
+WidgetIO.register_handler(SignalComboBox, SignalComboBoxHandler)
 
 
 if __name__ == "__main__":  # pragma: no cover
