@@ -198,9 +198,9 @@ class PropertyEditor(QWidget):
                     continue
                 if terr_int < 0:
                     continue
-                text = QLocale.countryToString(QLocale.Country(terr_int))
+                text = QLocale.territoryToString(QLocale.Country(terr_int))
                 country_combo.addItem(text, terr_int)
-            cur_country = self._enum_int(loc.country())
+            cur_country = self._enum_int(loc.territory())
             idx = country_combo.findData(cur_country)
             if idx >= 0:
                 country_combo.setCurrentIndex(idx)
