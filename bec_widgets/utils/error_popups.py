@@ -192,37 +192,22 @@ def SafeProperty(
     return decorator
 
 
-def _safe_connect_slot(weak_instance, weak_slot, *connect_args):
-    """Internal function used by SafeConnect to handle weak references to slots."""
-    instance = weak_instance()
-    slot_func = weak_slot()
-
-    # Check if the python object has already been garbage collected
-    if instance is None or slot_func is None:
-        return
-
-    # Check if the python object has already been marked for deletion
-    if getattr(instance, "_destroyed", False):
-        return
-
-    # Check if the C++ object is still valid
-    if not shiboken6.isValid(instance):
-        return
-
-    if connect_args:
-        slot_func(*connect_args)
-    slot_func()
-
-
 def SafeConnect(instance, signal, slot):  # pylint: disable=invalid-name
     """
     Method to safely handle Qt signal-slot connections. The python object is only forwarded
-    as a weak reference to avoid stale objects.
+    as a weak reference to avoid stale objects. Once the instance or slot has been garbage
+    collected, marked as destroyed, or its C++ object deleted, the connection removes itself
+    from the signal on the next emission, so long-lived signals (e.g. theme_changed) do not
+    accumulate dead wrappers.
 
     Args:
         instance: The instance to connect.
         signal: The signal to connect to.
         slot: The slot to connect.
+
+    Returns:
+        Callable: The wrapper connected to the signal. It can be passed to
+            ``signal.disconnect`` for explicit early disconnection.
 
     Example:
         >>> SafeConnect(self, qapp.theme.theme_changed, self._update_theme)
@@ -231,11 +216,29 @@ def SafeConnect(instance, signal, slot):  # pylint: disable=invalid-name
     weak_instance = safe_ref(instance)
     weak_slot = safe_ref(slot)
 
-    # Create a partial function that will check weak references before calling the actual slot
-    safe_slot = functools.partial(_safe_connect_slot, weak_instance, weak_slot)
+    def safe_slot(*connect_args):
+        instance_ = weak_instance()
+        slot_func = weak_slot()
 
-    # Connect the signal to the safe connect slot wrapper
-    return signal.connect(safe_slot)
+        # Instance or slot garbage collected, instance cleaned up, or C++ side
+        # deleted: remove this stale connection from the signal.
+        if (
+            instance_ is None
+            or slot_func is None
+            or getattr(instance_, "_destroyed", False)
+            or not shiboken6.isValid(instance_)
+        ):
+            try:
+                signal.disconnect(safe_slot)
+            except (RuntimeError, TypeError):
+                # Signal owner already gone or connection already removed.
+                pass
+            return
+
+        slot_func(*connect_args)
+
+    signal.connect(safe_slot)
+    return safe_slot
 
 
 def SafeSlot(*slot_args, **slot_kwargs):  # pylint: disable=invalid-name
@@ -268,9 +271,11 @@ def SafeSlot(*slot_args, **slot_kwargs):  # pylint: disable=invalid-name
         def wrapper(*args, **kwargs):
 
             _override_slot_params = kwargs.pop("_override_slot_params", {})
-            _slot_params.update(_override_slot_params)
+            # Merge into a per-call copy: an override must apply to this call
+            # only, not permanently mutate the decorator's defaults.
+            call_params = {**_slot_params, **_override_slot_params}
             try:
-                if not _slot_params["verify_sender"] or len(args) == 0:
+                if not call_params["verify_sender"] or len(args) == 0:
                     return method(*args, **kwargs)
 
                 _instance = args[0]
@@ -288,10 +293,10 @@ def SafeSlot(*slot_args, **slot_kwargs):  # pylint: disable=invalid-name
             except Exception:
                 slot_name = f"{method.__module__}.{method.__qualname__}"
                 error_msg = traceback.format_exc()
-                if _slot_params["popup_error"]:
+                if call_params["popup_error"]:
                     ErrorPopupUtility().custom_exception_hook(*sys.exc_info(), popup_error=True)
                 logger.error(f"SafeSlot error in slot '{slot_name}':\n{error_msg}")
-                if _slot_params["raise_error"]:
+                if call_params["raise_error"]:
                     raise
 
         return wrapper
