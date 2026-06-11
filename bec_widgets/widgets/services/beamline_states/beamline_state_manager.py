@@ -3,10 +3,9 @@ from __future__ import annotations
 import sys
 from typing import Any
 
-from bec_lib import bl_states
+from bec_lib import bl_states, messages
 from bec_lib.endpoints import MessageEndpoints
 from bec_qthemes import material_icon
-from pydantic import BaseModel
 from qtpy.QtCore import QAbstractListModel, QModelIndex, QSize, Qt
 from qtpy.QtWidgets import (
     QAbstractItemView,
@@ -48,7 +47,7 @@ class _BeamlineStateListModel(QAbstractListModel):
         super().__init__(parent)
         self._state_order: list[str] = []
         self._state_rows: dict[str, int] = {}
-        self._state_configs: dict[str, dict[str, Any]] = {}
+        self._state_configs: dict[str, messages.BeamlineStateConfig] = {}
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:  # noqa: N802
         return 0 if parent.isValid() else len(self._state_order)
@@ -60,7 +59,7 @@ class _BeamlineStateListModel(QAbstractListModel):
         if role in (Qt.ItemDataRole.DisplayRole, self.NameRole):
             return name
         if role == self.ConfigRole:
-            return self._state_configs.get(name, {})
+            return self._state_configs.get(name)
         return None
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
@@ -68,9 +67,9 @@ class _BeamlineStateListModel(QAbstractListModel):
             return Qt.ItemFlag.NoItemFlags
         return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
 
-    def set_states(self, state_configs: list[dict[str, Any]]) -> None:
-        new_order = [str(state["name"]) for state in state_configs if state.get("name")]
-        new_configs = {str(state["name"]): state for state in state_configs if state.get("name")}
+    def set_states(self, state_configs: list[messages.BeamlineStateConfig]) -> None:
+        new_order = [state.name for state in state_configs]
+        new_configs = {state.name: state for state in state_configs}
 
         for row in reversed(
             [row for row, name in enumerate(self._state_order) if name not in new_configs]
@@ -129,11 +128,8 @@ class _BeamlineStatePillDelegate(QStyledItemDelegate):
         self, parent: QWidget, _option: QStyleOptionViewItem, index: QModelIndex
     ) -> QWidget:
         name = index.data(_BeamlineStateListModel.NameRole)
-        state_config = index.data(_BeamlineStateListModel.ConfigRole) or {}
-        title = state_config.get("title") or name
-        pill = BeamlineStatePill(
-            parent=parent, state_name=name, title=title, client=self._manager.client
-        )
+        state_config = index.data(_BeamlineStateListModel.ConfigRole)
+        pill = BeamlineStatePill(parent=parent, state_name=name, client=self._manager.client)
         pill.idle_card_background = self._manager.idle_card_background
         pill.set_state_config(state_config)
         pill.state_changed.connect(self._manager._on_pill_state_changed)
@@ -147,9 +143,8 @@ class _BeamlineStatePillDelegate(QStyledItemDelegate):
         if not isinstance(editor, BeamlineStatePill):
             return
         name = index.data(_BeamlineStateListModel.NameRole)
-        state_config = index.data(_BeamlineStateListModel.ConfigRole) or {}
-        title = state_config.get("title") or name
-        editor.set_state_name(str(name), title=str(title))
+        state_config = index.data(_BeamlineStateListModel.ConfigRole)
+        editor.set_state_name(str(name))
         editor.idle_card_background = self._manager.idle_card_background
         editor.set_state_config(state_config)
 
@@ -229,7 +224,7 @@ class BeamlineStateManager(BECWidget, QWidget):
         )
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._state_pills: dict[str, BeamlineStatePill] = {}
-        self._state_configs: dict[str, dict[str, Any]] = {}
+        self._state_configs: dict[str, messages.BeamlineStateConfig] = {}
         self._state_order: list[str] = []
         self._selected_statuses: set[str] | None = None
         self._selected_devices: set[str] | None = None
@@ -414,14 +409,12 @@ class BeamlineStateManager(BECWidget, QWidget):
     ) -> None:
         """Update the displayed pills from ``AvailableBeamlineStatesMessage`` content."""
         expanded_names = {name for name, pill in self._state_pills.items() if pill.is_expanded()}
-        states = content.get("states", [])
-        state_configs = [self._state_config_to_dict(state) for state in states]
-        state_configs = [state for state in state_configs if state.get("name")]
+        state_configs: list[messages.BeamlineStateConfig] = content.get("states", [])
         if state_configs == list(self._state_configs.values()):
             self._apply_filters()
             return
-        self._state_configs = {str(state["name"]): state for state in state_configs}
-        self._state_order = [str(state["name"]) for state in state_configs]
+        self._state_configs = {state.name: state for state in state_configs}
+        self._state_order = [state.name for state in state_configs]
         self._model.set_states(state_configs)
         self._open_persistent_editors(expanded_names)
         self._apply_filters()
@@ -472,7 +465,7 @@ class BeamlineStateManager(BECWidget, QWidget):
         ):
             return False
 
-        device = self._state_device(self._state_configs.get(name, {}))
+        device = self._state_device(self._state_configs.get(name))
         if self._selected_devices is not None and device not in self._selected_devices:
             return False
 
@@ -505,14 +498,13 @@ class BeamlineStateManager(BECWidget, QWidget):
             )
             return
         try:
-            parameters = config.model_dump(exclude={"name"})
-            state_client.update_parameters(**parameters)
+            state_client.update_parameters(**config.model_dump(exclude={"name"}))
         except Exception as exc:
             QMessageBox.warning(self, "Cannot Update State", str(exc))
             return
         pill = self._state_pills.get(state_name)
         if pill is not None:
-            pill.mark_current_settings_clean(config)
+            pill.mark_current_settings_clean()
 
     @SafeSlot(str)
     def _remove_state_requested(self, state_name: str) -> None:
@@ -551,26 +543,9 @@ class BeamlineStateManager(BECWidget, QWidget):
         )
 
     @staticmethod
-    def _state_device(state: dict[str, Any]) -> str | None:
-        parameters = state.get("parameters")
-        if isinstance(parameters, dict):
-            device = parameters.get("device")
-        else:
-            device = state.get("device")
+    def _state_device(state: messages.BeamlineStateConfig | None) -> str | None:
+        device = state.parameters.get("device") if state is not None else None
         return str(device) if device else None
-
-    @staticmethod
-    def _state_config_to_dict(state: dict[str, Any] | BaseModel) -> dict[str, Any]:
-        if isinstance(state, dict):
-            return state
-        state_dict = state.model_dump()
-        state_type = getattr(state, "state_type", None)
-        if state_type is not None:
-            state_dict.setdefault("state_type", state_type)
-        title = getattr(state, "title", None)
-        if title is not None and not state_dict.get("title"):
-            state_dict["title"] = title
-        return state_dict
 
     def cleanup(self) -> None:
         self.bec_dispatcher.disconnect_slot(

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from bec_lib import bl_states
+from bec_lib import bl_states, messages
 from bec_lib.endpoints import MessageEndpoints
 from bec_qthemes import material_icon
 from qtpy.QtCore import Qt, Signal
@@ -76,7 +76,6 @@ class BeamlineStatePill(BECWidget, QWidget):
         self,
         parent: QWidget | None = None,
         state_name: str | None = None,
-        title: str | None = None,
         client=None,
         config: ConnectionConfig | None = None,
         gui_id: str | None = None,
@@ -89,8 +88,7 @@ class BeamlineStatePill(BECWidget, QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         self._state_name: str | None = None
-        self._title: str | None = None
-        self._state_config: dict[str, Any] = {}
+        self._state_config: messages.BeamlineStateConfig | None = None
         self._status = "unknown"
         self._label = "No state information available."
         self._expanded = False
@@ -100,9 +98,9 @@ class BeamlineStatePill(BECWidget, QWidget):
         self._settings_dirty_fields: set[str] = set()
         self._settings_form_stale = True
 
-        self._init_ui(state_name, title)
+        self._init_ui(state_name)
 
-    def _init_ui(self, state_name: str | None = None, title: str | None = None) -> None:
+    def _init_ui(self, state_name: str | None = None) -> None:
         self._shadow = QGraphicsDropShadowEffect(self)
         self._shadow.setBlurRadius(18)
         self._shadow.setOffset(0, 2)
@@ -212,7 +210,7 @@ class BeamlineStatePill(BECWidget, QWidget):
         self.setLayout(layout)
 
         self._settings.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-        self.set_state_name(state_name, title=title)
+        self.set_state_name(state_name)
         self._update_button.setEnabled(False)
         self._revert_button.setEnabled(False)
 
@@ -225,15 +223,14 @@ class BeamlineStatePill(BECWidget, QWidget):
     def state_name(self, state_name: str | None) -> None:
         self.set_state_name(state_name)
 
-    def set_state_name(self, state_name: str | None, title: str | None = None) -> None:
+    def set_state_name(self, state_name: str | None) -> None:
         """
         Set the BEC beamline state this pill displays.
 
         Args:
             state_name: State name as published by ``AvailableBeamlineStatesMessage``.
-            title: Optional human-readable title for the state.
         """
-        if state_name == self._state_name and title == self._title:
+        if state_name == self._state_name:
             return
 
         if self._state_name is not None:
@@ -242,8 +239,7 @@ class BeamlineStatePill(BECWidget, QWidget):
             )
 
         self._state_name = state_name
-        self._title = title
-        self._name_label.setText(title or state_name or "Beamline state")
+        self._name_label.setText(state_name or "Beamline state")
 
         if self._state_name is None:
             self._set_visual_state("unknown", "No beamline state selected.")
@@ -255,13 +251,13 @@ class BeamlineStatePill(BECWidget, QWidget):
             self.update_state, MessageEndpoints.beamline_state(self._state_name)
         )
 
-    def set_state_config(self, state_config: dict[str, Any]) -> None:
+    def set_state_config(self, state_config: messages.BeamlineStateConfig | None) -> None:
         """Set the editable BEC state configuration displayed by the expanded panel."""
         self._state_config = state_config
         self._settings_form_stale = True
         if self._config_form is not None:
             self._populate_settings()
-            self._mark_settings_clean_from_current()
+            self.mark_current_settings_clean()
 
     @SafeProperty(bool, default=False)
     def idle_card_background(self) -> bool:
@@ -439,13 +435,13 @@ class BeamlineStatePill(BECWidget, QWidget):
     def _ensure_settings_form_current(self) -> PydanticWidgetForm:
         if self._settings_form_stale:
             self._populate_settings()
-            self._mark_settings_clean_from_current()
+            self.mark_current_settings_clean()
         return self._ensure_config_form()
 
     def _populate_settings(self) -> None:
         self._populating_settings = True
         try:
-            state_type = str(self._state_config.get("state_type") or "")
+            state_type = self._state_config.state_type if self._state_config is not None else ""
             config_class = None
             for state_class in SUPPORTED_BEAMLINE_STATES:
                 if state_type in {state_class.__name__, state_class.CONFIG_CLASS.state_type}:
@@ -468,25 +464,8 @@ class BeamlineStatePill(BECWidget, QWidget):
         config = self._ensure_settings_form_current().model_instance()
         return config  # type: ignore[return-value]
 
-    def mark_current_settings_clean(
-        self, config: bl_states.BeamlineStateConfig | None = None
-    ) -> None:
+    def mark_current_settings_clean(self) -> None:
         """Mark the current editor values as saved."""
-        if config is None:
-            parameters = self._ensure_config_form().raw_editable_data()
-        else:
-            parameters = config.model_dump(exclude={"name"})
-        if self._state_config:
-            state_parameters = self._state_config.get("parameters")
-            if isinstance(state_parameters, dict):
-                state_parameters.update(parameters)
-            else:
-                self._state_config.update(parameters)
-            if "title" in parameters:
-                self._state_config["title"] = parameters["title"]
-        self._mark_settings_clean_from_current()
-
-    def _mark_settings_clean_from_current(self) -> None:
         config_form = self._ensure_config_form()
         self._settings_baseline = config_form.raw_editable_data()
         config_form.mark_clean()
@@ -561,15 +540,12 @@ class BeamlineStatePill(BECWidget, QWidget):
         self, config_class: type[bl_states.BeamlineStateConfig]
     ) -> dict[str, Any]:
         data: dict[str, Any] = {}
-        parameters = self._state_config.get("parameters")
-        parameter_values = parameters if isinstance(parameters, dict) else {}
+        parameters = self._state_config.parameters if self._state_config is not None else {}
         for name in config_class.model_fields:
             if name == "name":
                 data[name] = self._state_name
-            elif name in parameter_values:
-                data[name] = parameter_values[name]
-            elif name in self._state_config:
-                data[name] = self._state_config[name]
+            elif name in parameters:
+                data[name] = parameters[name]
         return data
 
     @staticmethod
