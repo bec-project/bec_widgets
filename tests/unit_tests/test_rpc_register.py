@@ -130,3 +130,62 @@ def test_callback_does_not_keep_owner_alive(rpc_register):
 
     rpc_register.broadcast()  # must not raise; prunes the dead reference
     assert len(rpc_register.callbacks) == callbacks_with_owner - 1
+
+
+def test_broadcast_skips_when_registry_unchanged(rpc_register):
+    """Perf regression test (audit item 24): the RPC execution path
+    broadcasts after every call; an unchanged registry must not be
+    re-serialized and callbacks must not be re-invoked."""
+    owner = _CallbackOwner()
+    rpc_register.add_callback(owner.on_update)
+
+    rpc_register.broadcast()  # pending after add_callback -> delivers
+    assert len(owner.received) == 1
+
+    rpc_register.broadcast()  # nothing changed -> skipped
+    rpc_register.broadcast()
+    assert len(owner.received) == 1
+
+    class _Probe:
+        gui_id = "pending_probe"
+        object_name = "pending_probe"
+
+    import gc
+
+    probe = _Probe()
+    try:
+        rpc_register.add_rpc(probe)  # mutation -> delivered
+        assert len(owner.received) == 2
+        rpc_register.broadcast()  # clean again -> skipped
+        assert len(owner.received) == 2
+    finally:
+        rpc_register.remove_rpc(probe)
+        gc.collect()
+
+
+def test_broadcast_without_callbacks_skips_registry_walk(rpc_register, monkeypatch):
+    """With no listeners, a pending broadcast must not walk/serialize the registry,
+    and the broadcast stays pending so the first callback added later receives it."""
+    from unittest import mock
+
+    walk = mock.Mock(wraps=rpc_register.list_all_connections)
+    monkeypatch.setattr(rpc_register, "list_all_connections", walk)
+    # The test environment may carry ambient callbacks (e.g. the RPC server's);
+    # this test owns the no-listeners precondition.
+    monkeypatch.setattr(rpc_register, "callbacks", [])
+
+    rpc_register.mark_broadcast_pending()
+    rpc_register.broadcast()
+    walk.assert_not_called()
+
+    received = []
+
+    class _Owner:
+        def on_update(self, connections):
+            received.append(connections)
+
+    owner = _Owner()
+    rpc_register.add_callback(owner.on_update)
+    rpc_register.broadcast()
+    walk.assert_called_once()
+    assert len(received) == 1

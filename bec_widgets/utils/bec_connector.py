@@ -324,6 +324,8 @@ class BECConnector:
         super().setObjectName(name)
         self.object_name = name
         if self.rpc_register.object_is_registered(self):
+            # A rename changes the serialized registry state.
+            self.rpc_register.mark_broadcast_pending()
             self.rpc_register.broadcast()
 
     def submit_task(self, fn, *args, on_complete: SafeSlot = None, **kwargs) -> Worker:
