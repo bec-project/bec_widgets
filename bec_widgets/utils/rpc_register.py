@@ -7,6 +7,7 @@ from weakref import WeakValueDictionary
 
 import shiboken6 as shb
 from bec_lib.logger import bec_logger
+from louie.saferef import safe_ref
 from qtpy.QtCore import QObject
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -147,14 +148,33 @@ class RPCRegister:
 
     def broadcast(self):
         """
-        Broadcast the update to all the callbacks.
+        Broadcast the update to all the callbacks. Callbacks whose owners have
+        been garbage collected — or whose owning QObject's C++ side has been
+        destroyed while the Python wrapper is still referenced — are pruned
+        instead of being called.
         """
 
         if self._skip_broadcast:
             return
         connections = self.list_all_connections()
-        for callback in self.callbacks:
+        dead_refs = []
+        for callback_ref in list(self.callbacks):
+            callback = callback_ref()
+            if callback is None:
+                dead_refs.append(callback_ref)
+                continue
+            owner = getattr(callback, "__self__", None)
+            if isinstance(owner, QObject) and not shb.isValid(owner):
+                # Bound method of a destroyed widget (Python wrapper still alive,
+                # e.g. during shutdown): calling it would raise on any Qt access.
+                dead_refs.append(callback_ref)
+                continue
             callback(connections)
+        for ref in dead_refs:
+            try:
+                self.callbacks.remove(ref)
+            except ValueError:
+                pass
 
     def object_is_registered(self, obj: BECConnector) -> bool:
         """
@@ -172,22 +192,30 @@ class RPCRegister:
         """
         Add a callback that will be called whenever the registry is updated.
 
+        Callbacks are stored as weak references (safe for bound methods): the
+        register never keeps a callback's owner alive. Registering the same
+        callback twice is a no-op, so broadcasts are delivered exactly once
+        per registered callback.
+
         Args:
             callback(Callable[[dict], None]): The callback to be added. It should accept a dictionary of all the
             registered RPC objects as an argument.
         """
-        self.callbacks.append(callback)
+        callback_ref = safe_ref(callback)
+        if callback_ref not in self.callbacks:
+            self.callbacks.append(callback_ref)
 
     def remove_callback(self, callback: Callable[[dict], None]):
         """
         Remove a previously added registry-update callback. Removing a callback
-        that is not registered is a no-op.
+        that is not registered (or removing it twice) is a no-op.
 
         Args:
             callback(Callable[[dict], None]): The callback to be removed.
         """
+        callback_ref = safe_ref(callback)
         try:
-            self.callbacks.remove(callback)
+            self.callbacks.remove(callback_ref)
         except ValueError:
             pass
 

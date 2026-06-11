@@ -266,3 +266,14 @@ def test_main_label_point_size_uniform(bec_launch_window):
     """
     point_sizes = {tile.main_label.font().pointSize() for tile in bec_launch_window.tiles.values()}
     assert len(point_sizes) == 1, f"Non-uniform main-label point sizes: {point_sizes}"
+
+
+def test_launch_window_cleanup_deregisters_registry_callback(bec_launch_window):
+    """The turn-off-the-lights callback must not survive the launcher's cleanup:
+    a later registry broadcast would call into a dying window (shutdown scenario)."""
+    from louie.saferef import safe_ref
+
+    reg = bec_launch_window.register
+    assert safe_ref(bec_launch_window._turn_off_the_lights) in reg.callbacks
+    bec_launch_window.cleanup()
+    assert safe_ref(bec_launch_window._turn_off_the_lights) not in reg.callbacks
