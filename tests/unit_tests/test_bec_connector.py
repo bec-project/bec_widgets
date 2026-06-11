@@ -158,9 +158,12 @@ def test_bec_widget_cleanup_broadcasts_after_children_are_unregistered(mocked_cl
     qtbot.addWidget(parent)
 
     observed_connections = []
-    parent.rpc_register.callbacks.append(
-        lambda connections: observed_connections.append(set(connections))
-    )
+
+    # Keep a strong reference: registry callbacks are weakly referenced.
+    def _observe_connections(connections):
+        observed_connections.append(set(connections))
+
+    parent.rpc_register.add_callback(_observe_connections)
 
     parent.close()
 

@@ -282,7 +282,7 @@ class LaunchWindow(BECMainWindow):
         self._update_theme()
 
         self.register = RPCRegister()
-        self.register.callbacks.append(self._turn_off_the_lights)
+        self.register.add_callback(self._turn_off_the_lights)
         self.register.broadcast()
 
         if launch_gui_class and launch_gui_id:
@@ -721,6 +721,14 @@ class LaunchWindow(BECMainWindow):
         self.raise_()
         if self.app:
             self.app.setQuitOnLastWindowClosed(True)  # type: ignore
+
+    def cleanup(self):
+        """
+        Deregister the turn-off-the-lights callback before teardown so later
+        registry broadcasts never call into a dying launcher.
+        """
+        self.register.remove_callback(self._turn_off_the_lights)
+        super().cleanup()
 
     def closeEvent(self, event):
         """
