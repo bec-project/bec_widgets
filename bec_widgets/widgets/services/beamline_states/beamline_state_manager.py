@@ -208,7 +208,15 @@ class BeamlineStateManager(BECWidget, QWidget):
 
     PLUGIN = True
     ICON_NAME = "format_list_bulleted"
-    USER_ACCESS = ["clear_filters", "state_summary", "remove", "attach", "detach", "screenshot"]
+    USER_ACCESS = [
+        "clear_filters",
+        "collapse_all",
+        "state_summary",
+        "remove",
+        "attach",
+        "detach",
+        "screenshot",
+    ]
 
     def __init__(
         self,
@@ -294,22 +302,28 @@ class BeamlineStateManager(BECWidget, QWidget):
         clear_filters = MaterialIconAction(
             "filter_alt_off", "Clear beamline state filters", filled=True, parent=self
         )
+        collapse_all = MaterialIconAction(
+            "collapse_all", "Collapse all states", filled=True, parent=self
+        )
 
         add_state.action.triggered.connect(self.open_add_state_dialog)
         filter_states.action.triggered.connect(self.open_status_filter_dialog)
         filter_devices.action.triggered.connect(self.open_device_filter_dialog)
         clear_filters.action.triggered.connect(self.clear_filters)
+        collapse_all.action.triggered.connect(self.collapse_all)
 
         toolbar.components.add_safe("add_state", add_state)
         toolbar.components.add_safe("filter_states", filter_states)
         toolbar.components.add_safe("filter_devices", filter_devices)
         toolbar.components.add_safe("clear_filters", clear_filters)
+        toolbar.components.add_safe("collapse_all", collapse_all)
 
         bundle = ToolbarBundle("beamline_state_manager", toolbar.components)
         bundle.add_action("add_state")
         bundle.add_action("filter_states")
         bundle.add_action("filter_devices")
         bundle.add_action("clear_filters")
+        bundle.add_action("collapse_all")
         toolbar.add_bundle(bundle)
         toolbar.show_bundles(["beamline_state_manager"])
         return toolbar
@@ -382,13 +396,20 @@ class BeamlineStateManager(BECWidget, QWidget):
         self._hidden_expanded = False
         self._apply_filters()
 
+    @SafeSlot()
+    def collapse_all(self) -> None:
+        """Collapse the settings panel of all displayed state pills."""
+        for pill in self._state_pills.values():
+            pill.set_expanded(False)
+
     def state_summary(self) -> dict[str, dict[str, str]]:
         """
-        Return the displayed beamline states with their current status and label.
+        Return all beamline states (including filtered ones) with their current status and label.
 
         Returns:
             dict: Mapping of state name to a dictionary with ``status`` and ``label`` keys.
         """
+
         return {
             name: {"status": pill._status, "label": pill._label}
             for name, pill in self._state_pills.items()
