@@ -33,6 +33,7 @@ from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.side_panel import SidePanel
+from bec_widgets.utils.signal_classification import SignalCategory, classify_device_signal
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import MaterialIconAction
 from bec_widgets.widgets.dap.lmfit_dialog.lmfit_dialog import LMFitDialog
@@ -2308,21 +2309,26 @@ class Waveform(PlotBase):
         readout_priority_async = self._ensure_str_list(readout_priority.get("async", []))
         readout_priority_sync = self._ensure_str_list(readout_priority.get("monitored", []))
 
-        # Iterate over all curves
         for curve in self.curves:
             if curve.config.source != "device":
                 continue
             dev_name = curve.config.signal.device
-            if dev_name in readout_priority_async:
+            entry = curve.config.signal.signal
+            category = classify_device_signal(self.dev.get(dev_name), entry)
+            if category == SignalCategory.ASYNC or dev_name in readout_priority_async:
                 self._async_curves.append(curve)
                 if hasattr(self.scan_item, "live_data"):
                     self._setup_async_curve(curve)
                 found_async = True
-            elif dev_name in readout_priority_sync:
+            elif category == SignalCategory.SYNC or dev_name in readout_priority_sync:
                 self._sync_curves.append(curve)
                 found_sync = True
             else:
-                logger.warning("Device {dev_name} not found in readout priority list.")
+                logger.warning(
+                    f"Cannot classify signal {dev_name}.{entry}: no signal info and "
+                    "device not found in readout priority list."
+                )
+                continue
         # Determine the mode of the scan
         if found_async and found_sync:
             mode = "mixed"
