@@ -196,3 +196,83 @@ def test_safe_slot_emit(qtbot):
 
     test_obj.deleteLater()
     signal_obj.deleteLater()
+
+
+class _ArgSignalEmitter(QObject):
+    str_signal = Signal(str)
+    plain_signal = Signal()
+
+
+class _SafeConnectReceiver(QObject):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.calls = []
+
+    def on_value(self, value=None):
+        self.calls.append(value)
+
+
+def test_safe_connect_slot_called_once_per_emission(qtbot):
+    """Regression test for BW-003: a SafeConnect-ed slot must run exactly once
+    per emission, with the signal's payload."""
+    from bec_widgets.utils.error_popups import SafeConnect
+
+    emitter = _ArgSignalEmitter()
+    receiver = _SafeConnectReceiver()
+
+    SafeConnect(receiver, emitter.str_signal, receiver.on_value)
+    emitter.str_signal.emit("dark")
+    assert receiver.calls == ["dark"]
+
+    SafeConnect(receiver, emitter.plain_signal, receiver.on_value)
+    receiver.calls.clear()
+    emitter.plain_signal.emit()
+    assert receiver.calls == [None]
+
+    receiver.deleteLater()
+    emitter.deleteLater()
+
+
+def test_safe_connect_removes_stale_connection(qtbot):
+    """Regression test for BW-005: after the receiver dies, the next emission
+    must remove the wrapper from the signal instead of accumulating forever."""
+    import gc
+
+    from bec_widgets.utils.error_popups import SafeConnect
+
+    emitter = _ArgSignalEmitter()
+    receiver = _SafeConnectReceiver()
+    wrapper = SafeConnect(receiver, emitter.str_signal, receiver.on_value)
+
+    receiver.deleteLater()
+    qtbot.wait(10)
+    del receiver
+    gc.collect()
+
+    # First emission after death: wrapper detects the dead receiver and
+    # disconnects itself. A second disconnect attempt must then fail because
+    # the connection no longer exists.
+    emitter.str_signal.emit("after-death")
+    assert emitter.str_signal.disconnect(wrapper) is False
+
+    emitter.deleteLater()
+
+
+def test_safe_slot_override_params_apply_to_single_call():
+    """Regression test for BW-004: _override_slot_params must not permanently
+    mutate the decorator's defaults."""
+
+    class Raising(QObject):
+        @SafeSlot()
+        def boom(self):
+            raise ValueError("boom")
+
+    obj = Raising()
+
+    with pytest.raises(ValueError):
+        obj.boom(_override_slot_params={"raise_error": True})
+
+    # Default behavior (swallow + log) must be restored for the next call.
+    obj.boom()
+
+    obj.deleteLater()
