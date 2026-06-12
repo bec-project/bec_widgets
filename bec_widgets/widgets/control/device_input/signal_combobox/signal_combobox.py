@@ -18,7 +18,6 @@ from bec_widgets.utils.filter_io import (
     signal_items_for_kind,
 )
 from bec_widgets.utils.ophyd_kind_util import Kind
-from bec_widgets.utils.widget_io import SignalComboBoxHandler, WidgetIO
 
 logger = bec_logger.logger
 
@@ -689,9 +688,6 @@ class SignalComboBox(BECWidget, QComboBox):
             if isinstance(signal_info, dict) and self._signal_info_matches(signal_info, signal):
                 return item_index
         return -1
-
-
-WidgetIO.register_handler(SignalComboBox, SignalComboBoxHandler)
 
 
 if __name__ == "__main__":  # pragma: no cover
