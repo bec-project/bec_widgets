@@ -214,6 +214,28 @@ def test_pydantic_widget_form_plain_field_has_generated_label_and_no_tooltip(qtb
     assert form.field_widget("sample_name").toolTip() == ""
 
 
+def test_pydantic_model_input_configs_reads_bl_states_annotated_scan_arguments():
+    """Contract test: ScanArgument metadata attached via ``Annotated`` in bec_lib's beamline
+    state configs must reach the generated-form configuration."""
+    from bec_lib import bl_states
+
+    from bec_widgets.utils.forms_from_types.pydantic_model_info_adapter import (
+        pydantic_model_input_configs,
+    )
+
+    items = {
+        item["name"]: item
+        for item in pydantic_model_input_configs(bl_states.DeviceWithinLimitsState.CONFIG_CLASS)
+    }
+
+    assert items["name"]["display_name"] == "State name"
+    assert items["name"]["tooltip"]
+    assert items["device"]["display_name"] == "Device"
+    assert items["low_limit"]["reference_units"] == "device"
+    assert items["high_limit"]["reference_units"] == "device"
+    assert items["tolerance"]["reference_units"] == "device"
+
+
 def test_pydantic_widget_form_uses_scan_argument_metadata(qtbot, mocked_client):
     form = PydanticWidgetForm(GeneratedScanArgumentSchema, client=mocked_client)
     qtbot.addWidget(form)

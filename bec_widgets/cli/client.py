@@ -738,7 +738,7 @@ class BeamlineStateManager(RPCBase):
     @rpc_call
     def state_summary(self) -> "dict[str, dict[str, str]]":
         """
-        Return the displayed beamline states with their current status and label.
+        Return all beamline states (including filtered ones) with their current status and label.
 
         Returns:
             dict: Mapping of state name to a dictionary with ``status`` and ``label`` keys.
