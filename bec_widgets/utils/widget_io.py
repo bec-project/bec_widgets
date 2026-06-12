@@ -100,7 +100,7 @@ class ComboBoxHandler(WidgetHandler):
 
 
 class DeviceComboBoxHandler(ComboBoxHandler):
-    """Handler for BEC device comboboxes."""
+    """Handler for BEC device comboboxes. The widget value is the device name."""
 
     def get_value(self, widget, **kwargs) -> str:
         return widget.currentText().strip()
@@ -119,7 +119,7 @@ class DeviceComboBoxHandler(ComboBoxHandler):
 
 
 class SignalComboBoxHandler(ComboBoxHandler):
-    """Handler for BEC signal comboboxes."""
+    """Handler for BEC signal comboboxes. The widget value is the signal object name."""
 
     def get_value(self, widget, **kwargs) -> str | None:
         signal = widget.get_signal_name().strip()
@@ -246,14 +246,28 @@ class WidgetIO:
         ToggleSwitch: ToggleSwitchHandler,
         QSlider: SlideHandler,
     }
+    _deferred_handlers_registered = False
 
     @classmethod
-    def register_handler(cls, widget_class: type[QWidget], handler: type[WidgetHandler]) -> None:
+    def _register_deferred_handlers(cls) -> None:
         """
-        Register a handler for a widget class. Widget modules that cannot be imported here
-        (e.g. to avoid circular imports) register their handlers on import.
+        Register handlers for widgets that import this module themselves and therefore
+        cannot be imported here at module level without a circular import. The import is
+        deferred to the first handler lookup, when all modules are fully initialized.
         """
-        cls._handlers[widget_class] = handler
+        if cls._deferred_handlers_registered:
+            return
+        cls._deferred_handlers_registered = True
+        # pylint: disable=import-outside-toplevel
+        from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import (
+            DeviceComboBox,
+        )
+        from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import (
+            SignalComboBox,
+        )
+
+        cls._handlers[DeviceComboBox] = DeviceComboBoxHandler
+        cls._handlers[SignalComboBox] = SignalComboBoxHandler
 
     @staticmethod
     def get_value(widget, ignore_errors=False, **kwargs):
@@ -329,18 +343,7 @@ class WidgetIO:
         Returns:
             handler_class: The handler class if found, otherwise None.
         """
-        if (
-            isinstance(widget, QComboBox)
-            and hasattr(widget, "set_signal")
-            and hasattr(widget, "get_signal_name")
-        ):
-            return SignalComboBoxHandler
-        if (
-            isinstance(widget, QComboBox)
-            and hasattr(widget, "set_device")
-            and hasattr(widget, "device_selected")
-        ):
-            return DeviceComboBoxHandler
+        WidgetIO._register_deferred_handlers()
         for base in type(widget).__mro__:
             if base in WidgetIO._handlers:
                 return WidgetIO._handlers[base]

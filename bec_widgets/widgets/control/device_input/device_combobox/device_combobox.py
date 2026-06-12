@@ -16,7 +16,6 @@ from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.filter_io import get_bec_signals_for_classes, replace_combobox_items
-from bec_widgets.utils.widget_io import DeviceComboBoxHandler, WidgetIO
 
 logger = bec_logger.logger
 
@@ -631,9 +630,6 @@ class DeviceComboBox(BECWidget, QComboBox):
         if index >= 0 and isinstance(self.itemData(index), tuple):
             return self.itemData(index)[0]
         return text
-
-
-WidgetIO.register_handler(DeviceComboBox, DeviceComboBoxHandler)
 
 
 if __name__ == "__main__":  # pragma: no cover
