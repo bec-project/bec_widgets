@@ -27,7 +27,7 @@ from qtpy.QtWidgets import (
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import get_accent_colors
-from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.toolbars.actions import MaterialIconAction, WidgetAction
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
@@ -208,7 +208,6 @@ class _BeamlineStatePillDelegate(QStyledItemDelegate):
         name = index.data(_BeamlineStateListModel.NameRole)
         state_config = index.data(_BeamlineStateListModel.ConfigRole)
         pill = BeamlineStatePill(parent=parent, state_name=name, client=self._manager.client)
-        pill.idle_card_background = self._manager.idle_card_background
         pill.set_state_config(state_config)
         pill.state_changed.connect(self._manager._on_pill_state_changed)
         pill.update_requested.connect(self._manager._update_state_parameters)
@@ -224,7 +223,6 @@ class _BeamlineStatePillDelegate(QStyledItemDelegate):
         name = index.data(_BeamlineStateListModel.NameRole)
         state_config = index.data(_BeamlineStateListModel.ConfigRole)
         editor.set_state_name(str(name))
-        editor.idle_card_background = self._manager.idle_card_background
         editor.set_state_config(state_config)
 
     def updateEditorGeometry(  # noqa: N802
@@ -305,7 +303,6 @@ class BeamlineStateManager(BECWidget, QWidget):
         client=None,
         config: ConnectionConfig | None = None,
         gui_id: str | None = None,
-        idle_card_background: bool = False,
         **kwargs,
     ) -> None:
         super().__init__(
@@ -319,8 +316,6 @@ class BeamlineStateManager(BECWidget, QWidget):
         self._selected_devices: set[str] | None = None
         self._device_filter_text = ""
         self._hidden_expanded = False
-        self._idle_card_background = False
-        self.idle_card_background = idle_card_background
         self._scan_interlock = self.client.builtin_actors.scan_interlock
         self._interlock_enabled = False
         self._interlock_states: dict[str, str] = {}
@@ -362,23 +357,6 @@ class BeamlineStateManager(BECWidget, QWidget):
         self._refresh_scan_interlock()
         self.refresh_states()
         self._refresh_hidden_summary()
-
-    @SafeProperty(bool, default=False)
-    def idle_card_background(self) -> bool:
-        """
-        Whether idle collapsed pills keep the status-tinted card background.
-        """
-        return self._idle_card_background
-
-    @idle_card_background.setter
-    def idle_card_background(self, enabled: bool) -> None:
-        self._idle_card_background = enabled
-        for pill in self._state_pills.values():
-            pill.idle_card_background = self._idle_card_background
-
-    def set_idle_card_background(self, enabled: bool) -> None:
-        """Set whether idle collapsed pills keep the status-tinted card background."""
-        self.idle_card_background = enabled
 
     def _create_toolbar(self) -> ModularToolBar:
         toolbar = ModularToolBar(parent=self)

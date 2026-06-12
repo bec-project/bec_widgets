@@ -317,21 +317,6 @@ def test_beamline_state_manager_preserves_expanded_pill_on_refresh(qtbot, mocked
     assert not beamline_state_manager._state_pills["limits"]._settings.isHidden()
 
 
-def test_beamline_state_manager_propagates_idle_card_background(qtbot, mocked_client):
-    idle_card_manager = create_widget(
-        qtbot, BeamlineStateManager, client=mocked_client, idle_card_background=True
-    )
-    idle_card_manager.update_available_states(
-        {"states": [_state("limits", "DeviceWithinLimitsState", {"device": "samx"})]}, {}
-    )
-
-    assert idle_card_manager._state_pills["limits"]._idle_card_background is True
-
-    idle_card_manager.idle_card_background = False
-
-    assert idle_card_manager._state_pills["limits"]._idle_card_background is False
-
-
 def test_beamline_state_manager_filters_status(qtbot, mocked_client):
     beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
     beamline_state_manager.update_available_states(
