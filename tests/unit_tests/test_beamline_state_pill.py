@@ -654,7 +654,36 @@ def test_beamline_state_manager_header_visibility_follows_filters(qtbot, mocked_
     )
 
     beamline_state_manager._state_pills["limits"].update_state(
-        {"name": "limits", "status": "valid", "label": "Within limits."}, {}
+        {"name": "limits", "status": "invalid", "label": "Out of limits."}, {}
+    )
+    beamline_state_manager._state_pills["shutter_open"].update_state(
+        {"name": "shutter_open", "status": "valid", "label": "Open."}, {}
+    )
+    beamline_state_manager._selected_statuses = {"valid"}
+    beamline_state_manager._apply_filters()
+
+    model = beamline_state_manager._model
+    assert not beamline_state_manager._view.isRowHidden(0)
+    assert not beamline_state_manager._view.isRowHidden(model.index_for_name("shutter_open").row())
+    assert beamline_state_manager._view.isRowHidden(2)
+    assert beamline_state_manager._view.isRowHidden(model.index_for_name("limits").row())
+
+    beamline_state_manager.clear_filters()
+
+    assert not beamline_state_manager._view.isRowHidden(2)
+
+
+def test_beamline_state_manager_interlock_states_bypass_filters(qtbot, mocked_client):
+    beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
+    beamline_state_manager.update_available_states(
+        {"states": [_limits_state(), _shutter_state()]}, {}
+    )
+    _install_fake_scan_interlock(
+        beamline_state_manager, _FakeScanInterlock(states_watched={"shutter_open": "valid"})
+    )
+
+    beamline_state_manager._state_pills["limits"].update_state(
+        {"name": "limits", "status": "invalid", "label": "Out of limits."}, {}
     )
     beamline_state_manager._state_pills["shutter_open"].update_state(
         {"name": "shutter_open", "status": "invalid", "label": "Closed."}, {}
@@ -663,14 +692,14 @@ def test_beamline_state_manager_header_visibility_follows_filters(qtbot, mocked_
     beamline_state_manager._apply_filters()
 
     model = beamline_state_manager._model
-    assert beamline_state_manager._view.isRowHidden(0)
-    assert beamline_state_manager._view.isRowHidden(model.index_for_name("shutter_open").row())
-    assert not beamline_state_manager._view.isRowHidden(2)
-    assert not beamline_state_manager._view.isRowHidden(model.index_for_name("limits").row())
+    assert not beamline_state_manager._view.isRowHidden(model.index_for_name("shutter_open").row())
+    assert beamline_state_manager._view.isRowHidden(model.index_for_name("limits").row())
+    assert "1 state is hidden" in beamline_state_manager._hidden_summary.text()
 
-    beamline_state_manager.clear_filters()
+    beamline_state_manager._device_filter_text = "nonexistent_device"
+    beamline_state_manager._apply_filters()
 
-    assert not beamline_state_manager._view.isRowHidden(0)
+    assert not beamline_state_manager._view.isRowHidden(model.index_for_name("shutter_open").row())
 
 
 def test_beamline_state_manager_paints_section_headers(qtbot, mocked_client):
