@@ -1,6 +1,72 @@
 # CHANGELOG
 
 
+## v3.15.0 (2026-06-12)
+
+### Bug Fixes
+
+- **beamline-states**: Better pydantic model handling
+  ([`64cbf93`](https://github.com/bec-project/bec_widgets/commit/64cbf93d64895cc8af9522506512c4e8f5de939d))
+
+- **bec_widget**: Removal of non existing TYPE check for old dock area
+  ([`08650e8`](https://github.com/bec-project/bec_widgets/commit/08650e86a3d3aa1098514bad3d8119401ace1d3f))
+
+- **device-input**: Align validity styling
+  ([`6db198e`](https://github.com/bec-project/bec_widgets/commit/6db198e68422967c1c6d8ffb749b993e0e4975e1))
+
+- **notification-banner**: Eventfilter guard for QStandartItem
+  ([`d07d03c`](https://github.com/bec-project/bec_widgets/commit/d07d03c1be7b405e52126cfc507fdcd79093cb45))
+
+- **notification-center**: Sync light theme styling
+  ([`f78bc26`](https://github.com/bec-project/bec_widgets/commit/f78bc26a26bfebfc7df83a9c6cd7dd5c95a35d05))
+
+- **pydantic**: Adoption to new ScanArgument refactor from bec
+  ([`3dfed23`](https://github.com/bec-project/bec_widgets/commit/3dfed232efb8baff14ebe62b6b14e62e0a4acd36))
+
+- **widget_it**: Device/signal combobox handler
+  ([`434f9f5`](https://github.com/bec-project/bec_widgets/commit/434f9f561fca199aadc798db682a7e863a3246b3))
+
+### Build System
+
+- **bec**: Bump bec_lib and bec_ipython_client to v3.134
+  ([`9550866`](https://github.com/bec-project/bec_widgets/commit/9550866b677bb304ab0ea490827d0d0c09064722))
+
+### Features
+
+- **beamline-states**: Add state manager widget
+  ([`2546cc4`](https://github.com/bec-project/bec_widgets/commit/2546cc484d1c483fd45f1b80847a7e0200faba43))
+
+- **beamline-states**: Collapse all functionality with cleanup of not used settings widgets if state
+  is not dirty
+  ([`768c138`](https://github.com/bec-project/bec_widgets/commit/768c138576ad924dfad334888583131cc452e4f0))
+
+- **dock-area**: Expose beamline state manager
+  ([`6aa1f7e`](https://github.com/bec-project/bec_widgets/commit/6aa1f7e74ae4497d449b03e600e5c3fbbfc34be0))
+
+- **forms**: Add pydantic widget form
+  ([`b20897f`](https://github.com/bec-project/bec_widgets/commit/b20897f4bf2c05653e57bd79c5e292883d1f8ee8))
+
+- **forms**: Unified pydantic and scan control adapter for pydantic models
+  ([`563603b`](https://github.com/bec-project/bec_widgets/commit/563603b80e52ec6746a57fa68b1f7b2dbc101439))
+
+- **widget_io**: Register handler
+  ([`7e6dca4`](https://github.com/bec-project/bec_widgets/commit/7e6dca49120fba480a8756a0cb951b88a2df3584))
+
+### Refactoring
+
+- **beamline-states**: Beamlinestatemanager widget moved to separate module
+  ([`4bb7e81`](https://github.com/bec-project/bec_widgets/commit/4bb7e811dd514e69e9a507505b976c3b8de1d035))
+
+- **colors**: Consolidate theme helpers
+  ([`aca2c4a`](https://github.com/bec-project/bec_widgets/commit/aca2c4a7a50e85b0d0f61251f71bc097a258599f))
+
+- **main-window**: Remove status-tip override
+  ([`f6f590c`](https://github.com/bec-project/bec_widgets/commit/f6f590cabdfd66f4bb4f8095414db5d120b0f9a1))
+
+- **notification_banner**: Remove defensive patterns
+  ([`64ed28b`](https://github.com/bec-project/bec_widgets/commit/64ed28ba4f554958305cc9cf37da1a124ba2a99b))
+
+
 ## v3.14.0 (2026-06-11)
 
 ### Bug Fixes
