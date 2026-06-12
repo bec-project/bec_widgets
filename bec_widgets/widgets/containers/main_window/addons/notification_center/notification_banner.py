@@ -150,11 +150,14 @@ class NotificationToast(QFrame):
         body_lbl.setWordWrap(True)
 
         self.time_lbl = QtWidgets.QLabel()
+        self._showing_absolute = False
         self._update_relative_time()
         # enable absolute timestamp on hover
         self.time_lbl.setCursor(QtCore.Qt.PointingHandCursor)
         self.time_lbl.installEventFilter(self)
-        self._showing_absolute = False
+
+        # shared ID assigned by NotificationCentre.add_notification
+        self.notification_id: str | None = None
 
         self.close_btn = QtWidgets.QPushButton("✕")
         self.close_btn.setObjectName("toastCloseBtn")
@@ -247,14 +250,13 @@ class NotificationToast(QFrame):
         # lifetime progress animation
         self._lifetime = max(0, lifetime_ms)  # 0 → never expire
         self._progress_anim: QtCore.QPropertyAnimation | None = None
+        # flag to indicate this toast has fully expired (progress bar finished)
+        self._expired = False
 
         if self._lifetime > 0:
             self._start_progress_animation()
         else:
             self.progress.hide()
-
-        # flag to indicate this toast has fully expired (progress bar finished)
-        self._expired = False
 
     # ------------------------------------------------------------------
     def _connect_to_theme_change(self):
@@ -337,9 +339,6 @@ class NotificationToast(QFrame):
             }}
             """)
         self.apply_theme(self._theme)
-        # keep injected gradient in sync
-        if getattr(self, "_hg_enabled", False):
-            self._hg_cols[0] = self._accent_color
 
     @SafeProperty(str)
     def traceback(self):
@@ -456,7 +455,7 @@ class NotificationToast(QFrame):
     ########################################
 
     def _update_relative_time(self) -> None:
-        if getattr(self, "_showing_absolute", False):
+        if self._showing_absolute:
             return  # don't overwrite while user is viewing absolute time
         seconds = int((datetime.now() - self.created).total_seconds())
         if seconds < 10:
@@ -497,7 +496,7 @@ class NotificationToast(QFrame):
         Pause the countdown while the cursor is over the toast, and reset the
         elapsed time and progress bar to full width.
         """
-        if getattr(self, "_expired", False):
+        if self._expired:
             return super().enterEvent(event)
         self._hover = True
         if self._progress_anim is not None:
@@ -511,10 +510,10 @@ class NotificationToast(QFrame):
         Resume the countdown when the cursor leaves, continuing from the
         paused progress rather than restarting.
         """
-        if getattr(self, "_expired", False):
+        if self._expired:
             return super().leaveEvent(event)
         self._hover = False
-        if self._lifetime > 0 and not self._expired:
+        if self._lifetime > 0:
             self._start_progress_animation()
         super().leaveEvent(event)
 
@@ -530,13 +529,11 @@ class NotificationToast(QFrame):
         painter.fillPath(path, self._base_color)
 
         # accent gradient, fades to transparent
-        grad = QtGui.QLinearGradient(
-            0, 0, self.width() * getattr(self, "_gradient_width_factor", 0.70), 0
-        )
+        grad = QtGui.QLinearGradient(0, 0, self.width() * self._gradient_width_factor, 0)
         accent = QtGui.QColor(self._accent_color)
-        if getattr(self, "_theme", "dark") == "light":
+        if self._theme == "light":
             accent = accent.darker(115)
-        accent.setAlpha(getattr(self, "_accent_alpha", 50))
+        accent.setAlpha(self._accent_alpha)
         grad.setColorAt(0.0, accent)
         fade = QtGui.QColor(self._accent_color)
         fade.setAlpha(0)
@@ -590,8 +587,7 @@ class NotificationCentre(QScrollArea):
     def __init__(self, parent=None, *, fixed_width: int = 420, margin: int = 16):
         super().__init__(parent=parent)
         self.setObjectName("NotificationCentre")
-        app = QApplication.instance()
-        self._theme = getattr(getattr(app, "theme", None), "theme", "dark").lower()
+        self._theme = get_theme_name()
 
         self.setWidgetResizable(True)
         # transparent background so only the toast cards are visible
@@ -756,7 +752,7 @@ class NotificationCentre(QScrollArea):
     def remove_notification(self, notification_id: str) -> None:
         """Close a specific notification in this centre if present."""
         for toast in list(self.toasts):
-            if getattr(toast, "notification_id", None) == notification_id:
+            if toast.notification_id == notification_id:
                 self._hide_notification(toast)
 
     # ------------------------------------------------------------------
