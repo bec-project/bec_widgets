@@ -655,7 +655,8 @@ class BeamlineStateManager(BECWidget, QWidget):
         visible_names = []
         hidden_names = []
         for name in self._state_order:
-            if self._is_state_visible(name):
+            # States watched by the scan interlock are exempt from filtering.
+            if name in self._interlock_states or self._is_state_visible(name):
                 visible_names.append(name)
             else:
                 hidden_names.append(name)
