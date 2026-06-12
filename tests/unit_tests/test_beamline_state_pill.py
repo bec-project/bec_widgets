@@ -1,7 +1,8 @@
 import shiboken6
 from bec_lib import bl_states, messages
-from qtpy.QtCore import QCoreApplication, QEvent, Qt
-from qtpy.QtWidgets import QMessageBox
+from qtpy.QtCore import QCoreApplication, QEvent, QRect, Qt
+from qtpy.QtGui import QPainter, QPixmap
+from qtpy.QtWidgets import QMessageBox, QStyleOptionViewItem
 
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.utils.widget_io import WidgetIO
@@ -49,6 +50,33 @@ def _shutter_state(
 ) -> messages.BeamlineStateConfig:
     config = bl_states.ShutterState.CONFIG_CLASS(name=name, device=device)
     return _wire_state(bl_states.ShutterState, config)
+
+
+class _FakeScanInterlock:
+    def __init__(self, enabled: bool = False, states_watched: dict[str, str] | None = None):
+        self.enabled = enabled
+        self._states = dict(states_watched or {})
+        self.added: list[tuple[str, str]] = []
+        self.removed: list[str] = []
+
+    @property
+    def states_watched(self) -> dict[str, str]:
+        return dict(self._states)
+
+    def add_state_to_interlock(self, state_name: str, required_value: str = "valid") -> None:
+        self.added.append((state_name, required_value))
+        self._states[state_name] = required_value
+
+    def remove_state_from_interlock(self, state_name: str) -> None:
+        self.removed.append(state_name)
+        self._states.pop(state_name, None)
+
+
+def _install_fake_scan_interlock(
+    manager: BeamlineStateManager, fake_interlock: _FakeScanInterlock
+) -> None:
+    manager._scan_interlock = fake_interlock
+    manager._refresh_scan_interlock()
 
 
 def test_beamline_state_pill_updates_from_message(qtbot, mocked_client):
@@ -498,6 +526,256 @@ def test_beamline_state_manager_removes_state(qtbot, mocked_client, monkeypatch)
     beamline_state_manager._remove_state_requested("limits")
 
     assert mocked_client.beamline_states.deleted == "limits"
+
+
+def test_beamline_state_pill_emits_interlock_toggle_request(qtbot, mocked_client):
+    pill = create_widget(qtbot, BeamlineStatePill, state_name="limits", client=mocked_client)
+
+    with qtbot.waitSignal(pill.scan_interlock_toggle_requested) as include_signal:
+        pill._interlock_button.click()
+
+    assert include_signal.args == ["limits", True]
+
+    pill.set_scan_interlock("valid", False)
+
+    with qtbot.waitSignal(pill.scan_interlock_toggle_requested) as exclude_signal:
+        pill._interlock_button.click()
+
+    assert exclude_signal.args == ["limits", False]
+
+
+def test_beamline_state_pill_included_state_forces_card_background(qtbot, mocked_client):
+    pill = create_widget(qtbot, BeamlineStatePill, state_name="limits", client=mocked_client)
+    colors = BeamlineStatePill._state_colors("unknown")
+
+    assert f"border: 1px solid {colors['card_border']}" not in pill.styleSheet().split(":hover")[0]
+    assert not pill._shadow.isEnabled()
+
+    pill.set_scan_interlock("valid", False)
+
+    assert f"border: 1px solid {colors['card_border']}" in pill.styleSheet()
+    assert pill._shadow.isEnabled()
+    assert "Watched by the scan interlock" in pill._interlock_button.toolTip()
+
+    pill.set_scan_interlock(None, False)
+
+    assert not pill._shadow.isEnabled()
+    assert "Not watched by the scan interlock" in pill._interlock_button.toolTip()
+
+
+def test_beamline_state_pill_triggered_interlock_animates(qtbot, mocked_client):
+    pill = create_widget(qtbot, BeamlineStatePill, state_name="limits", client=mocked_client)
+
+    pill.set_scan_interlock("valid", True)
+
+    assert pill._interlock_animation.state() == pill._interlock_animation.State.Running
+    pill.interlock_pulse = 0.5
+
+    stylesheet = pill.styleSheet()
+    assert "border: 2px solid" in stylesheet
+    assert "qlineargradient" in stylesheet
+
+    pill.set_scan_interlock("valid", False)
+
+    assert pill._interlock_animation.state() == pill._interlock_animation.State.Stopped
+    assert pill._interlock_pulse == 0.0
+    assert "border: 2px solid" not in pill.styleSheet()
+    assert "border: 1px solid" in pill.styleSheet()
+
+
+def test_beamline_state_pill_traveling_gradient_keeps_stops_sorted():
+    for phase in (0.0, 0.2, 0.5, 0.8, 1.0):
+        gradient = BeamlineStatePill._traveling_gradient("#101010", "#ff0000", phase)
+        positions = [
+            float(stop.split()[0].removeprefix("stop:"))
+            for stop in gradient.split(", ")
+            if stop.startswith("stop:")
+        ]
+        assert positions == sorted(positions)
+        assert positions[0] == 0.0
+        assert positions[-1] == 1.0
+
+
+def test_beamline_state_manager_toolbar_scan_interlock_on_right(qtbot, mocked_client):
+    beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
+
+    bundle = beamline_state_manager._toolbar.bundles["beamline_state_manager"]
+    assert list(bundle.bundle_actions)[-3:] == [
+        "scan_interlock_spacer",
+        "separator",
+        "scan_interlock",
+    ]
+
+    spacer_action = beamline_state_manager._toolbar.components.get_action("scan_interlock_spacer")
+    assert spacer_action.container.sizePolicy().horizontalPolicy() == (
+        spacer_action.container.sizePolicy().Policy.Expanding
+    )
+
+    interlock_action = beamline_state_manager._toolbar.components.get_action("scan_interlock")
+    assert interlock_action.action.isCheckable()
+    assert not interlock_action.action.isChecked()
+    assert "disabled" in interlock_action.action.toolTip()
+
+
+def test_beamline_state_manager_groups_states_under_headers(qtbot, mocked_client):
+    beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
+    beamline_state_manager.update_available_states(
+        {"states": [_limits_state(), _shutter_state()]}, {}
+    )
+    model = beamline_state_manager._model
+
+    assert model.rowCount() == 2
+    assert model.data(model.index(0, 0), model.HeaderRole) is None
+
+    _install_fake_scan_interlock(
+        beamline_state_manager, _FakeScanInterlock(states_watched={"shutter_open": "valid"})
+    )
+
+    assert model.rowCount() == 4
+    assert model.data(model.index(0, 0), model.HeaderRole) == model.INTERLOCK_HEADER
+    assert model.data(model.index(0, 0), Qt.ItemDataRole.DisplayRole) == "Scan interlock states"
+    assert model.data(model.index(1, 0), model.NameRole) == "shutter_open"
+    assert model.data(model.index(2, 0), model.HeaderRole) == model.OTHERS_HEADER
+    assert (
+        model.data(model.index(2, 0), Qt.ItemDataRole.DisplayRole)
+        == "Not included in scan interlock"
+    )
+    assert model.data(model.index(3, 0), model.NameRole) == "limits"
+    assert sorted(beamline_state_manager._state_pills) == ["limits", "shutter_open"]
+
+    _install_fake_scan_interlock(
+        beamline_state_manager,
+        _FakeScanInterlock(states_watched={"shutter_open": "valid", "limits": "valid"}),
+    )
+
+    assert model.rowCount() == 3
+    assert model.data(model.index(0, 0), model.HeaderRole) == model.INTERLOCK_HEADER
+    assert model.data(model.index(1, 0), model.NameRole) == "limits"
+    assert model.data(model.index(2, 0), model.NameRole) == "shutter_open"
+
+    _install_fake_scan_interlock(beamline_state_manager, _FakeScanInterlock())
+
+    assert model.rowCount() == 2
+    assert model.data(model.index(0, 0), model.HeaderRole) is None
+
+
+def test_beamline_state_manager_header_visibility_follows_filters(qtbot, mocked_client):
+    beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
+    beamline_state_manager.update_available_states(
+        {"states": [_limits_state(), _shutter_state()]}, {}
+    )
+    _install_fake_scan_interlock(
+        beamline_state_manager, _FakeScanInterlock(states_watched={"shutter_open": "valid"})
+    )
+
+    beamline_state_manager._state_pills["limits"].update_state(
+        {"name": "limits", "status": "valid", "label": "Within limits."}, {}
+    )
+    beamline_state_manager._state_pills["shutter_open"].update_state(
+        {"name": "shutter_open", "status": "invalid", "label": "Closed."}, {}
+    )
+    beamline_state_manager._selected_statuses = {"valid"}
+    beamline_state_manager._apply_filters()
+
+    model = beamline_state_manager._model
+    assert beamline_state_manager._view.isRowHidden(0)
+    assert beamline_state_manager._view.isRowHidden(model.index_for_name("shutter_open").row())
+    assert not beamline_state_manager._view.isRowHidden(2)
+    assert not beamline_state_manager._view.isRowHidden(model.index_for_name("limits").row())
+
+    beamline_state_manager.clear_filters()
+
+    assert not beamline_state_manager._view.isRowHidden(0)
+
+
+def test_beamline_state_manager_paints_section_headers(qtbot, mocked_client):
+    beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
+    beamline_state_manager.update_available_states(
+        {"states": [_limits_state(), _shutter_state()]}, {}
+    )
+    _install_fake_scan_interlock(
+        beamline_state_manager,
+        _FakeScanInterlock(enabled=True, states_watched={"shutter_open": "valid"}),
+    )
+
+    model = beamline_state_manager._model
+    delegate = beamline_state_manager._delegate
+    header_index = model.index(0, 0)
+
+    assert delegate.sizeHint(QStyleOptionViewItem(), header_index).height() == (
+        delegate.HEADER_HEIGHT
+    )
+    assert model.flags(header_index) == Qt.ItemFlag.NoItemFlags
+
+    target = QPixmap(400, delegate.HEADER_HEIGHT)
+    target.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(target)
+    option = QStyleOptionViewItem()
+    option.rect = QRect(0, 0, 400, delegate.HEADER_HEIGHT)
+    delegate.paint(painter, option, header_index)
+    delegate.paint(painter, option, model.index(2, 0))
+    painter.end()
+
+
+def test_beamline_state_manager_marks_triggered_pills(qtbot, mocked_client):
+    beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
+    beamline_state_manager.update_available_states({"states": [_shutter_state()]}, {})
+    fake_interlock = _FakeScanInterlock(enabled=True, states_watched={"shutter_open": "valid"})
+    _install_fake_scan_interlock(beamline_state_manager, fake_interlock)
+
+    pill = beamline_state_manager._state_pills["shutter_open"]
+    assert pill._interlock_required_status == "valid"
+    assert pill._interlock_triggered
+
+    pill.update_state({"name": "shutter_open", "status": "valid", "label": "Open."}, {})
+
+    assert not pill._interlock_triggered
+
+    pill.update_state({"name": "shutter_open", "status": "invalid", "label": "Closed."}, {})
+
+    assert pill._interlock_triggered
+
+    fake_interlock.enabled = False
+    beamline_state_manager._refresh_scan_interlock()
+
+    assert not pill._interlock_triggered
+    assert pill._interlock_required_status == "valid"
+
+
+def test_beamline_state_manager_toolbar_toggle_writes_backend(qtbot, mocked_client):
+    beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
+    fake_interlock = _FakeScanInterlock()
+    _install_fake_scan_interlock(beamline_state_manager, fake_interlock)
+    interlock_action = beamline_state_manager._toolbar.components.get_action("scan_interlock")
+
+    interlock_action.action.setChecked(True)
+
+    assert fake_interlock.enabled is True
+    assert beamline_state_manager._interlock_enabled is True
+    assert "armed" in interlock_action.action.toolTip()
+
+    interlock_action.action.setChecked(False)
+
+    assert fake_interlock.enabled is False
+    assert "disabled" in interlock_action.action.toolTip()
+
+
+def test_beamline_state_manager_pill_toggle_calls_backend(qtbot, mocked_client):
+    beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
+    beamline_state_manager.update_available_states({"states": [_limits_state()]}, {})
+    fake_interlock = _FakeScanInterlock()
+    _install_fake_scan_interlock(beamline_state_manager, fake_interlock)
+
+    beamline_state_manager._state_pills["limits"]._interlock_button.click()
+
+    assert fake_interlock.added == [("limits", "valid")]
+    # The toggle refreshes immediately, so the state is reflected without a backend notification.
+    assert beamline_state_manager._interlock_states == {"limits": "valid"}
+
+    beamline_state_manager._state_pills["limits"]._interlock_button.click()
+
+    assert fake_interlock.removed == ["limits"]
+    assert beamline_state_manager._interlock_states == {}
 
 
 def test_add_beamline_state_dialog_uses_generated_widgets_and_normalizes_name(qtbot, mocked_client):
