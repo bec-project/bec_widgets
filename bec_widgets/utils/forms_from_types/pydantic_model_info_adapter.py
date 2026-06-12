@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from bec_lib.scan_args import ScanArgument
 from pydantic import BaseModel
 from pydantic_core import PydanticUndefined
 
@@ -17,6 +18,9 @@ def pydantic_model_input_configs(model: type[BaseModel]) -> list[dict[str, Any]]
     for name, info in model.model_fields.items():
         metadata: dict[str, Any] = {}
         for entry in info.metadata:
+            if isinstance(entry, ScanArgument):
+                metadata.update(entry.model_dump(exclude_none=True))
+                continue
             for key in NUMERIC_BOUND_KEYS:
                 value = getattr(entry, key, None)
                 if value is not None:
