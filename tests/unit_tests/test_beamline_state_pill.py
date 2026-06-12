@@ -727,6 +727,85 @@ def test_beamline_state_manager_marks_triggered_pills(qtbot, mocked_client):
     assert pill._interlock_required_status == "valid"
 
 
+def test_beamline_state_manager_orders_both_sections_by_status_severity(qtbot, mocked_client):
+    beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
+    beamline_state_manager.update_available_states(
+        {
+            "states": [
+                _limits_state(name="watched_valid"),
+                _limits_state(name="watched_invalid"),
+                _limits_state(name="free_warning"),
+                _limits_state(name="free_invalid"),
+            ]
+        },
+        {},
+    )
+    _install_fake_scan_interlock(
+        beamline_state_manager,
+        _FakeScanInterlock(
+            enabled=True, states_watched={"watched_valid": "valid", "watched_invalid": "valid"}
+        ),
+    )
+    pills = beamline_state_manager._state_pills
+    pills["watched_valid"].update_state(
+        {"name": "watched_valid", "status": "valid", "label": ""}, {}
+    )
+    pills["watched_invalid"].update_state(
+        {"name": "watched_invalid", "status": "invalid", "label": ""}, {}
+    )
+    pills["free_warning"].update_state(
+        {"name": "free_warning", "status": "warning", "label": ""}, {}
+    )
+    pills["free_invalid"].update_state(
+        {"name": "free_invalid", "status": "invalid", "label": ""}, {}
+    )
+
+    model = beamline_state_manager._model
+    names = [model.data(model.index(row, 0), model.NameRole) for row in range(model.rowCount())]
+
+    # Interlock section: invalid before valid. Non-interlock section: invalid before warning.
+    assert names == [
+        None,  # "Scan interlock states" header
+        "watched_invalid",
+        "watched_valid",
+        None,  # "Not included in scan interlock" header
+        "free_invalid",
+        "free_warning",
+    ]
+    assert pills["watched_invalid"]._interlock_triggered
+    assert not pills["watched_valid"]._interlock_triggered
+
+
+def test_beamline_state_manager_orders_by_status_severity_on_initial_render(
+    qtbot, mocked_client, monkeypatch
+):
+    beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
+    # The statuses are visible in the connector cache when the pills are first created, so the
+    # severity order must hold from the very first render. ``get_last`` is patched (rather than
+    # writing to the session-shared fake connector) so the seeded statuses can't leak into and
+    # pollute other tests.
+    seeded = {"limits": "valid", "shutter_open": "invalid"}
+    real_get_last = mocked_client.connector.get_last
+
+    def fake_get_last(endpoint, *args, **kwargs):
+        topic = str(getattr(endpoint, "endpoint", endpoint))
+        for name, status in seeded.items():
+            if topic.endswith(f"/beamline_state/{name}"):
+                return messages.BeamlineStateMessage(name=name, status=status, label="x")
+        return real_get_last(endpoint, *args, **kwargs)
+
+    monkeypatch.setattr(mocked_client.connector, "get_last", fake_get_last)
+
+    beamline_state_manager.update_available_states(
+        {"states": [_limits_state(), _shutter_state()]}, {}
+    )
+
+    model = beamline_state_manager._model
+    names = [model.data(model.index(row, 0), model.NameRole) for row in range(model.rowCount())]
+    assert names == ["shutter_open", "limits"]
+    assert beamline_state_manager._state_pills["shutter_open"]._status == "invalid"
+
+
 def test_beamline_state_manager_toolbar_toggle_writes_backend(qtbot, mocked_client):
     beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
     fake_interlock = _FakeScanInterlock()

@@ -93,17 +93,18 @@ class _BeamlineStateListModel(QAbstractListModel):
     def set_states(
         self, state_configs: list[messages.BeamlineStateConfig], interlock_names: set[str]
     ) -> None:
-        interlock = [state for state in state_configs if state.name in interlock_names]
-        others = [state for state in state_configs if state.name not in interlock_names]
+        # Ordering comes from ``state_configs``; ``interlock_names`` is only a membership set.
+        new_configs = {state.name: state for state in state_configs}
+        interlock = [name for name in new_configs if name in interlock_names]
+        others = [name for name in new_configs if name not in interlock_names]
+
         new_keys: list[tuple[str, str]] = []
         if interlock:
             new_keys.append(("header", self.INTERLOCK_HEADER))
-            new_keys.extend(("state", state.name) for state in interlock)
+            new_keys.extend(("state", name) for name in interlock)
             if others:
                 new_keys.append(("header", self.OTHERS_HEADER))
-        new_keys.extend(("state", state.name) for state in others)
-
-        new_configs = {state.name: state for state in state_configs}
+        new_keys.extend(("state", name) for name in others)
         new_key_set = set(new_keys)
 
         for row in reversed(
@@ -287,6 +288,7 @@ class BeamlineStateManager(BECWidget, QWidget):
 
     PLUGIN = True
     ICON_NAME = "format_list_bulleted"
+    _STATUS_PRIORITY = {"invalid": 0, "warning": 1, "valid": 2, "unknown": 3}
     USER_ACCESS = [
         "clear_filters",
         "collapse_all",
@@ -545,7 +547,10 @@ class BeamlineStateManager(BECWidget, QWidget):
         """Render the current state and scan-interlock bookkeeping in one pass."""
         self._sync_interlock_action()
         expanded_names = {name for name, pill in self._state_pills.items() if pill.is_expanded()}
-        state_configs = [self._state_configs[name] for name in self._state_order]
+        # Both sections are ordered by status severity (invalid, warning, unknown, valid). The
+        # sort is stable, so the configured order is kept within each status.
+        ordered_names = sorted(self._state_order, key=self._status_rank)
+        state_configs = [self._state_configs[name] for name in ordered_names]
         self._model.set_states(state_configs, set(self._interlock_states))
         self._open_persistent_editors(expanded_names)
         for name, pill in self._state_pills.items():
@@ -581,13 +586,35 @@ class BeamlineStateManager(BECWidget, QWidget):
             action.setToolTip("Scan interlock is disabled. Click to arm it.")
 
     def _apply_interlock_to_pill(self, name: str, pill: BeamlineStatePill) -> None:
-        required_status = self._interlock_states.get(name)
-        triggered = (
-            self._interlock_enabled
-            and required_status is not None
-            and pill._status != required_status
+        pill.set_scan_interlock(
+            self._interlock_states.get(name), self._is_interlock_triggered(name)
         )
-        pill.set_scan_interlock(required_status, triggered)
+
+    def _is_interlock_triggered(self, name: str) -> bool:
+        required_status = self._interlock_states.get(name)
+        if required_status is None or not self._interlock_enabled:
+            return False
+        return self._state_status(name) not in (None, required_status)
+
+    def _status_rank(self, name: str) -> int:
+        """Sort rank of a state by status severity: invalid < warning < unknown < valid."""
+        return self._STATUS_PRIORITY.get(
+            self._state_status(name) or "unknown", self._STATUS_PRIORITY["unknown"]
+        )
+
+    def _state_status(self, name: str) -> str | None:
+        """Latest status of a state, from its live pill or the connector cache.
+
+        The connector fallback lets the sections be ordered by status severity even on the
+        first render, before the pills (and their statuses) have been created.
+        """
+        pill = self._state_pills.get(name)
+        if pill is not None:
+            return pill._status
+        msg = self.client.connector.get_last(MessageEndpoints.beamline_state(name), key="data")
+        if msg is None:
+            return None
+        return str(msg.content.get("status", "unknown")).lower()
 
     @SafeSlot(bool)
     def _on_interlock_action_toggled(self, checked: bool) -> None:
@@ -699,12 +726,10 @@ class BeamlineStateManager(BECWidget, QWidget):
         return True
 
     @SafeSlot(str, str, str)
-    def _on_pill_state_changed(self, name: str, _status: str, _label: str) -> None:
-        pill = self._state_pills.get(name)
-        if pill is not None:
-            self._apply_interlock_to_pill(name, pill)
-        if self._selected_statuses is not None:
-            self._apply_filters()
+    def _on_pill_state_changed(self, _name: str, _status: str, _label: str) -> None:
+        # Status drives the per-section severity ordering (and the interlock triggered flag),
+        # so any change re-renders the list.
+        self._refresh_view()
 
     @SafeSlot(str, object)
     def _update_state_parameters(
