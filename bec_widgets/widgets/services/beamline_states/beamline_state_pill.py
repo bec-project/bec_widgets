@@ -5,7 +5,7 @@ from typing import Any
 from bec_lib import bl_states, messages
 from bec_lib.endpoints import MessageEndpoints
 from bec_qthemes import material_icon
-from qtpy.QtCore import Qt, Signal
+from qtpy.QtCore import Property, QEasingCurve, QPropertyAnimation, Qt, Signal
 from qtpy.QtGui import QColor, QMouseEvent, QPalette
 from qtpy.QtWidgets import (
     QApplication,
@@ -62,6 +62,7 @@ class BeamlineStatePill(BECWidget, QWidget):
     state_changed = Signal(str, str, str)
     update_requested = Signal(str, object)
     remove_requested = Signal(str)
+    scan_interlock_toggle_requested = Signal(str, bool)
     row_height_changed = Signal()
 
     _STATUS_LABELS = BEAMLINE_STATE_STATUS_LABELS
@@ -93,6 +94,10 @@ class BeamlineStatePill(BECWidget, QWidget):
         self._label = "No state information available."
         self._expanded = False
         self._idle_card_background = False
+        self._interlock_required_status: str | None = None
+        self._interlock_triggered = False
+        self._interlock_pulse = 0.0
+        self._header_icon_cache_key: tuple | None = None
         self._populating_settings = False
         self._settings_baseline: dict[str, Any] = {}
         self._settings_dirty_fields: set[str] = set()
@@ -137,11 +142,23 @@ class BeamlineStatePill(BECWidget, QWidget):
         self._detail_label.setTextFormat(Qt.TextFormat.PlainText)
         self._detail_label.setWordWrap(True)
         self._detail_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self._interlock_button = QToolButton(self)
+        self._interlock_button.setObjectName("beamline_state_interlock")
+        self._interlock_button.setAutoRaise(True)
+        self._interlock_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._interlock_button.clicked.connect(self._emit_interlock_toggle_requested)
         self._expand_button = QToolButton(self)
         self._expand_button.setObjectName("beamline_state_expand")
         self._expand_button.setAutoRaise(True)
         self._expand_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self._expand_button.clicked.connect(self._toggle_expanded)
+
+        self._interlock_animation = QPropertyAnimation(self, b"interlock_pulse", self)
+        self._interlock_animation.setDuration(1400)
+        self._interlock_animation.setStartValue(0.0)
+        self._interlock_animation.setEndValue(1.0)
+        self._interlock_animation.setEasingCurve(QEasingCurve.Type.Linear)
+        self._interlock_animation.setLoopCount(-1)
 
         text_layout = QVBoxLayout()
         text_layout.setContentsMargins(0, 0, 0, 0)
@@ -156,6 +173,7 @@ class BeamlineStatePill(BECWidget, QWidget):
         header_layout.addWidget(self._icon_label)
         header_layout.addLayout(text_layout, 1)
         header_layout.addWidget(self._status_label, 0, Qt.AlignmentFlag.AlignRight)
+        header_layout.addWidget(self._interlock_button)
         header_layout.addWidget(self._expand_button)
 
         self._settings = QWidget(self)
@@ -275,6 +293,49 @@ class BeamlineStatePill(BECWidget, QWidget):
         """Set whether idle collapsed pills keep the status-tinted card background."""
         self.idle_card_background = enabled
 
+    @Property(float)
+    def interlock_pulse(self) -> float:
+        """Animation phase in [0, 1] driving the triggered scan-interlock highlight."""
+        return self._interlock_pulse
+
+    @interlock_pulse.setter
+    def interlock_pulse(self, phase: float) -> None:
+        self._interlock_pulse = float(phase)
+        if self._interlock_triggered:
+            self._apply_visual_state()
+
+    def set_scan_interlock(self, required_status: str | None, triggered: bool) -> None:
+        """
+        Set the scan-interlock participation of this pill.
+
+        Args:
+            required_status: Status the scan interlock requires for this state, or ``None``
+                if the state is not included in the scan interlock.
+            triggered: Whether the armed scan interlock is currently tripped by this state.
+        """
+        triggered = bool(triggered) and required_status is not None
+        if (required_status, triggered) == (
+            self._interlock_required_status,
+            self._interlock_triggered,
+        ):
+            return
+        self._interlock_required_status = required_status
+        self._interlock_triggered = triggered
+        if triggered:
+            if self._interlock_animation.state() != QPropertyAnimation.State.Running:
+                self._interlock_animation.start()
+        else:
+            self._interlock_animation.stop()
+            self._interlock_pulse = 0.0
+        self._apply_visual_state()
+
+    @SafeSlot()
+    def _emit_interlock_toggle_requested(self) -> None:
+        if self._state_name is None:
+            return
+        include = self._interlock_required_status is None
+        self.scan_interlock_toggle_requested.emit(self._state_name, include)
+
     def _refresh_latest_state(self) -> None:
         if self._state_name is None:
             return
@@ -314,8 +375,8 @@ class BeamlineStatePill(BECWidget, QWidget):
     def _apply_visual_state(self) -> None:
         colors = self._state_colors(self._status)
         accent = colors["accent"]
-        on_accent = colors["on_accent"]
-        active_card = self._expanded
+        included = self._interlock_required_status is not None
+        active_card = self._expanded or included
         border = colors["border"] if self._idle_card_background else "transparent"
         background = colors["background"] if self._idle_card_background else "transparent"
         card_gradient = (
@@ -330,29 +391,42 @@ class BeamlineStatePill(BECWidget, QWidget):
             background = card_gradient
             border = colors["card_border"]
         hover_background = card_gradient
-        self._shadow.setColor(QColor(colors["shadow"]))
-        self._shadow.setBlurRadius(int(colors["shadow_blur"]))
+        hover_border = colors["card_border"]
+        border_width = 1
+        shadow_color = QColor(colors["shadow"])
+        shadow_blur = int(colors["shadow_blur"])
+        shadow_enabled = active_card
+        if self._interlock_triggered:
+            flash = 1.0 - abs(2.0 * self._interlock_pulse - 1.0)
+            background = self._traveling_gradient(
+                colors["card_background"], colors["interlock_band"], self._interlock_pulse
+            )
+            hover_background = background
+            border = rgba(QColor(colors["interlock_trigger"]), 110 + int(145 * flash))
+            hover_border = border
+            border_width = 2
+            shadow_color = QColor(colors["interlock_trigger"])
+            shadow_color.setAlpha(150)
+            shadow_blur = int(colors["shadow_blur"]) + 10
+            shadow_enabled = True
+        self._shadow.setColor(shadow_color)
+        self._shadow.setBlurRadius(shadow_blur)
         self._shadow.setOffset(0, int(colors["shadow_y_offset"]))
-        self._shadow.setEnabled(active_card)
+        self._shadow.setEnabled(shadow_enabled)
 
-        icon_name = self._STATUS_ICONS[self._status]
-        self._icon_label.setPixmap(
-            material_icon(icon_name, size=(20, 20), color=on_accent, filled=True)
-        )
-        expand_icon = "expand_less" if self._expanded else "expand_more"
-        self._expand_button.setIcon(material_icon(expand_icon, convert_to_pixmap=False))
+        self._update_header_icons(colors)
         self._status_label.setText(self._STATUS_LABELS[self._status])
         self._detail_label.setText(self._label)
         self.setToolTip(self._label)
         self.setStyleSheet(
             "#BeamlineStatePill {"
             f"background: {background};"
-            f"border: 1px solid {border};"
+            f"border: {border_width}px solid {border};"
             f"border-radius: {'12px' if active_card else '8px'};"
             "}"
             "#BeamlineStatePill:hover {"
             f"background: {hover_background};"
-            f"border: 1px solid {colors['card_border']};"
+            f"border: {border_width}px solid {hover_border};"
             "border-radius: 12px;"
             "}"
             "QWidget#beamline_state_header {"
@@ -379,6 +453,15 @@ class BeamlineStatePill(BECWidget, QWidget):
             f"color: {colors['muted']};"
             "font-size: 11px;"
             "}"
+            "QToolButton#beamline_state_interlock {"
+            "background: transparent;"
+            "border: none;"
+            "border-radius: 4px;"
+            "padding: 2px;"
+            "}"
+            "QToolButton#beamline_state_interlock:hover {"
+            f"background-color: {colors['button_hover']};"
+            "}"
             "QWidget#beamline_state_settings {"
             "background: transparent;"
             f"border-top: 1px solid {colors['border']};"
@@ -400,6 +483,70 @@ class BeamlineStatePill(BECWidget, QWidget):
             "border-color: #a91419;"
             "}"
         )
+
+    def _update_header_icons(self, colors: dict[str, str]) -> None:
+        cache_key = (
+            self._status,
+            self._expanded,
+            self._interlock_required_status,
+            self._interlock_triggered,
+            get_theme_name(),
+        )
+        if cache_key == self._header_icon_cache_key:
+            return
+        self._header_icon_cache_key = cache_key
+
+        self._icon_label.setPixmap(
+            material_icon(
+                self._STATUS_ICONS[self._status],
+                size=(20, 20),
+                color=colors["on_accent"],
+                filled=True,
+            )
+        )
+        expand_icon = "expand_less" if self._expanded else "expand_more"
+        self._expand_button.setIcon(
+            material_icon(expand_icon, size=(20, 20), convert_to_pixmap=False)
+        )
+        if self._interlock_required_status is not None:
+            lock_color = (
+                colors["interlock_trigger"] if self._interlock_triggered else colors["foreground"]
+            )
+            self._interlock_button.setIcon(
+                material_icon(
+                    "lock", size=(18, 18), color=lock_color, filled=True, convert_to_pixmap=False
+                )
+            )
+            self._interlock_button.setToolTip(
+                f"Watched by the scan interlock (required status: "
+                f"{self._interlock_required_status}).\n"
+                "Click to remove this state from the scan interlock."
+            )
+        else:
+            self._interlock_button.setIcon(
+                material_icon(
+                    "lock_open_right", size=(18, 18), color=colors["muted"], convert_to_pixmap=False
+                )
+            )
+            self._interlock_button.setToolTip(
+                "Not watched by the scan interlock.\n"
+                "Click to add this state to the scan interlock."
+            )
+
+    @staticmethod
+    def _traveling_gradient(base: str, highlight: str, phase: float) -> str:
+        """Return a horizontal QSS gradient with a highlight band centered at ``phase``."""
+        span = 0.3
+        center = phase * (1.0 + 2.0 * span) - span
+        stops: list[tuple[float, str]] = [(0.0, base)]
+        for position, color in ((center - span, base), (center, highlight), (center + span, base)):
+            position = min(1.0, max(0.0, position))
+            if position - stops[-1][0] > 0.001:
+                stops.append((position, color))
+        if 1.0 - stops[-1][0] > 0.001:
+            stops.append((1.0, base))
+        body = ", ".join(f"stop:{position:.4f} {color}" for position, color in stops)
+        return f"qlineargradient(x1:0, y1:0, x2:1, y2:0, {body})"
 
     @SafeSlot()
     def _toggle_expanded(self) -> None:
@@ -610,12 +757,16 @@ class BeamlineStatePill(BECWidget, QWidget):
             "dirty_border": Colors._blend(border, warning, 0.70).name(),
             "foreground": foreground.name(),
             "muted": Colors._blend(card_bg, foreground, 0.66).name(),
+            "interlock_trigger": accents.emergency.name(),
+            "interlock_band": rgba(accents.emergency, 64 if light_theme else 110),
+            "button_hover": rgba(accent, 28 if light_theme else 48),
             "shadow": "#00000024" if light_theme else "#00000078",
             "shadow_blur": "24" if light_theme else "18",
             "shadow_y_offset": "3" if light_theme else "2",
         }
 
     def cleanup(self) -> None:
+        self._interlock_animation.stop()
         if self._state_name is not None:
             self.bec_dispatcher.disconnect_slot(
                 self.update_state, MessageEndpoints.beamline_state(self._state_name)

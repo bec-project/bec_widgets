@@ -6,7 +6,8 @@ from typing import Any
 from bec_lib import bl_states, messages
 from bec_lib.endpoints import MessageEndpoints
 from bec_qthemes import material_icon
-from qtpy.QtCore import QAbstractListModel, QModelIndex, QSize, Qt
+from qtpy.QtCore import QAbstractListModel, QModelIndex, QRect, QSize, Qt
+from qtpy.QtGui import QColor, QPainter, QPen
 from qtpy.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -25,8 +26,9 @@ from qtpy.QtWidgets import (
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
-from bec_widgets.utils.toolbars.actions import MaterialIconAction
+from bec_widgets.utils.toolbars.actions import MaterialIconAction, WidgetAction
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.widgets.services.beamline_states.beamline_state_pill import BeamlineStatePill
@@ -38,91 +40,167 @@ from bec_widgets.widgets.services.beamline_states.dialogs import (
 
 
 class _BeamlineStateListModel(QAbstractListModel):
-    """Model owning beamline state row identity and configuration data."""
+    """
+    Model owning beamline state row identity, configuration data, and section headers.
+
+    Rows are identified by ``("state", name)`` or ``("header", kind)`` keys so state rows and
+    section header rows share one diff-based update path.
+    """
 
     NameRole = Qt.ItemDataRole.UserRole + 1
     ConfigRole = Qt.ItemDataRole.UserRole + 2
+    HeaderRole = Qt.ItemDataRole.UserRole + 3
+
+    INTERLOCK_HEADER = "interlock"
+    OTHERS_HEADER = "others"
+    HEADER_LABELS = {
+        INTERLOCK_HEADER: "Scan interlock states",
+        OTHERS_HEADER: "Not included in scan interlock",
+    }
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self._state_order: list[str] = []
-        self._state_rows: dict[str, int] = {}
+        self._row_keys: list[tuple[str, str]] = []
+        self._row_indices: dict[tuple[str, str], int] = {}
         self._state_configs: dict[str, messages.BeamlineStateConfig] = {}
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:  # noqa: N802
-        return 0 if parent.isValid() else len(self._state_order)
+        return 0 if parent.isValid() else len(self._row_keys)
 
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
-        if not index.isValid() or not 0 <= index.row() < len(self._state_order):
+        if not index.isValid() or not 0 <= index.row() < len(self._row_keys):
             return None
-        name = self._state_order[index.row()]
+        kind, value = self._row_keys[index.row()]
+        if kind == "header":
+            if role == Qt.ItemDataRole.DisplayRole:
+                return self.HEADER_LABELS[value]
+            if role == self.HeaderRole:
+                return value
+            return None
         if role in (Qt.ItemDataRole.DisplayRole, self.NameRole):
-            return name
+            return value
         if role == self.ConfigRole:
-            return self._state_configs.get(name)
+            return self._state_configs.get(value)
         return None
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
-        if not index.isValid():
+        if not index.isValid() or not 0 <= index.row() < len(self._row_keys):
+            return Qt.ItemFlag.NoItemFlags
+        if self._row_keys[index.row()][0] == "header":
             return Qt.ItemFlag.NoItemFlags
         return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
 
-    def set_states(self, state_configs: list[messages.BeamlineStateConfig]) -> None:
-        new_order = [state.name for state in state_configs]
+    def set_states(
+        self, state_configs: list[messages.BeamlineStateConfig], interlock_names: set[str]
+    ) -> None:
+        interlock = [state for state in state_configs if state.name in interlock_names]
+        others = [state for state in state_configs if state.name not in interlock_names]
+        new_keys: list[tuple[str, str]] = []
+        if interlock:
+            new_keys.append(("header", self.INTERLOCK_HEADER))
+            new_keys.extend(("state", state.name) for state in interlock)
+            if others:
+                new_keys.append(("header", self.OTHERS_HEADER))
+        new_keys.extend(("state", state.name) for state in others)
+
         new_configs = {state.name: state for state in state_configs}
+        new_key_set = set(new_keys)
 
         for row in reversed(
-            [row for row, name in enumerate(self._state_order) if name not in new_configs]
+            [row for row, key in enumerate(self._row_keys) if key not in new_key_set]
         ):
             self.beginRemoveRows(QModelIndex(), row, row)
-            name = self._state_order.pop(row)
-            self._state_configs.pop(name, None)
+            kind, value = self._row_keys.pop(row)
+            if kind == "state":
+                self._state_configs.pop(value, None)
             self.endRemoveRows()
         self._rebuild_rows()
 
-        for target_row, name in enumerate(new_order):
-            if name not in self._state_rows:
+        for target_row, key in enumerate(new_keys):
+            if key not in self._row_indices:
                 self.beginInsertRows(QModelIndex(), target_row, target_row)
-                self._state_order.insert(target_row, name)
-                self._state_configs[name] = new_configs[name]
+                self._row_keys.insert(target_row, key)
+                if key[0] == "state":
+                    self._state_configs[key[1]] = new_configs[key[1]]
                 self.endInsertRows()
                 self._rebuild_rows()
                 continue
 
-            current_row = self._state_rows[name]
+            current_row = self._row_indices[key]
             if current_row != target_row:
                 destination_row = target_row if current_row > target_row else target_row + 1
                 self.beginMoveRows(
                     QModelIndex(), current_row, current_row, QModelIndex(), destination_row
                 )
-                self._state_order.insert(target_row, self._state_order.pop(current_row))
+                self._row_keys.insert(target_row, self._row_keys.pop(current_row))
                 self.endMoveRows()
                 self._rebuild_rows()
 
-            if self._state_configs.get(name) != new_configs[name]:
-                self._state_configs[name] = new_configs[name]
-                index = self.index(self._state_rows[name], 0)
+            if key[0] == "state" and self._state_configs.get(key[1]) != new_configs[key[1]]:
+                self._state_configs[key[1]] = new_configs[key[1]]
+                index = self.index(self._row_indices[key], 0)
                 self.dataChanged.emit(index, index, [self.ConfigRole])
 
     def _rebuild_rows(self) -> None:
-        self._state_rows = {name: row for row, name in enumerate(self._state_order)}
+        self._row_indices = {key: row for row, key in enumerate(self._row_keys)}
 
     def index_for_name(self, name: str) -> QModelIndex:
-        row = self._state_rows.get(name)
+        row = self._row_indices.get(("state", name))
         if row is None:
             return QModelIndex()
         return self.index(row, 0)
 
 
 class _BeamlineStatePillDelegate(QStyledItemDelegate):
-    """Delegate that provides BeamlineStatePill persistent editors for list rows."""
+    """Delegate painting section headers and providing BeamlineStatePill persistent editors."""
+
+    HEADER_HEIGHT = 26
 
     def __init__(self, manager: "BeamlineStateManager") -> None:
         super().__init__(manager)
         self._manager = manager
 
-    def paint(self, _painter, _option: QStyleOptionViewItem, _index: QModelIndex) -> None:
-        return
+    def paint(self, painter, option: QStyleOptionViewItem, index: QModelIndex) -> None:
+        kind = index.data(_BeamlineStateListModel.HeaderRole)
+        if kind is None:
+            return
+
+        colors = BeamlineStatePill._state_colors("unknown")
+        armed = (
+            kind == _BeamlineStateListModel.INTERLOCK_HEADER and self._manager._interlock_enabled
+        )
+        label_color = QColor(colors["foreground"] if armed else colors["muted"])
+        icon_name = (
+            "lock" if kind == _BeamlineStateListModel.INTERLOCK_HEADER else "lock_open_right"
+        )
+        pixmap = material_icon(icon_name, size=(14, 14), color=label_color, filled=armed)
+        text = str(index.data(Qt.ItemDataRole.DisplayRole))
+
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        rect = option.rect.adjusted(8, 0, -8, 0)
+
+        font = painter.font()
+        font.setPointSizeF(max(7.0, font.pointSizeF() * 0.85))
+        font.setBold(True)
+        painter.setFont(font)
+
+        icon_width = int(pixmap.width() / pixmap.devicePixelRatio())
+        icon_height = int(pixmap.height() / pixmap.devicePixelRatio())
+        painter.drawPixmap(rect.left(), rect.center().y() - icon_height // 2, pixmap)
+
+        text_left = rect.left() + icon_width + 6
+        painter.setPen(label_color)
+        text_rect = QRect(text_left, rect.top(), rect.width() - icon_width - 6, rect.height())
+        painter.drawText(
+            text_rect, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, text
+        )
+
+        rule_left = text_left + painter.fontMetrics().horizontalAdvance(text) + 8
+        if rule_left < rect.right():
+            painter.setPen(QPen(QColor(colors["border"]), 1))
+            painter.drawLine(rule_left, rect.center().y(), rect.right(), rect.center().y())
+        painter.restore()
 
     def createEditor(  # noqa: N802
         self, parent: QWidget, _option: QStyleOptionViewItem, index: QModelIndex
@@ -135,6 +213,7 @@ class _BeamlineStatePillDelegate(QStyledItemDelegate):
         pill.state_changed.connect(self._manager._on_pill_state_changed)
         pill.update_requested.connect(self._manager._update_state_parameters)
         pill.remove_requested.connect(self._manager._remove_state_requested)
+        pill.scan_interlock_toggle_requested.connect(self._manager._on_interlock_toggle_requested)
         pill.row_height_changed.connect(lambda name=name: self._manager._sync_pill_item_size(name))
         self._manager._state_pills[str(name)] = pill
         return pill
@@ -154,6 +233,8 @@ class _BeamlineStatePillDelegate(QStyledItemDelegate):
         editor.setGeometry(option.rect)
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:  # noqa: N802
+        if index.data(_BeamlineStateListModel.HeaderRole) is not None:
+            return QSize(120, self.HEADER_HEIGHT)
         name = index.data(_BeamlineStateListModel.NameRole)
         pill = self._manager._state_pills.get(str(name))
         if pill is not None:
@@ -240,6 +321,11 @@ class BeamlineStateManager(BECWidget, QWidget):
         self._hidden_expanded = False
         self._idle_card_background = False
         self.idle_card_background = idle_card_background
+        self._scan_interlock = self.client.builtin_actors.scan_interlock
+        self._interlock_enabled = False
+        self._interlock_states: dict[str, str] = {}
+        self._updating_interlock_action = False
+        self._interlock_action_armed: bool | None = None
 
         self._empty_label = QLabel(
             "No beamline states available.\n Add new state from toolbar or CLI.", self
@@ -269,6 +355,11 @@ class BeamlineStateManager(BECWidget, QWidget):
         self.bec_dispatcher.connect_slot(
             self.update_available_states, MessageEndpoints.available_beamline_states()
         )
+        self.bec_dispatcher.connect_slot(
+            self._refresh_scan_interlock,
+            MessageEndpoints.builtin_actor_update_notif("ScanInterlockActor"),
+        )
+        self._refresh_scan_interlock()
         self.refresh_states()
         self._refresh_hidden_summary()
 
@@ -305,18 +396,33 @@ class BeamlineStateManager(BECWidget, QWidget):
         collapse_all = MaterialIconAction(
             "collapse_all", "Collapse all states", filled=True, parent=self
         )
+        spacer = QWidget(self)
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        spacer_action = WidgetAction(widget=spacer, adjust_size=False, parent=self)
+        scan_interlock = MaterialIconAction(
+            "no_encryption",
+            "Scan interlock",
+            checkable=True,
+            filled=True,
+            label_text="Scan interlock",
+            text_position="beside",
+            parent=self,
+        )
 
         add_state.action.triggered.connect(self.open_add_state_dialog)
         filter_states.action.triggered.connect(self.open_status_filter_dialog)
         filter_devices.action.triggered.connect(self.open_device_filter_dialog)
         clear_filters.action.triggered.connect(self.clear_filters)
         collapse_all.action.triggered.connect(self.collapse_all)
+        scan_interlock.action.toggled.connect(self._on_interlock_action_toggled)
 
         toolbar.components.add_safe("add_state", add_state)
         toolbar.components.add_safe("filter_states", filter_states)
         toolbar.components.add_safe("filter_devices", filter_devices)
         toolbar.components.add_safe("clear_filters", clear_filters)
         toolbar.components.add_safe("collapse_all", collapse_all)
+        toolbar.components.add_safe("scan_interlock_spacer", spacer_action)
+        toolbar.components.add_safe("scan_interlock", scan_interlock)
 
         bundle = ToolbarBundle("beamline_state_manager", toolbar.components)
         bundle.add_action("add_state")
@@ -324,8 +430,15 @@ class BeamlineStateManager(BECWidget, QWidget):
         bundle.add_action("filter_devices")
         bundle.add_action("clear_filters")
         bundle.add_action("collapse_all")
+        bundle.add_action("scan_interlock_spacer")
+        bundle.add_separator()
+        bundle.add_action("scan_interlock")
         toolbar.add_bundle(bundle)
         toolbar.show_bundles(["beamline_state_manager"])
+        if spacer_action.container is not None:
+            spacer_action.container.setSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+            )
         return toolbar
 
     @SafeSlot(str)
@@ -343,6 +456,9 @@ class BeamlineStateManager(BECWidget, QWidget):
         )
         for pill in self._state_pills.values():
             pill.apply_theme(_theme)
+        self._interlock_action_armed = None
+        self._sync_interlock_action()
+        self._view.viewport().update()
         self._refresh_hidden_summary()
 
     @SafeSlot()
@@ -429,21 +545,100 @@ class BeamlineStateManager(BECWidget, QWidget):
         self, content: dict[str, Any], _metadata: dict[str, Any] | None = None
     ) -> None:
         """Update the displayed pills from ``AvailableBeamlineStatesMessage`` content."""
-        expanded_names = {name for name, pill in self._state_pills.items() if pill.is_expanded()}
         state_configs: list[messages.BeamlineStateConfig] = content.get("states", [])
-        if state_configs == list(self._state_configs.values()):
-            self._apply_filters()
-            return
         self._state_configs = {state.name: state for state in state_configs}
         self._state_order = [state.name for state in state_configs]
-        self._model.set_states(state_configs)
+        self._refresh_view()
+
+    @SafeSlot(dict, dict)
+    def _refresh_scan_interlock(
+        self, _content: dict[str, Any] | None = None, _metadata: dict[str, Any] | None = None
+    ) -> None:
+        """Re-read the scan-interlock state from BEC and refresh the displayed pills."""
+        try:
+            self._interlock_enabled = bool(self._scan_interlock.enabled)
+            self._interlock_states = dict(self._scan_interlock.states_watched)
+        except Exception as exc:
+            QMessageBox.warning(self, "Scan Interlock Unavailable", str(exc))
+            return
+        self._refresh_view()
+
+    def _refresh_view(self) -> None:
+        """Render the current state and scan-interlock bookkeeping in one pass."""
+        self._sync_interlock_action()
+        expanded_names = {name for name, pill in self._state_pills.items() if pill.is_expanded()}
+        state_configs = [self._state_configs[name] for name in self._state_order]
+        self._model.set_states(state_configs, set(self._interlock_states))
         self._open_persistent_editors(expanded_names)
+        for name, pill in self._state_pills.items():
+            self._apply_interlock_to_pill(name, pill)
         self._apply_filters()
+        self._view.viewport().update()
+
+    def _sync_interlock_action(self) -> None:
+        action = self._toolbar.components.get_action("scan_interlock").action
+        self._updating_interlock_action = True
+        try:
+            action.setChecked(self._interlock_enabled)
+        finally:
+            self._updating_interlock_action = False
+        if self._interlock_enabled == self._interlock_action_armed:
+            return
+        self._interlock_action_armed = self._interlock_enabled
+        if self._interlock_enabled:
+            action.setIcon(
+                material_icon(
+                    "lock",
+                    size=(20, 20),
+                    filled=True,
+                    color=get_accent_colors().success.name(),
+                    convert_to_pixmap=False,
+                )
+            )
+            action.setToolTip("Scan interlock is armed. Click to disable it.")
+        else:
+            action.setIcon(
+                material_icon("no_encryption", size=(20, 20), filled=True, convert_to_pixmap=False)
+            )
+            action.setToolTip("Scan interlock is disabled. Click to arm it.")
+
+    def _apply_interlock_to_pill(self, name: str, pill: BeamlineStatePill) -> None:
+        required_status = self._interlock_states.get(name)
+        triggered = (
+            self._interlock_enabled
+            and required_status is not None
+            and pill._status != required_status
+        )
+        pill.set_scan_interlock(required_status, triggered)
+
+    @SafeSlot(bool)
+    def _on_interlock_action_toggled(self, checked: bool) -> None:
+        if self._updating_interlock_action:
+            return
+        try:
+            self._scan_interlock.enabled = bool(checked)
+        except Exception as exc:
+            QMessageBox.warning(self, "Cannot Toggle Scan Interlock", str(exc))
+        self._refresh_scan_interlock()
+
+    @SafeSlot(str, bool)
+    def _on_interlock_toggle_requested(self, state_name: str, include: bool) -> None:
+        try:
+            if include:
+                self._scan_interlock.add_state_to_interlock(state_name, "valid")
+            else:
+                self._scan_interlock.remove_state_from_interlock(state_name)
+        except Exception as exc:
+            QMessageBox.warning(self, "Cannot Update Scan Interlock", str(exc))
+            return
+        self._refresh_scan_interlock()
 
     def _open_persistent_editors(self, expanded_names: set[str] | None = None) -> None:
         expanded_names = expanded_names or set()
         for row in range(self._model.rowCount()):
             index = self._model.index(row, 0)
+            if index.data(_BeamlineStateListModel.HeaderRole) is not None:
+                continue
             self._view.openPersistentEditor(index)
             name = str(index.data(_BeamlineStateListModel.NameRole))
             pill = self._state_pills.get(name)
@@ -462,10 +657,32 @@ class BeamlineStateManager(BECWidget, QWidget):
 
         visible_set = set(visible_names)
         show_hidden = self._hidden_expanded and bool(hidden_names)
-        for row, name in enumerate(self._state_order):
-            hidden_by_filter = name not in visible_set
-            self._view.setRowHidden(row, hidden_by_filter and not show_hidden)
+        shown_interlock = 0
+        shown_others = 0
+        for row in range(self._model.rowCount()):
+            index = self._model.index(row, 0)
+            if index.data(_BeamlineStateListModel.HeaderRole) is not None:
+                continue
+            name = str(index.data(_BeamlineStateListModel.NameRole))
+            shown = name in visible_set or show_hidden
+            self._view.setRowHidden(row, not shown)
+            if shown:
+                if name in self._interlock_states:
+                    shown_interlock += 1
+                else:
+                    shown_others += 1
             self._sync_pill_item_size(name)
+        for row in range(self._model.rowCount()):
+            index = self._model.index(row, 0)
+            kind = index.data(_BeamlineStateListModel.HeaderRole)
+            if kind is None:
+                continue
+            shown_count = (
+                shown_interlock
+                if kind == _BeamlineStateListModel.INTERLOCK_HEADER
+                else shown_others
+            )
+            self._view.setRowHidden(row, shown_count == 0)
         self._empty_label.setVisible(
             not visible_names and not (self._hidden_expanded and hidden_names)
         )
@@ -504,7 +721,10 @@ class BeamlineStateManager(BECWidget, QWidget):
         return True
 
     @SafeSlot(str, str, str)
-    def _on_pill_state_changed(self, _name: str, _status: str, _label: str) -> None:
+    def _on_pill_state_changed(self, name: str, _status: str, _label: str) -> None:
+        pill = self._state_pills.get(name)
+        if pill is not None:
+            self._apply_interlock_to_pill(name, pill)
         if self._selected_statuses is not None:
             self._apply_filters()
 
@@ -571,6 +791,10 @@ class BeamlineStateManager(BECWidget, QWidget):
     def cleanup(self) -> None:
         self.bec_dispatcher.disconnect_slot(
             self.update_available_states, MessageEndpoints.available_beamline_states()
+        )
+        self.bec_dispatcher.disconnect_slot(
+            self._refresh_scan_interlock,
+            MessageEndpoints.builtin_actor_update_notif("ScanInterlockActor"),
         )
         for row in range(self._model.rowCount()):
             self._view.closePersistentEditor(self._model.index(row, 0))
