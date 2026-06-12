@@ -152,7 +152,6 @@ class Waveform(PlotBase):
         self.old_scan_id = None
         self.scan_id = None
         self.scan_item = None
-        self.readout_priority = None
         self.x_axis_mode = {
             "name": "auto",
             "entry": None,
@@ -1590,19 +1589,19 @@ class Waveform(PlotBase):
             self._update_curve_visibility()
             self._mode = self._categorise_device_curves()
 
-            # First trigger to sync and async data
+            # First trigger to sync and async data. Async curve subscriptions
+            # were already set up by _categorise_device_curves above (it calls
+            # _setup_async_curve per async curve for live scans); repeating it
+            # here cleared each curve's data a second time and re-attempted
+            # the stream registration for every new scan.
             if self._mode == "sync":
                 self.sync_signal_update.emit()
                 logger.info("Scan status: Sync mode")
             elif self._mode == "async":
-                for curve in self._async_curves:
-                    self._setup_async_curve(curve)
                 self.async_signal_update.emit()
                 logger.info("Scan status: Async mode")
             else:
                 self.sync_signal_update.emit()
-                for curve in self._async_curves:
-                    self._setup_async_curve(curve)
                 self.async_signal_update.emit()
                 logger.info("Scan status: Mixed mode")
                 logger.warning("Mixed mode - integrity of x axis cannot be guaranteed.")
