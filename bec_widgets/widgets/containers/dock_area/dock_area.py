@@ -32,6 +32,7 @@ from bec_widgets.utils.rpc_widget_handler import widget_handler
 from bec_widgets.utils.toolbars.actions import (
     ExpandableMenuAction,
     MaterialIconAction,
+    SwitchableToolBarAction,
     WidgetAction,
 )
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
@@ -470,10 +471,34 @@ class BECDockArea(DockAreaWidget):
             self._profile_management_enabled
         )
         self.toolbar.components.add_safe(
-            "screenshot",
+            "screenshot_save",
             MaterialIconAction(icon_name="photo_camera", tooltip="Take Screenshot", parent=self),
         )
-        self.toolbar.components.get_action("screenshot").action.setVisible(
+        self.toolbar.components.add_safe(
+            "screenshot_to_scilog",
+            MaterialIconAction(
+                icon_name="add_a_photo", tooltip="Send Screenshot to SciLog", parent=self
+            ),
+        )
+        self.toolbar.components.add_safe(
+            "screenshot",
+            SwitchableToolBarAction(
+                actions={
+                    "save": self.toolbar.components.get_action_reference("screenshot_save")(),
+                    "scilog": self.toolbar.components.get_action_reference(
+                        "screenshot_to_scilog"
+                    )(),
+                },
+                initial_action="save",
+                tooltip="Screenshot Actions",
+                checkable=False,
+                parent=self.toolbar,
+            ),
+        )
+        self.toolbar.components.get_action("screenshot_save").action.setVisible(
+            self._profile_management_enabled
+        )
+        self.toolbar.components.get_action("screenshot_to_scilog").action.setVisible(
             self._profile_management_enabled
         )
         dark_mode_action = WidgetAction(
@@ -542,7 +567,12 @@ class BECDockArea(DockAreaWidget):
         _connect_flat_actions(self._ACTION_MAPPINGS["menu_utils"])
 
         self.toolbar.components.get_action("attach_all").action.triggered.connect(self.attach_all)
-        self.toolbar.components.get_action("screenshot").action.triggered.connect(self.screenshot)
+        self.toolbar.components.get_action("screenshot_save").action.triggered.connect(
+            self.screenshot
+        )
+        self.toolbar.components.get_action("screenshot_to_scilog").action.triggered.connect(
+            self.screenshot_to_scilog
+        )
 
     def _new_plugin_widget(self, widget_type: str, toolbar_action: MaterialIconAction) -> None:
         # Created as helper method for simple tests
