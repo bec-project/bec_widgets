@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.15.1 (2026-06-13)
+
+### Bug Fixes
+
+- **curve_tree**: Update header labels to reflect device and signal columns
+  ([`68903fc`](https://github.com/bec-project/bec_widgets/commit/68903fc6ae2ffd3ac7b5394ba6cf9a4b2ce745e5))
+
+
 ## v3.15.0 (2026-06-12)
 
 ### Bug Fixes
