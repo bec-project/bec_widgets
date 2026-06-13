@@ -552,7 +552,7 @@ class CurveTree(BECWidget, QWidget):
         self.tree = QTreeWidget()
         self.tree.setColumnCount(8)
         self.tree.setHeaderLabels(
-            ["Actions", "Name", "Entry", "Scan #", "Color", "Style", "Width", "Symbol"]
+            ["Actions", "Device", "Signal", "Scan #", "Color", "Style", "Width", "Symbol"]
         )
 
         header = self.tree.header()
