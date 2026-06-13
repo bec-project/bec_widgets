@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from qtpy.QtCore import QSettings, Qt, QTimer
 from qtpy.QtGui import QPixmap
-from qtpy.QtWidgets import QDialog, QMessageBox, QWidget
+from qtpy.QtWidgets import QDialog, QMessageBox, QToolButton, QWidget
 
 import bec_widgets.widgets.containers.dock_area.basic_dock_area as basic_dock_module
 import bec_widgets.widgets.containers.dock_area.dock_area as dock_area_module
@@ -987,9 +987,9 @@ class TestToolbarFunctionality:
                 mock_screenshot = mock.MagicMock()
                 mock_grab.return_value = mock_screenshot
 
-                # Trigger the screenshot action
-                action = advanced_dock_area.toolbar.components.get_action("screenshot").action
-                action.trigger()
+                # Trigger the screenshot main button
+                action = advanced_dock_area.toolbar.components.get_action("screenshot")
+                action.main_button.click()
 
                 # Verify the dialog was called
                 mock_dialog.assert_called_once()
@@ -999,6 +999,41 @@ class TestToolbarFunctionality:
 
                 # Verify save was called with the filename
                 mock_screenshot.save.assert_called_once_with(str(screenshot_path))
+
+    def test_screenshot_button_has_scilog_dropdown(self, advanced_dock_area):
+        """Test screenshot toolbar button exposes a SciLog dropdown option."""
+        action = advanced_dock_area.toolbar.components.get_action("screenshot")
+        button = action.main_button
+
+        assert isinstance(button, QToolButton)
+        assert button.popupMode() == QToolButton.ToolButtonPopupMode.MenuButtonPopup
+        assert button.menu() is not None
+        assert [menu_action.text() for menu_action in button.menu().actions()] == [
+            "Take Screenshot",
+            "Send Screenshot to SciLog",
+        ]
+
+    def test_screenshot_to_scilog_action(self, advanced_dock_area):
+        """Test sending a screenshot through the BEC SciLog messaging service."""
+        mock_message = mock.MagicMock()
+        mock_message.add_attachment.return_value = mock_message
+        advanced_dock_area.client.messaging.scilog.new = mock.MagicMock(return_value=mock_message)
+        advanced_dock_area.client.messaging.scilog._enabled = True
+
+        with mock.patch.object(advanced_dock_area, "grab") as mock_grab:
+            mock_screenshot = mock.MagicMock()
+            mock_screenshot.isNull.return_value = False
+            mock_screenshot.save.return_value = True
+            mock_grab.return_value = mock_screenshot
+
+            action = advanced_dock_area.toolbar.components.get_action("screenshot")
+            assert action.main_button is not None
+            scilog_menu_action = action.main_button.menu().actions()[1]
+            scilog_menu_action.trigger()
+
+        advanced_dock_area.client.messaging.scilog.new.assert_called_once_with()
+        mock_message.add_attachment.assert_called_once()
+        mock_message.send.assert_called_once_with()
 
     def test_plugin_toolbar_actions_empty_when_no_plugins(self, clear_plugin_toolbar_actions_cache):
         """Test that no plugin toolbar actions are produced when no plugin widgets exist."""

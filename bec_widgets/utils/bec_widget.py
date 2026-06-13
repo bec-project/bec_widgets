@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import tempfile
 from datetime import datetime
 from typing import TYPE_CHECKING
 
@@ -303,6 +305,49 @@ class BECWidget(BECConnector):
         pixmap.save(buf, fmt, quality)
         buf.close()
         return ba
+
+    @SafeSlot(popup_error=True)
+    @rpc_timeout(None)
+    def screenshot_to_scilog(self) -> None:
+        """
+        Take a screenshot of the widget and send it to SciLog through BEC messaging services.
+        """
+        if not isinstance(self, QWidget):
+            raise RuntimeError("Cannot take screenshot of non-QWidget instance")
+
+        messaging = getattr(self.client, "messaging", None)
+        if messaging is None:
+            raise RuntimeError("BEC messaging services are not available on the current client.")
+
+        scilog = messaging.scilog
+        if not getattr(scilog, "_enabled", False):
+            # We currently don't expose a public method to check if SciLog is enabled,
+            # so we play defensive and check for an internal _enabled attribute that
+            # should be True when SciLog is enabled.
+            raise RuntimeError(
+                "SciLog is not enabled for the current client, cannot send screenshot."
+            )
+
+        pixmap: QPixmap = self.grab()
+        if pixmap.isNull():
+            raise RuntimeError("Failed to capture screenshot.")
+
+        tmp_name: str | None = None
+
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_file:
+                tmp_name = tmp_file.name
+
+            if not pixmap.save(tmp_name, "PNG"):
+                raise RuntimeError("Failed to save screenshot to a temporary file.")
+
+            msg = messaging.scilog.new()
+            msg.add_attachment(tmp_name)
+            msg.send()
+            logger.info("Screenshot sent to SciLog")
+        finally:
+            if tmp_name and os.path.exists(tmp_name):
+                os.unlink(tmp_name)
 
     def attach(self):
         dock = WidgetHierarchy.find_ancestor(self, QtAds.CDockWidget)
