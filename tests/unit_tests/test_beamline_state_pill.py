@@ -1,7 +1,6 @@
 import shiboken6
 from bec_lib import bl_states, messages
-from qtpy.QtCore import QCoreApplication, QEvent, QRect, Qt
-from qtpy.QtGui import QPainter, QPixmap
+from qtpy.QtCore import QCoreApplication, QEvent, Qt
 from qtpy.QtWidgets import QMessageBox, QStyleOptionViewItem
 
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
@@ -702,7 +701,7 @@ def test_beamline_state_manager_interlock_states_bypass_filters(qtbot, mocked_cl
     assert not beamline_state_manager._view.isRowHidden(model.index_for_name("shutter_open").row())
 
 
-def test_beamline_state_manager_paints_section_headers(qtbot, mocked_client):
+def test_beamline_state_manager_section_headers_are_widgets(qtbot, mocked_client):
     beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
     beamline_state_manager.update_available_states(
         {"states": [_limits_state(), _shutter_state()]}, {}
@@ -721,14 +720,12 @@ def test_beamline_state_manager_paints_section_headers(qtbot, mocked_client):
     )
     assert model.flags(header_index) == Qt.ItemFlag.NoItemFlags
 
-    target = QPixmap(400, delegate.HEADER_HEIGHT)
-    target.fill(Qt.GlobalColor.transparent)
-    painter = QPainter(target)
-    option = QStyleOptionViewItem()
-    option.rect = QRect(0, 0, 400, delegate.HEADER_HEIGHT)
-    delegate.paint(painter, option, header_index)
-    delegate.paint(painter, option, model.index(2, 0))
-    painter.end()
+    # Both section headers are rendered by persistent header widgets, not by a custom paint().
+    headers = beamline_state_manager._section_headers
+    assert set(headers) == {model.INTERLOCK_HEADER, model.OTHERS_HEADER}
+    assert headers[model.INTERLOCK_HEADER]._label.text() == "Scan interlock states"
+    assert headers[model.OTHERS_HEADER]._label.text() == "Not included in scan interlock"
+    assert not headers[model.INTERLOCK_HEADER]._icon.pixmap().isNull()
 
 
 def test_beamline_state_manager_marks_triggered_pills(qtbot, mocked_client):

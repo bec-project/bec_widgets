@@ -6,8 +6,7 @@ from typing import Any
 from bec_lib import bl_states, messages
 from bec_lib.endpoints import MessageEndpoints
 from bec_qthemes import material_icon
-from qtpy.QtCore import QAbstractListModel, QModelIndex, QRect, QSize, Qt
-from qtpy.QtGui import QColor, QPainter, QPen
+from qtpy.QtCore import QAbstractListModel, QModelIndex, QSize, Qt
 from qtpy.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -152,8 +151,45 @@ class _BeamlineStateListModel(QAbstractListModel):
         return self.index(row, 0)
 
 
+class _BeamlineStateSectionHeader(QWidget):
+    """Section header row (icon + label + rule line) shown above each state group."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setObjectName("beamline_state_section_header")
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self._icon = QLabel(self)
+        self._label = QLabel(self)
+        self._label.setObjectName("beamline_state_section_label")
+        self._rule = QWidget(self)
+        self._rule.setObjectName("beamline_state_section_rule")
+        self._rule.setFixedHeight(1)
+        self._rule.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(8, 0, 8, 0)
+        layout.setSpacing(6)
+        layout.addWidget(self._icon)
+        layout.addWidget(self._label)
+        layout.addWidget(self._rule, 1, Qt.AlignmentFlag.AlignVCenter)
+
+    def set_header(self, *, icon_name: str, text: str, color: str, filled: bool, rule: str) -> None:
+        self._icon.setPixmap(material_icon(icon_name, size=(14, 14), color=color, filled=filled))
+        self._label.setText(text)
+        self.setStyleSheet(
+            "QLabel#beamline_state_section_label {"
+            f"color: {color};"
+            "font-weight: 700;"
+            "font-size: 11px;"
+            "}"
+            "QWidget#beamline_state_section_rule {"
+            f"background-color: {rule};"
+            "}"
+        )
+
+
 class _BeamlineStatePillDelegate(QStyledItemDelegate):
-    """Delegate painting section headers and providing BeamlineStatePill persistent editors."""
+    """Delegate providing persistent editors: a pill for state rows, a header widget for headers."""
 
     HEADER_HEIGHT = 26
 
@@ -161,51 +197,20 @@ class _BeamlineStatePillDelegate(QStyledItemDelegate):
         super().__init__(manager)
         self._manager = manager
 
-    def paint(self, painter, option: QStyleOptionViewItem, index: QModelIndex) -> None:
-        kind = index.data(_BeamlineStateListModel.HeaderRole)
-        if kind is None:
-            return
-
-        colors = BeamlineStatePill._state_colors("unknown")
-        armed = (
-            kind == _BeamlineStateListModel.INTERLOCK_HEADER and self._manager._interlock_enabled
-        )
-        label_color = QColor(colors["foreground"] if armed else colors["muted"])
-        icon_name = (
-            "lock" if kind == _BeamlineStateListModel.INTERLOCK_HEADER else "lock_open_right"
-        )
-        pixmap = material_icon(icon_name, size=(14, 14), color=label_color, filled=armed)
-        text = str(index.data(Qt.ItemDataRole.DisplayRole))
-
-        painter.save()
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        rect = option.rect.adjusted(8, 0, -8, 0)
-
-        font = painter.font()
-        font.setPointSizeF(max(7.0, font.pointSizeF() * 0.85))
-        font.setBold(True)
-        painter.setFont(font)
-
-        icon_width = int(pixmap.width() / pixmap.devicePixelRatio())
-        icon_height = int(pixmap.height() / pixmap.devicePixelRatio())
-        painter.drawPixmap(rect.left(), rect.center().y() - icon_height // 2, pixmap)
-
-        text_left = rect.left() + icon_width + 6
-        painter.setPen(label_color)
-        text_rect = QRect(text_left, rect.top(), rect.width() - icon_width - 6, rect.height())
-        painter.drawText(
-            text_rect, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, text
-        )
-
-        rule_left = text_left + painter.fontMetrics().horizontalAdvance(text) + 8
-        if rule_left < rect.right():
-            painter.setPen(QPen(QColor(colors["border"]), 1))
-            painter.drawLine(rule_left, rect.center().y(), rect.right(), rect.center().y())
-        painter.restore()
+    def paint(self, _painter, _option: QStyleOptionViewItem, _index: QModelIndex) -> None:
+        # Every row is rendered by its persistent editor widget (pill or section header),
+        # so the delegate itself paints nothing.
+        return
 
     def createEditor(  # noqa: N802
         self, parent: QWidget, _option: QStyleOptionViewItem, index: QModelIndex
     ) -> QWidget:
+        kind = index.data(_BeamlineStateListModel.HeaderRole)
+        if kind is not None:
+            header = _BeamlineStateSectionHeader(parent)
+            self._manager._section_headers[str(kind)] = header
+            return header
+
         name = index.data(_BeamlineStateListModel.NameRole)
         state_config = index.data(_BeamlineStateListModel.ConfigRole)
         pill = BeamlineStatePill(parent=parent, state_name=name, client=self._manager.client)
@@ -219,6 +224,10 @@ class _BeamlineStatePillDelegate(QStyledItemDelegate):
         return pill
 
     def setEditorData(self, editor: QWidget, index: QModelIndex) -> None:  # noqa: N802
+        kind = index.data(_BeamlineStateListModel.HeaderRole)
+        if isinstance(editor, _BeamlineStateSectionHeader):
+            self._manager._apply_section_header(editor, str(kind))
+            return
         if not isinstance(editor, BeamlineStatePill):
             return
         name = index.data(_BeamlineStateListModel.NameRole)
@@ -241,7 +250,11 @@ class _BeamlineStatePillDelegate(QStyledItemDelegate):
         return QSize(120, 58)
 
     def destroyEditor(self, editor: QWidget, index: QModelIndex) -> None:  # noqa: N802
-        if isinstance(editor, BeamlineStatePill):
+        if isinstance(editor, _BeamlineStateSectionHeader):
+            for kind, header in list(self._manager._section_headers.items()):
+                if header is editor:
+                    self._manager._section_headers.pop(kind, None)
+        elif isinstance(editor, BeamlineStatePill):
             name = editor.state_name
             if name and self._manager._state_pills.get(name) is editor:
                 self._manager._state_pills.pop(name, None)
@@ -312,6 +325,7 @@ class BeamlineStateManager(BECWidget, QWidget):
         )
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._state_pills: dict[str, BeamlineStatePill] = {}
+        self._section_headers: dict[str, _BeamlineStateSectionHeader] = {}
         self._state_configs: dict[str, messages.BeamlineStateConfig] = {}
         self._state_order: list[str] = []
         self._selected_statuses: set[str] | None = None
@@ -438,7 +452,7 @@ class BeamlineStateManager(BECWidget, QWidget):
             pill.apply_theme(_theme)
         self._interlock_action_armed = None
         self._sync_interlock_action()
-        self._view.viewport().update()
+        self._refresh_section_headers()
         self._refresh_hidden_summary()
 
     @SafeSlot()
@@ -555,8 +569,8 @@ class BeamlineStateManager(BECWidget, QWidget):
         self._open_persistent_editors(expanded_names)
         for name, pill in self._state_pills.items():
             self._apply_interlock_to_pill(name, pill)
+        self._refresh_section_headers()
         self._apply_filters()
-        self._view.viewport().update()
 
     def _sync_interlock_action(self) -> None:
         action = self._toolbar.components.get_action("scan_interlock").action
@@ -589,6 +603,23 @@ class BeamlineStateManager(BECWidget, QWidget):
         pill.set_scan_interlock(
             self._interlock_states.get(name), self._is_interlock_triggered(name)
         )
+
+    def _apply_section_header(self, header: _BeamlineStateSectionHeader, kind: str) -> None:
+        colors = BeamlineStatePill._state_colors("unknown")
+        armed = kind == _BeamlineStateListModel.INTERLOCK_HEADER and self._interlock_enabled
+        header.set_header(
+            icon_name=(
+                "lock" if kind == _BeamlineStateListModel.INTERLOCK_HEADER else "lock_open_right"
+            ),
+            text=_BeamlineStateListModel.HEADER_LABELS[kind],
+            color=colors["foreground"] if armed else colors["muted"],
+            filled=armed,
+            rule=colors["border"],
+        )
+
+    def _refresh_section_headers(self) -> None:
+        for kind, header in self._section_headers.items():
+            self._apply_section_header(header, kind)
 
     def _is_interlock_triggered(self, name: str) -> bool:
         required_status = self._interlock_states.get(name)
@@ -642,9 +673,9 @@ class BeamlineStateManager(BECWidget, QWidget):
         expanded_names = expanded_names or set()
         for row in range(self._model.rowCount()):
             index = self._model.index(row, 0)
+            self._view.openPersistentEditor(index)
             if index.data(_BeamlineStateListModel.HeaderRole) is not None:
                 continue
-            self._view.openPersistentEditor(index)
             name = str(index.data(_BeamlineStateListModel.NameRole))
             pill = self._state_pills.get(name)
             if pill is not None:
@@ -806,6 +837,7 @@ class BeamlineStateManager(BECWidget, QWidget):
             pill.cleanup()
             pill.deleteLater()
         self._state_pills.clear()
+        self._section_headers.clear()
         self._toolbar.components.cleanup()
         super().cleanup()
 
