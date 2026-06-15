@@ -335,6 +335,7 @@ class BeamlineStateManager(BECWidget, QWidget):
         self._scan_interlock = self.client.builtin_actors.scan_interlock
         self._interlock_enabled = False
         self._interlock_states: dict[str, list[str]] = {}
+        self._pending_interlock_statuses: dict[str, list[str]] = {}
         self._updating_interlock_action = False
         self._interlock_action_armed: bool | None = None
 
@@ -459,10 +460,14 @@ class BeamlineStateManager(BECWidget, QWidget):
     def open_add_state_dialog(self) -> None:
         dialog = AddBeamlineStateDialog(self, client=self.client)
         config = None
+        add_to_interlock = False
+        interlock_statuses: list[str] = ["valid", "warning"]
         try:
             accepted = dialog.exec() == QDialog.Accepted
             if accepted:
                 config = dialog.config_result
+                add_to_interlock = dialog.add_to_interlock()
+                interlock_statuses = dialog.interlock_statuses()
         finally:
             dialog.cleanup()
             dialog.deleteLater()
@@ -473,6 +478,14 @@ class BeamlineStateManager(BECWidget, QWidget):
             self.client.beamline_states.add(config)
         except Exception as exc:
             QMessageBox.warning(self, "Cannot Add State", str(exc))
+            return
+        if add_to_interlock:
+            try:
+                self._scan_interlock.add_state_to_interlock(config.name, interlock_statuses)
+            except Exception as exc:
+                QMessageBox.warning(self, "Cannot Update Scan Interlock", str(exc))
+        else:
+            self._pending_interlock_statuses[config.name] = interlock_statuses
 
     @SafeSlot()
     def open_status_filter_dialog(self) -> None:
@@ -600,9 +613,10 @@ class BeamlineStateManager(BECWidget, QWidget):
             action.setToolTip("Scan interlock is disabled. Click to arm it.")
 
     def _apply_interlock_to_pill(self, name: str, pill: BeamlineStatePill) -> None:
-        pill.set_scan_interlock(
-            self._interlock_states.get(name), self._is_interlock_triggered(name)
-        )
+        required_statuses = self._interlock_states.get(name)
+        if required_statuses is None and name in self._pending_interlock_statuses:
+            pill.set_interlock_statuses(self._pending_interlock_statuses.pop(name))
+        pill.set_scan_interlock(required_statuses, self._is_interlock_triggered(name))
 
     def _apply_section_header(self, header: _BeamlineStateSectionHeader, kind: str) -> None:
         colors = BeamlineStatePill._state_colors("unknown")
@@ -662,7 +676,9 @@ class BeamlineStateManager(BECWidget, QWidget):
     def _on_interlock_toggle_requested(self, state_name: str, include: bool) -> None:
         try:
             if include:
-                self._scan_interlock.add_state_to_interlock(state_name, "valid")
+                pill = self._state_pills.get(state_name)
+                statuses = pill.interlock_statuses if pill is not None else ["valid", "warning"]
+                self._scan_interlock.add_state_to_interlock(state_name, statuses)
             else:
                 self._scan_interlock.remove_state_from_interlock(state_name)
         except Exception as exc:

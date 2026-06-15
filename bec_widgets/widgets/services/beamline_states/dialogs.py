@@ -56,6 +56,19 @@ class AddBeamlineStateDialog(QDialog):
         self._config_form_host = QVBoxLayout()
         self._config_form: PydanticWidgetForm | None = None
 
+        self._trigger_on_warning_checkbox = QCheckBox(
+            "Trigger ScanInterlock on WARNING state", self
+        )
+        self._trigger_on_warning_checkbox.setToolTip(
+            "By default both VALID and WARNING are accepted. Enable this so a WARNING status also "
+            "trips the scan interlock (only VALID accepted)."
+        )
+        self._add_to_interlock_checkbox = QCheckBox("Add new state to ScanInterlock", self)
+        self._add_to_interlock_checkbox.setToolTip(
+            "Watch this state in the scan interlock right away. Leave unchecked to add it later "
+            "with the lock button on the state."
+        )
+
         self._buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, parent=self
         )
@@ -65,6 +78,8 @@ class AddBeamlineStateDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.addLayout(self._form)
         layout.addLayout(self._config_form_host)
+        layout.addWidget(self._trigger_on_warning_checkbox)
+        layout.addWidget(self._add_to_interlock_checkbox)
         layout.addWidget(self._buttons)
         self.setLayout(layout)
         self._update_config_form()
@@ -77,6 +92,20 @@ class AddBeamlineStateDialog(QDialog):
         data = self._config_form.get_data()
         data["name"] = name
         return config_class.model_validate(data)
+
+    def add_to_interlock(self) -> bool:
+        """Whether the new state should be enrolled in the scan interlock immediately."""
+        return self._add_to_interlock_checkbox.isChecked()
+
+    def interlock_statuses(self) -> list[str]:
+        """Accepted scan-interlock statuses for the state.
+
+        VALID and WARNING are both accepted by default; triggering on WARNING accepts only VALID.
+        Only applied when the state is actually enrolled (see :meth:`add_to_interlock`).
+        """
+        if self._trigger_on_warning_checkbox.isChecked():
+            return ["valid"]
+        return ["valid", "warning"]
 
     def accept(self) -> None:
         try:

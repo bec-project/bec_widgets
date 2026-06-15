@@ -1,7 +1,7 @@
 import shiboken6
 from bec_lib import bl_states, messages
 from qtpy.QtCore import QCoreApplication, QEvent, Qt
-from qtpy.QtWidgets import QMessageBox, QStyleOptionViewItem
+from qtpy.QtWidgets import QDialog, QMessageBox, QStyleOptionViewItem
 
 from bec_widgets.utils.eliding_label import ElidingLabel
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
@@ -882,14 +882,42 @@ def test_beamline_state_manager_pill_toggle_calls_backend(qtbot, mocked_client):
 
     beamline_state_manager._state_pills["limits"]._interlock_button.click()
 
-    assert fake_interlock.added == [("limits", "valid")]
+    assert fake_interlock.added == [("limits", ["valid", "warning"])]
     # The toggle refreshes immediately, so the state is reflected without a backend notification.
-    assert beamline_state_manager._interlock_states == {"limits": ["valid"]}
+    assert beamline_state_manager._interlock_states == {"limits": ["valid", "warning"]}
 
     beamline_state_manager._state_pills["limits"]._interlock_button.click()
 
     assert fake_interlock.removed == ["limits"]
     assert beamline_state_manager._interlock_states == {}
+
+
+def test_beamline_state_manager_lock_uses_dialog_status_preference(
+    qtbot, mocked_client, monkeypatch
+):
+    beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
+    fake_interlock = _FakeScanInterlock()
+    _install_fake_scan_interlock(beamline_state_manager, fake_interlock)
+    _stub_beamline_states_add(mocked_client)
+    # Create a state that triggers on WARNING (statuses = ["valid"]) but is NOT enrolled now.
+    _install_fake_add_dialog(
+        monkeypatch,
+        config=_limits_state(name="limits"),
+        add_to_interlock=False,
+        interlock_statuses=["valid"],
+    )
+    beamline_state_manager.open_add_state_dialog()
+    assert fake_interlock.added == []
+
+    # When the state's pill appears, it is seeded with the configured statuses.
+    beamline_state_manager.update_available_states({"states": [_limits_state(name="limits")]}, {})
+    pill = beamline_state_manager._state_pills["limits"]
+    assert pill.interlock_statuses == ["valid"]
+
+    # Clicking the lock later enrolls with the remembered preference, not the default.
+    pill._interlock_button.click()
+
+    assert fake_interlock.added == [("limits", ["valid"])]
 
 
 def test_add_beamline_state_dialog_uses_generated_widgets_and_normalizes_name(qtbot, mocked_client):
@@ -920,6 +948,100 @@ def test_add_beamline_state_dialog_uses_generated_widgets_and_normalizes_name(qt
     assert config.signal == "samx"
     assert config.low_limit == 0.0
     assert config.high_limit == 15.0
+
+
+def test_add_beamline_state_dialog_interlock_checkboxes(qtbot, mocked_client):
+    add_state_dialog = create_widget(qtbot, AddBeamlineStateDialog, client=mocked_client)
+
+    # Not enrolled by default; VALID and WARNING are both accepted (WARNING does not trip it).
+    assert add_state_dialog.add_to_interlock() is False
+    assert add_state_dialog.interlock_statuses() == ["valid", "warning"]
+
+    # The warning condition is independent of enrollment (settable without "Add to interlock").
+    assert add_state_dialog._trigger_on_warning_checkbox.isEnabled()
+    add_state_dialog._trigger_on_warning_checkbox.setChecked(True)
+    assert add_state_dialog.interlock_statuses() == ["valid"]
+    assert add_state_dialog.add_to_interlock() is False
+
+    add_state_dialog._add_to_interlock_checkbox.setChecked(True)
+    assert add_state_dialog.add_to_interlock() is True
+
+
+def _install_fake_add_dialog(monkeypatch, *, config, add_to_interlock, interlock_statuses):
+    class FakeAddDialog:
+        def __init__(self, parent, client=None):
+            pass
+
+        def exec(self):
+            return QDialog.Accepted
+
+        @property
+        def config_result(self):
+            return config
+
+        def add_to_interlock(self):
+            return add_to_interlock
+
+        def interlock_statuses(self):
+            return interlock_statuses
+
+        def cleanup(self):
+            pass
+
+        def deleteLater(self):  # noqa: N802
+            pass
+
+    monkeypatch.setattr(manager_module, "AddBeamlineStateDialog", FakeAddDialog)
+
+
+def _stub_beamline_states_add(mocked_client):
+    added_configs = []
+
+    class StateManager:
+        def add(self, config):
+            added_configs.append(config)
+
+    mocked_client.beamline_states = StateManager()
+    return added_configs
+
+
+def test_beamline_state_manager_add_dialog_enrolls_new_state_in_interlock(
+    qtbot, mocked_client, monkeypatch
+):
+    beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
+    fake_interlock = _FakeScanInterlock()
+    _install_fake_scan_interlock(beamline_state_manager, fake_interlock)
+    added_configs = _stub_beamline_states_add(mocked_client)
+    new_config = _limits_state(name="new_state")
+    _install_fake_add_dialog(
+        monkeypatch,
+        config=new_config,
+        add_to_interlock=True,
+        interlock_statuses=["valid", "warning"],
+    )
+
+    beamline_state_manager.open_add_state_dialog()
+
+    assert added_configs == [new_config]
+    assert fake_interlock.added == [("new_state", ["valid", "warning"])]
+
+
+def test_beamline_state_manager_add_dialog_skips_interlock_when_not_requested(
+    qtbot, mocked_client, monkeypatch
+):
+    beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
+    fake_interlock = _FakeScanInterlock()
+    _install_fake_scan_interlock(beamline_state_manager, fake_interlock)
+    added_configs = _stub_beamline_states_add(mocked_client)
+    new_config = _limits_state(name="new_state")
+    _install_fake_add_dialog(
+        monkeypatch, config=new_config, add_to_interlock=False, interlock_statuses=["valid"]
+    )
+
+    beamline_state_manager.open_add_state_dialog()
+
+    assert added_configs == [new_config]
+    assert fake_interlock.added == []
 
 
 def test_add_beamline_state_dialog_generates_name_only_after_valid_device_selection(

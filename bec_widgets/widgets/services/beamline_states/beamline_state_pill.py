@@ -99,6 +99,7 @@ class BeamlineStatePill(BECWidget, QWidget):
         self._expanded = False
         self._idle_card_background = False
         self._interlock_required_statuses: list[str] | None = None
+        self._interlock_statuses: list[str] = ["valid", "warning"]
         self._interlock_triggered = False
         self._interlock_pulse = 0.0
         self._header_icon_cache_key: tuple | None = None
@@ -317,6 +318,8 @@ class BeamlineStatePill(BECWidget, QWidget):
             triggered: Whether the armed scan interlock is currently tripped by this state.
         """
         triggered = bool(triggered) and required_statuses is not None
+        if required_statuses is not None:
+            self._interlock_statuses = list(required_statuses)
         if (required_statuses, triggered) == (
             self._interlock_required_statuses,
             self._interlock_triggered,
@@ -331,6 +334,15 @@ class BeamlineStatePill(BECWidget, QWidget):
             self._interlock_animation.stop()
             self._interlock_pulse = 0.0
         self._apply_visual_state()
+
+    @property
+    def interlock_statuses(self) -> list[str]:
+        """Accepted statuses to enroll this state with when it joins the scan interlock."""
+        return list(self._interlock_statuses)
+
+    def set_interlock_statuses(self, statuses: list[str]) -> None:
+        """Configure the accepted scan-interlock statuses for this state."""
+        self._interlock_statuses = list(statuses)
 
     @SafeSlot()
     def _emit_interlock_toggle_requested(self) -> None:
