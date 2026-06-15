@@ -3,6 +3,7 @@ from bec_lib import bl_states, messages
 from qtpy.QtCore import QCoreApplication, QEvent, Qt
 from qtpy.QtWidgets import QMessageBox, QStyleOptionViewItem
 
+from bec_widgets.utils.eliding_label import ElidingLabel
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.services.beamline_states import beamline_state_manager as manager_module
@@ -225,6 +226,21 @@ def test_beamline_state_pill_does_not_override_themed_input_controls(qtbot, mock
     assert "QAbstractSpinBox" not in stylesheet
     assert "QComboBox" not in stylesheet
     assert "QCheckBox::indicator" not in stylesheet
+
+
+def test_beamline_state_pill_title_and_detail_elide_without_wrapping(qtbot, mocked_client):
+    pill = create_widget(qtbot, BeamlineStatePill, state_name="x", client=mocked_client)
+
+    assert isinstance(pill._name_label, ElidingLabel)
+    assert isinstance(pill._detail_label, ElidingLabel)
+    # The detail no longer word-wraps, so a long message can't make a collapsed pill taller.
+    assert not pill._detail_label.wordWrap()
+    assert pill.minimumWidth() == 200
+
+    pill.update_state({"name": "x", "status": "valid", "label": "L" * 200}, {})
+
+    # A long title/detail keeps its full logical text instead of forcing the pill to grow.
+    assert pill._detail_label.text() == "L" * 200
 
 
 def test_beamline_state_manager_adds_and_removes_pills(qtbot, mocked_client):
