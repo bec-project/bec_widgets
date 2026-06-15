@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.16.0 (2026-06-15)
+
+### Features
+
+- **screenshot**: Add option to upload to SciLog
+  ([`9146c51`](https://github.com/bec-project/bec_widgets/commit/9146c5194e0871b6f99a1b985a6d6b2e3fdd409c))
+
+
 ## v3.15.1 (2026-06-13)
 
 ### Bug Fixes
