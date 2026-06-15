@@ -174,8 +174,8 @@ class BECQueue(BECWidget, CompactPopupWidget):
             scan_types = []
             scan_numbers = []
             scan_names = []
-            scan_ids = []
             user_metadatas = []
+            request_ids = []
             status = item.status
             for request_block in blocks:
                 scan_type = request_block.msg.scan_type
@@ -190,9 +190,8 @@ class BECQueue(BECWidget, CompactPopupWidget):
                     scan_names.append(scan_name)
                 if user_metadata:
                     user_metadatas.append(user_metadata)
-                scan_id = request_block.scan_id
-                if scan_id:
-                    scan_ids.append(scan_id)
+                if request_block.RID:
+                    request_ids.append(request_block.RID)
             if scan_types:
                 scan_types = ", ".join(scan_types)
             if scan_numbers:
@@ -206,9 +205,15 @@ class BECQueue(BECWidget, CompactPopupWidget):
                     tooltip = json.dumps(user_metadatas[0], indent=2)
                 else:
                     tooltip = json.dumps(user_metadatas, indent=2)
-            if scan_ids:
-                scan_ids = ", ".join(scan_ids)
-            self.set_row(index, scan_numbers, scan_names, scan_types, status, scan_ids, tooltip)
+            self.set_row(
+                index,
+                scan_numbers,
+                scan_names,
+                scan_types,
+                status,
+                tooltip,
+                abort_request_id=request_ids[0] if request_ids else "",
+            )
         busy = (
             False
             if all(item.status in ("STOPPED", "COMPLETED", "IDLE") for item in queue_info)
@@ -249,8 +254,8 @@ class BECQueue(BECWidget, CompactPopupWidget):
         scan_name: str,
         scan_type: str,
         status: str,
-        scan_id: str,
         tooltip: str = "",
+        abort_request_id: str = "",
     ):
         """
         Set the row of the table.
@@ -261,10 +266,10 @@ class BECQueue(BECWidget, CompactPopupWidget):
             scan_name (str): The scan name.
             scan_type (str): The scan type.
             status (str): The status.
-            scan_id (str): The scan id.
             tooltip (str): Optional tooltip to display (pretty-printed user metadata).
+            abort_request_id (str):  request id to abort.
         """
-        abort_button = self._create_abort_button(scan_id)
+        abort_button = self._create_abort_button(abort_request_id)
         abort_button.button.clicked.connect(self.delete_selected_row)
 
         self.table.setItem(index, 0, self.format_item(scan_number, tooltip=tooltip))
@@ -273,17 +278,17 @@ class BECQueue(BECWidget, CompactPopupWidget):
         self.table.setItem(index, 3, self.format_item(status, status=True, tooltip=tooltip))
         self.table.setCellWidget(index, 4, abort_button)
 
-    def _create_abort_button(self, scan_id: str) -> AbortButton:
+    def _create_abort_button(self, request_id: str) -> AbortButton:
         """
-        Create an abort button with styling for BEC Queue widget for certain scan_id.
+        Create an abort button with styling for BEC Queue widget for certain request_id.
 
         Args:
-            scan_id(str): The scan id to abort.
+            request_id(str): The request id to abort.
 
         Returns:
             AbortButton: The abort button.
         """
-        abort_button = AbortButton(parent=self, scan_id=scan_id)
+        abort_button = AbortButton(parent=self, request_id=request_id)
 
         abort_button.button.setText("")
         abort_button.button.setIcon(

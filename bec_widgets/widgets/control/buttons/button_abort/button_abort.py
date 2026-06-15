@@ -12,7 +12,7 @@ logger = bec_logger.logger
 
 
 class AbortButton(BECWidget, QWidget):
-    """A button that abort the scan."""
+    """A button that aborts the request."""
 
     PLUGIN = True
     ICON_NAME = "cancel"
@@ -25,11 +25,12 @@ class AbortButton(BECWidget, QWidget):
         config=None,
         gui_id=None,
         toolbar=False,
-        scan_id=None,
+        request_id=None,
         **kwargs,
     ):
         super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
         self.get_bec_shortcuts()
+        self.request_id = request_id
 
         self.layout = QHBoxLayout(self)
         self.layout.setSpacing(0)
@@ -39,7 +40,7 @@ class AbortButton(BECWidget, QWidget):
         if toolbar:
             icon = material_icon("cancel", color="#666666", filled=True)
             self.button = QToolButton(icon=icon)
-            self.button.setToolTip("Abort the scan")
+            self.button.setToolTip("Abort the request")
         else:
             self.button = QPushButton()
             self.button.setText("Abort")
@@ -47,20 +48,18 @@ class AbortButton(BECWidget, QWidget):
 
         self.layout.addWidget(self.button)
 
-        self.scan_id = scan_id
-
     @SafeSlot()
     def abort_scan(
         self,
     ):  # , scan_id: str | None = None): #FIXME scan_id will be added when combining with Queue widget
         """
-        Abort the scan.
+        Abort the request.
 
         Args:
-            scan_id(str|None): The scan id to abort. If None, the current scan will be aborted.
+            request_id(str|None): The request id to abort. If None, the current request will be aborted.
         """
-        if self.scan_id is not None:
-            logger.info(f"Aborting scan with scan_id: {self.scan_id}")
-            self.queue.request_scan_abortion(scan_id=self.scan_id)
+        if self.request_id is not None:
+            logger.info(f"Aborting request with request_id: {self.request_id}")
+            self.queue.request_scan_abortion(request_id=self.request_id)
         else:
             self.queue.request_scan_abortion()
