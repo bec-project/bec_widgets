@@ -334,7 +334,7 @@ class BeamlineStateManager(BECWidget, QWidget):
         self._hidden_expanded = False
         self._scan_interlock = self.client.builtin_actors.scan_interlock
         self._interlock_enabled = False
-        self._interlock_states: dict[str, str] = {}
+        self._interlock_states: dict[str, list[str]] = {}
         self._updating_interlock_action = False
         self._interlock_action_armed: bool | None = None
 
@@ -622,10 +622,11 @@ class BeamlineStateManager(BECWidget, QWidget):
             self._apply_section_header(header, kind)
 
     def _is_interlock_triggered(self, name: str) -> bool:
-        required_status = self._interlock_states.get(name)
-        if required_status is None or not self._interlock_enabled:
+        accepted_statuses = self._interlock_states.get(name)
+        if not accepted_statuses or not self._interlock_enabled:
             return False
-        return self._state_status(name) not in (None, required_status)
+        status = self._state_status(name)
+        return status is not None and status not in accepted_statuses
 
     def _status_rank(self, name: str) -> int:
         """Sort rank of a state by status severity: invalid < warning < unknown < valid."""

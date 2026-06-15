@@ -98,7 +98,7 @@ class BeamlineStatePill(BECWidget, QWidget):
         self._label = "No state information available."
         self._expanded = False
         self._idle_card_background = False
-        self._interlock_required_status: str | None = None
+        self._interlock_required_statuses: list[str] | None = None
         self._interlock_triggered = False
         self._interlock_pulse = 0.0
         self._header_icon_cache_key: tuple | None = None
@@ -307,22 +307,22 @@ class BeamlineStatePill(BECWidget, QWidget):
         if self._interlock_triggered:
             self._apply_visual_state()
 
-    def set_scan_interlock(self, required_status: str | None, triggered: bool) -> None:
+    def set_scan_interlock(self, required_statuses: list[str] | None, triggered: bool) -> None:
         """
         Set the scan-interlock participation of this pill.
 
         Args:
-            required_status: Status the scan interlock requires for this state, or ``None``
+            required_statuses: Statuses the scan interlock accepts for this state, or ``None``
                 if the state is not included in the scan interlock.
             triggered: Whether the armed scan interlock is currently tripped by this state.
         """
-        triggered = bool(triggered) and required_status is not None
-        if (required_status, triggered) == (
-            self._interlock_required_status,
+        triggered = bool(triggered) and required_statuses is not None
+        if (required_statuses, triggered) == (
+            self._interlock_required_statuses,
             self._interlock_triggered,
         ):
             return
-        self._interlock_required_status = required_status
+        self._interlock_required_statuses = required_statuses
         self._interlock_triggered = triggered
         if triggered:
             if self._interlock_animation.state() != QPropertyAnimation.State.Running:
@@ -336,7 +336,7 @@ class BeamlineStatePill(BECWidget, QWidget):
     def _emit_interlock_toggle_requested(self) -> None:
         if self._state_name is None:
             return
-        include = self._interlock_required_status is None
+        include = self._interlock_required_statuses is None
         self.scan_interlock_toggle_requested.emit(self._state_name, include)
 
     def _refresh_latest_state(self) -> None:
@@ -378,7 +378,7 @@ class BeamlineStatePill(BECWidget, QWidget):
     def _apply_visual_state(self) -> None:
         colors = self._state_colors(self._status)
         accent = colors["accent"]
-        included = self._interlock_required_status is not None
+        included = self._interlock_required_statuses is not None
         active_card = self._expanded or included
         border = colors["border"] if self._idle_card_background else "transparent"
         background = colors["background"] if self._idle_card_background else "transparent"
@@ -491,7 +491,8 @@ class BeamlineStatePill(BECWidget, QWidget):
         cache_key = (
             self._status,
             self._expanded,
-            self._interlock_required_status,
+            tuple(self._interlock_required_statuses or ()),
+            self._interlock_required_statuses is not None,
             self._interlock_triggered,
             get_theme_name(),
         )
@@ -511,7 +512,7 @@ class BeamlineStatePill(BECWidget, QWidget):
         self._expand_button.setIcon(
             material_icon(expand_icon, size=(20, 20), convert_to_pixmap=False)
         )
-        if self._interlock_required_status is not None:
+        if self._interlock_required_statuses is not None:
             lock_color = (
                 colors["interlock_trigger"] if self._interlock_triggered else colors["foreground"]
             )
@@ -521,8 +522,8 @@ class BeamlineStatePill(BECWidget, QWidget):
                 )
             )
             self._interlock_button.setToolTip(
-                f"Watched by the scan interlock (required status: "
-                f"{self._interlock_required_status}).\n"
+                "Watched by the scan interlock (accepted statuses: "
+                f"{', '.join(self._interlock_required_statuses)}).\n"
                 "Click to remove this state from the scan interlock."
             )
         else:
