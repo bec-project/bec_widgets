@@ -24,6 +24,7 @@ from qtpy.QtWidgets import (
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import Colors, get_accent_colors, get_theme_name, rgba, theme_color
+from bec_widgets.utils.eliding_label import ElidingLabel
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.forms_from_types.pydantic_widget_form import (
     OptionalValueWidget,
@@ -88,6 +89,9 @@ class BeamlineStatePill(BECWidget, QWidget):
         self.setObjectName("BeamlineStatePill")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        # Floor below which the pill keeps its structure; the title/detail elide rather than
+        # pushing the pill wider or taller, so collapsed rows stay a consistent size.
+        self.setMinimumWidth(200)
         self._state_name: str | None = None
         self._state_config: messages.BeamlineStateConfig | None = None
         self._status = "unknown"
@@ -129,7 +133,7 @@ class BeamlineStatePill(BECWidget, QWidget):
         self._icon_label.setFixedSize(32, 32)
         self._icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._icon_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
-        self._name_label = QLabel(self)
+        self._name_label = ElidingLabel(self)
         self._name_label.setObjectName("beamline_state_name")
         self._name_label.setTextFormat(Qt.TextFormat.PlainText)
         self._name_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
@@ -137,10 +141,9 @@ class BeamlineStatePill(BECWidget, QWidget):
         self._status_label.setObjectName("beamline_state_status")
         self._status_label.setTextFormat(Qt.TextFormat.PlainText)
         self._status_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
-        self._detail_label = QLabel(self)
+        self._detail_label = ElidingLabel(self)
         self._detail_label.setObjectName("beamline_state_detail")
         self._detail_label.setTextFormat(Qt.TextFormat.PlainText)
-        self._detail_label.setWordWrap(True)
         self._detail_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self._interlock_button = QToolButton(self)
         self._interlock_button.setObjectName("beamline_state_interlock")
