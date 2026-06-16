@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.16.1 (2026-06-16)
+
+### Bug Fixes
+
+- **property-editor**: Use QLocale territory API instead of deprecated country calls
+  ([`7c2ea8b`](https://github.com/bec-project/bec_widgets/commit/7c2ea8b50b492eabc9e9ba4d6dbbb6253f59ba50))
+
+
 ## v3.16.0 (2026-06-15)
 
 ### Features
