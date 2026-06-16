@@ -6,7 +6,7 @@ from typing import Any
 from bec_lib import bl_states, messages
 from bec_lib.endpoints import MessageEndpoints
 from bec_qthemes import material_icon
-from qtpy.QtCore import QAbstractListModel, QModelIndex, QSize, Qt
+from qtpy.QtCore import QAbstractListModel, QModelIndex, QSize, Qt, Signal
 from qtpy.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -312,6 +312,8 @@ class BeamlineStateManager(BECWidget, QWidget):
         "screenshot",
     ]
 
+    scan_interlock_enabled_changed = Signal(bool)
+
     def __init__(
         self,
         parent: QWidget | None = None,
@@ -338,6 +340,7 @@ class BeamlineStateManager(BECWidget, QWidget):
         self._pending_interlock_statuses: dict[str, list[str]] = {}
         self._updating_interlock_action = False
         self._interlock_action_armed: bool | None = None
+        self._enabled_config = None
 
         self._empty_label = QLabel(
             "No beamline states available.\n Add new state from toolbar or CLI.", self
@@ -371,6 +374,11 @@ class BeamlineStateManager(BECWidget, QWidget):
             self._refresh_scan_interlock,
             MessageEndpoints.builtin_actor_update_notif("ScanInterlockActor"),
         )
+        # Scan Interlock updates from HLI
+        self.scan_interlock_enabled_changed.connect(self._on_interlock_enabled_changed)
+        self._enabled_config = getattr(self._scan_interlock, "_enabled", None)
+        if self._enabled_config is not None and hasattr(self._enabled_config, "subscribe"):
+            self._enabled_config.subscribe(self._on_interlock_enabled_stream)
         self._refresh_scan_interlock()
         self.refresh_states()
         self._refresh_hidden_summary()
@@ -666,11 +674,29 @@ class BeamlineStateManager(BECWidget, QWidget):
     def _on_interlock_action_toggled(self, checked: bool) -> None:
         if self._updating_interlock_action:
             return
+        checked = bool(checked)
         try:
-            self._scan_interlock.enabled = bool(checked)
+            self._scan_interlock.enabled = checked
         except Exception as exc:
             QMessageBox.warning(self, "Cannot Toggle Scan Interlock", str(exc))
-        self._refresh_scan_interlock()
+            self._refresh_scan_interlock()
+            return
+        self._interlock_enabled = checked
+        self._refresh_view()
+
+    def _on_interlock_enabled_stream(self, enabled: bool) -> None:
+        """Connector-thread callback for the scan-interlock ``enabled`` config value.
+
+        Runs off the Qt thread, so it only re-emits the value as a queued signal; the widget update
+        happens in ``_on_interlock_enabled_changed`` on the Qt thread.
+        """
+        self.scan_interlock_enabled_changed.emit(bool(enabled))
+
+    @SafeSlot(bool)
+    def _on_interlock_enabled_changed(self, enabled: bool) -> None:
+        """Sync the toolbar button and pills when ``enabled`` changes from the CLI or another GUI."""
+        self._interlock_enabled = enabled
+        self._refresh_view()
 
     @SafeSlot(str, bool)
     def _on_interlock_toggle_requested(self, state_name: str, include: bool) -> None:
@@ -841,6 +867,9 @@ class BeamlineStateManager(BECWidget, QWidget):
         return str(device) if device else None
 
     def cleanup(self) -> None:
+        if self._enabled_config is not None:
+            self._enabled_config.unsubscribe(self._on_interlock_enabled_stream)
+            self._enabled_config = None
         self.bec_dispatcher.disconnect_slot(
             self.update_available_states, MessageEndpoints.available_beamline_states()
         )
