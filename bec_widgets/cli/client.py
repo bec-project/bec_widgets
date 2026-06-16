@@ -5285,6 +5285,35 @@ class RingProgressBar(RPCBase):
             text(str): Text for the center label.
         """
 
+    @rpc_call
+    def set_progress_state(
+        self,
+        values: list[float | None] | dict[int, float | None] | None = None,
+        center_label: str | None = None,
+        **kwargs,
+    ):
+        """
+        Update several rings and the center label in a single call.
+
+        Updating each ring value and the center label individually is one RPC
+        round-trip per call; over a long-running scan that is a steady stream of
+        round-trips, and each one also triggers a server-side registry
+        broadcast. ``set_progress_state`` applies all of them within a single
+        method call, i.e. one RPC round-trip and one broadcast.
+
+        Args:
+            values: Ring values to apply. Either a list aligned to ring index,
+                where ``None`` leaves that ring unchanged (e.g.
+                ``[12.0, None, 80.0]`` updates rings 0 and 2), or a
+                ``{index: value}`` mapping to update only specific rings.
+                ``None`` leaves all ring values unchanged.
+            center_label: New center-label text, or ``None`` to leave the
+                current text unchanged.
+            **kwargs: Ignored. Absorbs RPC-layer pass-through keyword arguments
+                (e.g. ``_rpc_wait_for_response``) so the call does not fail when
+                extra control kwargs are supplied by the client.
+        """
+
 
 class SBBMonitor(RPCBase):
     """A widget to display the SBB monitor website."""

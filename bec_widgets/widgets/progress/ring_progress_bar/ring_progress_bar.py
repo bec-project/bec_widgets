@@ -393,6 +393,7 @@ class RingProgressBar(BECWidget, QWidget):
         "remove_ring",
         "set_gap",
         "set_center_label",
+        "set_progress_state",
     ]
 
     def __init__(self, parent: QWidget | None = None, client=None, **kwargs):
@@ -510,6 +511,44 @@ class RingProgressBar(BECWidget, QWidget):
             text(str): Text for the center label.
         """
         self.center_label = text
+
+    def set_progress_state(
+        self,
+        values: list[float | None] | dict[int, float | None] | None = None,
+        center_label: str | None = None,
+        **kwargs,
+    ):
+        """Update several rings and the center label in a single call.
+
+        Updating each ring value and the center label individually is one RPC
+        round-trip per call; over a long-running scan that is a steady stream of
+        round-trips, and each one also triggers a server-side registry
+        broadcast. ``set_progress_state`` applies all of them within a single
+        method call, i.e. one RPC round-trip and one broadcast.
+
+        Args:
+            values: Ring values to apply. Either a list aligned to ring index,
+                where ``None`` leaves that ring unchanged (e.g.
+                ``[12.0, None, 80.0]`` updates rings 0 and 2), or a
+                ``{index: value}`` mapping to update only specific rings.
+                ``None`` leaves all ring values unchanged.
+            center_label: New center-label text, or ``None`` to leave the
+                current text unchanged.
+            **kwargs: Ignored. Absorbs RPC-layer pass-through keyword arguments
+                (e.g. ``_rpc_wait_for_response``) so the call does not fail when
+                extra control kwargs are supplied by the client.
+        """
+        rings = self.rings
+        if isinstance(values, dict):
+            for index, value in values.items():
+                if value is not None and 0 <= int(index) < len(rings):
+                    rings[int(index)].set_value(value)
+        elif values is not None:
+            for ring, value in zip(rings, values):
+                if value is not None:
+                    ring.set_value(value)
+        if center_label is not None:
+            self.center_label = center_label
 
     @property
     def rings(self) -> list[Ring]:
