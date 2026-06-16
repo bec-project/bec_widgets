@@ -9,6 +9,7 @@ from qtpy.QtCore import Property, QEasingCurve, QPropertyAnimation, Qt, Signal
 from qtpy.QtGui import QColor, QMouseEvent, QPalette
 from qtpy.QtWidgets import (
     QApplication,
+    QCheckBox,
     QFormLayout,
     QGraphicsDropShadowEffect,
     QHBoxLayout,
@@ -64,6 +65,7 @@ class BeamlineStatePill(BECWidget, QWidget):
     update_requested = Signal(str, object)
     remove_requested = Signal(str)
     scan_interlock_toggle_requested = Signal(str, bool)
+    scan_interlock_statuses_changed = Signal(str, object)
     row_height_changed = Signal()
 
     _STATUS_LABELS = BEAMLINE_STATE_STATUS_LABELS
@@ -217,11 +219,22 @@ class BeamlineStatePill(BECWidget, QWidget):
         self._settings_form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
         self._settings_form.addRow("Type", self._state_type_value)
 
+        self._interlock_warning_checkbox = QCheckBox(
+            "Trigger ScanInterlock on WARNING state", self._settings
+        )
+        self._interlock_warning_checkbox.setToolTip(
+            "By default both VALID and WARNING are accepted. Enable this so a WARNING status also "
+            "trips the scan interlock (only VALID accepted)."
+        )
+        self._interlock_warning_checkbox.toggled.connect(self._on_interlock_warning_toggled)
+        self._sync_interlock_warning_checkbox()
+
         settings_layout = QVBoxLayout(self._settings)
         settings_layout.setContentsMargins(12, 8, 12, 12)
         settings_layout.setSpacing(8)
         settings_layout.addLayout(self._settings_form)
         settings_layout.addLayout(self._config_form_host)
+        settings_layout.addWidget(self._interlock_warning_checkbox)
         settings_layout.addLayout(button_layout)
 
         layout = QVBoxLayout(self)
@@ -320,6 +333,7 @@ class BeamlineStatePill(BECWidget, QWidget):
         triggered = bool(triggered) and required_statuses is not None
         if required_statuses is not None:
             self._interlock_statuses = list(required_statuses)
+            self._sync_interlock_warning_checkbox()
         if (required_statuses, triggered) == (
             self._interlock_required_statuses,
             self._interlock_triggered,
@@ -343,6 +357,22 @@ class BeamlineStatePill(BECWidget, QWidget):
     def set_interlock_statuses(self, statuses: list[str]) -> None:
         """Configure the accepted scan-interlock statuses for this state."""
         self._interlock_statuses = list(statuses)
+        self._sync_interlock_warning_checkbox()
+
+    def _sync_interlock_warning_checkbox(self) -> None:
+        trigger_on_warning = "warning" not in self._interlock_statuses
+        self._interlock_warning_checkbox.blockSignals(True)
+        self._interlock_warning_checkbox.setChecked(trigger_on_warning)
+        self._interlock_warning_checkbox.blockSignals(False)
+
+    @SafeSlot(bool)
+    def _on_interlock_warning_toggled(self, trigger_on_warning: bool) -> None:
+        statuses = ["valid"] if trigger_on_warning else ["valid", "warning"]
+        if statuses == self._interlock_statuses:
+            return
+        self._interlock_statuses = statuses
+        if self._state_name is not None:
+            self.scan_interlock_statuses_changed.emit(self._state_name, statuses)
 
     @SafeSlot()
     def _emit_interlock_toggle_requested(self) -> None:

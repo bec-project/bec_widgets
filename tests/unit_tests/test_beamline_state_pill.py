@@ -892,6 +892,66 @@ def test_beamline_state_manager_pill_toggle_calls_backend(qtbot, mocked_client):
     assert beamline_state_manager._interlock_states == {}
 
 
+def test_beamline_state_pill_settings_warning_checkbox(qtbot, mocked_client):
+    pill = create_widget(qtbot, BeamlineStatePill, state_name="limits", client=mocked_client)
+
+    # Default accepts VALID and WARNING, so the checkbox is unchecked.
+    assert pill._interlock_warning_checkbox.isChecked() is False
+    assert pill.interlock_statuses == ["valid", "warning"]
+
+    with qtbot.waitSignal(pill.scan_interlock_statuses_changed) as signal:
+        pill._interlock_warning_checkbox.setChecked(True)
+
+    assert signal.args == ["limits", ["valid"]]
+    assert pill.interlock_statuses == ["valid"]
+
+    pill._interlock_warning_checkbox.setChecked(False)
+    assert pill.interlock_statuses == ["valid", "warning"]
+
+
+def test_beamline_state_pill_settings_warning_checkbox_reflects_statuses(qtbot, mocked_client):
+    pill = create_widget(qtbot, BeamlineStatePill, state_name="limits", client=mocked_client)
+
+    pill.set_interlock_statuses(["valid"])
+    assert pill._interlock_warning_checkbox.isChecked() is True
+
+    pill.set_interlock_statuses(["valid", "warning"])
+    assert pill._interlock_warning_checkbox.isChecked() is False
+
+
+def test_beamline_state_manager_settings_warning_reenrolls_watched_state(qtbot, mocked_client):
+    beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
+    beamline_state_manager.update_available_states({"states": [_limits_state()]}, {})
+    fake_interlock = _FakeScanInterlock(
+        enabled=True, states_watched={"limits": ["valid", "warning"]}
+    )
+    _install_fake_scan_interlock(beamline_state_manager, fake_interlock)
+    pill = beamline_state_manager._state_pills["limits"]
+    assert pill.interlock_statuses == ["valid", "warning"]
+
+    pill._interlock_warning_checkbox.setChecked(True)
+
+    assert fake_interlock.added[-1] == ("limits", ["valid"])
+    assert beamline_state_manager._interlock_states == {"limits": ["valid"]}
+
+
+def test_beamline_state_manager_settings_warning_no_backend_when_not_watched(qtbot, mocked_client):
+    beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
+    beamline_state_manager.update_available_states({"states": [_limits_state()]}, {})
+    fake_interlock = _FakeScanInterlock()
+    _install_fake_scan_interlock(beamline_state_manager, fake_interlock)
+    pill = beamline_state_manager._state_pills["limits"]
+
+    pill._interlock_warning_checkbox.setChecked(True)
+
+    # Not watched yet: no backend write, but the preference is kept and used when locked.
+    assert fake_interlock.added == []
+    assert pill.interlock_statuses == ["valid"]
+
+    pill._interlock_button.click()
+    assert fake_interlock.added == [("limits", ["valid"])]
+
+
 def test_beamline_state_manager_lock_uses_dialog_status_preference(
     qtbot, mocked_client, monkeypatch
 ):
