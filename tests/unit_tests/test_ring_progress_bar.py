@@ -741,3 +741,62 @@ def test_leave_event_clears_hover_and_hides_tooltip(qtbot, container):
     assert ring._hovered is False
     assert container._last_hover_global_pos is None
     container._hover_tooltip.hide.assert_called()
+
+
+def _ensure_three_rings(ring_progress_bar):
+    while len(ring_progress_bar.rings) < 3:
+        ring_progress_bar.add_ring()
+    rings = ring_progress_bar.rings
+    for ring in rings:
+        ring.set_value(1.0)  # sentinel so "unchanged" assertions are meaningful
+    return rings
+
+
+def test_set_progress_state_in_user_access():
+    assert "set_progress_state" in RingProgressBar.USER_ACCESS
+
+
+def test_set_progress_state_list_updates_selected_rings_and_label(ring_progress_bar):
+    rings = _ensure_three_rings(ring_progress_bar)
+    ring_progress_bar.set_progress_state([12.0, None, 80.0], center_label="batched")
+    assert rings[0].config.value == 12.0  # updated
+    assert rings[1].config.value == 1.0  # None -> unchanged
+    assert rings[2].config.value == 80.0  # updated
+    assert ring_progress_bar.center_label == "batched"
+
+
+def test_set_progress_state_accepts_index_mapping(ring_progress_bar):
+    rings = _ensure_three_rings(ring_progress_bar)
+    ring_progress_bar.set_progress_state({0: 5.0, 2: 95.0})
+    assert rings[0].config.value == 5.0
+    assert rings[1].config.value == 1.0  # untouched index
+    assert rings[2].config.value == 95.0
+
+
+def test_set_progress_state_label_only_leaves_rings_untouched(ring_progress_bar):
+    rings = _ensure_three_rings(ring_progress_bar)
+    ring_progress_bar.set_progress_state(center_label="only label")
+    assert [r.config.value for r in rings] == [1.0, 1.0, 1.0]
+    assert ring_progress_bar.center_label == "only label"
+
+
+def test_set_progress_state_ignores_rpc_passthrough_kwargs(ring_progress_bar):
+    _ensure_three_rings(ring_progress_bar)
+    # the client may pass control kwargs (e.g. _rpc_wait_for_response); must not raise
+    ring_progress_bar.set_progress_state([3.0], center_label="kw", _rpc_wait_for_response=False)
+    assert ring_progress_bar.rings[0].config.value == 3.0
+    assert ring_progress_bar.center_label == "kw"
+
+
+def test_set_progress_state_no_rings_is_noop(ring_progress_bar):
+    # a freshly created RingProgressBar has no rings; must not raise
+    assert ring_progress_bar.rings == []
+    ring_progress_bar.set_progress_state([1.0, 2.0], center_label="safe")
+    assert ring_progress_bar.center_label == "safe"
+
+
+def test_set_progress_state_clamps_and_ignores_out_of_range_index(ring_progress_bar):
+    rings = _ensure_three_rings(ring_progress_bar)
+    # value above max clamps to 100; out-of-range index is ignored, not an error
+    ring_progress_bar.set_progress_state({0: 150.0, 99: 42.0})
+    assert rings[0].config.value == 100.0
