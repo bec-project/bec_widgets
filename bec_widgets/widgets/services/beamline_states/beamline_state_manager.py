@@ -219,6 +219,7 @@ class _BeamlineStatePillDelegate(QStyledItemDelegate):
         pill.update_requested.connect(self._manager._update_state_parameters)
         pill.remove_requested.connect(self._manager._remove_state_requested)
         pill.scan_interlock_toggle_requested.connect(self._manager._on_interlock_toggle_requested)
+        pill.scan_interlock_statuses_changed.connect(self._manager._on_interlock_statuses_changed)
         pill.row_height_changed.connect(lambda name=name: self._manager._sync_pill_item_size(name))
         self._manager._state_pills[str(name)] = pill
         return pill
@@ -707,6 +708,19 @@ class BeamlineStateManager(BECWidget, QWidget):
                 self._scan_interlock.add_state_to_interlock(state_name, statuses)
             else:
                 self._scan_interlock.remove_state_from_interlock(state_name)
+        except Exception as exc:
+            QMessageBox.warning(self, "Cannot Update Scan Interlock", str(exc))
+            return
+        self._refresh_scan_interlock()
+
+    @SafeSlot(str, object)
+    def _on_interlock_statuses_changed(self, state_name: str, statuses: object) -> None:
+        # Only persist when the state is currently watched; otherwise the pill keeps the
+        # preference for when it is locked later.
+        if state_name not in self._interlock_states:
+            return
+        try:
+            self._scan_interlock.add_state_to_interlock(state_name, list(statuses))
         except Exception as exc:
             QMessageBox.warning(self, "Cannot Update Scan Interlock", str(exc))
             return
