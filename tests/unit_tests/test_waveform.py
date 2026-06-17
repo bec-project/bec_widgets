@@ -897,12 +897,20 @@ def test_setup_async_curve(qtbot, mocked_client, monkeypatch):
     connect_spy = MagicMock()
     monkeypatch.setattr(wf.bec_dispatcher, "connect_slot", connect_spy)
 
+    # _setup_async_curve dedupes subscriptions per scan; reset the tracking so this
+    # isolated call performs the (single) subscription.
+    wf._async_streams_setup = {}
     wf._setup_async_curve(c)
     connect_spy.assert_called_once()
     endpoint_called = connect_spy.call_args[0][1].endpoint
     # We expect MessageEndpoints.device_async_readback('222', 'async_device')
     assert "222" in endpoint_called
     assert "async_device" in endpoint_called
+
+    # A second curve that resolves to the same stream reuses the one subscription
+    # instead of subscribing again.
+    wf._setup_async_curve(c)
+    connect_spy.assert_called_once()
 
 
 def test_on_async_readback_add_update(qtbot, mocked_client):
