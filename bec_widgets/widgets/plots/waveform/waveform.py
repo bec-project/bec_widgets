@@ -142,6 +142,10 @@ class Waveform(PlotBase):
         # Curve data
         self._sync_curves = []
         self._async_curves = []
+        # Async streams already subscribed in the current scan. Keyed by
+        # (device, stream) (stream is None for the old per-device endpoint); the value
+        # is the list of signal entries that share that single subscription.
+        self._async_streams_setup: dict = {}
         self._history_curves = []
         self._slice_index = None
         self._dap_curves = []
@@ -1753,45 +1757,51 @@ class Waveform(PlotBase):
         """
         Setup async curve.
 
+        Several curves can resolve to the same underlying async stream -- most
+        commonly the sub-signals of one ``AsyncMultiSignal``, which share a
+        ``storage_name`` and are published on a single endpoint. Such curves reuse one
+        subscription instead of subscribing to the same endpoint repeatedly;
+        ``on_async_readback`` then feeds every curve that maps to it.
+
         Args:
             curve(Curve): The curve to set up.
         """
         name = curve.config.signal.device
         signal = curve.config.signal.signal
-        async_signal_found, signal = self._check_async_signal_found(name, signal)
+        async_signal_found, stream = self._check_async_signal_found(name, signal)
 
         try:
             curve.clear_data()
         except KeyError:
             logger.warning(f"Curve {name} not found in plot item.")
-            pass
 
-        # New endpoint for async signals
         if async_signal_found:
-            self.bec_dispatcher.disconnect_slot(
-                self.on_async_readback,
-                MessageEndpoints.device_async_signal(self.old_scan_id, name, signal),
-            )
-            self.bec_dispatcher.connect_slot(
-                self.on_async_readback,
-                MessageEndpoints.device_async_signal(self.scan_id, name, signal),
-                from_start=True,
-                cb_info={"scan_id": self.scan_id},
-            )
-
-        # old endpoint
+            stream_key = (name, stream)  # AsyncMultiSignal sub-signals share `stream`
+            new_endpoint = MessageEndpoints.device_async_signal(self.scan_id, name, stream)
+            old_endpoint = MessageEndpoints.device_async_signal(self.old_scan_id, name, stream)
         else:
-            self.bec_dispatcher.disconnect_slot(
-                self.on_async_readback,
-                MessageEndpoints.device_async_readback(self.old_scan_id, name),
+            stream_key = (name, None)  # old endpoint is keyed by device only
+            new_endpoint = MessageEndpoints.device_async_readback(self.scan_id, name)
+            old_endpoint = MessageEndpoints.device_async_readback(self.old_scan_id, name)
+
+        endpoint_str = getattr(new_endpoint, "endpoint", new_endpoint)
+
+        shared = self._async_streams_setup.get(stream_key)
+        if shared is not None:
+            # Another curve already subscribed to this exact stream this scan.
+            shared.append(signal)
+            logger.info(
+                f"Async signals {shared} share a single subscription on endpoint "
+                f"'{endpoint_str}'; reusing it instead of subscribing again."
             )
-            self.bec_dispatcher.connect_slot(
-                self.on_async_readback,
-                MessageEndpoints.device_async_readback(self.scan_id, name),
-                from_start=True,
-                cb_info={"scan_id": self.scan_id},
-            )
-        logger.info(f"Setup async curve {name}")
+            return
+
+        self._async_streams_setup[stream_key] = [signal]
+        self.bec_dispatcher.disconnect_slot(self.on_async_readback, old_endpoint)
+        self.bec_dispatcher.connect_slot(
+            self.on_async_readback, new_endpoint, from_start=True, cb_info={"scan_id": self.scan_id}
+        )
+        logger.info(f"Setup async curve {name} (signal '{signal}', endpoint '{endpoint_str}')")
 
     @SafeSlot(dict, dict, verify_sender=True)
     def on_async_readback(self, msg, metadata):
@@ -2301,6 +2311,7 @@ class Waveform(PlotBase):
         # Reset sync/async curve lists
         self._async_curves.clear()
         self._sync_curves.clear()
+        self._async_streams_setup = {}
         found_async = False
         found_sync = False
         mode = "sync"
