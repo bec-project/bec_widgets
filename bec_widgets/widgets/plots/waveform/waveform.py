@@ -33,7 +33,11 @@ from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.side_panel import SidePanel
-from bec_widgets.utils.signal_classification import SignalCategory, classify_device_signal
+from bec_widgets.utils.signal_classification import (
+    ASYNC_SIGNAL_CLASSES,
+    SignalCategory,
+    classify_device_signal,
+)
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import MaterialIconAction
 from bec_widgets.widgets.dap.lmfit_dialog.lmfit_dialog import LMFitDialog
@@ -1745,9 +1749,7 @@ class Waveform(PlotBase):
             tuple[bool, str]: A tuple where the first element is True if the async signal is found (False otherwise),
                 and the second element is the signal name (either the original signal or the storage_name for AsyncMultiSignal).
         """
-        bec_async_signals = self.client.device_manager.get_bec_signals(
-            ["AsyncSignal", "AsyncMultiSignal"]
-        )
+        bec_async_signals = self.client.device_manager.get_bec_signals(sorted(ASYNC_SIGNAL_CLASSES))
         for signal_name, _, entry_data in bec_async_signals:
             if signal_name == name and entry_data.get("obj_name") == signal:
                 return True, entry_data.get("storage_name")
