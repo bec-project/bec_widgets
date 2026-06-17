@@ -240,7 +240,7 @@ def test_qt_redis_connector_logs_rpc_before_qt_callback(monkeypatch):
     )
 
     try:
-        connector._execute_callback(cb, {"data": rpc_msg}, {})
+        connector._buffered_connection._execute_callback(cb, {"data": rpc_msg}, {})
 
         info_mock.assert_called_once()
         info_message = info_mock.call_args.args[0]
