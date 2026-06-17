@@ -1,3 +1,5 @@
+from bec_widgets.applications.startup_profiler import startup_profiler  # isort: skip
+
 from bec_qthemes import material_icon
 from qtpy.QtGui import QAction  # type: ignore
 from qtpy.QtWidgets import QApplication, QHBoxLayout, QStackedWidget, QWidget
@@ -20,6 +22,8 @@ from bec_widgets.utils.screen_utils import (
 )
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 
+startup_profiler.mark("module imports")
+
 
 class BECMainApp(BECMainWindow):
     RPC = False
@@ -34,6 +38,7 @@ class BECMainApp(BECMainWindow):
         **kwargs,
     ):
         super().__init__(parent=parent, *args, **kwargs)
+        startup_profiler.mark("BEC connection + base window")
         self._show_examples = bool(show_examples)
 
         # --- Compose central UI (sidebar + stack)
@@ -54,17 +59,22 @@ class BECMainApp(BECMainWindow):
         self.sidebar.view_selected.connect(self._on_view_selected)
 
         self._add_views()
+        startup_profiler.mark("views added")
 
         # Initialize guided tour
         self.guided_tour = GuidedTour(self)
         self._setup_guided_tour()
+        startup_profiler.mark("guided tour")
 
     def _add_views(self):
         self.add_section("BEC Applications", "bec_apps")
         self.dock_area = DockAreaView(self)
+        startup_profiler.mark("DockAreaView")
         self.device_manager = DeviceManagerView(self)
+        startup_profiler.mark("DeviceManagerView")
         # self.developer_view = DeveloperView(self) #TODO temporary disable until the bugs with BECShell are resolved
         self.admin_view = AdminView(self)
+        startup_profiler.mark("AdminView")
 
         self.add_view(icon="widgets", title="Dock Area", widget=self.dock_area, mini_text="Docks")
         self.add_view(
@@ -395,8 +405,11 @@ def main():  # pragma: no cover
 
     app = QApplication([sys.argv[0], *qt_args])
     app.setApplicationName("BEC")
+    startup_profiler.mark("QApplication")
     apply_theme("dark")
+    startup_profiler.mark("theme applied")
     w = BECMainApp(show_examples=args.examples)
+    startup_profiler.mark("main window built")
 
     screen_geometry = available_screen_geometry()
     if screen_geometry is not None:
@@ -406,6 +419,12 @@ def main():  # pragma: no cover
         w.resize(w.minimumSizeHint())
 
     w.show()
+    startup_profiler.mark("window shown")
+
+    # First event-loop iteration -> the window is actually painted/interactive.
+    from qtpy.QtCore import QTimer
+
+    QTimer.singleShot(0, lambda: startup_profiler.mark("interactive", final=True))
 
     sys.exit(app.exec())
 
