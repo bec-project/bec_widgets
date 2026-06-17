@@ -1,6 +1,45 @@
 # CHANGELOG
 
 
+## v3.17.0 (2026-06-17)
+
+### Bug Fixes
+
+- **beamline_states**: Listen to the updates of the scan interlock HLI for interlock enable/disable
+  ([`fe305d5`](https://github.com/bec-project/bec_widgets/commit/fe305d5d077edcac806a73a6f185f79720bc499e))
+
+- **beamline_states**: Support multiple accepted statuses in the scan interlock
+  ([`2084edb`](https://github.com/bec-project/bec_widgets/commit/2084edb576497124b2d4d2aa1a4fa66ec8952956))
+
+- **beamline_states**: Trigger on Warning checkbox in the setting of the beamline pill
+  ([`73d49d9`](https://github.com/bec-project/bec_widgets/commit/73d49d9dfa6ac392a26271d469acf146b8d0812e))
+
+### Features
+
+- **beamline_states**: Add scan-interlock options to the add-state dialog
+  ([`3cd37fe`](https://github.com/bec-project/bec_widgets/commit/3cd37fea26acf90a3712855dc63e881b8838df6d))
+
+- **beamline_states**: Exempt scan-interlock states from display filters
+  ([`beddfb1`](https://github.com/bec-project/bec_widgets/commit/beddfb14b2c93e09c0fb79d307f5d59d507b8a23))
+
+- **beamline_states**: Integrate scan interlock into state manager and pills
+  ([`87be649`](https://github.com/bec-project/bec_widgets/commit/87be6496ebf590c75cf79175ea53828bcc02d978))
+
+- **beamline_states**: Order states by status severity within each section
+  ([`90084db`](https://github.com/bec-project/bec_widgets/commit/90084db58085ef777c0c673152b99055c2e98f85))
+
+- **elide_label**: General elide label
+  ([`1fac492`](https://github.com/bec-project/bec_widgets/commit/1fac492b0bb4f195fc612102fad4eb10127fa0c1))
+
+### Refactoring
+
+- **beamline_states**: Beamline headed as separate widget, not in paint
+  ([`2a8a726`](https://github.com/bec-project/bec_widgets/commit/2a8a7261be22929113d75242b961d1ee5fba1ccb))
+
+- **beamline_states**: Drop idle_card_background from the manager
+  ([`ecf3a37`](https://github.com/bec-project/bec_widgets/commit/ecf3a37cbf5e0770d41d65030cb4491bbde769fd))
+
+
 ## v3.16.1 (2026-06-16)
 
 ### Bug Fixes
