@@ -34,15 +34,6 @@ jobs:
     if: needs.check_pr_status.outputs.branch-pr == ''
     uses: ./.github/workflows/formatter.yml
 
-  benchmark:
-    needs: [check_pr_status]
-    if: needs.check_pr_status.outputs.branch-pr == ''
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-    uses: ./.github/workflows/benchmark.yml
-
   unit-test:
     needs: [check_pr_status, formatter]
     if: needs.check_pr_status.outputs.branch-pr == ''
@@ -92,3 +83,12 @@ jobs:
 
     secrets:
       GH_READ_TOKEN: ${{ secrets.GH_READ_TOKEN }}
+
+  benchmark:
+    needs: [check_pr_status, unit-test, unit-test-matrix]
+    if: needs.check_pr_status.outputs.branch-pr == ''
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    uses: ./.github/workflows/benchmark.yml
