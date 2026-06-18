@@ -1781,10 +1781,15 @@ class Waveform(PlotBase):
             stream_key = (name, stream)  # AsyncMultiSignal sub-signals share `stream`
             new_endpoint = MessageEndpoints.device_async_signal(self.scan_id, name, stream)
             old_endpoint = MessageEndpoints.device_async_signal(self.old_scan_id, name, stream)
+            legacy_endpoint = False
         else:
+            # No BEC async signal (AsyncSignal/AsyncMultiSignal/DynamicSignal) was found
+            # for this curve, so it must be served by the deprecated per-device
+            # device_async_readback endpoint.
             stream_key = (name, None)  # old endpoint is keyed by device only
             new_endpoint = MessageEndpoints.device_async_readback(self.scan_id, name)
             old_endpoint = MessageEndpoints.device_async_readback(self.old_scan_id, name)
+            legacy_endpoint = True
 
         endpoint_str = getattr(new_endpoint, "endpoint", new_endpoint)
 
@@ -1797,6 +1802,16 @@ class Waveform(PlotBase):
                 f"'{endpoint_str}'; reusing it instead of subscribing again."
             )
             return
+
+        # TODO implement deprecation warning when simulations are migrated
+        # if legacy_endpoint:
+        #     logger.warning(
+        #         f"Deprecated async endpoint in use: device '{name}' provides async data via the "
+        #         f"legacy 'device_async_readback' endpoint ('{endpoint_str}'). Migrate the device "
+        #         "to an AsyncSignal/AsyncMultiSignal/DynamicSignal so it publishes on the "
+        #         "'device_async_signal' endpoint; support for 'device_async_readback' in the "
+        #         "waveform widget will be removed in a future release."
+        #     )
 
         self._async_streams_setup[stream_key] = [signal]
         self.bec_dispatcher.disconnect_slot(self.on_async_readback, old_endpoint)
