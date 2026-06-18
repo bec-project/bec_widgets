@@ -14,6 +14,10 @@ from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.side_panel import SidePanel
 from bec_widgets.utils.toolbars.actions import MaterialIconAction, SwitchableToolBarAction
+from bec_widgets.widgets.plots.image.bec_histogram_lut_item import (
+    BECColorBarItem,
+    BECHistogramLUTItem,
+)
 from bec_widgets.widgets.plots.image.image_item import ImageItem
 from bec_widgets.widgets.plots.image.image_roi_plot import ImageROIPlot
 from bec_widgets.widgets.plots.image.setting_widgets.image_roi_tree import ROIPropertyTree
@@ -476,7 +480,7 @@ class ImageBase(PlotBase):
         self,
         enabled: bool,
         style: Literal["full", "simple"] = "full",
-        vrange: tuple[int, int] | None = None,
+        vrange: tuple[float, float] | None = None,
     ):
         """
         Enable the colorbar and switch types of colorbars.
@@ -486,13 +490,14 @@ class ImageBase(PlotBase):
             style(Literal["full", "simple"]): The type of colorbar to enable.
             vrange(tuple): The range of values to use for the colorbar.
         """
-        autorange_state = self.layer_manager["main"].image.autorange
+        if enabled and style not in ("full", "simple"):
+            raise ValueError(f"Invalid colorbar style '{style}'; use 'full' or 'simple'.")
+
+        main_image = self.layer_manager["main"].image
+        autorange_state = main_image.autorange
+        saved_vrange = main_image.v_range
         if enabled:
-            if self._color_bar:
-                if self.config.color_bar == "full":
-                    self.cleanup_histogram_lut_item(self._color_bar)
-                self.plot_widget.removeItem(self._color_bar)
-                self._color_bar = None
+            self._remove_color_bar()
 
             def disable_autorange():
                 logger.info("Disabling autorange")
@@ -500,30 +505,51 @@ class ImageBase(PlotBase):
 
             if style == "simple":
                 cmap = Colors.get_colormap(self.config.color_map)
-                self._color_bar = pg.ColorBarItem(colorMap=cmap)
-                self._color_bar.setImageItem(self.layer_manager["main"].image)
+                self._color_bar = BECColorBarItem(colorMap=cmap)
+                self._color_bar.setImageItem(main_image)
                 self._color_bar.sigLevelsChangeFinished.connect(disable_autorange)
                 self.config.color_bar = "simple"
 
             elif style == "full":
-                self._color_bar = pg.HistogramLUTItem()
-                self._color_bar.setImageItem(self.layer_manager["main"].image)
+                self._color_bar = BECHistogramLUTItem()
+                self._color_bar.setImageItem(main_image)
                 self.config.color_bar = "full"
                 self._apply_colormap_to_colorbar(self.config.color_map)
                 self._color_bar.sigLevelsChanged.connect(disable_autorange)
 
+            # Custom colorbar context menu (replaces pyqtgraph's default menus).
+            self._color_bar.sigColorMapChangeRequested.connect(self._set_colormap_from_menu)
+            self._color_bar.sigColorLevelsChangeRequested.connect(self._set_vrange_from_menu)
+            self._color_bar.sigAutoLevelsRequested.connect(self._autorange_from_menu)
+
             self.plot_widget.addItem(self._color_bar, row=0, col=1)
         else:
-            if self._color_bar:
-                self.plot_widget.removeItem(self._color_bar)
-                self._color_bar = None
+            self._remove_color_bar()
             self.config.color_bar = None
 
         self.autorange = autorange_state
+        if enabled and not autorange_state:
+            # Attaching a colorbar re-levels the image (HistogramLUTItem's
+            # setImageItem auto-levels); restore the previous manual levels so
+            # switching between colorbar styles keeps the levels in sync.
+            self._set_vrange(saved_vrange, disable_autorange=False)
         self._sync_colorbar_actions()
 
         if vrange:  # should be at the end to disable the autorange if defined
             self.v_range = vrange
+
+    def _remove_color_bar(self) -> None:
+        """
+        Remove the current colorbar from the plot and fully tear it down, including
+        the parentless menus/dialogs it owns.
+        """
+        if self._color_bar is None:
+            return
+        if isinstance(self._color_bar, (BECHistogramLUTItem, BECColorBarItem)):
+            self._color_bar.cleanup()
+        self.plot_widget.removeItem(self._color_bar)
+        self._color_bar.deleteLater()
+        self._color_bar = None
 
     def _apply_colormap_to_colorbar(self, color_map: str) -> None:
         if not self._color_bar:
@@ -974,6 +1000,21 @@ class ImageBase(PlotBase):
 
         # self.toolbar.components.get_action("image_autorange").set_state_all(False)
 
+    @SafeSlot(str)
+    def _set_colormap_from_menu(self, color_map: str):
+        """Apply a colormap chosen from the colorbar context menu."""
+        self.color_map = color_map
+
+    @SafeSlot(object)
+    def _set_vrange_from_menu(self, vrange: tuple[float, float]):
+        """Apply explicit color levels requested from the colorbar context menu."""
+        self._set_vrange(vrange, disable_autorange=True)
+
+    @SafeSlot()
+    def _autorange_from_menu(self):
+        """Enable autorange (current mode) from the colorbar context menu."""
+        self.autorange = True
+
     @property
     def v_min(self) -> float:
         """
@@ -1171,22 +1212,6 @@ class ImageBase(PlotBase):
             else:
                 colorbar_switch.set_state_all(False)
 
-    @staticmethod
-    def cleanup_histogram_lut_item(histogram_lut_item: pg.HistogramLUTItem):
-        """
-        Clean up HistogramLUTItem safely, including open ViewBox menus and child widgets.
-
-        Args:
-            histogram_lut_item(pg.HistogramLUTItem): The HistogramLUTItem to clean up.
-        """
-        histogram_lut_item.vb.menu.close()
-        histogram_lut_item.vb.menu.deleteLater()
-
-        histogram_lut_item.gradient.menu.close()
-        histogram_lut_item.gradient.menu.deleteLater()
-        histogram_lut_item.gradient.colorDialog.close()
-        histogram_lut_item.gradient.colorDialog.deleteLater()
-
     def cleanup(self):
         """
         Cleanup the widget.
@@ -1199,13 +1224,7 @@ class ImageBase(PlotBase):
             roi.remove()
 
         # Colorbar Cleanup
-        if self._color_bar:
-            if self.config.color_bar == "full":
-                self.cleanup_histogram_lut_item(self._color_bar)
-            if self.config.color_bar == "simple":
-                self.plot_widget.removeItem(self._color_bar)
-                self._color_bar.deleteLater()
-            self._color_bar = None
+        self._remove_color_bar()
 
         # Popup cleanup
         if self.roi_manager_dialog is not None:

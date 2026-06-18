@@ -2188,7 +2188,7 @@ class Heatmap(RPCBase):
         self,
         enabled: "bool",
         style: "Literal['full', 'simple']" = "full",
-        vrange: "tuple[int, int] | None" = None,
+        vrange: "tuple[float, float] | None" = None,
     ):
         """
         Enable the colorbar and switch types of colorbars.
@@ -2924,7 +2924,7 @@ class Image(RPCBase):
         self,
         enabled: "bool",
         style: "Literal['full', 'simple']" = "full",
-        vrange: "tuple[int, int] | None" = None,
+        vrange: "tuple[float, float] | None" = None,
     ):
         """
         Enable the colorbar and switch types of colorbars.
