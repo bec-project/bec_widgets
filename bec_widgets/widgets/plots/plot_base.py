@@ -1095,12 +1095,21 @@ class PlotBase(BECWidget, QWidget):
             self.crosshair.deleteLater()
             self.crosshair = None
 
-    def toggle_crosshair(self) -> None:
-        """Toggle the crosshair on all plots."""
-        if self.crosshair is None:
-            return self.hook_crosshair()
+    def toggle_crosshair(self, enabled: bool | None = None) -> None:
+        """Toggle the crosshair on all plots.
 
-        self.unhook_crosshair()
+        Args:
+            enabled (bool | None): If provided, explicitly enable (``True``) or disable
+                (``False``) the crosshair. If ``None``, the current state is flipped.
+                When connected to a checkable action's ``toggled`` signal the checked
+                state is forwarded here, keeping the crosshair in sync with the action.
+        """
+        if enabled is None:
+            enabled = self.crosshair is None
+        if enabled:
+            self.hook_crosshair()
+        else:
+            self.unhook_crosshair()
 
     @SafeProperty(
         int,
