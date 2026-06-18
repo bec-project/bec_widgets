@@ -1,6 +1,26 @@
 # CHANGELOG
 
 
+## v3.17.1 (2026-06-18)
+
+### Bug Fixes
+
+- **waveform**: Classify curves by signal class, not device readout priority
+  ([`d623172`](https://github.com/bec-project/bec_widgets/commit/d6231726d6e287d0c637086387654be09d1316ec))
+
+- **waveform**: Deprecation warning if device is using old device_async_readback
+  ([`4ded287`](https://github.com/bec-project/bec_widgets/commit/4ded287788a00cc2d7948bda61d1cf5b90f75f9d))
+
+- **waveform**: Log signals with shared endpoint
+  ([`2458ac1`](https://github.com/bec-project/bec_widgets/commit/2458ac10746971f26ac658af419b125bdf14b934))
+
+- **waveform**: Set up async curve subscriptions once per scan transition
+  ([`bf61399`](https://github.com/bec-project/bec_widgets/commit/bf61399123c41d30cc09b5ec6287e86a0318a531))
+
+- **waveform**: Support dynamic signals
+  ([`9c4ff54`](https://github.com/bec-project/bec_widgets/commit/9c4ff5403d759774a1e9216ad9920f2e162a3c44))
+
+
 ## v3.17.0 (2026-06-17)
 
 ### Bug Fixes
