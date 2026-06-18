@@ -12,7 +12,7 @@ import redis
 from bec_lib.client import BECClient
 from bec_lib.logger import bec_logger
 from bec_lib.redis_connector import MessageObject, RedisConnector
-from bec_lib.redis_connector.buffered_redis_connector import BufferedRedisConnector
+from bec_lib.redis_connector.managed_redis_connection import ManagedRedisConnection
 from bec_lib.service_config import ServiceConfig
 from qtpy.QtCore import QObject
 from qtpy.QtCore import Signal as pyqtSignal
@@ -100,7 +100,7 @@ class QtThreadSafeCallback(QObject):
         self.cb_signal.emit(msg_content, metadata)
 
 
-class QtBufferedRedisConnector(BufferedRedisConnector):
+class QtManagedRedisConnection(ManagedRedisConnection):
     def _execute_callback(self, cb, msg, kwargs):
         if not isinstance(cb, QtThreadSafeCallback):
             return super()._execute_callback(cb, msg, kwargs)
@@ -123,7 +123,7 @@ class QtBufferedRedisConnector(BufferedRedisConnector):
 
 
 class QtRedisConnector(RedisConnector):
-    connector_cls = QtBufferedRedisConnector
+    connector_cls = QtManagedRedisConnection
 
 
 class BECDispatcher:
