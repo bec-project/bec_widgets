@@ -4,6 +4,10 @@ import pytest
 from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtCore import QPointF, Qt
 
+from bec_widgets.widgets.plots.image.bec_histogram_lut_item import (
+    BECColorBarItem,
+    BECHistogramLUTItem,
+)
 from bec_widgets.widgets.plots.image.image import Image
 from bec_widgets.widgets.plots.image.image_processor import ImageProcessor, ProcessingConfig
 from tests.unit_tests.client_mocks import mocked_client
@@ -122,6 +126,126 @@ def test_enable_full_colorbar(qtbot, mocked_client):
     assert bec_image_view.autorange_mode == "mean"
     assert bec_image_view.main_image.autorange is True
     assert bec_image_view.main_image.autorange_mode == "mean"
+
+
+def test_full_colorbar_uses_bec_histogram_lut_item(qtbot, mocked_client):
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    bec_image_view.enable_full_colorbar = True
+    color_bar = bec_image_view._color_bar
+    assert isinstance(color_bar, BECHistogramLUTItem)
+    # The confusing default pyqtgraph plot menu is replaced on the histogram view.
+    assert color_bar.vb.getMenu(None) is color_bar._bec_menu
+
+
+def test_colorbar_menu_set_levels_updates_vrange(qtbot, mocked_client):
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    bec_image_view.enable_full_colorbar = True
+    assert bec_image_view.autorange is True
+
+    # Simulate the "Set levels…" context-menu action (image scaling via the region).
+    bec_image_view._color_bar.sigColorLevelsChangeRequested.emit((0, 50))
+
+    assert bec_image_view.v_range == QPointF(0, 50)
+    assert bec_image_view.main_image.levels == (0, 50)
+    # Setting explicit levels disables autorange.
+    assert bec_image_view.autorange is False
+
+
+def test_colorbar_menu_autoscale_enables_autorange(qtbot, mocked_client):
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    bec_image_view.enable_full_colorbar = True
+    bec_image_view.autorange = False
+
+    # Simulate the "Autoscale levels" context-menu action.
+    bec_image_view._color_bar.sigAutoLevelsRequested.emit()
+
+    assert bec_image_view.autorange is True
+
+
+def test_colorbar_menu_colormap_updates_image(qtbot, mocked_client):
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    bec_image_view.enable_full_colorbar = True
+
+    # Simulate picking a colormap from the colorbar context menu.
+    bec_image_view._color_bar.sigColorMapChangeRequested.emit("viridis")
+
+    assert bec_image_view.color_map == "viridis"
+    assert bec_image_view.config.color_map == "viridis"
+    assert bec_image_view.main_image.color_map == "viridis"
+
+
+def test_simple_colorbar_uses_bec_colorbar_item(qtbot, mocked_client):
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    bec_image_view.enable_simple_colorbar = True
+    assert isinstance(bec_image_view._color_bar, BECColorBarItem)
+
+
+def test_simple_colorbar_menu_signals_update_image_state(qtbot, mocked_client):
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    bec_image_view.enable_simple_colorbar = True
+
+    # "Set levels…" applies explicit levels and disables autorange.
+    bec_image_view._color_bar.sigColorLevelsChangeRequested.emit((1.0, 42.0))
+    assert bec_image_view.v_range == QPointF(1.0, 42.0)
+    assert bec_image_view.autorange is False
+
+    # "Autoscale levels" re-enables autorange.
+    bec_image_view._color_bar.sigAutoLevelsRequested.emit()
+    assert bec_image_view.autorange is True
+
+    # Picking a colormap goes through the BEC colormap handling (config + image).
+    bec_image_view._color_bar.sigColorMapChangeRequested.emit("viridis")
+    assert bec_image_view.config.color_map == "viridis"
+    assert bec_image_view.main_image.color_map == "viridis"
+
+
+@pytest.mark.parametrize(
+    "first, second", [("full", "simple"), ("simple", "full"), ("full", "full")]
+)
+def test_switching_colorbar_styles_preserves_manual_levels(qtbot, mocked_client, first, second):
+    """Switching between colorbar styles must not reset manually set levels."""
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    bec_image_view.main_image.set_data(np.arange(100, dtype=float).reshape(10, 10))
+    bec_image_view.enable_colorbar(True, first)
+
+    bec_image_view.v_range = (5.0, 77.0)
+    assert bec_image_view.autorange is False
+
+    bec_image_view.enable_colorbar(True, second)
+    assert bec_image_view.autorange is False
+    assert bec_image_view.v_range == QPointF(5.0, 77.0)
+    assert bec_image_view.main_image.v_range == (5.0, 77.0)
+
+
+def test_switching_colorbar_styles_keeps_autorange(qtbot, mocked_client):
+    """With autorange on, switching colorbar styles keeps autorange enabled."""
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    bec_image_view.main_image.set_data(np.arange(100, dtype=float).reshape(10, 10))
+    bec_image_view.enable_full_colorbar = True
+    assert bec_image_view.autorange is True
+
+    bec_image_view.enable_simple_colorbar = True
+    assert bec_image_view.autorange is True
+
+
+@pytest.mark.parametrize("colorbar_type", ["simple", "full"])
+def test_disable_colorbar_cleans_up(qtbot, mocked_client, colorbar_type):
+    """Disabling the colorbar tears down its parentless menus (no leaked top-levels)."""
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    bec_image_view.enable_colorbar(True, colorbar_type)
+    color_bar = bec_image_view._color_bar
+
+    bec_image_view.enable_colorbar(False)
+
+    assert bec_image_view._color_bar is None
+    assert bec_image_view.config.color_bar is None
+    assert color_bar._cleaned_up_triggered is True
+
+
+def test_enable_colorbar_invalid_style_raises(qtbot, mocked_client):
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    with pytest.raises(ValueError, match="Invalid colorbar style"):
+        bec_image_view.enable_colorbar(True, "fancy")
 
 
 @pytest.mark.parametrize("colorbar_type", ["simple", "full"])
