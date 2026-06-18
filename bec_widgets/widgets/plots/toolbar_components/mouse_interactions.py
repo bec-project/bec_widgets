@@ -79,7 +79,6 @@ class MouseInteractionConnection(BundleConnection):
         self.bundle_name = "mouse_interaction"
         self.components = components
         self.target_widget = target_widget
-        self.mouse_mode = None
         if (
             not hasattr(self.target_widget, "plot_item")
             or not hasattr(self.target_widget, "auto_range_x")
@@ -114,50 +113,52 @@ class MouseInteractionConnection(BundleConnection):
 
     def get_viewbox_mode(self):
         """
-        Returns the current interaction mode of a PyQtGraph ViewBox and sets the corresponding action.
+        Synchronise the toolbar selection with the plot's current mouse interaction mode.
         """
 
-        if self.target_widget:
-            viewbox = self.target_widget.plot_item.getViewBox()
-            switch_mouse_action = self.components.get_action_reference("switch_mouse_mode")()
-            if viewbox.getState()["mouseMode"] == 3:
-                switch_mouse_action.set_default_action("drag_mode")
-                switch_mouse_action.main_button.setChecked(True)
-                self.mouse_mode = "PanMode"
-            elif viewbox.getState()["mouseMode"] == 1:
-                switch_mouse_action.set_default_action("rectangle_mode")
-                switch_mouse_action.main_button.setChecked(True)
-                self.mouse_mode = "RectMode"
+        if not self.target_widget:
+            return
+        mouse_mode = self.target_widget.plot_item.getViewBox().getState()["mouseMode"]
+        switch_mouse_action = self.components.get_action_reference("switch_mouse_mode")()
+        if mouse_mode == pg.ViewBox.PanMode:
+            switch_mouse_action.set_default_action("drag_mode")
+        elif mouse_mode == pg.ViewBox.RectMode:
+            switch_mouse_action.set_default_action("rectangle_mode")
 
     @SafeSlot(bool)
     def enable_mouse_rectangle_mode(self, checked: bool):
         """
         Enable the rectangle zoom mode on the plot widget.
+
+        A mouse mode is always active. When the rectangle action is unchecked because the
+        user switched to pan, the pan action becomes checked and takes over. When it is
+        unchecked directly (e.g. clicking the active main button), no other mode is active,
+        so the rectangle action is re-checked to avoid leaving every sub-action unchecked.
         """
-        switch_mouse_action = self.components.get_action_reference("switch_mouse_mode")()
-        if self.mouse_mode == "RectMode":
-            switch_mouse_action.main_button.setChecked(True)
+
+        if not checked:
+            self.components.get_action_reference("switch_mouse_mode")().main_button.setChecked(True)
+            if not self.components.get_action_reference("mouse_drag")().action.isChecked():
+                self.components.get_action_reference("mouse_rect")().action.setChecked(True)
             return
-        drag_mode = self.components.get_action_reference("mouse_drag")()
-        drag_mode.action.setChecked(not checked)
-        if self.target_widget and checked:
+        if self.target_widget:
             self.target_widget.plot_item.getViewBox().setMouseMode(pg.ViewBox.RectMode)
-            self.mouse_mode = "RectMode"
 
     @SafeSlot(bool)
     def enable_mouse_pan_mode(self, checked: bool):
         """
         Enable the pan mode on the plot widget.
+
+        See :meth:`enable_mouse_rectangle_mode`: the pan action is re-checked when it is
+        unchecked directly while no other mode is active, so a mouse mode is always selected.
         """
-        if self.mouse_mode == "PanMode":
-            switch_mouse_action = self.components.get_action_reference("switch_mouse_mode")()
-            switch_mouse_action.main_button.setChecked(True)
+        if not checked:
+            self.components.get_action_reference("switch_mouse_mode")().main_button.setChecked(True)
+            if not self.components.get_action_reference("mouse_rect")().action.isChecked():
+                self.components.get_action_reference("mouse_drag")().action.setChecked(True)
             return
-        rect_mode = self.components.get_action_reference("mouse_rect")()
-        rect_mode.action.setChecked(not checked)
-        if self.target_widget and checked:
+        if self.target_widget:
             self.target_widget.plot_item.getViewBox().setMouseMode(pg.ViewBox.PanMode)
-            self.mouse_mode = "PanMode"
 
     @SafeSlot()
     def autorange_plot(self):
