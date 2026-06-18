@@ -536,6 +536,32 @@ def test_switchable_toolbar_action_is_exclusive(toolbar_fixture, switchable_tool
     assert not action2.isChecked()
 
 
+def test_switchable_toolbar_action_menu_cache_rebuilt_on_reshow(toolbar_fixture, qtbot):
+    """Re-showing bundles rebuilds the menu cache: no stale/duplicate menu actions."""
+    action1 = MaterialIconAction(icon_name="counter_1", tooltip="Action 1", checkable=True)
+    action2 = MaterialIconAction(icon_name="counter_2", tooltip="Action 2", checkable=True)
+    switch = SwitchableToolBarAction(
+        actions={"action1": action1, "action2": action2}, initial_action="action1", checkable=True
+    )
+    toolbar = toolbar_fixture
+    toolbar.add_action("switch_action", switch)
+    toolbar.show_bundles(["switch_action"])
+    assert set(switch.menu_actions) == {"action1", "action2"}
+
+    # add_to_toolbar runs again on the same instance -> the cache must not accumulate
+    # stale entries, and the cached actions must stay live and usable.
+    toolbar.show_bundles(["switch_action"])
+    assert set(switch.menu_actions) == {"action1", "action2"}
+    for menu_action in switch.menu_actions.values():
+        # Touching the cached action must not raise (i.e. not a deleted C++ object).
+        menu_action.setChecked(menu_action.isChecked())
+
+    switch.set_default_action("action2")
+    assert switch.current_key == "action2"
+    assert switch.menu_actions["action2"].isChecked()
+    assert not switch.menu_actions["action1"].isChecked()
+
+
 def test_switchable_toolbar_action_can_disable_exclusivity(toolbar_fixture):
     """When exclusive=False the actions are independent (no action group)."""
     action1 = MaterialIconAction(icon_name="counter_1", tooltip="Action 1", checkable=True)

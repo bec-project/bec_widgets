@@ -363,6 +363,7 @@ class SwitchableToolBarAction(IconAction):
         self.main_button.setToolTip(default_action.tooltip or "")
         self.main_button.clicked.connect(self._trigger_current_action)
         menu = QMenu(self.main_button)
+        self.menu_actions = {}
         for key, action_obj in self.actions.items():
             menu_action = QAction(
                 icon=action_obj.get_icon(), text=action_obj.tooltip, parent=self.main_button

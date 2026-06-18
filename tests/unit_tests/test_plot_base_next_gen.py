@@ -260,6 +260,61 @@ def test_crosshair_hook_unhook(qtbot, mocked_client):
     assert pb.crosshair is None
 
 
+def test_mouse_mode_switch_is_exclusive(qtbot, mocked_client):
+    """The pan/rectangle mouse modes must be mutually exclusive and always one active."""
+    import pyqtgraph as pg
+
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    switch = pb.toolbar.components.get_action("switch_mouse_mode")
+    drag = switch.actions["drag_mode"].action
+    rect = switch.actions["rectangle_mode"].action
+    viewbox = pb.plot_item.getViewBox()
+
+    # Switching to rectangle mode updates the viewbox and unchecks the pan action.
+    switch.set_default_action("rectangle_mode")
+    assert rect.isChecked() and not drag.isChecked()
+    assert viewbox.getState()["mouseMode"] == pg.ViewBox.RectMode
+    assert switch.main_button.isChecked()
+
+    # Switching back to pan mode flips both the viewbox and the checked states.
+    switch.set_default_action("drag_mode")
+    assert drag.isChecked() and not rect.isChecked()
+    assert viewbox.getState()["mouseMode"] == pg.ViewBox.PanMode
+
+    # The exclusive action group forbids both modes being active at once.
+    drag.setChecked(True)
+    rect.setChecked(True)
+    assert rect.isChecked() and not drag.isChecked()
+
+
+def test_mouse_mode_always_one_active_on_toggle_off(qtbot, mocked_client):
+    """Toggling the active mode off directly must keep exactly one mode selected."""
+    import pyqtgraph as pg
+
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    switch = pb.toolbar.components.get_action("switch_mouse_mode")
+    drag = switch.actions["drag_mode"].action
+    rect = switch.actions["rectangle_mode"].action
+    viewbox = pb.plot_item.getViewBox()
+
+    switch.set_default_action("drag_mode")
+    assert drag.isChecked() and not rect.isChecked()
+
+    # Clicking the main button toggles the current action off; a mouse mode must
+    # remain active rather than leaving both sub-actions unchecked.
+    switch.main_button.click()
+    assert switch.main_button.isChecked()
+    assert drag.isChecked() and not rect.isChecked()
+    assert viewbox.getState()["mouseMode"] == pg.ViewBox.PanMode
+
+    # Switching still works after a direct toggle-off.
+    switch.set_default_action("rectangle_mode")
+    assert rect.isChecked() and not drag.isChecked()
+    switch.main_button.click()
+    assert rect.isChecked() and not drag.isChecked()
+    assert viewbox.getState()["mouseMode"] == pg.ViewBox.RectMode
+
+
 def test_set_method(qtbot, mocked_client):
     """
     Test using the set(...) convenience method to update multiple properties at once.
