@@ -481,12 +481,81 @@ def test_switchable_toolbar_action_switching(toolbar_fixture, switchable_toolbar
             action_for_2 = act
             break
     assert action_for_2 is not None, "Menu action for 'Action 2' not found."
+
+    # The drop-down menu must reflect the current selection (action1 initially).
+    assert switchable_toolbar_action.menu_actions.keys() == {"action1", "action2"}
+    assert switchable_toolbar_action.menu_actions["action1"].isChecked()
+    assert not switchable_toolbar_action.menu_actions["action2"].isChecked()
+
     # Trigger the QAction to switch to action2
     action_for_2.trigger()
     qtbot.wait(100)
     # Verify that the switchable action has updated its state
     assert switchable_toolbar_action.current_key == "action2"
     assert switchable_toolbar_action.main_button.toolTip() == "Action 2"
+
+    # The menu check indicators must follow the active selection, not stay stale.
+    assert not switchable_toolbar_action.menu_actions["action1"].isChecked()
+    assert switchable_toolbar_action.menu_actions["action2"].isChecked()
+
+    # Switching back must move the check mark back to action1.
+    switchable_toolbar_action.set_default_action("action1")
+    assert switchable_toolbar_action.current_key == "action1"
+    assert switchable_toolbar_action.menu_actions["action1"].isChecked()
+    assert not switchable_toolbar_action.menu_actions["action2"].isChecked()
+
+
+def test_switchable_toolbar_action_is_exclusive(toolbar_fixture, switchable_toolbar_action):
+    """A switchable action must never leave more than one of its actions enabled."""
+    toolbar = toolbar_fixture
+    switch = switchable_toolbar_action
+    toolbar.add_action("switch_action", switch)
+    toolbar.show_bundles(["switch_action"])
+
+    # The actions are managed by an exclusive group by default.
+    assert switch.exclusive is True
+    assert switch.action_group is not None
+
+    action1 = switch.actions["action1"].action
+    action2 = switch.actions["action2"].action
+
+    # Forcing both checked must collapse to only the most recently checked one.
+    action1.setChecked(True)
+    action2.setChecked(True)
+    assert action2.isChecked()
+    assert not action1.isChecked()
+
+    # Re-checking the other one flips exclusively back.
+    action1.setChecked(True)
+    assert action1.isChecked()
+    assert not action2.isChecked()
+
+    # ExclusiveOptional: it is still allowed to have no action enabled at all.
+    action1.setChecked(False)
+    assert not action1.isChecked()
+    assert not action2.isChecked()
+
+
+def test_switchable_toolbar_action_can_disable_exclusivity(toolbar_fixture):
+    """When exclusive=False the actions are independent (no action group)."""
+    action1 = MaterialIconAction(icon_name="counter_1", tooltip="Action 1", checkable=True)
+    action2 = MaterialIconAction(icon_name="counter_2", tooltip="Action 2", checkable=True)
+    switch = SwitchableToolBarAction(
+        actions={"action1": action1, "action2": action2},
+        initial_action="action1",
+        checkable=True,
+        exclusive=False,
+    )
+    toolbar = toolbar_fixture
+    toolbar.add_action("switch_action", switch)
+    toolbar.show_bundles(["switch_action"])
+
+    assert switch.action_group is None
+    action1.action.setChecked(True)
+    action2.action.setChecked(True)
+    # Without the exclusive group both can be checked simultaneously.
+    assert action1.action.isChecked()
+    assert action2.action.isChecked()
 
 
 def test_long_pressbutton(toolbar_fixture, switchable_toolbar_action, qtbot):

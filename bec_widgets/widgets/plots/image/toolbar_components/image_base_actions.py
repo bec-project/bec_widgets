@@ -76,7 +76,7 @@ class ImageRoiConnection(BundleConnection):
         self.components.get_action("image_crosshair").action.toggled.connect(
             self.target_widget.toggle_crosshair
         )
-        self.components.get_action("image_crosshair_roi").action.triggered.connect(
+        self.components.get_action("image_crosshair_roi").action.toggled.connect(
             self.target_widget.toggle_roi_panels
         )
 
@@ -87,7 +87,7 @@ class ImageRoiConnection(BundleConnection):
         self.components.get_action("image_crosshair").action.toggled.disconnect(
             self.target_widget.toggle_crosshair
         )
-        self.components.get_action("image_crosshair_roi").action.triggered.disconnect(
+        self.components.get_action("image_crosshair_roi").action.toggled.disconnect(
             self.target_widget.toggle_roi_panels
         )
 

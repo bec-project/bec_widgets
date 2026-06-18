@@ -922,6 +922,44 @@ def test_crosshair_roi_panels_visibility(qtbot, mocked_client):
     )
 
 
+def test_crosshair_roi_switch_is_mutually_exclusive(qtbot, mocked_client):
+    """
+    Switching the crosshair/ROI tool via the switcher menu must disable the
+    previously active mode. In particular, switching from the ROI-crosshair back
+    to the plain crosshair has to hide the ROI panels (and vice versa); the two
+    modes are mutually exclusive.
+    """
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    switch = bec_image_view.toolbar.components.get_action("image_switch_crosshair")
+    crosshair_action = switch.actions["crosshair"].action
+    crosshair_roi_action = switch.actions["crosshair_roi"].action
+
+    def panels_visible() -> bool:
+        return bec_image_view.side_panel_x.panel_height > 0 and (
+            bec_image_view.side_panel_y.panel_width > 0
+        )
+
+    # Activate the ROI-crosshair mode -> panels visible, crosshair hooked.
+    switch.set_default_action("crosshair_roi")
+    qtbot.waitUntil(panels_visible, timeout=500)
+    assert bec_image_view.crosshair is not None
+    assert crosshair_roi_action.isChecked()
+    assert not crosshair_action.isChecked()
+
+    # Switch to the plain crosshair -> ROI panels must hide (the regression).
+    switch.set_default_action("crosshair")
+    qtbot.waitUntil(lambda: not panels_visible(), timeout=500)
+    assert bec_image_view.crosshair is not None  # crosshair still active
+    assert crosshair_action.isChecked()
+    assert not crosshair_roi_action.isChecked()
+
+    # Switch back to the ROI-crosshair -> panels visible again.
+    switch.set_default_action("crosshair_roi")
+    qtbot.waitUntil(panels_visible, timeout=500)
+    assert crosshair_roi_action.isChecked()
+    assert not crosshair_action.isChecked()
+
+
 def test_roi_plot_data_from_image(qtbot, mocked_client):
     """
     Check that ROI plots receive correct slice data from the 2D image.

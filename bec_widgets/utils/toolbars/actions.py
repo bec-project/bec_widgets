@@ -11,7 +11,7 @@ from bec_lib.device import ReadoutPriority
 from bec_lib.logger import bec_logger
 from bec_qthemes._icon.material_icons import material_icon
 from qtpy.QtCore import QSize, Qt, QTimer
-from qtpy.QtGui import QAction, QColor, QIcon  # type: ignore
+from qtpy.QtGui import QAction, QActionGroup, QColor, QIcon  # type: ignore
 from qtpy.QtWidgets import (
     QApplication,
     QComboBox,
@@ -314,6 +314,10 @@ class SwitchableToolBarAction(IconAction):
         initial_action (str, optional): The key of the initial default action. If not provided, the first action is used.
         tooltip (str, optional): An optional tooltip for the split action; if provided, it overrides the default action's tooltip.
         checkable (bool, optional): Whether the action is checkable. Defaults to True.
+        exclusive (bool, optional): Whether the switchable actions are mutually exclusive, i.e. only
+            one of them can be active at a time. Defaults to True. When enabled the actions are
+            managed by a ``QActionGroup`` (``ExclusiveOptional`` policy), so checking one action
+            structurally unchecks the others while still allowing all of them to be off.
         parent (QWidget, optional): Parent widget for the underlying QAction.
     """
 
@@ -324,6 +328,7 @@ class SwitchableToolBarAction(IconAction):
         tooltip: str | None = None,
         checkable: bool = True,
         default_state_checked: bool = False,
+        exclusive: bool = True,
         parent=None,
     ):
         super().__init__(icon_path=None, tooltip=tooltip, checkable=checkable)
@@ -332,8 +337,15 @@ class SwitchableToolBarAction(IconAction):
         self.parent = parent
         self.checkable = checkable
         self.default_state_checked = default_state_checked
+        self.exclusive = exclusive
         self.main_button = None
         self.menu_actions: Dict[str, QAction] = {}
+        self.action_group: QActionGroup | None = None
+        if self.exclusive and self.checkable:
+            self.action_group = QActionGroup(parent)
+            self.action_group.setExclusionPolicy(QActionGroup.ExclusionPolicy.ExclusiveOptional)
+            for action_obj in self.actions.values():
+                self.action_group.addAction(action_obj.action)
 
     def add_to_toolbar(self, toolbar: QToolBar, target: QWidget):
         """
@@ -360,6 +372,7 @@ class SwitchableToolBarAction(IconAction):
             menu_action.setChecked(key == self.current_key)
             menu_action.triggered.connect(lambda checked, k=key: self.set_default_action(k))
             menu.addAction(menu_action)
+            self.menu_actions[key] = menu_action
         self.main_button.setMenu(menu)
         if self.default_state_checked:
             self.main_button.setChecked(True)
@@ -385,14 +398,16 @@ class SwitchableToolBarAction(IconAction):
         new_action = self.actions[self.current_key]
         self.main_button.setIcon(new_action.get_icon())
         self.main_button.setToolTip(new_action.tooltip)
-        # Update check state of menu items
-        for k, menu_act in self.actions.items():
-            menu_act.action.setChecked(False)
+        for sub_action in self.actions.values():
+            sub_action.action.setChecked(False)
         new_action.action.trigger()
         # Active action chosen from menu is always checked, uncheck through main button
         if self.checkable:
             new_action.action.setChecked(True)
             self.main_button.setChecked(True)
+        # Keep the drop-down menu's check indicators in sync with the current selection.
+        for menu_key, menu_act in self.menu_actions.items():
+            menu_act.setChecked(menu_key == self.current_key)
 
     def block_all_signals(self, block: bool = True):
         """
