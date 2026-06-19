@@ -163,6 +163,9 @@ class PlotBase(BECWidget, QWidget):
         # PlotItem Addons
         self.plot_item.addLegend()
         self.crosshair = None
+        # Holds a pin that outlived its crosshair (e.g. crosshair toggled off) so it
+        # can be re-adopted when the crosshair is hooked again.
+        self._detached_pin = None
         self.fps_monitor = None
         self.fps_label = QLabel(alignment=Qt.AlignmentFlag.AlignRight)
         self._user_x_label = ""
@@ -1086,10 +1089,25 @@ class PlotBase(BECWidget, QWidget):
             self.crosshair.coordinatesPinned1D.connect(self.crosshair_coordinates_pinned)
             self.crosshair.coordinatesPinned2D.connect(self.crosshair_coordinates_pinned)
             self.crosshair.pinCleared.connect(self.crosshair_pin_cleared)
+            # Re-adopt a pin that survived a previous toggle-off.
+            if self._detached_pin is not None:
+                self.crosshair.adopt_pin(self._detached_pin)
+                self._detached_pin = None
 
-    def unhook_crosshair(self) -> None:
-        """Unhook the crosshair from all plots."""
+    def unhook_crosshair(self, preserve_pin: bool = True) -> None:
+        """Unhook the crosshair from all plots.
+
+        Args:
+            preserve_pin (bool): When True (the default, e.g. the crosshair is toggled
+                off from the toolbar), keep any active pin on the plot so it survives
+                the toggle and is re-adopted on the next hook. When False (e.g. on
+                widget teardown), the pin is discarded as well.
+        """
         if self.crosshair is not None:
+            if preserve_pin:
+                self._detached_pin = self.crosshair.release_pin()
+                if self._detached_pin is not None and self._detached_pin.get("point") is not None:
+                    self._detached_pin["point"]._on_remove = self._discard_detached_pin
             self.crosshair.crosshairChanged.disconnect(self.crosshair_position_changed)
             self.crosshair.crosshairClicked.disconnect(self.crosshair_position_clicked)
             self.crosshair.coordinatesChanged1D.disconnect(self.crosshair_coordinates_changed)
@@ -1102,6 +1120,21 @@ class PlotBase(BECWidget, QWidget):
             self.crosshair.cleanup()
             self.crosshair.deleteLater()
             self.crosshair = None
+        if not preserve_pin:
+            self._discard_detached_pin()
+
+    def _discard_detached_pin(self) -> None:
+        """Remove a detached (crosshair-less) pin's items from the plot, if any."""
+        if self._detached_pin is None:
+            return
+        had_pin = self._detached_pin.get("pos") is not None
+        for key in ("point", "v_line", "h_line", "label"):
+            item = self._detached_pin.get(key)
+            if item is not None:
+                self.plot_item.removeItem(item)
+        self._detached_pin = None
+        if had_pin:
+            self.crosshair_pin_cleared.emit()
 
     def toggle_crosshair(self, enabled: bool | None = None) -> None:
         """Toggle the crosshair on all plots.
@@ -1152,7 +1185,7 @@ class PlotBase(BECWidget, QWidget):
 
     def cleanup(self):
         self.toolbar.cleanup()
-        self.unhook_crosshair()
+        self.unhook_crosshair(preserve_pin=False)
         self.unhook_fps_monitor(delete_label=True)
         self.tick_item.cleanup()
         self.arrow_item.cleanup()

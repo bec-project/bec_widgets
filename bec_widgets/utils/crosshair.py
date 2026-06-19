@@ -718,6 +718,51 @@ class Crosshair(QObject):
         if had_pin:
             self.pinCleared.emit()
 
+    def release_pin(self):
+        """Detach the pin from this crosshair *without* removing it from the plot.
+
+        Used when the crosshair is unhooked (e.g. toggled off) but the pin should
+        stay on the plot. Returns a state dict that :meth:`adopt_pin` can use to
+        re-attach the same items to a future crosshair, or ``None`` if there is no pin.
+        """
+        if self.pinned_pos is None:
+            return None
+        state = {
+            "point": self.pinned_point,
+            "v_line": self.pinned_v_line,
+            "h_line": self.pinned_h_line,
+            "label": self.pinned_label,
+            "pos": self.pinned_pos,
+        }
+        # Detach the removal callback: this crosshair is about to be deleted and a
+        # detached pin has no owner to clear it through.
+        if self.pinned_point is not None:
+            self.pinned_point._on_remove = None
+        # Drop our references without removing the graphics items from the plot.
+        self.pinned_point = None
+        self.pinned_v_line = None
+        self.pinned_h_line = None
+        self.pinned_label = None
+        self.pinned_pos = None
+        return state
+
+    def adopt_pin(self, state):
+        """Re-attach a pin previously detached with :meth:`release_pin`.
+
+        The graphics items are already on the plot item; this only restores the
+        references so the crosshair can manage (move / clear) the pin again.
+        """
+        if not state:
+            return
+        self.pinned_point = state.get("point")
+        self.pinned_v_line = state.get("v_line")
+        self.pinned_h_line = state.get("h_line")
+        self.pinned_label = state.get("label")
+        self.pinned_pos = state.get("pos")
+        # Rebind the removal callback to this crosshair (the previous owner is gone).
+        if self.pinned_point is not None:
+            self.pinned_point._on_remove = self.clear_pin
+
     def _pin_hit(self, scene_pos) -> bool:
         """Return True if a click at ``scene_pos`` (scene pixels) lands on the pinned marker."""
         if self.pinned_pos is None:

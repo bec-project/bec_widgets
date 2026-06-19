@@ -2,7 +2,7 @@ import numpy as np
 import pyqtgraph as pg
 import pytest
 from bec_lib.endpoints import MessageEndpoints
-from qtpy.QtCore import QPointF
+from qtpy.QtCore import QPointF, Qt
 
 from bec_widgets.widgets.plots.image.image import Image
 from tests.unit_tests.client_mocks import mocked_client
@@ -23,6 +23,20 @@ def _set_signal_config(
         "component_name": signal_name,
         "describe": {"signal_info": {"ndim": ndim}},
     }
+
+
+class _FakeClickEvent:
+    """Minimal stand-in for a pyqtgraph MouseClickEvent."""
+
+    def __init__(self, button=Qt.LeftButton):
+        self._button = button
+        self.accepted = False
+
+    def button(self):
+        return self._button
+
+    def accept(self):
+        self.accepted = True
 
 
 def test_initialization_defaults(qtbot, mocked_client):
@@ -1054,6 +1068,36 @@ def test_pinned_roi_profiles_keep_style_on_theme_change(qtbot, mocked_client):
     # The frozen reference keeps its amber styling, the live curve is re-penned.
     assert pinned.opts["pen"].color().name() == "#f2c037"
     assert bec_image_view.x_roi_curve.opts["pen"].color().name() == "#000000"
+
+
+def test_detached_pin_can_be_removed_with_right_click(qtbot, mocked_client, monkeypatch):
+    """A pin left on the plot after disabling crosshair remains removable."""
+    from qtpy.QtWidgets import QMenu
+
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    bec_image_view.on_image_update_2d({"data": np.arange(25).reshape(5, 5)}, {})
+    switch = bec_image_view.toolbar.components.get_action("image_switch_crosshair")
+    switch.actions["crosshair_roi"].action.trigger()
+    qtbot.wait(50)
+
+    bec_image_view.crosshair.set_pin(2.0, 3.0)
+    switch.actions["crosshair_roi"].action.trigger()
+    qtbot.wait(20)
+    assert bec_image_view.crosshair is None
+    assert bec_image_view._detached_pin is not None
+
+    pin_point = bec_image_view._detached_pin["point"]
+    cleared = []
+    bec_image_view.crosshair_pin_cleared.connect(lambda: cleared.append(True))
+    monkeypatch.setattr(QMenu, "exec_", lambda self, *a, **k: self.actions()[0])
+
+    event = _FakeClickEvent(button=Qt.RightButton)
+    pin_point.mouseClickEvent(event)
+
+    assert bec_image_view._detached_pin is None
+    assert pin_point not in bec_image_view.plot_item.items
+    assert event.accepted is True
+    assert cleared == [True]
 
 
 ##############################################
