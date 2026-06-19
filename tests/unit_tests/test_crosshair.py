@@ -540,6 +540,27 @@ def test_log_mode_change_clears_pin(plot_widget_with_crosshair):
     assert crosshair.pinned_pos is None
 
 
+def test_adopted_pin_rebinds_removal_callback(monkeypatch, plot_widget_with_crosshair):
+    """After release/adopt (crosshair toggled off/on) the pin's context-menu
+    removal must act on the adopting crosshair, not the deleted one."""
+    from qtpy.QtWidgets import QMenu
+
+    crosshair, _ = plot_widget_with_crosshair
+    crosshair.set_pin(2, 5)
+
+    state = crosshair.release_pin()
+    # While detached there is no owner: the menu is disabled.
+    assert state["point"]._on_remove is None
+
+    crosshair.adopt_pin(state)
+    assert crosshair.pinned_point is not None
+
+    monkeypatch.setattr(QMenu, "exec_", lambda self, *a, **k: self.actions()[0])
+    event = _FakeClickEvent(None, button=Qt.RightButton)
+    crosshair.pinned_point.mouseClickEvent(event)
+    assert crosshair.pinned_point is None
+
+
 def test_set_pin_2d_emits_pixel_coordinates(image_widget_with_crosshair):
     crosshair, _ = image_widget_with_crosshair
     pinned = []

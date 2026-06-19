@@ -260,6 +260,64 @@ def test_crosshair_hook_unhook(qtbot, mocked_client):
     assert pb.crosshair is None
 
 
+def test_pin_survives_crosshair_toggle_off(qtbot, mocked_client):
+    """Toggling the crosshair off keeps the pinned marker; toggling on re-adopts it."""
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    pb.plot_item.plot(x=[1, 2, 3], y=[4, 5, 6], name="c")
+
+    pb.hook_crosshair()
+    pb.crosshair.set_pin(2, 5)
+    pin_items = [
+        pb.crosshair.pinned_point,
+        pb.crosshair.pinned_v_line,
+        pb.crosshair.pinned_h_line,
+        pb.crosshair.pinned_label,
+    ]
+    assert all(item is not None for item in pin_items)
+
+    # Toggle the crosshair off: the live crosshair is gone but the pin remains.
+    pb.toggle_crosshair()
+    assert pb.crosshair is None
+    assert pb._detached_pin is not None
+    for item in pin_items:
+        assert item in pb.plot_item.items
+
+    # Toggle back on: the new crosshair re-adopts the very same pin items.
+    pb.toggle_crosshair()
+    assert pb.crosshair is not None
+    assert pb._detached_pin is None
+    assert pb.crosshair.pinned_point is pin_items[0]
+    assert pb.crosshair.pinned_pos is not None
+
+    # The re-adopted pin is fully managed again and can be cleared.
+    pb.crosshair.clear_pin()
+    assert pb.crosshair.pinned_point is None
+    for item in pin_items:
+        assert item not in pb.plot_item.items
+
+
+def test_teardown_discards_detached_pin(qtbot, mocked_client):
+    """A pin left detached (crosshair off) is removed from the plot on teardown."""
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    pb.plot_item.plot(x=[1, 2, 3], y=[4, 5, 6], name="c")
+    pb.hook_crosshair()
+    pb.crosshair.set_pin(2, 5)
+    pin_items = [
+        pb.crosshair.pinned_point,
+        pb.crosshair.pinned_v_line,
+        pb.crosshair.pinned_h_line,
+        pb.crosshair.pinned_label,
+    ]
+    pb.toggle_crosshair()  # detach the pin
+    assert pb._detached_pin is not None
+
+    # Teardown (preserve_pin=False) must remove the detached pin's items.
+    pb.unhook_crosshair(preserve_pin=False)
+    assert pb._detached_pin is None
+    for item in pin_items:
+        assert item not in pb.plot_item.items
+
+
 def test_mouse_mode_switch_is_exclusive(qtbot, mocked_client):
     """The pan/rectangle mouse modes must be mutually exclusive and always one active."""
     import pyqtgraph as pg
