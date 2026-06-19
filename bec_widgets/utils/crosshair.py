@@ -865,18 +865,23 @@ class Crosshair(QObject):
 
     @SafeSlot()
     def reset(self):
-        """Resets the crosshair to its initial state."""
+        """Reset the transient crosshair markers (e.g. on new data / a new scan).
+
+        The pinned marker is intentionally *not* cleared here: it is a persistent
+        user annotation that survives data and scan changes. Use :meth:`clear_pin`
+        for an explicit removal and :meth:`cleanup` for full teardown.
+        """
         if self.marker_2d_row is not None:
             self.plot_item.removeItem(self.marker_2d_row)
             self.marker_2d_row = None
         if self.marker_2d_col is not None:
             self.plot_item.removeItem(self.marker_2d_col)
             self.marker_2d_col = None
-        self.clear_pin()
         self.clear_markers()
 
     def cleanup(self):
         self.reset()
+        self.clear_pin()
         self.plot_item.removeItem(self.v_line)
         self.plot_item.removeItem(self.h_line)
         self.plot_item.removeItem(self.coord_label)
