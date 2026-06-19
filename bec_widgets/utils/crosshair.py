@@ -137,6 +137,9 @@ class Crosshair(QObject):
         self.pinned_v_line = None
         self.pinned_h_line = None
         self.pinned_pos = None
+        # Last emitted pin payload, kept so the pin can be re-announced to consumers
+        # after it is re-adopted: ("2d", payload) | ("1d", payload) | None.
+        self._pinned_emit = None
         self._pin_hit_radius_px = 12  # how close (scene px) a click counts as "on the pin"
         self.update_markers()
         self.check_log()
@@ -648,8 +651,10 @@ class Crosshair(QObject):
         self._draw_pin(draw_pt[0], draw_pt[1])
         self.pinned_pos = draw_pt
         if pinned_2d is not None:
+            self._pinned_emit = ("2d", pinned_2d)
             self.coordinatesPinned2D.emit(pinned_2d)
-        if pinned_1d is not None:
+        elif pinned_1d is not None:
+            self._pinned_emit = ("1d", pinned_1d)
             self.coordinatesPinned1D.emit(pinned_1d)
 
     def _draw_pin(self, x: float, y: float):
@@ -715,6 +720,7 @@ class Crosshair(QObject):
             self.plot_item.removeItem(self.pinned_label)
             self.pinned_label = None
         self.pinned_pos = None
+        self._pinned_emit = None
         if had_pin:
             self.pinCleared.emit()
 
@@ -733,6 +739,7 @@ class Crosshair(QObject):
             "h_line": self.pinned_h_line,
             "label": self.pinned_label,
             "pos": self.pinned_pos,
+            "emit": self._pinned_emit,
         }
         # Detach the removal callback: this crosshair is about to be deleted and a
         # detached pin has no owner to clear it through.
@@ -744,6 +751,7 @@ class Crosshair(QObject):
         self.pinned_h_line = None
         self.pinned_label = None
         self.pinned_pos = None
+        self._pinned_emit = None
         return state
 
     def adopt_pin(self, state):
@@ -759,9 +767,24 @@ class Crosshair(QObject):
         self.pinned_h_line = state.get("h_line")
         self.pinned_label = state.get("label")
         self.pinned_pos = state.get("pos")
+        self._pinned_emit = state.get("emit")
         # Rebind the removal callback to this crosshair (the previous owner is gone).
         if self.pinned_point is not None:
             self.pinned_point._on_remove = self.clear_pin
+
+    def reemit_pin(self):
+        """Re-announce the current pin's coordinates to consumers.
+
+        Used after :meth:`adopt_pin` so dependent state (e.g. the image ROI panels'
+        frozen reference profiles) can be rebuilt for a pin that survived a toggle.
+        """
+        if self._pinned_emit is None:
+            return
+        kind, payload = self._pinned_emit
+        if kind == "2d":
+            self.coordinatesPinned2D.emit(payload)
+        elif kind == "1d":
+            self.coordinatesPinned1D.emit(payload)
 
     def _pin_hit(self, scene_pos) -> bool:
         """Return True if a click at ``scene_pos`` (scene pixels) lands on the pinned marker."""

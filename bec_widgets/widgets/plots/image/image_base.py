@@ -658,6 +658,10 @@ class ImageBase(PlotBase):
             self.crosshair.coordinatesPinned2D.connect(self.pin_image_slices)
             self.crosshair.pinCleared.connect(self.clear_pinned_slices)
             self.image_updated.connect(self.update_image_slices)
+            # If a pin survived a previous toggle, rebuild its frozen profiles now that
+            # the consumer slots are connected again.
+            if self.crosshair.pinned_pos is not None:
+                self.crosshair.reemit_pin()
         else:
             self.unhook_crosshair()
             # Hide the ROI panels (the crosshair is destroyed, so its pin signals

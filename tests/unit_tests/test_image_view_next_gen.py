@@ -1095,6 +1095,39 @@ def test_pin_survives_scan_reset(qtbot, mocked_client):
     assert bec_image_view.y_roi_pinned is not None
 
 
+def test_pin_and_profiles_restored_after_roi_toggle(qtbot, mocked_client):
+    """Toggling crosshair-ROI off then on restores both the marker and its frozen profiles."""
+    import numpy as np
+
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    test_data = np.arange(25).reshape(5, 5)
+    bec_image_view.on_image_update_2d({"data": test_data}, {})
+    switch = bec_image_view.toolbar.components.get_action("image_switch_crosshair")
+    switch.actions["crosshair_roi"].action.trigger()
+    qtbot.wait(50)
+
+    bec_image_view.crosshair.set_pin(2.0, 3.0)
+    assert bec_image_view.x_roi_pinned is not None
+    pin_point = bec_image_view.crosshair.pinned_point
+
+    # Toggle the ROI crosshair off: marker persists, frozen curves are cleared.
+    switch.actions["crosshair_roi"].action.trigger()
+    qtbot.wait(20)
+    assert bec_image_view.crosshair is None
+    assert bec_image_view._detached_pin is not None
+    assert bec_image_view.x_roi_pinned is None
+
+    # Toggle back on: marker is re-adopted AND the frozen profiles are rebuilt.
+    switch.actions["crosshair_roi"].action.trigger()
+    qtbot.wait(20)
+    assert bec_image_view.crosshair is not None
+    assert bec_image_view.crosshair.pinned_point is pin_point
+    assert bec_image_view.x_roi_pinned is not None
+    assert bec_image_view.y_roi_pinned is not None
+    _, x_pinned = bec_image_view.x_roi_pinned.getData()
+    np.testing.assert_array_equal(x_pinned, test_data[:, 3])
+
+
 def test_detached_pin_can_be_removed_with_right_click(qtbot, mocked_client, monkeypatch):
     """A pin left on the plot after disabling crosshair remains removable."""
     from qtpy.QtWidgets import QMenu
