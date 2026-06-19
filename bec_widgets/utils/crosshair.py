@@ -7,7 +7,7 @@ import numpy as np
 import pyqtgraph as pg
 from qtpy.QtCore import QObject, QPointF, Qt, Signal
 from qtpy.QtGui import QCursor, QTransform
-from qtpy.QtWidgets import QApplication
+from qtpy.QtWidgets import QApplication, QMenu
 
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.widgets.plots.image.image_item import ImageItem
@@ -24,6 +24,31 @@ class CrosshairScatterItem(pg.ScatterPlotItem):
         pass
 
 
+class PinScatterItem(CrosshairScatterItem):
+    """Scatter item for the pinned marker, owning its removal context menu.
+
+    Right-clicks must be handled at the item level: item click events are
+    delivered before the ViewBox's, so accepting the event here is the only way
+    to keep pyqtgraph's plot context menu from opening on top of the pin menu.
+    """
+
+    def __init__(self, *args, on_remove=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._on_remove = on_remove
+
+    def mouseClickEvent(self, ev):
+        if ev.button() == Qt.MouseButton.RightButton and self._on_remove is not None:
+            ev.accept()
+            menu = QMenu()
+            remove_action = menu.addAction("Remove pinned marker")
+            chosen = menu.exec_(QCursor.pos())
+            menu.deleteLater()
+            if chosen == remove_action:
+                self._on_remove()
+            return
+        super().mouseClickEvent(ev)
+
+
 class Crosshair(QObject):
     # QT Position of mouse cursor
     positionChanged = Signal(tuple)
@@ -37,6 +62,10 @@ class Crosshair(QObject):
     # Signal for 2D plot
     coordinatesChanged2D = Signal(tuple)
     coordinatesClicked2D = Signal(tuple)
+    # Pinned marker signals (a persistent marker placed on click)
+    coordinatesPinned1D = Signal(tuple)
+    coordinatesPinned2D = Signal(tuple)
+    pinCleared = Signal()
 
     def __init__(
         self,
@@ -101,6 +130,14 @@ class Crosshair(QObject):
         self.marker_clicked_1d = {}
         self.marker_2d_row = None
         self.marker_2d_col = None
+        # Pinned marker (a single persistent marker placed on click). The live
+        # crosshair keeps tracking the cursor; the pin stays until removed.
+        self.pinned_point = None
+        self.pinned_label = None
+        self.pinned_v_line = None
+        self.pinned_h_line = None
+        self.pinned_pos = None
+        self._pin_hit_radius_px = 12  # how close (scene px) a click counts as "on the pin"
         self.update_markers()
         self.check_log()
         self.check_derivatives()
@@ -489,13 +526,16 @@ class Crosshair(QObject):
             event: The mouse clicked event
         """
 
-        # we only accept left mouse clicks
+        # we only accept left mouse clicks; right-clicks on the pin are handled
+        # by the PinScatterItem itself (item events precede the ViewBox menu).
         if event.button() != Qt.MouseButton.LeftButton:
             return
         self.update_markers()
         if self.plot_item.vb.sceneBoundingRect().contains(event._scenePos):
             mouse_point = self.plot_item.vb.mapSceneToView(event._scenePos)
             x, y = mouse_point.x(), mouse_point.y()
+            # Keep the raw click position; ``x``/``y`` are reused/snapped below.
+            pin_x, pin_y = mouse_point.x(), mouse_point.y()
             scaled_x, scaled_y = self.scale_emitted_coordinates(mouse_point.x(), mouse_point.y())
             self.crosshairClicked.emit((scaled_x, scaled_y))
             self.positionClicked.emit((x, y))
@@ -544,6 +584,147 @@ class Crosshair(QObject):
                     self.coordinatesClicked2D.emit(coordinate_to_emit)
                 else:
                     continue
+
+            # Pinned marker: double-click clears it, clicking the existing pin
+            # removes it, otherwise (re)place a single pin at the clicked point.
+            if event.double():
+                self.clear_pin()
+            elif self._pin_hit(event._scenePos):
+                self.clear_pin()
+            else:
+                self.set_pin(pin_x, pin_y, x_snap_values, y_snap_values)
+
+    def set_pin(self, x: float, y: float, x_snap=None, y_snap=None):
+        """Place (or move) the single pinned marker at the data point nearest to (x, y).
+
+        The pin is independent of the live crosshair: it stays in place until removed.
+        Emits :attr:`coordinatesPinned1D` / :attr:`coordinatesPinned2D` with the snapped
+        coordinates so consumers (e.g. the image ROI panels) can freeze a reference.
+
+        Args:
+            x (float): The x-coordinate of the click, in plot coordinates.
+            y (float): The y-coordinate of the click, in plot coordinates.
+            x_snap, y_snap: Optionally pre-computed snap dictionaries (from
+                :meth:`snap_to_data`) to avoid recomputing them.
+        """
+        # Make sure the tracked items are current (e.g. when called programmatically).
+        self.update_markers()
+        if x_snap is None or y_snap is None:
+            x_snap, y_snap = self.snap_to_data(x, y)
+        if x_snap is None or y_snap is None:
+            return
+
+        precision = self._current_precision()
+        draw_pt = None
+        pinned_1d = None
+        pinned_2d = None
+        for item in self.items:
+            if isinstance(item, pg.PlotDataItem):
+                name = item.name() or str(id(item))
+                sx, sy = x_snap.get(name), y_snap.get(name)
+                if sx is None or sy is None:
+                    continue
+                draw_pt = (sx, sy)
+                sx_s, sy_s = self.scale_emitted_coordinates(sx, sy)
+                pinned_1d = (name, round(sx_s, precision), round(sy_s, precision))
+                break
+            elif isinstance(item, pg.ImageItem):
+                name = item.objectName() or str(id(item))
+                px, py = x_snap.get(name), y_snap.get(name)
+                if px is None or py is None:
+                    continue
+                # Pin the marker at the pixel centre, mapped back into plot coordinates.
+                if isinstance(item, ImageItem) and item.image_transform is not None:
+                    pt = item.image_transform.map(QPointF(px + 0.5, py + 0.5))
+                    draw_pt = (pt.x(), pt.y())
+                else:
+                    draw_pt = (px + 0.5, py + 0.5)
+                pinned_2d = (name, px, py)
+                break
+
+        if draw_pt is None:
+            return
+
+        self._draw_pin(draw_pt[0], draw_pt[1])
+        self.pinned_pos = draw_pt
+        if pinned_2d is not None:
+            self.coordinatesPinned2D.emit(pinned_2d)
+        if pinned_1d is not None:
+            self.coordinatesPinned1D.emit(pinned_1d)
+
+    def _draw_pin(self, x: float, y: float):
+        """Create/move the pinned marker at plot coordinates (x, y).
+
+        The pin is drawn as a frozen crosshair: dashed infinite lines plus a small dot
+        and a coordinate label, so it is visually distinct from the live crosshair.
+        """
+        pin_pen = pg.mkPen("#f2c037", width=1, style=Qt.PenStyle.DashLine)
+        if self.pinned_v_line is None:
+            self.pinned_v_line = pg.InfiniteLine(angle=90, movable=False, pen=pin_pen)
+            self.pinned_v_line.skip_auto_range = True
+            self.pinned_v_line.is_crosshair = True
+            self.pinned_v_line.setZValue(999)
+            self.plot_item.addItem(self.pinned_v_line, ignoreBounds=True)
+        if self.pinned_h_line is None:
+            self.pinned_h_line = pg.InfiniteLine(angle=0, movable=False, pen=pin_pen)
+            self.pinned_h_line.skip_auto_range = True
+            self.pinned_h_line.is_crosshair = True
+            self.pinned_h_line.setZValue(999)
+            self.plot_item.addItem(self.pinned_h_line, ignoreBounds=True)
+        self.pinned_v_line.setPos(x)
+        self.pinned_h_line.setPos(y)
+
+        if self.pinned_point is None:
+            self.pinned_point = PinScatterItem(
+                size=9,
+                symbol="o",
+                pen=pg.mkPen("#3a2d00", width=1.5),
+                brush=pg.mkBrush("#f2c037"),
+                on_remove=self.clear_pin,
+            )
+            self.pinned_point.skip_auto_range = True
+            self.pinned_point.is_crosshair = True
+            self.pinned_point.setZValue(1000)
+            self.plot_item.addItem(self.pinned_point)
+        self.pinned_point.setData([x], [y])
+
+        if self.pinned_label is None:
+            self.pinned_label = pg.TextItem("", anchor=(0, 1), color="#f2c037", fill=(0, 0, 0, 150))
+            self.pinned_label.skip_auto_range = True
+            self.pinned_label.setZValue(1000)
+            self.plot_item.addItem(self.pinned_label)
+        x_scaled, y_scaled = self.scale_emitted_coordinates(x, y)
+        precision = self._current_precision()
+        self.pinned_label.setText(f"pin ({x_scaled:.{precision}f}, {y_scaled:.{precision}f})")
+        self.pinned_label.setPos(x, y)
+        self.pinned_label.setVisible(True)
+
+    def clear_pin(self):
+        """Remove the pinned marker (if any) and notify consumers via :attr:`pinCleared`."""
+        had_pin = self.pinned_pos is not None
+        if self.pinned_point is not None:
+            self.plot_item.removeItem(self.pinned_point)
+            self.pinned_point = None
+        if self.pinned_v_line is not None:
+            self.plot_item.removeItem(self.pinned_v_line)
+            self.pinned_v_line = None
+        if self.pinned_h_line is not None:
+            self.plot_item.removeItem(self.pinned_h_line)
+            self.pinned_h_line = None
+        if self.pinned_label is not None:
+            self.plot_item.removeItem(self.pinned_label)
+            self.pinned_label = None
+        self.pinned_pos = None
+        if had_pin:
+            self.pinCleared.emit()
+
+    def _pin_hit(self, scene_pos) -> bool:
+        """Return True if a click at ``scene_pos`` (scene pixels) lands on the pinned marker."""
+        if self.pinned_pos is None:
+            return False
+        pin_scene = self.plot_item.vb.mapViewToScene(QPointF(*self.pinned_pos))
+        delta = pin_scene - scene_pos
+        return (delta.x() ** 2 + delta.y() ** 2) ** 0.5 <= self._pin_hit_radius_px
 
     def _get_transformed_position(
         self, x: float, y: float, transform: QTransform
@@ -626,11 +807,16 @@ class Crosshair(QObject):
         self.is_log_x = self.plot_item.axes["bottom"]["item"].logMode
         self.is_log_y = self.plot_item.axes["left"]["item"].logMode
         self.clear_markers()
+        # The pin is stored in view coordinates, which change meaning when the
+        # axis scale changes; a stale pin would be drawn at the wrong data point.
+        self.clear_pin()
 
     def check_derivatives(self):
         """Checks if the derivatives are enabled and updates the internal state accordingly."""
         self.is_derivative = self.plot_item.ctrl.derivativeCheck.isChecked()
         self.clear_markers()
+        # Same as check_log: the plotted data changes meaning, so drop the pin.
+        self.clear_pin()
 
     @SafeSlot()
     def reset(self):
@@ -641,6 +827,7 @@ class Crosshair(QObject):
         if self.marker_2d_col is not None:
             self.plot_item.removeItem(self.marker_2d_col)
             self.marker_2d_col = None
+        self.clear_pin()
         self.clear_markers()
 
     def cleanup(self):

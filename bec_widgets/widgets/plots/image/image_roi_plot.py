@@ -26,6 +26,9 @@ class ImageROIPlot(RoundedFrame):
         else:
             self.curve_color = "k"
         for curve in self.plot_item.curves:
+            if getattr(curve, "is_pinned_reference", False):
+                # Frozen reference profiles keep their own (dashed) styling.
+                continue
             curve.setPen(pg.mkPen(self.curve_color, width=3))
         super().apply_theme(theme)
 

@@ -116,6 +116,8 @@ class PlotBase(BECWidget, QWidget):
     crosshair_position_clicked = Signal(tuple)
     crosshair_coordinates_changed = Signal(tuple)
     crosshair_coordinates_clicked = Signal(tuple)
+    crosshair_coordinates_pinned = Signal(tuple)
+    crosshair_pin_cleared = Signal()
 
     def __init__(
         self,
@@ -1081,6 +1083,9 @@ class PlotBase(BECWidget, QWidget):
             self.crosshair.coordinatesClicked1D.connect(self.crosshair_coordinates_clicked)
             self.crosshair.coordinatesChanged2D.connect(self.crosshair_coordinates_changed)
             self.crosshair.coordinatesClicked2D.connect(self.crosshair_coordinates_clicked)
+            self.crosshair.coordinatesPinned1D.connect(self.crosshair_coordinates_pinned)
+            self.crosshair.coordinatesPinned2D.connect(self.crosshair_coordinates_pinned)
+            self.crosshair.pinCleared.connect(self.crosshair_pin_cleared)
 
     def unhook_crosshair(self) -> None:
         """Unhook the crosshair from all plots."""
@@ -1091,6 +1096,9 @@ class PlotBase(BECWidget, QWidget):
             self.crosshair.coordinatesClicked1D.disconnect(self.crosshair_coordinates_clicked)
             self.crosshair.coordinatesChanged2D.disconnect(self.crosshair_coordinates_changed)
             self.crosshair.coordinatesClicked2D.disconnect(self.crosshair_coordinates_clicked)
+            self.crosshair.coordinatesPinned1D.disconnect(self.crosshair_coordinates_pinned)
+            self.crosshair.coordinatesPinned2D.disconnect(self.crosshair_coordinates_pinned)
+            self.crosshair.pinCleared.disconnect(self.crosshair_pin_cleared)
             self.crosshair.cleanup()
             self.crosshair.deleteLater()
             self.crosshair = None
