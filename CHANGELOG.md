@@ -1,6 +1,27 @@
 # CHANGELOG
 
 
+## v3.17.2 (2026-06-19)
+
+### Bug Fixes
+
+- Qt redis connector for separated connector
+  ([`65d743a`](https://github.com/bec-project/bec_widgets/commit/65d743ab5ec6b5d2842eeeefc021a1ab34e4b930))
+
+### Chores
+
+- Move benchmark to end of workflow
+  ([`4b7fd2a`](https://github.com/bec-project/bec_widgets/commit/4b7fd2aa4254f7e80a493e1aa71b81f8ea48c3a3))
+
+- Rename buffered to managed
+  ([`c9b6f5e`](https://github.com/bec-project/bec_widgets/commit/c9b6f5ecedb89ba219a124e674a6cb9cf9ff6e35))
+
+### Continuous Integration
+
+- Do not close stale issues
+  ([`046e283`](https://github.com/bec-project/bec_widgets/commit/046e283dcfd11c436c18ebd4f9fdb2147b64efd1))
+
+
 ## v3.17.1 (2026-06-18)
 
 ### Bug Fixes
