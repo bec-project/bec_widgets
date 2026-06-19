@@ -996,6 +996,66 @@ def test_roi_plot_data_from_image(qtbot, mocked_client):
     np.testing.assert_array_equal(h_slice, test_data[2])
 
 
+def test_pinned_roi_profiles_freeze_and_clear(qtbot, mocked_client):
+    """Clicking pins a frozen copy of the X/Y profiles that survives live updates."""
+    import numpy as np
+
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    test_data = np.arange(25).reshape(5, 5)
+    bec_image_view.on_image_update_2d({"data": test_data}, {})
+
+    switch = bec_image_view.toolbar.components.get_action("image_switch_crosshair")
+    switch.actions["crosshair_roi"].action.trigger()
+    qtbot.wait(50)
+
+    assert bec_image_view.x_roi_pinned is None
+    assert bec_image_view.y_roi_pinned is None
+
+    # Pin at pixel (row=2, col=3) -> freezes the corresponding profiles.
+    bec_image_view.crosshair.set_pin(2.0, 3.0)
+    assert bec_image_view.x_roi_pinned is not None
+    assert bec_image_view.y_roi_pinned is not None
+    _, x_pinned = bec_image_view.x_roi_pinned.getData()
+    np.testing.assert_array_equal(x_pinned, test_data[:, 3])
+    y_pinned, _ = bec_image_view.y_roi_pinned.getData()
+    np.testing.assert_array_equal(y_pinned, test_data[2])
+
+    # A live update at another location must NOT wipe the frozen pinned curves.
+    pinned_item = bec_image_view.x_roi_pinned
+    bec_image_view.update_image_slices((0, 1, 1))
+    assert bec_image_view.x_roi_pinned is pinned_item
+    assert pinned_item in bec_image_view.x_roi.plot_item.listDataItems()
+
+    # Clearing the pin removes the frozen curves.
+    bec_image_view.crosshair.clear_pin()
+    assert bec_image_view.x_roi_pinned is None
+    assert bec_image_view.y_roi_pinned is None
+    assert pinned_item not in bec_image_view.x_roi.plot_item.listDataItems()
+
+
+def test_pinned_roi_profiles_keep_style_on_theme_change(qtbot, mocked_client):
+    """Theme changes re-pen the live profile curves but must not restyle the
+    frozen (amber) pinned reference curves."""
+    import numpy as np
+
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    bec_image_view.on_image_update_2d({"data": np.arange(25).reshape(5, 5)}, {})
+    switch = bec_image_view.toolbar.components.get_action("image_switch_crosshair")
+    switch.actions["crosshair_roi"].action.trigger()
+    qtbot.wait(50)
+
+    bec_image_view.crosshair.set_pin(2.0, 3.0)
+    bec_image_view.update_image_slices((0, 2, 3))  # ensure the live curve exists
+    pinned = bec_image_view.x_roi_pinned
+    assert pinned.opts["pen"].color().name() == "#f2c037"
+
+    bec_image_view.x_roi.apply_theme("light")
+
+    # The frozen reference keeps its amber styling, the live curve is re-penned.
+    assert pinned.opts["pen"].color().name() == "#f2c037"
+    assert bec_image_view.x_roi_curve.opts["pen"].color().name() == "#000000"
+
+
 ##############################################
 # Device selection toolbar sync
 ##############################################

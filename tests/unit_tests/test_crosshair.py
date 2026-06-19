@@ -376,3 +376,186 @@ def test_ignore_invisible_curves_on_move(qtbot, mocked_client):
     wf.crosshair.mouse_moved(event_mock)
     qtbot.wait(200)
     assert set(wf.crosshair.marker_moved_1d.keys()) == {"Curve_0"}
+
+
+###############################################
+# Pinned marker (click to pin, remove gestures)
+###############################################
+
+
+class _FakeClickEvent:
+    """Minimal stand-in for a pyqtgraph MouseClickEvent for routing tests."""
+
+    def __init__(self, scene_pos, button=Qt.LeftButton, double=False):
+        self._scenePos = scene_pos
+        self._button = button
+        self._double = double
+        self.accepted = False
+
+    def button(self):
+        return self._button
+
+    def double(self):
+        return self._double
+
+    def accept(self):
+        self.accepted = True
+
+
+def test_set_pin_1d_creates_marker_and_emits(plot_widget_with_crosshair):
+    crosshair, _ = plot_widget_with_crosshair
+    pinned = []
+    crosshair.coordinatesPinned1D.connect(pinned.append)
+
+    assert crosshair.pinned_point is None
+    crosshair.set_pin(2, 5)
+
+    assert crosshair.pinned_point is not None
+    assert crosshair.pinned_pos is not None
+    assert len(pinned) == 1
+    _, px, py = pinned[0]
+    assert np.isclose(px, 2) and np.isclose(py, 5)
+
+
+def test_pin_draws_dashed_crosshair_lines(plot_widget_with_crosshair):
+    crosshair, plot_item = plot_widget_with_crosshair
+    crosshair.set_pin(2, 5)
+
+    # A frozen, dashed crosshair (two infinite lines) is drawn at the pin.
+    assert crosshair.pinned_v_line is not None
+    assert crosshair.pinned_h_line is not None
+    assert np.isclose(crosshair.pinned_v_line.value(), 2)
+    assert np.isclose(crosshair.pinned_h_line.value(), 5)
+    assert crosshair.pinned_v_line.pen.style() == Qt.PenStyle.DashLine
+    assert crosshair.pinned_v_line in plot_item.items
+    assert crosshair.pinned_h_line in plot_item.items
+
+    crosshair.clear_pin()
+    assert crosshair.pinned_v_line is None
+    assert crosshair.pinned_h_line is None
+
+
+def test_clear_pin_emits_only_when_pinned(plot_widget_with_crosshair):
+    crosshair, _ = plot_widget_with_crosshair
+    cleared = []
+    crosshair.pinCleared.connect(lambda: cleared.append(True))
+
+    crosshair.set_pin(2, 5)
+    crosshair.clear_pin()
+    assert crosshair.pinned_point is None
+    assert crosshair.pinned_v_line is None
+    assert crosshair.pinned_h_line is None
+    assert crosshair.pinned_pos is None
+    assert cleared == [True]
+
+    # Clearing again is a no-op and must not re-emit.
+    crosshair.clear_pin()
+    assert cleared == [True]
+
+
+def test_single_click_pins(qtbot, plot_widget_with_crosshair):
+    crosshair, plot_item = plot_widget_with_crosshair
+    graphics_view = plot_item.vb.scene().views()[0]
+    qtbot.waitExposed(graphics_view)
+    pos = graphics_view.mapFromScene(plot_item.vb.mapViewToScene(QPointF(2, 5)))
+
+    qtbot.mouseClick(graphics_view.viewport(), Qt.LeftButton, pos=pos)
+    assert crosshair.pinned_point is not None
+    assert crosshair.pinned_pos is not None
+
+
+def test_reclick_on_pin_removes_it(plot_widget_with_crosshair):
+    crosshair, plot_item = plot_widget_with_crosshair
+    crosshair.set_pin(2, 5)
+    assert crosshair.pinned_point is not None
+
+    # A left click that lands on the existing pin toggles it off.
+    scene_pos = plot_item.vb.mapViewToScene(QPointF(*crosshair.pinned_pos))
+    crosshair.mouse_clicked(_FakeClickEvent(scene_pos, button=Qt.LeftButton))
+    assert crosshair.pinned_point is None
+
+
+def test_double_click_clears_pin(plot_widget_with_crosshair):
+    crosshair, plot_item = plot_widget_with_crosshair
+    crosshair.set_pin(2, 5)
+    assert crosshair.pinned_point is not None
+
+    scene_pos = plot_item.vb.mapViewToScene(QPointF(2, 5))
+    crosshair.mouse_clicked(_FakeClickEvent(scene_pos, double=True))
+    assert crosshair.pinned_point is None
+
+
+def test_right_click_on_pin_removes_via_menu(monkeypatch, plot_widget_with_crosshair):
+    """Right-clicks are handled by the pin item itself (accepting the event there
+    is what keeps pyqtgraph's plot context menu from opening on top)."""
+    from qtpy.QtWidgets import QMenu
+
+    crosshair, _ = plot_widget_with_crosshair
+    crosshair.set_pin(2, 5)
+    assert crosshair.pinned_point is not None
+
+    # Choose the (only) "Remove pinned marker" action without showing a real menu.
+    monkeypatch.setattr(QMenu, "exec_", lambda self, *a, **k: self.actions()[0])
+    event = _FakeClickEvent(None, button=Qt.RightButton)
+    crosshair.pinned_point.mouseClickEvent(event)
+
+    assert crosshair.pinned_point is None
+    assert event.accepted is True
+
+
+def test_right_click_on_pin_menu_cancelled_keeps_pin(monkeypatch, plot_widget_with_crosshair):
+    from qtpy.QtWidgets import QMenu
+
+    crosshair, _ = plot_widget_with_crosshair
+    crosshair.set_pin(2, 5)
+
+    monkeypatch.setattr(QMenu, "exec_", lambda self, *a, **k: None)  # menu dismissed
+    event = _FakeClickEvent(None, button=Qt.RightButton)
+    crosshair.pinned_point.mouseClickEvent(event)
+
+    assert crosshair.pinned_point is not None
+    assert event.accepted is True
+
+
+def test_right_click_without_pin_is_ignored(plot_widget_with_crosshair):
+    crosshair, plot_item = plot_widget_with_crosshair
+    scene_pos = plot_item.vb.mapViewToScene(QPointF(2, 5))
+    event = _FakeClickEvent(scene_pos, button=Qt.RightButton)
+    crosshair.mouse_clicked(event)
+    # No pin -> nothing handled at scene level, the event is left for
+    # pyqtgraph's own context menu.
+    assert event.accepted is False
+
+
+def test_log_mode_change_clears_pin(plot_widget_with_crosshair):
+    """The pin lives in view coordinates; toggling log mode must drop it instead
+    of leaving it at a now-meaningless position."""
+    crosshair, plot_item = plot_widget_with_crosshair
+    crosshair.set_pin(2, 5)
+    assert crosshair.pinned_point is not None
+
+    plot_item.ctrl.logYCheck.setChecked(True)
+
+    assert crosshair.pinned_point is None
+    assert crosshair.pinned_pos is None
+
+
+def test_set_pin_2d_emits_pixel_coordinates(image_widget_with_crosshair):
+    crosshair, _ = image_widget_with_crosshair
+    pinned = []
+    crosshair.coordinatesPinned2D.connect(pinned.append)
+
+    crosshair.set_pin(40, 60)
+    assert crosshair.pinned_point is not None
+    assert len(pinned) == 1
+    _, px, py = pinned[0]
+    assert (px, py) == (40, 60)
+
+
+def test_reset_clears_pin(image_widget_with_crosshair):
+    crosshair, _ = image_widget_with_crosshair
+    crosshair.set_pin(40, 60)
+    assert crosshair.pinned_point is not None
+    crosshair.reset()
+    assert crosshair.pinned_point is None
+    assert crosshair.pinned_pos is None

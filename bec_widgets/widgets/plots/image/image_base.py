@@ -607,6 +607,13 @@ class ImageBase(PlotBase):
         self.x_roi.plot_item.setXLink(self.plot_item)
         self.y_roi = ImageROIPlot(parent=self)
         self.y_roi.plot_item.setYLink(self.plot_item)
+
+        # Persistent live profile curves (updated in place so a pinned reference
+        # curve is not wiped on every crosshair move) and the frozen pinned curves.
+        self.x_roi_curve = None
+        self.y_roi_curve = None
+        self.x_roi_pinned = None
+        self.y_roi_pinned = None
         self.x_roi.apply_theme("dark")
         self.y_roi.apply_theme("dark")
 
@@ -647,10 +654,15 @@ class ImageBase(PlotBase):
             self.side_panel_x.show_panel(self.x_panel_index)
             self.side_panel_y.show_panel(self.y_panel_index)
             self.crosshair.coordinatesChanged2D.connect(self.update_image_slices)
+            # Clicking pins a static copy of the current X/Y profiles for comparison.
+            self.crosshair.coordinatesPinned2D.connect(self.pin_image_slices)
+            self.crosshair.pinCleared.connect(self.clear_pinned_slices)
             self.image_updated.connect(self.update_image_slices)
         else:
             self.unhook_crosshair()
-            # Hide the ROI panels
+            # Hide the ROI panels (the crosshair is destroyed, so its pin signals
+            # disconnect automatically; just drop any frozen reference curves).
+            self.clear_pinned_slices()
             self.side_panel_x.hide_panel()
             self.side_panel_y.hide_panel()
             self.image_updated.disconnect(self.update_image_slices)
@@ -678,14 +690,46 @@ class ImageBase(PlotBase):
             x = coordinates[1]
             y = coordinates[2]
         image_item = self.layer_manager["main"].image
+        slices = self._compute_image_slices(image_item, x, y)
+        if slices is None:
+            return
+        h_world_x, h_slice, v_world_y, v_slice = slices
+
+        # Update the live curves in place. They are persistent (rather than
+        # clear()+plot() each time) so a pinned reference curve survives.
+        if self.x_roi_curve is None:
+            self.x_roi_curve = self.x_roi.plot_item.plot(
+                h_world_x, h_slice, pen=pg.mkPen(self.x_roi.curve_color, width=3)
+            )
+        else:
+            self.x_roi_curve.setData(h_world_x, h_slice)
+
+        if self.y_roi_curve is None:
+            self.y_roi_curve = self.y_roi.plot_item.plot(
+                v_slice, v_world_y, pen=pg.mkPen(self.y_roi.curve_color, width=3)
+            )
+        else:
+            self.y_roi_curve.setData(v_slice, v_world_y)
+
+    def _compute_image_slices(self, image_item, row: int, col: int):
+        """Compute the horizontal/vertical profile slices through the image at (row, col).
+
+        Args:
+            image_item: The image item to slice.
+            row (int): Pixel index along the image's first axis.
+            col (int): Pixel index along the image's second axis.
+
+        Returns:
+            tuple | None: ``(h_world_x, h_slice, v_world_y, v_slice)`` in world coordinates,
+            or ``None`` if there is no image or the pixel is out of bounds.
+        """
         image = image_item.image
         if image is None:
-            return
+            return None
         max_row, max_col = image.shape[0] - 1, image.shape[1] - 1
-        row, col = x, y
         if not (0 <= row <= max_row and 0 <= col <= max_col):
-            return
-        # Horizontal slice
+            return None
+        # Horizontal slice (varies along the first axis at the fixed column)
         h_slice = image[:, col]
         x_pixel_indices = np.arange(h_slice.shape[0])
         if image_item.image_transform is None:
@@ -694,10 +738,7 @@ class ImageBase(PlotBase):
             h_world_x = [
                 image_item.image_transform.map(xi + 0.5, col + 0.5)[0] for xi in x_pixel_indices
             ]
-        self.x_roi.plot_item.clear()
-        self.x_roi.plot_item.plot(h_world_x, h_slice, pen=pg.mkPen(self.x_roi.curve_color, width=3))
-
-        # Vertical slice
+        # Vertical slice (varies along the second axis at the fixed row)
         v_slice = image[row, :]
         y_pixel_indices = np.arange(v_slice.shape[0])
         if image_item.image_transform is None:
@@ -706,8 +747,43 @@ class ImageBase(PlotBase):
             v_world_y = [
                 image_item.image_transform.map(row + 0.5, yi + 0.5)[1] for yi in y_pixel_indices
             ]
-        self.y_roi.plot_item.clear()
-        self.y_roi.plot_item.plot(v_slice, v_world_y, pen=pg.mkPen(self.y_roi.curve_color, width=3))
+        return h_world_x, h_slice, v_world_y, v_slice
+
+    @SafeSlot(tuple)
+    def pin_image_slices(self, coordinates: tuple):
+        """Freeze the X/Y profiles at the pinned pixel as static reference curves.
+
+        Args:
+            coordinates (tuple): ``(name, row, col)`` pixel coordinates of the pin, as
+                emitted by the crosshair's ``coordinatesPinned2D`` signal.
+        """
+        image_item = self.layer_manager["main"].image
+        slices = self._compute_image_slices(image_item, coordinates[1], coordinates[2])
+        if slices is None:
+            return
+        h_world_x, h_slice, v_world_y, v_slice = slices
+        # Single pin: drop any previously frozen curves first.
+        self.clear_pinned_slices()
+        # Solid pen on purpose: Qt's dash stroker on a many-segment profile curve is
+        # 10-20x more expensive to paint than a solid stroke, which stalls the GUI
+        # thread on every image update while a pin is active. The straight pin
+        # InfiniteLines can stay dashed cheaply; these data curves cannot.
+        pen = pg.mkPen("#f2c037", width=2)
+        self.x_roi_pinned = self.x_roi.plot_item.plot(h_world_x, h_slice, pen=pen)
+        self.y_roi_pinned = self.y_roi.plot_item.plot(v_slice, v_world_y, pen=pen)
+        # Keep the frozen reference styling when the ROI plots re-pen on theme change.
+        self.x_roi_pinned.is_pinned_reference = True
+        self.y_roi_pinned.is_pinned_reference = True
+
+    @SafeSlot()
+    def clear_pinned_slices(self):
+        """Remove the frozen pinned profile curves, if present."""
+        if self.x_roi_pinned is not None:
+            self.x_roi.plot_item.removeItem(self.x_roi_pinned)
+            self.x_roi_pinned = None
+        if self.y_roi_pinned is not None:
+            self.y_roi.plot_item.removeItem(self.y_roi_pinned)
+            self.y_roi_pinned = None
 
     ################################################################################
     # Widget Specific Properties
