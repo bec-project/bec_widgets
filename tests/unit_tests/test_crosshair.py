@@ -573,10 +573,17 @@ def test_set_pin_2d_emits_pixel_coordinates(image_widget_with_crosshair):
     assert (px, py) == (40, 60)
 
 
-def test_reset_clears_pin(image_widget_with_crosshair):
+def test_reset_preserves_pin_cleanup_removes_it(image_widget_with_crosshair):
     crosshair, _ = image_widget_with_crosshair
     crosshair.set_pin(40, 60)
     assert crosshair.pinned_point is not None
+
+    # A data/scan reset keeps the pin (a persistent annotation).
     crosshair.reset()
+    assert crosshair.pinned_point is not None
+    assert crosshair.pinned_pos is not None
+
+    # Full teardown removes it.
+    crosshair.cleanup()
     assert crosshair.pinned_point is None
     assert crosshair.pinned_pos is None

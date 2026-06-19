@@ -1070,6 +1070,31 @@ def test_pinned_roi_profiles_keep_style_on_theme_change(qtbot, mocked_client):
     assert bec_image_view.x_roi_curve.opts["pen"].color().name() == "#000000"
 
 
+def test_pin_survives_scan_reset(qtbot, mocked_client):
+    """A scan transition (crosshair.reset()) must not wipe the pin or its frozen profiles."""
+    import numpy as np
+
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    bec_image_view.on_image_update_2d({"data": np.arange(25).reshape(5, 5)}, {})
+    switch = bec_image_view.toolbar.components.get_action("image_switch_crosshair")
+    switch.actions["crosshair_roi"].action.trigger()
+    qtbot.wait(50)
+
+    bec_image_view.crosshair.set_pin(2.0, 3.0)
+    assert bec_image_view.x_roi_pinned is not None
+    pin_point = bec_image_view.crosshair.pinned_point
+    assert pin_point is not None
+
+    # Image._handle_scan_change calls crosshair.reset() on each new scan id.
+    bec_image_view.crosshair.reset()
+
+    # The pin marker and the frozen reference profiles must still be there.
+    assert bec_image_view.crosshair.pinned_point is pin_point
+    assert bec_image_view.crosshair.pinned_pos is not None
+    assert bec_image_view.x_roi_pinned is not None
+    assert bec_image_view.y_roi_pinned is not None
+
+
 def test_detached_pin_can_be_removed_with_right_click(qtbot, mocked_client, monkeypatch):
     """A pin left on the plot after disabling crosshair remains removable."""
     from qtpy.QtWidgets import QMenu
@@ -1098,6 +1123,8 @@ def test_detached_pin_can_be_removed_with_right_click(qtbot, mocked_client, monk
     assert pin_point not in bec_image_view.plot_item.items
     assert event.accepted is True
     assert cleared == [True]
+
+
 
 
 ##############################################
