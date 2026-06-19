@@ -211,7 +211,7 @@ class BECDispatcher:
                 self._registered_slots[qt_slot] = qt_slot
             qt_slot = self._registered_slots[qt_slot]
             self.client.connector.register(topics, cb=qt_slot, **kwargs)
-            topics_str, _ = self.client.connector._convert_endpointinfo(topics)
+            topics_str, _ = self.client.connector.extract_raw_endpoints_from_info(topics)
             qt_slot.topics.update(set(topics_str))
         else:
             logger.warning(f"Attempted to create duplicate stream subscription for {topics=}")
@@ -240,7 +240,7 @@ class BECDispatcher:
         if not self._registered_slots[connected_slot].topics:
             del self._registered_slots[connected_slot]
 
-    def disconnect_topics(self, topics: Union[str, list]):
+    def disconnect_topics(self, topics: str | list):
         """
         Disconnect all slots from a topic.
 
@@ -248,7 +248,7 @@ class BECDispatcher:
             topics(Union[str, list]): The topic(s) to disconnect from
         """
         self.client.connector.unregister(topics)
-        topics_str, _ = self.client.connector._convert_endpointinfo(topics)
+        topics_str, _ = self.client.connector.extract_raw_endpoints_from_info(topics)
 
         remove_slots = []
         for connected_slot in self._registered_slots.values():
