@@ -12,6 +12,7 @@ from bec_widgets.cli.client_utils import (
     BECGuiClient,
     _join_process_output_thread,
     _start_plot_process,
+    check_gui_display_available,
 )
 from bec_widgets.cli.rpc.rpc_base import RPCBase, RPCResponseTimeoutError, rpc_timeout
 
@@ -95,6 +96,38 @@ def test_client_utils_passes_client_config_to_server(bec_dispatcher):
                 config=mixin._client._service_config.config,
                 logger=mock.ANY,
             )
+
+
+def test_check_gui_display_available_reports_missing_display_for_ssh_session():
+    with mock.patch.dict(
+        "bec_widgets.cli.client_utils.os.environ", {"SSH_CONNECTION": "1"}, clear=True
+    ):
+        available, message = check_gui_display_available()
+
+    assert available is False
+    assert message is not None
+    assert "SSH session" in message
+    assert "ssh -X" in message
+
+
+def test_client_utils_start_server_returns_when_no_display(bec_dispatcher):
+    gui = BECGuiClient()
+    gui._client = bec_dispatcher.client
+    gui._gui_id = "gui_id"
+    gui._gui_is_alive = mock.MagicMock(return_value=False)
+
+    with (
+        mock.patch(
+            "bec_widgets.cli.client_utils.check_gui_display_available",
+            return_value=(False, "No display available"),
+        ),
+        mock.patch("bec_widgets.cli.client_utils._start_plot_process") as mock_start_plot,
+        mock.patch("bec_widgets.cli.client_utils.logger") as mock_logger,
+    ):
+        gui._start_server(wait=False)
+
+    mock_start_plot.assert_not_called()
+    mock_logger.error.assert_called_once_with("No display available")
 
 
 @contextmanager
