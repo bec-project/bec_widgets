@@ -7,6 +7,7 @@ import os
 import select
 import signal
 import subprocess
+import sys
 import threading
 import time
 from contextlib import contextmanager
@@ -58,6 +59,40 @@ def _filter_output(output: str) -> str:
         # see https://discussions.apple.com/thread/255761734?sortBy=rank
         return ""
     return output
+
+
+def check_gui_display_available() -> tuple[bool, str | None]:
+    """
+    Check whether the current environment can launch the GUI.
+
+    Returns:
+        tuple[bool, str | None]:
+            - ``True, None`` when a graphical display is available.
+            - ``False, <message>`` when GUI startup should be blocked with a helpful message.
+    """
+    if os.name != "posix" or sys.platform == "darwin":
+        return True, None
+
+    if os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"):
+        return True, None
+
+    if (
+        os.environ.get("SSH_CONNECTION")
+        or os.environ.get("SSH_CLIENT")
+        or os.environ.get("SSH_TTY")
+    ):
+        return (
+            False,
+            "Cannot start BEC GUI: no graphical display was detected for this SSH session. "
+            "If you want to launch widgets remotely, reconnect with X11 forwarding enabled "
+            "(for example `ssh -X` or `ssh -Y`) or start the GUI from a local graphical session.",
+        )
+
+    return (
+        False,
+        "Cannot start BEC GUI: no graphical display was detected. "
+        "Set `DISPLAY` or `WAYLAND_DISPLAY`, or start the GUI from a graphical session.",
+    )
 
 
 def _get_output(process, logger, stop_event: threading.Event | None = None) -> None:
@@ -654,6 +689,11 @@ class BECGuiClient(RPCBase):
         """
         if self._gui_is_alive():
             self._gui_started_event.set()
+            return
+        gui_available, error_message = check_gui_display_available()
+        if not gui_available:
+            logger.error(error_message)
+            self._startup_timeout = 0
             return
         if self._process is None or self._process.poll() is not None:
             logger.success("GUI starting...")
