@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.18.0 (2026-06-24)
+
+### Features
+
+- Add GUI display availability check for SSH sessions
+  ([`ee360ad`](https://github.com/bec-project/bec_widgets/commit/ee360adf3ae4fc4af75b09358f13f443af471432))
+
+
 ## v3.17.2 (2026-06-19)
 
 ### Bug Fixes
