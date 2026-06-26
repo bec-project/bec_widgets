@@ -289,15 +289,29 @@ class RPCBase:
 
         if wait_for_rpc_response:
             try:
-                finished = self._msg_wait_event.wait(timeout)
-                if not finished:
-                    logger.error(
-                        "GUI RPC response timeout "
-                        f"request_id={request_id} method={method} receiver={receiver} "
-                        f"target_gui_id={target_gui_id} object_name={self.object_name} "
-                        f"timeout={timeout}"
-                    )
-                    raise RPCResponseTimeoutError(request_id, timeout)
+                start = time.monotonic()
+                while True:
+                    if timeout is None:
+                        wait_timeout = 0.5
+                    else:
+                        remaining = timeout - (time.monotonic() - start)
+                        wait_timeout = max(0.0, min(0.5, remaining))
+
+                    finished = self._msg_wait_event.wait(wait_timeout)
+                    if finished:
+                        break
+                    self._fetch_rpc_response(request_id)
+                    if self._msg_wait_event.is_set():
+                        break
+                    if timeout is not None and (time.monotonic() - start) > timeout:
+                        logger.error(
+                            "GUI RPC response timeout "
+                            f"request_id={request_id} method={method} receiver={receiver} "
+                            f"target_gui_id={target_gui_id} object_name={self.object_name} "
+                            f"timeout={timeout}"
+                        )
+                        raise RPCResponseTimeoutError(request_id, timeout)
+
             finally:
                 self._msg_wait_event.clear()
                 self._client.connector.unregister(
@@ -324,6 +338,13 @@ class RPCBase:
         msg = cast(messages.RequestResponseMessage, msg_obj.value)
         logger.debug(f"GUI RPC response callback received: {msg}")
         self._rpc_response = msg
+        self._msg_wait_event.set()
+
+    def _fetch_rpc_response(self, request_id: str) -> None:
+        msg = self._client.connector.get(MessageEndpoints.gui_instruction_response(request_id))
+        if msg is None:
+            return
+        self._rpc_response = cast(messages.RequestResponseMessage, msg)
         self._msg_wait_event.set()
 
     def _create_widget_from_msg_result(self, msg_result):
