@@ -22,6 +22,7 @@ from bec_widgets.widgets.containers.dock_area.profile_utils import (
     SETTINGS_KEYS,
     baseline_profile_path,
     get_profile_info,
+    is_experimental_features_enabled,
     is_profile_read_only,
     is_quick_select,
     list_profiles,
@@ -32,6 +33,7 @@ from bec_widgets.widgets.containers.dock_area.profile_utils import (
     read_manifest,
     restore_runtime_from_baseline,
     runtime_profile_path,
+    set_experimental_features_enabled,
     set_quick_select,
     write_manifest,
 )
@@ -1442,6 +1444,20 @@ class TestWorkSpaceManager:
 
         assert is_quick_select(name) is (not initial)
         assert target.refresh_calls >= 1
+
+    def test_global_experimental_features_flag_persists(self):
+        assert is_experimental_features_enabled() is False
+
+        set_experimental_features_enabled(True)
+
+        assert is_experimental_features_enabled() is True
+        meta_path = os.path.join(os.environ["BECWIDGETS_PROFILE_DIR"], "_meta.ini")
+        assert (
+            QSettings(meta_path, QSettings.IniFormat).value(
+                SETTINGS_KEYS["experimental_features"], type=bool
+            )
+            is True
+        )
 
     def test_save_current_as_profile_with_target(self, qtbot, workspace_manager_target):
         name = "profile_save"

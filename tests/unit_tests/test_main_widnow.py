@@ -1,12 +1,14 @@
+import os
 import webbrowser
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
-from qtpy.QtCore import QEvent, QPoint, QPointF
+from qtpy.QtCore import QEvent, QPoint, QPointF, QSettings
 from qtpy.QtGui import QEnterEvent
-from qtpy.QtWidgets import QApplication, QFrame, QLabel
+from qtpy.QtWidgets import QApplication, QFrame, QLabel, QMessageBox
 
+from bec_widgets.widgets.containers.dock_area.profile_utils import SETTINGS_KEYS
 from bec_widgets.widgets.containers.main_window.addons.hover_widget import (
     HoverWidget,
     WidgetTooltip,
@@ -110,6 +112,35 @@ def test_hidden_scan_progress_parent_blocks_children_namespace(bec_main_window):
 
     assert hidden_progress.rpc_exposed is False
     assert nested_progress.parent_id == hidden_progress.gui_id
+
+
+def test_experimental_features_menu_action_persists_flag(
+    monkeypatch, tmp_path, qtbot, mocked_client
+):
+    monkeypatch.setenv("BECWIDGETS_PROFILE_DIR", str(tmp_path))
+    widget = BECMainWindow(client=mocked_client)
+    qtbot.addWidget(widget)
+    qtbot.waitExposed(widget)
+
+    action = widget._experimental_features_action
+    assert action.isCheckable()
+    assert action.isChecked() is False
+
+    quit_calls = []
+    monkeypatch.setattr(widget.app, "quit", lambda: quit_calls.append(True))
+    monkeypatch.setattr(QMessageBox, "question", lambda *args, **kwargs: QMessageBox.Yes)
+
+    action.setChecked(True)
+    action.setChecked(False)
+
+    meta_path = os.path.join(str(tmp_path), "_meta.ini")
+    assert (
+        QSettings(meta_path, QSettings.Format.IniFormat).value(
+            SETTINGS_KEYS["experimental_features"], type=bool
+        )
+        is False
+    )
+    assert quit_calls == [True, True]
 
 
 #################################################################
