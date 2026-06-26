@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.18.1 (2026-06-26)
+
+### Bug Fixes
+
+- Fetch rpc response manually
+  ([`40d6e69`](https://github.com/bec-project/bec_widgets/commit/40d6e69fc9989544e09ffe64823d9a4ec502edd4))
+
+
 ## v3.18.0 (2026-06-24)
 
 ### Features
