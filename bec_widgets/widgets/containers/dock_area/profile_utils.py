@@ -4,6 +4,8 @@ Utilities for managing BECDockArea profiles stored in INI files.
 Policy:
 - All created/modified profiles are stored under the BEC settings root:
   <base_path>/profiles/{baseline,runtime}
+- App-wide dock-area metadata and feature flags are stored in
+    <base_path>/profiles/_meta.ini.
 - Bundled read-only baselines are discovered in BW core profiles and plugin
   bec_widgets/profiles but never written to.
 - Lookup order when reading: runtime → settings baseline → app or plugin bundled baseline.
@@ -463,6 +465,7 @@ SETTINGS_KEYS = {
     "manifest": "manifest/widgets",
     "created_at": "profile/created_at",
     "is_quick_select": "profile/quick_select",
+    "experimental_features": "app/experimental_features",
     "screenshot": "profile/screenshot",
     "screenshot_at": "profile/screenshot_at",
     "last_profile": "app/last_profile",
@@ -659,6 +662,28 @@ def set_last_profile(
         s.setValue(key, name)
     else:
         s.remove(key)
+
+
+def is_experimental_features_enabled() -> bool:
+    """
+    Check whether experimental features are enabled globally.
+
+    Returns:
+        bool: ``True`` when the global experimental flag is enabled.
+    """
+    s = _app_settings()
+    return s.value(SETTINGS_KEYS["experimental_features"], False, type=bool)
+
+
+def set_experimental_features_enabled(enabled: bool) -> None:
+    """
+    Persist the global experimental-features flag.
+
+    Args:
+        enabled (bool): ``True`` to enable experimental features, ``False`` to disable.
+    """
+    s = _app_settings()
+    s.setValue(SETTINGS_KEYS["experimental_features"], bool(enabled))
 
 
 def now_iso_utc() -> str:

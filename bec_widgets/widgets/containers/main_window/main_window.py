@@ -12,6 +12,7 @@ from qtpy.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMainWindow,
+    QMessageBox,
     QStyle,
     QVBoxLayout,
     QWidget,
@@ -22,6 +23,10 @@ from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.ui_loader import UILoader
+from bec_widgets.widgets.containers.dock_area.profile_utils import (
+    is_experimental_features_enabled,
+    set_experimental_features_enabled,
+)
 from bec_widgets.widgets.containers.main_window.addons.hover_widget import HoverWidget
 from bec_widgets.widgets.containers.main_window.addons.notification_center.notification_banner import (
     BECNotificationBroker,
@@ -343,6 +348,12 @@ class BECMainWindow(BECWidget, QMainWindow):
         widget_tree_action.triggered.connect(self._show_widget_hierarchy_dialog)
         theme_menu.addAction(widget_tree_action)
 
+        experimental_features_action = QAction("Enable Experimental Features", self, checkable=True)
+        experimental_features_action.setChecked(is_experimental_features_enabled())
+        experimental_features_action.toggled.connect(self._toggle_experimental_features)
+        theme_menu.addAction(experimental_features_action)
+        self._experimental_features_action = experimental_features_action
+
         # Set the default theme
         if hasattr(self.app, "theme") and self.app.theme:
             theme_name = self.app.theme.theme.lower()
@@ -416,6 +427,19 @@ class BECMainWindow(BECWidget, QMainWindow):
             theme(str): Either "light" or "dark".
         """
         apply_theme(theme)  # emits theme_updated and applies palette globally
+
+    @SafeSlot(bool)
+    def _toggle_experimental_features(self, enabled: bool):
+        set_experimental_features_enabled(enabled)
+        reply = QMessageBox.question(
+            self,
+            "Restart Required",
+            "Experimental features require a restart to take effect. Restart the application now?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            self.app.quit()
 
     def _show_widget_hierarchy_dialog(self):
         if self._widget_hierarchy_dialog is None:
