@@ -18,6 +18,7 @@ from bec_widgets.utils.screen_utils import (
     available_screen_geometry,
     main_app_size_for_screen,
 )
+from bec_widgets.widgets.containers.dock_area.profile_utils import is_experimental_features_enabled
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 
 
@@ -63,7 +64,7 @@ class BECMainApp(BECMainWindow):
         self.add_section("BEC Applications", "bec_apps")
         self.dock_area = DockAreaView(self)
         self.device_manager = DeviceManagerView(self)
-        # self.developer_view = DeveloperView(self) #TODO temporary disable until the bugs with BECShell are resolved
+        self.developer_view = None
         self.admin_view = AdminView(self)
 
         self.add_view(icon="widgets", title="Dock Area", widget=self.dock_area, mini_text="Docks")
@@ -73,14 +74,15 @@ class BECMainApp(BECMainWindow):
             widget=self.device_manager,
             mini_text="DM",
         )
-        # TODO temporary disable until the bugs with BECShell are resolved
-        # self.add_view(
-        #     icon="code_blocks",
-        #     title="IDE",
-        #     widget=self.developer_view,
-        #     mini_text="IDE",
-        #     exclusive=True,
-        # )
+        if is_experimental_features_enabled():
+            self.developer_view = DeveloperView(self)
+            self.add_view(
+                icon="code_blocks",
+                title="IDE",
+                widget=self.developer_view,
+                mini_text="IDE",
+                exclusive=True,
+            )
         self.add_view(
             icon="admin_panel_settings",
             title="Admin View",

@@ -5,6 +5,10 @@ from qtpy.QtWidgets import QWidget
 from bec_widgets.applications.main_app import BECMainApp
 from bec_widgets.applications.views.view import ViewBase
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.widgets.containers.dock_area.profile_utils import (
+    is_experimental_features_enabled,
+    set_experimental_features_enabled,
+)
 
 from .client_mocks import mocked_client
 
@@ -134,6 +138,21 @@ def test_view_switch_method_switches_to_target(app_with_spies, qtbot):
 def test_view_content_widget_is_hidden_from_namespace(app_with_spies):
     app, _, _, _ = app_with_spies
     assert app.dock_area.content is app.dock_area.dock_area
+
+
+def test_developer_view_is_experimental_by_default(monkeypatch, tmp_path, qtbot, mocked_client):
+    monkeypatch.setenv("BECWIDGETS_PROFILE_DIR", str(tmp_path))
+    set_experimental_features_enabled(False)
+
+    app = BECMainApp(client=mocked_client, anim_duration=ANIM_TEST_DURATION, show_examples=False)
+    qtbot.addWidget(app)
+    app.show()
+    qtbot.waitExposed(app)
+
+    assert is_experimental_features_enabled() is False
+    assert (
+        not hasattr(app, "developer_view") or app.sidebar.components.get("developer_view") is None
+    )
 
 
 # def test_developer_plotting_area_parent_id_uses_view_namespace(app_with_spies): #TODO temp disabled due to disabled IDE view
