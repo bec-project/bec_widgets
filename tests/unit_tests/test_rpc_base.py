@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock
 
 import pytest
+from bec_lib import messages
 from bec_lib.device import DeviceBaseWithConfig, Signal
 
 from bec_widgets.cli.rpc import rpc_base as rpc_base_module
@@ -59,6 +60,7 @@ def test_run_rpc_logs_response_timeout(monkeypatch):
     rpc = RPCBase(gui_id="progress_widget", object_name="progressbar")
     rpc._rpc_timeout = 0
     rpc._client = MagicMock()
+    rpc._client.connector.get.return_value = None
 
     info_mock = MagicMock()
     error_mock = MagicMock()
@@ -83,3 +85,55 @@ def test_run_rpc_logs_response_timeout(monkeypatch):
     assert "target_gui_id=progress_widget" in error_message
     assert "object_name=progressbar" in error_message
     assert "timeout=0" in error_message
+
+
+def test_run_rpc_waits_indefinitely_when_timeout_is_none(monkeypatch):
+    rpc = RPCBase(gui_id="progress_widget", object_name="progressbar")
+    rpc._client = MagicMock()
+    rpc._create_widget_from_msg_result = MagicMock(return_value="done")
+
+    response = messages.RequestResponseMessage(accepted=True, message={"result": "rpc-result"})
+
+    wait_calls = {"count": 0}
+
+    def wait_side_effect(timeout):
+        wait_calls["count"] += 1
+        if wait_calls["count"] == 1:
+            return False
+        rpc._rpc_response = response
+        rpc._msg_wait_event.set()
+        return True
+
+    monkeypatch.setattr(rpc._msg_wait_event, "wait", wait_side_effect)
+    fetch_mock = MagicMock()
+    monkeypatch.setattr(rpc, "_fetch_rpc_response", fetch_mock)
+
+    result = rpc._run_rpc("set_value", timeout=None)
+
+    assert result == "done"
+    assert fetch_mock.call_count == 1
+    assert wait_calls["count"] == 2
+    assert rpc._create_widget_from_msg_result.call_args.args == ("rpc-result",)
+
+
+def test_run_rpc_fetches_response_before_timeout(monkeypatch):
+    rpc = RPCBase(gui_id="progress_widget", object_name="progressbar")
+    rpc._client = MagicMock()
+    rpc._create_widget_from_msg_result = MagicMock(return_value="done")
+
+    response = messages.RequestResponseMessage(accepted=True, message={"result": "rpc-result"})
+
+    monkeypatch.setattr(rpc._msg_wait_event, "wait", MagicMock(return_value=False))
+
+    def fetch_side_effect(_request_id):
+        rpc._rpc_response = response
+        rpc._msg_wait_event.set()
+
+    fetch_mock = MagicMock(side_effect=fetch_side_effect)
+    monkeypatch.setattr(rpc, "_fetch_rpc_response", fetch_mock)
+
+    result = rpc._run_rpc("set_value", timeout=0)
+
+    assert result == "done"
+    fetch_mock.assert_called_once()
+    rpc._create_widget_from_msg_result.assert_called_once_with("rpc-result")
