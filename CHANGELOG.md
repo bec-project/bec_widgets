@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.18.2 (2026-06-27)
+
+### Bug Fixes
+
+- Migrate _convert_endpointinfo to public method
+  ([`794de6a`](https://github.com/bec-project/bec_widgets/commit/794de6a2d974f585bef67fc4c2cdd9372404736c))
+
+
 ## v3.18.1 (2026-06-26)
 
 ### Bug Fixes
