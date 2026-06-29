@@ -37,6 +37,65 @@ def test_heatmap_plot(heatmap_widget):
     assert heatmap_widget._image_config.device_z.device == "bpm4i"
 
 
+def test_heatmap_plot_with_scan_id_uses_history(heatmap_widget):
+    history_scan = mock.MagicMock()
+    history_scan.scan_id = "scan-123"
+
+    with (
+        mock.patch.object(
+            heatmap_widget,
+            "update_with_scan_history",
+            wraps=heatmap_widget.update_with_scan_history,
+        ) as update_history_mock,
+        mock.patch.object(heatmap_widget, "get_history_scan_item", return_value=history_scan),
+    ):
+        heatmap_widget.plot(
+            device_x="samx",
+            device_y="samy",
+            device_z="bpm4i",
+            signal_x="samx",
+            signal_y="samy",
+            signal_z="bpm4i",
+            scan_id="scan-123",
+        )
+
+    update_history_mock.assert_called_once_with(scan_id="scan-123")
+    assert heatmap_widget.scan_item is history_scan
+    assert heatmap_widget.scan_id == "scan-123"
+
+
+def test_heatmap_update_with_scan_history_resets_cached_image_state(heatmap_widget):
+    history_scan = mock.MagicMock()
+    history_scan.scan_id = "scan-456"
+
+    heatmap_widget.scan_id = "scan-123"
+    heatmap_widget._grid_index = 17
+    heatmap_widget.status_message = mock.MagicMock()
+
+    with (
+        mock.patch.object(heatmap_widget, "get_history_scan_item", return_value=history_scan),
+        mock.patch.object(heatmap_widget.main_image, "clear") as clear_mock,
+    ):
+        heatmap_widget.update_with_scan_history(scan_id="scan-456")
+
+    clear_mock.assert_called_once()
+    assert heatmap_widget._grid_index is None
+    assert heatmap_widget.status_message is None
+    assert heatmap_widget.scan_item is history_scan
+    assert heatmap_widget.scan_id == "scan-456"
+
+
+def test_heatmap_on_scan_status_resets_after_history_scan_selection(heatmap_widget):
+    heatmap_widget.scan_id = "scan-123"
+    scan_msg = messages.ScanStatusMessage(scan_id="live-scan", status="open", metadata={}, info={})
+
+    with mock.patch.object(heatmap_widget, "reset") as reset_mock:
+        heatmap_widget.on_scan_status(scan_msg.content, scan_msg.metadata)
+
+    reset_mock.assert_called_once()
+    assert heatmap_widget.scan_id == "live-scan"
+
+
 def test_heatmap_on_scan_status_no_scan_id(heatmap_widget):
 
     scan_msg = messages.ScanStatusMessage(scan_id=None, status="open", metadata={}, info={})
