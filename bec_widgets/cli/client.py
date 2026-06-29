@@ -2360,6 +2360,7 @@ class Heatmap(RPCBase):
         oversampling_factor: "float | None" = None,
         lock_aspect_ratio: "bool | None" = None,
         show_config_label: "bool | None" = None,
+        scan_id: "str | None" = None,
         reload: "bool" = False,
     ):
         """
@@ -2379,7 +2380,14 @@ class Heatmap(RPCBase):
             oversampling_factor (float | None): Factor to oversample the grid resolution.
             lock_aspect_ratio (bool | None): Whether to lock the aspect ratio of the image.
             show_config_label (bool | None): Whether to show the configuration label in the heatmap.
+            scan_id (str | None): Optional scan ID to fetch from history instead of using the live/latest scan.
             reload (bool): Whether to reload the heatmap with new data.
+        """
+
+    @rpc_call
+    def update_with_scan_history(self, scan_id: "str | None" = None):
+        """
+        Update the heatmap with a scan fetched from history.
         """
 
     @property

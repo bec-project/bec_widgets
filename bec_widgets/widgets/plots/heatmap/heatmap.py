@@ -214,6 +214,7 @@ class Heatmap(ImageBase):
         "remove_roi",
         "rois",
         "plot",
+        "update_with_scan_history",
         # Device properties
         "device_x",
         "device_x.setter",
@@ -338,6 +339,7 @@ class Heatmap(ImageBase):
         oversampling_factor: float | None = None,
         lock_aspect_ratio: bool | None = None,
         show_config_label: bool | None = None,
+        scan_id: str | None = None,
         reload: bool = False,
     ):
         """
@@ -357,6 +359,7 @@ class Heatmap(ImageBase):
             oversampling_factor (float | None): Factor to oversample the grid resolution.
             lock_aspect_ratio (bool | None): Whether to lock the aspect ratio of the image.
             show_config_label (bool | None): Whether to show the configuration label in the heatmap.
+            scan_id (str | None): Optional scan ID to fetch from history instead of using the live/latest scan.
             reload (bool): Whether to reload the heatmap with new data.
         """
         if validate_bec:
@@ -418,6 +421,10 @@ class Heatmap(ImageBase):
             self.main_image.clear()
         self.update_labels()
 
+        if scan_id is not None:
+            self.update_with_scan_history(scan_id=scan_id)
+            return
+
         self._fetch_running_scan()
         self.sync_signal_update.emit()
 
@@ -430,6 +437,50 @@ class Heatmap(ImageBase):
             self.scan_item = self.client.history[-1]
             self.scan_id = self.client.history._scan_ids[-1]
             self.old_scan_id = None
+
+    def get_history_scan_item(self, scan_id: str | None = None):
+        """Fetch a scan item from history, defaulting to the latest historical scan."""
+        if self.client.history is None or len(self.client.history) == 0:
+            logger.info("No scans executed so far. Cannot fetch scan history.")
+            return None
+
+        if scan_id is None:
+            return self.client.history[-1]
+        return self.client.history.get_by_scan_id(scan_id)
+
+    @SafeSlot(str)
+    @SafeSlot()
+    def update_with_scan_history(self, scan_id: str | None = None):
+        """Update the heatmap with a scan fetched from history."""
+        scan_item = self.get_history_scan_item(scan_id=scan_id)
+        if scan_item is None:
+            return
+
+        if scan_id is not None:
+            target_scan_id = scan_id
+        elif hasattr(scan_item, "metadata"):
+            target_scan_id = scan_item.metadata["bec"]["scan_id"]
+        else:
+            target_scan_id = scan_item.scan_id
+
+        if target_scan_id != self.scan_id:
+            self._invalidate_interpolation_generation()
+            self._grid_index = None
+            self.main_image.clear()
+            self.status_message = None
+
+        self.scan_item = scan_item
+        if self.scan_item is None:
+            return
+
+        if scan_id is not None:
+            self.scan_id = scan_id
+        elif hasattr(self.scan_item, "metadata"):
+            self.scan_id = self.scan_item.metadata["bec"]["scan_id"]
+        else:
+            self.scan_id = self.scan_item.scan_id
+
+        self.sync_signal_update.emit()
 
     def update_labels(self):
         """
