@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.19.1 (2026-06-29)
+
+### Bug Fixes
+
+- Correct fast and slow axis order in heatmap calculations and tests
+  ([`9123f5b`](https://github.com/bec-project/bec_widgets/commit/9123f5be0083662b98d41172a6e7988c1a5a4207))
+
+
 ## v3.19.0 (2026-06-29)
 
 ### Features
