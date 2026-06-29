@@ -917,7 +917,7 @@ class Heatmap(ImageBase):
 
         snaked = msg.request_inputs["kwargs"].get("snaked", True)
 
-        slow_entry, fast_entry = (
+        fast_entry, slow_entry = (
             msg.request_inputs["arg_bundle"][0],
             msg.request_inputs["arg_bundle"][4],
         )

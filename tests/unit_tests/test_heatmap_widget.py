@@ -141,7 +141,7 @@ def test_heatmap_get_grid_scan_image(heatmap_widget):
         scan_name="grid_scan",
         metadata={},
         info={
-            "positions": _grid_positions(slow_levels=x_levels, fast_levels=y_levels, snaked=True)
+            "positions": _grid_positions(slow_levels=y_levels, fast_levels=x_levels, snaked=True)
         },
         request_inputs={"arg_bundle": ["samx", -5, 5, 10, "samy", -5, 5, 10], "kwargs": {}},
     )
@@ -196,7 +196,7 @@ def test_heatmap_grid_scan_direction_and_snaking_x_fast(heatmap_widget):
             "positions": _grid_positions(slow_levels=y_levels, fast_levels=x_levels, snaked=snaked)
         },
         request_inputs={
-            "arg_bundle": ["samy", -2.0, 2.0, 2, "samx", 1.0, -1.0, 3],
+            "arg_bundle": ["samx", 1.0, -1.0, 3, "samy", -2.0, 2.0, 2],
             "kwargs": {"snaked": snaked, "relative": True},
         },
     )
@@ -241,7 +241,7 @@ def test_heatmap_grid_scan_direction_and_snaking_y_fast(heatmap_widget):
             "positions": _grid_positions(slow_levels=x_levels, fast_levels=y_levels, snaked=snaked)
         },
         request_inputs={
-            "arg_bundle": ["samx", 1.0, -1.0, 3, "samy", -2.0, 2.0, 2],
+            "arg_bundle": ["samy", -2.0, 2.0, 2, "samx", 1.0, -1.0, 3],
             "kwargs": {"snaked": snaked, "relative": True},
         },
     )
@@ -318,7 +318,7 @@ def test_heatmap_update_plot(heatmap_widget):
         scan_name="grid_scan",
         metadata={},
         info={
-            "positions": _grid_positions(slow_levels=x_levels, fast_levels=y_levels, snaked=True)
+            "positions": _grid_positions(slow_levels=y_levels, fast_levels=x_levels, snaked=True)
         },
         request_inputs={"arg_bundle": ["samx", -5, 5, 10, "samy", -5, 5, 10], "kwargs": {}},
     )
