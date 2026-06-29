@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v3.19.0 (2026-06-29)
+
+### Features
+
+- Add support for enabling/disabling experimental features in the app
+  ([`9282522`](https://github.com/bec-project/bec_widgets/commit/92825223587dbcb0f49d7063eeb9514c60bf4162))
+
+- Enable conditional loading of DeveloperView based on experimental features
+  ([`9ce7e36`](https://github.com/bec-project/bec_widgets/commit/9ce7e360ab93b65ef9e3bb297722864584e92099))
+
+
 ## v3.18.2 (2026-06-27)
 
 ### Bug Fixes
