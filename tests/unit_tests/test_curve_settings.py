@@ -278,6 +278,30 @@ def test_refresh_from_waveform(qtbot, mocked_client_with_dap, monkeypatch):
     assert curve_tree.tree.topLevelItemCount() == 2
 
 
+def test_refresh_from_waveform_preserves_linear_model_toggle(
+    qtbot, mocked_client_with_dap, monkeypatch
+):
+    """
+    Test that a composite DAP model with LinearModel is restored into the curve-tree UI.
+    """
+    patched_models = {"GaussianModel": {}, "LorentzModel": {}, "SineModel": {}, "LinearModel": {}}
+    monkeypatch.setattr(mocked_client_with_dap.dap, "_available_dap_plugins", patched_models)
+
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    curve_tree = create_widget(qtbot, CurveTree, parent=None, waveform=wf)
+
+    curve = wf.plot(arg1="bpm4i")
+    wf.add_dap_curve(device_label=curve.name(), dap_name=["GaussianModel", "LinearModel"])
+
+    curve_tree.refresh_from_waveform()
+
+    device_row = curve_tree.tree.topLevelItem(0)
+    dap_child = device_row.child(0)
+    assert dap_child.dap_combo.fit_model_combobox.currentText() == "GaussianModel"
+    assert dap_child.composite_models == ["LinearModel"]
+    assert dap_child.composite_button.text() == "Composite (2)"
+
+
 def test_add_dap_row(curve_tree_fixture):
     """
     Test that add_dap_row creates a new DAP curve as a child of a device curve,
@@ -383,6 +407,44 @@ def test_export_data_dap(curve_tree_fixture):
     assert exported["signal"]["signal"] == "bpm4i"
     assert exported["signal"]["dap"] == "GaussianModel"
     assert exported["label"] == "bpm4i-bpm4i-GaussianModel"
+
+
+def test_export_data_dap_with_linear_model(curve_tree_fixture):
+    """
+    Test that export_data serializes the optional LinearModel composite selection.
+    """
+    curve_tree, wf = curve_tree_fixture
+
+    device_row = curve_tree.add_new_curve(device="bpm4i", signal="bpm4i")
+    device_row.add_dap_row()
+    dap_child = device_row.child(0)
+
+    dap_child.dap_combo.fit_model_combobox.setCurrentText("GaussianModel")
+    dap_child.composite_models = ["LinearModel"]
+    dap_child._update_composite_button_text()
+
+    exported = dap_child.export_data()
+
+    assert exported["signal"]["dap"] == ["GaussianModel", "LinearModel"]
+    assert exported["label"] == "bpm4i-bpm4i-GaussianModel+LinearModel"
+    assert dap_child.composite_button.text() == "Composite (2)"
+
+
+def test_primary_model_change_removes_duplicate_composite_model(curve_tree_fixture):
+    """
+    Test that changing the primary model removes the same model from the composite extras.
+    """
+    curve_tree, wf = curve_tree_fixture
+
+    device_row = curve_tree.add_new_curve(device="bpm4i", signal="bpm4i")
+    device_row.add_dap_row()
+    dap_child = device_row.child(0)
+
+    dap_child.composite_models = ["LorentzModel", "LinearModel"]
+    dap_child.dap_combo.fit_model_combobox.setCurrentText("LorentzModel")
+
+    assert dap_child.composite_models == ["LinearModel"]
+    assert dap_child.composite_button.text() == "Composite (2)"
 
 
 def test_scan_index_validator_behavior():
