@@ -6,40 +6,18 @@ from typing import TYPE_CHECKING
 from bec_lib.logger import bec_logger
 from bec_qthemes._icon.material_icons import material_icon
 from qtpy.QtGui import QValidator
-
-
-class ScanIndexValidator(QValidator):
-    """Validator to allow only 'live' or integer scan numbers from an allowed set."""
-
-    def __init__(self, allowed_scans: set[int] | None = None, parent=None):
-        super().__init__(parent)
-        self.allowed_scans = allowed_scans or set()
-
-    def validate(self, input_str: str, pos: int):
-        # Accept empty or 'live'
-        if input_str == "" or input_str == "live":
-            return QValidator.State.Acceptable, input_str, pos
-        # Allow partial editing of "live"
-        if "live".startswith(input_str):
-            return QValidator.State.Intermediate, input_str, pos
-        # Accept integer only if present in the allowed set
-        if input_str.isdigit():
-            try:
-                num = int(input_str)
-            except ValueError:
-                return QValidator.State.Invalid, input_str, pos
-            if num in self.allowed_scans:
-                return QValidator.State.Acceptable, input_str, pos
-        return QValidator.State.Invalid, input_str, pos
-
-
 from qtpy.QtWidgets import (
     QApplication,
+    QCheckBox,
     QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QFormLayout,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QSpinBox,
     QToolButton,
@@ -73,6 +51,103 @@ if TYPE_CHECKING:  # pragma: no cover
 logger = bec_logger.logger
 
 
+class ScanIndexValidator(QValidator):
+    """Validator to allow only 'live' or integer scan numbers from an allowed set."""
+
+    def __init__(self, allowed_scans: set[int] | None = None, parent=None):
+        super().__init__(parent)
+        self.allowed_scans = allowed_scans or set()
+
+    def validate(self, input_str: str, pos: int):
+        # Accept empty or 'live'
+        if input_str == "" or input_str == "live":
+            return QValidator.State.Acceptable, input_str, pos
+        # Allow partial editing of "live"
+        if "live".startswith(input_str):
+            return QValidator.State.Intermediate, input_str, pos
+        # Accept integer only if present in the allowed set
+        if input_str.isdigit():
+            try:
+                num = int(input_str)
+            except ValueError:
+                return QValidator.State.Invalid, input_str, pos
+            if num in self.allowed_scans:
+                return QValidator.State.Acceptable, input_str, pos
+        return QValidator.State.Invalid, input_str, pos
+
+
+def _normalize_dap_selection(
+    dap_value: str | list[str] | tuple[str, ...] | None,
+) -> tuple[str, list[str]]:
+    """Map serialized DAP config to the curve-tree UI state."""
+    if isinstance(dap_value, (list, tuple)):
+        models = [model for model in dap_value if model]
+        if models:
+            primary_model = models[0]
+            extras = [model for model in models[1:] if model != primary_model]
+            return primary_model, extras
+        return "GaussianModel", []
+    if isinstance(dap_value, str) and dap_value:
+        return dap_value, []
+    return "GaussianModel", []
+
+
+class CompositeModelDialog(QDialog):
+    """Dialog to choose additional fit models for a composite DAP fit."""
+
+    def __init__(
+        self,
+        available_models: list[str],
+        primary_model: str,
+        selected_models: list[str] | None = None,
+        parent: QWidget | None = None,
+    ):
+        super().__init__(parent)
+        self.setWindowTitle("Composite Fit Models")
+        self.setModal(True)
+        self._primary_model = primary_model
+        self._checkboxes: dict[str, QCheckBox] = {}
+
+        selected_set = set(selected_models or [])
+        layout = QVBoxLayout(self)
+
+        form = QFormLayout()
+        form.addRow("Primary model", QLabel(primary_model))
+        layout.addLayout(form)
+
+        layout.addWidget(QLabel("Additional models"))
+
+        checkbox_container = QWidget(self)
+        checkbox_layout = QVBoxLayout(checkbox_container)
+        checkbox_layout.setContentsMargins(0, 0, 0, 0)
+        checkbox_layout.setSpacing(6)
+
+        for model in available_models:
+            if model == primary_model:
+                continue
+            checkbox = QCheckBox(model, checkbox_container)
+            checkbox.setChecked(model in selected_set)
+            checkbox_layout.addWidget(checkbox)
+            self._checkboxes[model] = checkbox
+
+        checkbox_layout.addStretch(1)
+
+        scroll_area = QScrollArea(self)
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setWidget(checkbox_container)
+        scroll_area.setMinimumHeight(140)
+        layout.addWidget(scroll_area)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, parent=self)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def selected_models(self) -> list[str]:
+        """Return the additional models selected by the user."""
+        return [model for model, checkbox in self._checkboxes.items() if checkbox.isChecked()]
+
+
 class CurveRow(QTreeWidgetItem):
     DELETE_BUTTON_COLOR = "#CC181E"
     """A unified row that can represent either a device or a DAP curve.
@@ -80,10 +155,11 @@ class CurveRow(QTreeWidgetItem):
     Columns:
       0: Actions (delete or "Add DAP" if source=device)
       1..2: DeviceComboBox and QLineEdit if source=device, or "Model" label and DapComboBox if source=dap
-      3: ColorButton
-      4: Style QComboBox
-      5: Pen width QSpinBox
-      6: Symbol size QSpinBox
+      3: Scan selector if source=device/history, or Composite button if source=dap
+      4: ColorButton
+      5: Style QComboBox
+      6: Pen width QSpinBox
+      7: Symbol size QSpinBox
     """
 
     def __init__(
@@ -108,6 +184,7 @@ class CurveRow(QTreeWidgetItem):
         # BEC user input
         self.device_edit = None
         self.dap_combo = None
+        self.composite_models: list[str] = []
 
         self.dev = device_manager
         self.entry_validator = EntryValidator(self.dev)
@@ -249,16 +326,18 @@ class CurveRow(QTreeWidgetItem):
             self.tree.setItemWidget(self, 1, self.label_widget)
             self.dap_combo = DapComboBox(parent=self.tree)
             self.dap_combo.populate_fit_model_combobox()
-            # If config.signal has a dap
-            if self.config.signal and self.config.signal.dap:
-                dap_value = self.config.signal.dap
-                idx = self.dap_combo.fit_model_combobox.findText(dap_value)
-                if idx >= 0:
-                    self.dap_combo.fit_model_combobox.setCurrentIndex(idx)
-            else:
-                self.dap_combo.select_fit_model("GaussianModel")  # default
-
+            self.dap_combo.currentTextChanged.connect(self._on_primary_model_changed)
             self.tree.setItemWidget(self, 2, self.dap_combo)
+            self.composite_button = QPushButton()
+            self.composite_button.setToolTip("Select additional fit models for a composite fit.")
+            self.composite_button.clicked.connect(self._open_composite_dialog)
+            self.tree.setItemWidget(self, 3, self.composite_button)
+
+            dap_value = self.config.signal.dap if self.config.signal else None
+            primary_model, composite_models = _normalize_dap_selection(dap_value)
+            self.dap_combo.select_fit_model(primary_model)
+            self.composite_models = composite_models
+            self._update_composite_button_text()
 
     def _init_style_controls(self):
         """Create columns 4..7: color button, style combo, width spin, symbol spin."""
@@ -286,6 +365,38 @@ class CurveRow(QTreeWidgetItem):
         self.symbol_spin.setRange(1, 20)
         self.symbol_spin.setValue(self.config.symbol_size)
         self.tree.setItemWidget(self, 7, self.symbol_spin)
+
+    def _update_composite_button_text(self):
+        """Reflect the current composite selection in the button label."""
+        if not hasattr(self, "composite_button"):
+            return
+        if self.composite_models:
+            self.composite_button.setText(f"Composite ({len(self.composite_models) + 1})")
+        else:
+            self.composite_button.setText("Single")
+
+    @SafeSlot(str)
+    def _on_primary_model_changed(self, primary_model: str):
+        """Keep additional composite models distinct from the primary selection."""
+        self.composite_models = [model for model in self.composite_models if model != primary_model]
+        self._update_composite_button_text()
+
+    @SafeSlot()
+    def _open_composite_dialog(self):
+        """Open a dialog to select extra models for a composite fit."""
+        if not hasattr(self, "dap_combo"):
+            return
+        primary_model = self.dap_combo.fit_model_combobox.currentText()
+        dialog = CompositeModelDialog(
+            available_models=self.dap_combo.available_models,
+            primary_model=primary_model,
+            selected_models=self.composite_models,
+            parent=self.tree,
+        )
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.composite_models = dialog.selected_models()
+            self._update_composite_button_text()
+        dialog.deleteLater()
 
     @SafeSlot(str, verify_sender=True)
     def _on_color_changed(self, new_color: str):
@@ -354,6 +465,10 @@ class CurveRow(QTreeWidgetItem):
             self.dap_combo.close()
             self.dap_combo.deleteLater()
             self.dap_combo = None
+        if getattr(self, "composite_button", None) is not None:
+            self.composite_button.close()
+            self.composite_button.deleteLater()
+            self.composite_button = None
 
         if getattr(self, "color_button", None) is not None:
             self.color_button.close()
@@ -428,13 +543,20 @@ class CurveRow(QTreeWidgetItem):
                 device = parent_conf.signal.device
                 signal = parent_conf.signal.signal
             # Dap from the DapComboBox
-            new_dap = "GaussianModel"
+            new_dap: str | list[str] = "GaussianModel"
             if hasattr(self, "dap_combo"):
-                new_dap = self.dap_combo.fit_model_combobox.currentText()
+                selected_model = self.dap_combo.fit_model_combobox.currentText()
+                composite_models = [
+                    model for model in self.composite_models if model != selected_model
+                ]
+                new_dap = (
+                    [selected_model, *composite_models] if composite_models else selected_model
+                )
             self.config.signal = DeviceSignal(device=device, signal=signal, dap=new_dap)
             self.config.source = "dap"
             self.config.parent_label = parent_conf.label
-            self.config.label = f"{parent_conf.label}-{new_dap}"
+            label_suffix = "+".join(new_dap) if isinstance(new_dap, list) else new_dap
+            self.config.label = f"{parent_conf.label}-{label_suffix}"
 
         # Common style fields
         self.config.color = self.color_button.color
