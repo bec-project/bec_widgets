@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v3.20.1 (2026-06-30)
+
+### Bug Fixes
+
+- **actions**: Review adjustments
+  ([`881da59`](https://github.com/bec-project/bec_widgets/commit/881da59786ca064ce1fe6d4d257cdcccadd5b2b6))
+
+- **actions**: Switchabletoolbaraction exclusive behaviour; image base toolbar adjusted
+  ([`8edc012`](https://github.com/bec-project/bec_widgets/commit/8edc01208ddb0dfc507c36178b55b4d52e264e17))
+
+
 ## v3.20.0 (2026-06-30)
 
 ### Features
