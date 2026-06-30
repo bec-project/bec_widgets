@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.21.1 (2026-06-30)
+
+### Bug Fixes
+
+- Abort button should use request id
+  ([`0b74408`](https://github.com/bec-project/bec_widgets/commit/0b74408ba08f462b762205c98c2bf2efdd2357ae))
+
+
 ## v3.21.0 (2026-06-30)
 
 ### Features
