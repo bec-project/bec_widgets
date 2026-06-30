@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.21.0 (2026-06-30)
+
+### Features
+
+- Implement composite model selection in curve tree UI
+  ([`99d416e`](https://github.com/bec-project/bec_widgets/commit/99d416effbb6a6875e4438e8bb88a4ecfdd9ba91))
+
+
 ## v3.20.1 (2026-06-30)
 
 ### Bug Fixes
