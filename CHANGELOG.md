@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.20.0 (2026-06-30)
+
+### Features
+
+- Add scan_id parameter and update_with_scan_history method to Heatmap class
+  ([`5b33732`](https://github.com/bec-project/bec_widgets/commit/5b33732947887eeb379e96e88f08a58e0ca280f6))
+
+
 ## v3.19.1 (2026-06-29)
 
 ### Bug Fixes
