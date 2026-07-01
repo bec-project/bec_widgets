@@ -74,9 +74,28 @@ class BecQTerm(QWidget):
         self._layout.addWidget(self._main_widget)
 
     def write(self, text: str, add_newline: bool = True):
+        """
+        Write text to the terminal.
+
+        Args:
+            text (str): The text to write.
+            add_newline (bool): Whether to add a newline at the end.
+        """
         if add_newline:
             text += "\n"
         self._sendText(text)
+
+    def zoom_in(self):
+        """Zoom in the terminal font size."""
+        self._zoomIn()
+
+    def zoom_out(self):
+        """Zoom out the terminal font size."""
+        self._zoomOut()
+
+    def send_ctrl_c(self):
+        """Send Ctrl+C to the terminal."""
+        self.write("\x03", add_newline=False)  # Send Ctrl+C character to the terminal
 
     # automatically forwarded to the widget only if it exists
     @_forward

@@ -397,7 +397,7 @@ class BecConsole(BECWidget, QWidget):
 
     def _set_up_instance(self):
         """
-        Set up the web instance and UI elements.
+        Set up the console instance.
         """
         self._stacked_layout = QStackedLayout()
         # self._stacked_layout.setStackingMode(QStackedLayout.StackingMode.StackAll)
@@ -434,7 +434,7 @@ class BecConsole(BECWidget, QWidget):
 
     def _set_mode(self, mode: ConsoleMode):
         """
-        Set the mode of the web console.
+        Set the mode of the console.
 
         Args:
             mode (ConsoleMode): The mode to set.
@@ -508,7 +508,7 @@ class BecConsole(BECWidget, QWidget):
 
     def take_terminal_ownership(self):
         """
-        Take ownership of a web instance from the registry. This will transfer the instance
+        Take ownership of a console instance from the registry. This will transfer the instance
         from its current owner (if any) to this widget.
         """
         # Get the instance from registry
@@ -520,7 +520,7 @@ class BecConsole(BECWidget, QWidget):
 
     def yield_ownership(self):
         """
-        Yield ownership of the instance. The instance remains in the registry with no owner,
+        Yield ownership of the console instance. The instance remains in the registry with no owner,
         available for another widget to claim. This is automatically called when the
         widget becomes hidden.
         """
