@@ -327,6 +327,13 @@ class BecConsoleRegistry:
         if info is not None and info.owner_console_id == console.console_id:
             info.initialized = True
 
+    def get_terminal(self, term_id: str) -> BecTerminal | None:
+        """Return a tracked terminal instance even if another console currently owns it."""
+        info = self._terminal_registry.get(term_id)
+        if info is None or not self._is_valid_qobject(info.instance):
+            return None
+        return info.instance
+
     def owner_is_visible(self, term_id: str) -> bool:
         """
         Check if the owner of an instance is currently visible.
@@ -472,16 +479,23 @@ class BecConsole(BECWidget, QWidget):
         """
         self._startup_cmd = cmd
 
-    def write(self, data: str, send_return: bool = True):
+    def write(
+        self, data: str, send_return: bool = True, regardless_of_ownership: bool = False
+    ):
         """
         Send data to the console
 
         Args:
             data (str): The data to send.
             send_return (bool): Whether to send a return after the data.
+            regardless_of_ownership (bool): Whether to send to the shared terminal session even
+                when this console does not currently own the visible terminal widget.
         """
-        if self.term:
-            self.term.write(data, send_return)
+        term = self.term
+        if term is None and regardless_of_ownership:
+            term = _bec_console_registry.get_terminal(self.terminal_id)
+        if term:
+            term.write(data, send_return)
 
     def _ensure_startup_started(self):
         if not self.startup_cmd or not _bec_console_registry.should_initialize(self):
