@@ -287,6 +287,7 @@ class ScanGroupBox(QGroupBox):
                     arg_name=arg_name,
                     default=default,
                     device_filter=BECDeviceFilter.DEVICE,
+                    include_signals_with_write_access=True,
                     autocomplete=True,
                 )
             else:

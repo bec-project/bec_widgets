@@ -3,6 +3,7 @@ from unittest import mock
 import pytest
 from bec_lib.device import ReadoutPriority
 
+from bec_widgets.tests.utils import FakeDevice
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import (
     BECDeviceFilter,
     DeviceComboBox,
@@ -154,6 +155,48 @@ def test_device_input_combobox_cleanup_clears_callback_before_unregister(qtbot, 
         widget.cleanup()
 
     remove_mock.assert_called_once_with(callback_id)
+
+
+def test_device_input_combobox_include_signals_with_write_access(qtbot, mocked_client):
+    settable_signal = FakeDevice("settable_signal", write_access=True)
+    mocked_client.device_manager.add_devices([settable_signal])
+
+    widget = DeviceComboBox(client=mocked_client, device_filter=BECDeviceFilter.POSITIONER)
+    qtbot.addWidget(widget)
+    qtbot.waitExposed(widget)
+
+    assert widget.include_signals_with_write_access is False
+    assert "samx" in widget.devices
+    assert "settable_signal" not in widget.devices
+    assert "bpm4i" not in widget.devices
+
+    widget.include_signals_with_write_access = True
+
+    assert widget.config.include_signals_with_write_access is True
+    assert "samx" in widget.devices
+    assert "settable_signal" in widget.devices
+    assert "bpm4i" not in widget.devices
+
+    widget.include_signals_with_write_access = False
+
+    assert "settable_signal" not in widget.devices
+
+
+def test_device_input_combobox_include_signals_with_write_access_via_kwarg(qtbot, mocked_client):
+    settable_signal = FakeDevice("settable_signal", write_access=True)
+    mocked_client.device_manager.add_devices([settable_signal])
+
+    widget = DeviceComboBox(
+        client=mocked_client,
+        device_filter=BECDeviceFilter.POSITIONER,
+        include_signals_with_write_access=True,
+    )
+    qtbot.addWidget(widget)
+    qtbot.waitExposed(widget)
+
+    assert widget.include_signals_with_write_access is True
+    assert "samx" in widget.devices
+    assert "settable_signal" in widget.devices
 
 
 def test_get_device_from_input_combobox_init(device_input_combobox):

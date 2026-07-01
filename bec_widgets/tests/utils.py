@@ -17,6 +17,7 @@ class FakeDevice(BECDevice):
         enabled=True,
         readout_priority=ReadoutPriority.MONITORED,
         signal_class: str | None = None,
+        write_access: bool = False,
     ):
         super().__init__(name=name)
         self._enabled = enabled
@@ -35,6 +36,8 @@ class FakeDevice(BECDevice):
         if signal_class is None:
             signal_class = "AsyncSignal" if readout_priority == ReadoutPriority.ASYNC else "Signal"
         self._info = {
+            "read_access": True,
+            "write_access": write_access,
             "signals": {
                 self.name: {
                     "kind_str": "hinted",
@@ -42,7 +45,7 @@ class FakeDevice(BECDevice):
                     "obj_name": self.name,
                     "signal_class": signal_class,
                 }
-            }
+            },
         }
 
     @property
@@ -115,6 +118,8 @@ class FakePositioner(BECPositioner):
             "name": self.name,
         }
         self._info = {
+            "read_access": None,
+            "write_access": None,  # positioner containers report no write access flag
             "signals": {
                 "readback": {
                     "kind_str": "hinted",
@@ -131,7 +136,7 @@ class FakePositioner(BECPositioner):
                     "component_name": "velocity",
                     "obj_name": f"{self.name}_velocity",
                 },  # config
-            }
+            },
         }
         self.signals = {
             self.name: {"value": self.read_value},
