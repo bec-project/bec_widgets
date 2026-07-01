@@ -514,9 +514,7 @@ class BecConsole(BECWidget, QWidget):
         """
         self._startup_cmd = cmd
 
-    def write(
-        self, data: str, send_return: bool = True, regardless_of_ownership: bool = False
-    ):
+    def write(self, data: str, send_return: bool = True, regardless_of_ownership: bool = False):
         """
         Send data to the console
 

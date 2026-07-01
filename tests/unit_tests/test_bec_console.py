@@ -229,7 +229,9 @@ def test_bec_console_starts_with_default_zoom_level(qtbot, monkeypatch):
 
     monkeypatch.setattr(bec_console_module, "_BecTermClass", RecordingTerminal)
 
-    widget = BecConsole(client=mocked_client, gui_id="console_zoom_default", terminal_id="zoom_default")
+    widget = BecConsole(
+        client=mocked_client, gui_id="console_zoom_default", terminal_id="zoom_default"
+    )
     qtbot.addWidget(widget)
 
     assert widget.zoom_level == 1
