@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.21.2 (2026-07-01)
+
+### Bug Fixes
+
+- **stop_button**: Enhance emergency stop functionality and update button behavior
+  ([`49855b5`](https://github.com/bec-project/bec_widgets/commit/49855b569881cd64e97559a770022d09d52f6c35))
+
+
 ## v3.21.1 (2026-06-30)
 
 ### Bug Fixes
