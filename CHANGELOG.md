@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.21.3 (2026-07-01)
+
+### Bug Fixes
+
+- **device_combobox**: Include signals with write_access filter; include in scan control
+  ([`c0a1f8e`](https://github.com/bec-project/bec_widgets/commit/c0a1f8e1ffb877022978ee2414bbb6762a1d3c85))
+
+
 ## v3.21.2 (2026-07-01)
 
 ### Bug Fixes
