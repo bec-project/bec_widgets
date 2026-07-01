@@ -42,6 +42,8 @@ class DeviceInputConfig(ConnectionConfig):
         signal_class_filter: Signal class names used to restrict listed devices.
         autocomplete: Whether to use the explicit completer model instead of Qt's default
             editable-combobox completer.
+        include_signals_with_write_access: Whether to additionally list signals that report
+            write access, in addition to the devices selected by the other filters.
     """
 
     device_filter: list[str] = Field(default_factory=list)
@@ -52,6 +54,7 @@ class DeviceInputConfig(ConnectionConfig):
     apply_filter: bool = True
     signal_class_filter: list[str] = Field(default_factory=list)
     autocomplete: bool = False
+    include_signals_with_write_access: bool = False
 
     @field_validator("device_filter")
     @classmethod
@@ -115,6 +118,8 @@ class DeviceComboBox(BECWidget, QComboBox):
         signal_class_filter: Signal class names used to restrict listed devices.
         autocomplete: If True, use the explicit line-edit style completer. If False, keep
             Qt's default editable-combobox completion behavior.
+        include_signals_with_write_access: If True, additionally list signals that report
+            write access on top of the devices selected by the other filters.
         **kwargs: Additional keyword arguments passed to ``BECWidget``.
     """
 
@@ -146,6 +151,7 @@ class DeviceComboBox(BECWidget, QComboBox):
         arg_name: str | None = None,
         signal_class_filter: list[str] | None = None,
         autocomplete: bool | None = None,
+        include_signals_with_write_access: bool | None = None,
         **kwargs,
     ):
         self.config = self._process_config(config)
@@ -190,6 +196,8 @@ class DeviceComboBox(BECWidget, QComboBox):
             self.config.autocomplete = autocomplete
         if self.config.autocomplete:
             self.autocomplete = True
+        if include_signals_with_write_access is not None:
+            self.config.include_signals_with_write_access = include_signals_with_write_access
 
         if available_devices is not None:
             self.set_available_devices(available_devices)
@@ -261,10 +269,18 @@ class DeviceComboBox(BECWidget, QComboBox):
         if not self.apply_filter:
             return
 
-        devices = self._filter_devices_by_signal_class(self.dev.enabled_devices)
+        enabled_devices = self.dev.enabled_devices
+        devices = self._filter_devices_by_signal_class(enabled_devices)
         devices = [device for device in devices if self._check_device_filter(device)]
         devices = [device for device in devices if self._check_readout_filter(device)]
-        self.devices = [device.name for device in devices]
+        device_names = [device.name for device in devices]
+        if self.include_signals_with_write_access:
+            seen = set(device_names)
+            for name in self._signals_with_write_access(enabled_devices):
+                if name not in seen:
+                    device_names.append(name)
+                    seen.add(name)
+        self.devices = device_names
 
     @SafeSlot(list)
     def set_available_devices(self, devices: list[str]):
@@ -315,6 +331,16 @@ class DeviceComboBox(BECWidget, QComboBox):
     @signal_class_filter.setter
     def signal_class_filter(self, value: list[str] | None):
         self.config.signal_class_filter = value or []
+        self.update_devices_from_filters()
+
+    @SafeProperty(bool)
+    def include_signals_with_write_access(self) -> bool:
+        """Whether signals with write access are listed in addition to the other filters."""
+        return self.config.include_signals_with_write_access
+
+    @include_signals_with_write_access.setter
+    def include_signals_with_write_access(self, value: bool):
+        self.config.include_signals_with_write_access = value
         self.update_devices_from_filters()
 
     @SafeProperty(bool)
@@ -602,6 +628,18 @@ class DeviceComboBox(BECWidget, QComboBox):
     ) -> bool:
         return device.readout_priority in self.readout_filter
 
+    @staticmethod
+    def _signals_with_write_access(
+        devices: list[Device | BECSignal | ComputedSignal | Positioner],
+    ) -> list[str]:
+        """Return the names of devices that report write access in their device info."""
+        names = []
+        for device in devices:
+            device_info = getattr(device, "_info", None) or {}
+            if device_info.get("write_access"):
+                names.append(device.name)
+        return names
+
     def _update_validity_style(self, is_valid: bool) -> None:
         if is_valid or not self.isEnabled():
             self.setStyleSheet("")
@@ -663,10 +701,12 @@ if __name__ == "__main__":  # pragma: no cover
     filter_positioner = QCheckBox("Positioner")
     filter_signal = QCheckBox("Signal")
     filter_computed = QCheckBox("ComputedSignal")
+    filter_write_access = QCheckBox("Include write-access signals")
     controls.addWidget(filter_device)
     controls.addWidget(filter_positioner)
     controls.addWidget(filter_signal)
     controls.addWidget(filter_computed)
+    controls.addWidget(filter_write_access)
 
     combo = DeviceComboBox()
     combo.set_first_element_as_empty = True
@@ -679,12 +719,14 @@ if __name__ == "__main__":  # pragma: no cover
         combo.filter_to_positioner = filter_positioner.isChecked()
         combo.filter_to_signal = filter_signal.isChecked()
         combo.filter_to_computed_signal = filter_computed.isChecked()
+        combo.include_signals_with_write_access = filter_write_access.isChecked()
 
     class_input.textChanged.connect(_apply_filters)
     filter_device.toggled.connect(_apply_filters)
     filter_positioner.toggled.connect(_apply_filters)
     filter_signal.toggled.connect(_apply_filters)
     filter_computed.toggled.connect(_apply_filters)
+    filter_write_access.toggled.connect(_apply_filters)
     _apply_filters()
 
     widget.show()
