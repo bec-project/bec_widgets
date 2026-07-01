@@ -181,6 +181,7 @@ class DeveloperWidget(DockAreaWidget):
             return_dock=True,
             title_buttons={"float": False, "close": False},
         )
+        self.console_dock.setAsCurrentTab()
 
         # Plotting area on the right with signature help tabbed alongside
         self.plotting_ads_dock = self.new(

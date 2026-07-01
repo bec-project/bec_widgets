@@ -117,6 +117,12 @@ class TestDeveloperViewInitialization:
         dock_widgets = developer_view.dock_manager.dockWidgets()
         assert len(dock_widgets) >= 4  # Explorer, Monaco, Console, Terminal
 
+    def test_bec_shell_is_default_active_bottom_tab(self, developer_view):
+        """Test that the BEC shell is the initially selected tab in the bottom dock area."""
+        bottom_area = developer_view.console_dock.dockAreaWidget()
+        assert bottom_area is not None
+        assert bottom_area.currentDockWidget() is developer_view.console_dock
+
 
 class TestFileOperations:
     """Test file operation functionality."""
