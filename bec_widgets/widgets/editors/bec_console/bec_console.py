@@ -77,13 +77,24 @@ class BecConsoleRegistry:
         app.aboutToQuit.connect(self.clear, Qt.ConnectionType.UniqueConnection)
 
     @staticmethod
+    def _apply_zoom_step(term: BecTerminal, direction: int) -> bool:
+        method_name = "zoom_in" if direction > 0 else "zoom_out"
+        method = getattr(term, method_name, None)
+        if not callable(method):
+            return False
+        method()
+        return True
+
+    @staticmethod
     def _apply_zoom_level(term: BecTerminal, zoom_level: int) -> None:
         if zoom_level > 0:
             for _ in range(zoom_level):
-                term.zoom_in()
+                if not BecConsoleRegistry._apply_zoom_step(term, 1):
+                    break
         elif zoom_level < 0:
             for _ in range(-zoom_level):
-                term.zoom_out()
+                if not BecConsoleRegistry._apply_zoom_step(term, -1):
+                    break
 
     @staticmethod
     def _new_terminal_info(console: BecConsole) -> _TerminalOwnerInfo:
@@ -355,10 +366,12 @@ class BecConsoleRegistry:
 
         if delta > 0:
             for _ in range(delta):
-                info.instance.zoom_in()
+                if not self._apply_zoom_step(info.instance, 1):
+                    return info.zoom_level
         else:
             for _ in range(-delta):
-                info.instance.zoom_out()
+                if not self._apply_zoom_step(info.instance, -1):
+                    return info.zoom_level
         info.zoom_level += delta
         return info.zoom_level
 
