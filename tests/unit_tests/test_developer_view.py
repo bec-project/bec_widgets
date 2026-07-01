@@ -104,7 +104,13 @@ class TestDeveloperViewInitialization:
 
         # Check for expected toolbar actions
         toolbar_components = developer_view.toolbar.components
-        expected_actions = ["save", "save_as", "run", "stop", "vim"]
+        expected_actions = [
+            "save",
+            "save_as",
+            "run",
+            "stop",
+            "vim",
+        ]
 
         for action_name in expected_actions:
             assert toolbar_components.exists(action_name)

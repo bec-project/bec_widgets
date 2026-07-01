@@ -50,6 +50,7 @@ class _TerminalOwnerInfo:
     terminal_id: str = ""
     initialized: bool = False
     persist_session: bool = False
+    zoom_level: int = 0
     fallback_holder: QWidget | None = None
 
 
@@ -76,19 +77,31 @@ class BecConsoleRegistry:
         app.aboutToQuit.connect(self.clear, Qt.ConnectionType.UniqueConnection)
 
     @staticmethod
+    def _apply_zoom_level(term: BecTerminal, zoom_level: int) -> None:
+        if zoom_level > 0:
+            for _ in range(zoom_level):
+                term.zoom_in()
+        elif zoom_level < 0:
+            for _ in range(-zoom_level):
+                term.zoom_out()
+
+    @staticmethod
     def _new_terminal_info(console: BecConsole) -> _TerminalOwnerInfo:
         term = _BecTermClass()
+        BecConsoleRegistry._apply_zoom_level(term, console.default_zoom_level)
         return _TerminalOwnerInfo(
             registered_console_ids={console.console_id},
             owner_console_id=console.console_id,
             instance=term,
             terminal_id=console.terminal_id,
             persist_session=console.persist_terminal_session,
+            zoom_level=console.default_zoom_level,
         )
 
     @staticmethod
     def _replace_terminal(info: _TerminalOwnerInfo, console: BecConsole) -> None:
         info.instance = _BecTermClass()
+        BecConsoleRegistry._apply_zoom_level(info.instance, info.zoom_level)
         info.initialized = False
         info.owner_console_id = console.console_id
         info.registered_console_ids.add(console.console_id)
@@ -334,6 +347,27 @@ class BecConsoleRegistry:
             return None
         return info.instance
 
+    def change_zoom(self, term_id: str, delta: int) -> int | None:
+        """Apply a relative zoom change to the tracked terminal and return the resulting level."""
+        info = self._terminal_registry.get(term_id)
+        if info is None or not self._is_valid_qobject(info.instance) or delta == 0:
+            return None
+
+        if delta > 0:
+            for _ in range(delta):
+                info.instance.zoom_in()
+        else:
+            for _ in range(-delta):
+                info.instance.zoom_out()
+        info.zoom_level += delta
+        return info.zoom_level
+
+    def zoom_level(self, term_id: str) -> int:
+        info = self._terminal_registry.get(term_id)
+        if info is None:
+            return 0
+        return info.zoom_level
+
     def owner_is_visible(self, term_id: str) -> bool:
         """
         Check if the owner of an instance is currently visible.
@@ -381,6 +415,7 @@ class BecConsole(BECWidget, QWidget):
     PLUGIN = True
     ICON_NAME = "terminal"
     persist_terminal_session = False
+    default_zoom_level = 1
 
     def __init__(
         self,
@@ -496,6 +531,18 @@ class BecConsole(BECWidget, QWidget):
             term = _bec_console_registry.get_terminal(self.terminal_id)
         if term:
             term.write(data, send_return)
+
+    @property
+    def zoom_level(self) -> int:
+        return _bec_console_registry.zoom_level(self.terminal_id)
+
+    def zoom_in(self) -> int | None:
+        """Increase the tracked zoom level for the shared terminal session."""
+        return _bec_console_registry.change_zoom(self.terminal_id, 1)
+
+    def zoom_out(self) -> int | None:
+        """Decrease the tracked zoom level for the shared terminal session."""
+        return _bec_console_registry.change_zoom(self.terminal_id, -1)
 
     def _ensure_startup_started(self):
         if not self.startup_cmd or not _bec_console_registry.should_initialize(self):
