@@ -321,7 +321,9 @@ class DeveloperWidget(DockAreaWidget):
                 # If still modified, user likely cancelled save dialog
                 return
         self.current_script_id = upload_script(self.client.connector, widget.get_text())
-        self.console.write(f'bec._run_script("{self.current_script_id}")')
+        self.console.write(
+            f'bec._run_script("{self.current_script_id}")', regardless_of_ownership=True
+        )
         print(f"Uploaded script with ID: {self.current_script_id}")
 
     @SafeSlot()

@@ -135,6 +135,23 @@ def test_bec_console_write(console_widget):
         mock_write.assert_called_once_with("test command", True)
 
 
+def test_bec_console_write_can_target_shared_terminal_without_ownership(qtbot):
+    owner = BecConsole(client=mocked_client, gui_id="owner_console", terminal_id="shared_submit")
+    submitter = BecConsole(
+        client=mocked_client, gui_id="submitter_console", terminal_id="shared_submit"
+    )
+    qtbot.addWidget(owner)
+    qtbot.addWidget(submitter)
+
+    owner.take_terminal_ownership()
+    assert owner.term is not None
+    assert submitter.term is None
+
+    with mock.patch.object(owner.term, "write") as mock_write:
+        submitter.write("test command", regardless_of_ownership=True)
+        mock_write.assert_called_once_with("test command", True)
+
+
 def test_is_owner(console_widget: BecConsole):
     assert _bec_console_registry.is_owner(console_widget)
     mock_console = mock.MagicMock()
