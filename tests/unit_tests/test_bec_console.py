@@ -54,6 +54,7 @@ def test_bec_console_initialization(console_widget: BecConsole):
     assert console_widget.terminal_id == "test_terminal"
     assert console_widget._mode == ConsoleMode.ACTIVE
     assert console_widget.term is not None
+    assert console_widget.zoom_level == 1
     assert console_widget._overlay.isHidden()
     console_widget.show()
     assert console_widget.isVisible()
@@ -126,6 +127,7 @@ def test_bec_shell_initialization(qtbot):
     assert widget.console_id == "bec_shell"
     assert widget.terminal_id == "bec_shell"
     assert widget.startup_cmd is not None
+    assert widget.zoom_level == 1
 
 
 def test_bec_console_write(console_widget):
@@ -150,6 +152,89 @@ def test_bec_console_write_can_target_shared_terminal_without_ownership(qtbot):
     with mock.patch.object(owner.term, "write") as mock_write:
         submitter.write("test command", regardless_of_ownership=True)
         mock_write.assert_called_once_with("test command", True)
+
+
+def test_bec_console_zoom_tracks_shared_terminal_without_ownership(qtbot):
+    owner = BecConsole(client=mocked_client, gui_id="zoom_owner", terminal_id="shared_zoom")
+    follower = BecConsole(client=mocked_client, gui_id="zoom_follower", terminal_id="shared_zoom")
+    qtbot.addWidget(owner)
+    qtbot.addWidget(follower)
+
+    owner.take_terminal_ownership()
+    assert owner.term is not None
+
+    with (
+        mock.patch.object(owner.term, "zoom_in") as mock_zoom_in,
+        mock.patch.object(owner.term, "zoom_out") as mock_zoom_out,
+    ):
+        assert follower.zoom_in() == 2
+        assert follower.zoom_level == 2
+        mock_zoom_in.assert_called_once_with()
+
+        assert follower.zoom_out() == 1
+        assert follower.zoom_level == 1
+        mock_zoom_out.assert_called_once_with()
+
+
+def test_bec_console_reapplies_zoom_level_when_terminal_is_recreated(qtbot, monkeypatch):
+    class RecordingTerminal(QWidget):
+        zoom_in_calls = 0
+        zoom_out_calls = 0
+
+        def write(self, text: str, add_newline: bool = True):
+            return None
+
+        def zoom_in(self):
+            type(self).zoom_in_calls += 1
+
+        def zoom_out(self):
+            type(self).zoom_out_calls += 1
+
+        def send_ctrl_c(self):
+            return None
+
+    monkeypatch.setattr(bec_console_module, "_BecTermClass", RecordingTerminal)
+
+    widget = BecConsole(client=mocked_client, gui_id="zoom_recreate", terminal_id="zoom_recreate")
+    qtbot.addWidget(widget)
+
+    widget.zoom_in()
+    widget.zoom_in()
+    assert widget.zoom_level == 3
+    assert RecordingTerminal.zoom_in_calls == 3
+
+    _bec_console_registry._terminal_registry[widget.terminal_id].instance = None
+    widget.take_terminal_ownership()
+
+    assert widget.zoom_level == 3
+    assert RecordingTerminal.zoom_in_calls == 6
+
+
+def test_bec_console_starts_with_default_zoom_level(qtbot, monkeypatch):
+    class RecordingTerminal(QWidget):
+        zoom_in_calls = 0
+        zoom_out_calls = 0
+
+        def write(self, text: str, add_newline: bool = True):
+            return None
+
+        def zoom_in(self):
+            type(self).zoom_in_calls += 1
+
+        def zoom_out(self):
+            type(self).zoom_out_calls += 1
+
+        def send_ctrl_c(self):
+            return None
+
+    monkeypatch.setattr(bec_console_module, "_BecTermClass", RecordingTerminal)
+
+    widget = BecConsole(client=mocked_client, gui_id="console_zoom_default", terminal_id="zoom_default")
+    qtbot.addWidget(widget)
+
+    assert widget.zoom_level == 1
+    assert RecordingTerminal.zoom_in_calls == 1
+    assert RecordingTerminal.zoom_out_calls == 0
 
 
 def test_is_owner(console_widget: BecConsole):
