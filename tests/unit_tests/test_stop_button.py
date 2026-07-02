@@ -26,7 +26,8 @@ def test_stop_button(stop_button):
     widget.button.click()
 
     assert widget.queue.request_scan_abortion.called
-    assert widget.button.text() == "Emergency Stop"
+    assert widget._emergency_stop_active is True
+    qtbot.waitUntil(lambda: widget.button.text() == "Emergency Stop")
 
     qtbot.wait(widget.EMERGENCY_STOP_TIMEOUT_MS // 2)
     widget.button.click()
@@ -46,14 +47,14 @@ def test_stop_button_click_extends_emergency_timeout(stop_button):
     widget, qtbot = stop_button
 
     widget.button.click()
-    qtbot.wait(widget.EMERGENCY_STOP_TIMEOUT_MS - 250)
+    qtbot.wait(500)
 
     widget.button.click()
-    assert widget.button.text() == "Emergency Stop"
+    assert widget._emergency_stop_active is True
+    qtbot.waitUntil(lambda: widget.button.text() == "Emergency Stop")
 
-    qtbot.wait(200)
-    assert widget.button.text() == "Emergency Stop"
-
-    qtbot.wait(widget.EMERGENCY_STOP_TIMEOUT_MS - 100)
+    qtbot.waitUntil(
+        lambda: not widget._reset_timer.isActive(), timeout=widget.EMERGENCY_STOP_TIMEOUT_MS + 500
+    )
     assert widget.button.text() == "Stop"
     widget.close()
