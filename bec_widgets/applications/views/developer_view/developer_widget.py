@@ -332,8 +332,7 @@ class DeveloperWidget(DockAreaWidget):
         """Stop the execution of the currently running script"""
         if not self.current_script_id:
             return
-        if self.console.term is not None:
-            self.console.term.send_ctrl_c()
+        self.console.send_ctrl_c(regardless_of_ownership=True)
 
     @property
     def current_script_id(self):

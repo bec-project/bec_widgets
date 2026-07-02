@@ -543,6 +543,20 @@ class BecConsole(BECWidget, QWidget):
         if term:
             term.write(data, send_return)
 
+    def send_ctrl_c(self, regardless_of_ownership: bool = False):
+        """
+        Send Ctrl+C to the console
+
+        Args:
+            regardless_of_ownership (bool): Whether to send to the shared terminal session even
+                when this console does not currently own the visible terminal widget.
+        """
+        term = self.term
+        if term is None and regardless_of_ownership:
+            term = _bec_console_registry.get_terminal(self.terminal_id)
+        if term:
+            term.send_ctrl_c()
+
     @property
     def zoom_level(self) -> int:
         return _bec_console_registry.zoom_level(self.terminal_id)
