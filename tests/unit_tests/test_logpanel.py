@@ -9,8 +9,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from bec_lib.logger import LogLevel
 from bec_lib.messages import LogMessage
-from qtpy.QtCore import QDateTime
+from qtpy.QtCore import QDateTime, Qt
 
+from bec_widgets.utils.colors import apply_theme, get_accent_colors, get_theme_name
 from bec_widgets.widgets.utility.logpanel.logpanel import LogPanel, TimestampUpdate
 
 from .client_mocks import mocked_client
@@ -127,3 +128,21 @@ def test_log_panel_update(qtbot, log_panel: LogPanel):
     )
     log_panel._model.log_queue._proc_update()
     qtbot.waitUntil(lambda: log_panel._model.rowCount() == 4, timeout=500)
+
+
+def test_log_panel_colors_follow_theme(qtbot, log_panel: LogPanel):
+    info_index = log_panel._model.index(1, 0)
+    success_index = log_panel._model.index(2, 0)
+
+    # INFO rows have no explicit color so the view falls back to the palette text color
+    assert log_panel._model.data(info_index, Qt.ItemDataRole.ForegroundRole) is None
+
+    original_theme = get_theme_name()
+    other_theme = "dark" if original_theme == "light" else "light"
+    try:
+        for theme in (other_theme, original_theme):
+            apply_theme(theme)
+            success_color = log_panel._model.data(success_index, Qt.ItemDataRole.ForegroundRole)
+            assert success_color == get_accent_colors().success
+    finally:
+        apply_theme(original_theme)
