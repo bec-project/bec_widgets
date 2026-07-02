@@ -182,6 +182,7 @@ class RPCRegister:
         self._broadcast_pending = False
         connections = self.list_all_connections()
         dead_refs = []
+        delivery_failed = False
         for callback_ref in list(self.callbacks):
             callback = callback_ref()
             if callback is None:
@@ -193,12 +194,21 @@ class RPCRegister:
                 # e.g. during shutdown): calling it would raise on any Qt access.
                 dead_refs.append(callback_ref)
                 continue
-            callback(connections)
+            try:
+                callback(connections)
+            except Exception:
+                delivery_failed = True
+                logger.exception(f"RPC registry broadcast callback {callback!r} failed")
         for ref in dead_refs:
             try:
                 self.callbacks.remove(ref)
             except ValueError:
                 pass
+        if delivery_failed:
+            # The state change must not be lost: leave the registry dirty so the
+            # next broadcast retries delivery (duplicates are safe, the payload
+            # is the full state).
+            self._broadcast_pending = True
 
     def object_is_registered(self, obj: BECConnector) -> bool:
         """
