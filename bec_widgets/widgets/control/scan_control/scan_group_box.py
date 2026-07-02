@@ -1,5 +1,6 @@
 from typing import Literal, Sequence
 
+import shiboken6
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from qtpy.QtCore import Property, Qt, Signal, Slot
@@ -238,6 +239,13 @@ class ScanGroupBox(QGroupBox):
     # layout()->totalHeightForWidth(), which already includes the title-aware group box
     # margins. Host layouts should top-align or stretch below the box; ScanControl uses
     # layout.setAlignment(Qt.AlignTop).
+
+    def closeEvent(self, event):
+        for widget in self.widgets:
+            if shiboken6.isValid(widget):
+                widget.close()
+                widget.deleteLater()
+        super().closeEvent(event)
 
     def init_box(self, config: dict):
         box_name = config.get("name", "ScanGroupBox")

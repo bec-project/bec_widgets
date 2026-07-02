@@ -648,6 +648,23 @@ def test_current_scan(scan_control, mocked_client):
     assert scan_control.current_scan == new_scan
 
 
+def test_scan_switch_runs_cleanup_on_previous_inputs(scan_control):
+    """Switching scans tears down the old group boxes; the BECWidget inputs inside
+    (device comboboxes) must go through close() so their cleanup runs, instead of
+    being destroyed by deleteLater() without cleanup."""
+    scan_control.comboBox_scan_selection.setCurrentText("line_scan")
+    old_inputs = [w for w in scan_control.arg_box.widgets if hasattr(w, "_destroyed")]
+    assert old_inputs, "line_scan arg box should contain at least one BECWidget input"
+    assert all(not w._destroyed for w in old_inputs)
+
+    scan_control.comboBox_scan_selection.setCurrentText("grid_scan")
+
+    # closeEvent ran cleanup and flagged each old input as destroyed
+    assert all(w._destroyed for w in old_inputs)
+    register = scan_control.rpc_register
+    assert all(not register.object_is_registered(w) for w in old_inputs)
+
+
 @pytest.mark.parametrize("scan_name", ["line_scan", "grid_scan"])
 def test_on_scan_selected(scan_control, scan_name):
     expected_scan_info = available_scans_message.resource[scan_name]

@@ -469,6 +469,7 @@ class ScanControl(BECWidget, QWidget):
         """Clears the scan control layout from GuiGroups and ArgGroups boxes."""
         if self.arg_box is not None:
             self.layout.removeWidget(self.arg_box)
+            self.arg_box.close()
             self.arg_box.deleteLater()
             self.arg_box = None
         if self.kwarg_boxes != []:
@@ -477,6 +478,7 @@ class ScanControl(BECWidget, QWidget):
     def remove_kwarg_boxes(self):
         for box in self.kwarg_boxes:
             self.layout.removeWidget(box)
+            box.close()
             box.deleteLater()
         self.kwarg_boxes = []
 
@@ -554,15 +556,6 @@ class ScanControl(BECWidget, QWidget):
 
     def cleanup(self):
         """Cleanup the scan control widget."""
-        self.button_stop_scan.cleanup()
-        if self.arg_box:
-            for widget in self.arg_box.widgets:
-                if hasattr(widget, "cleanup"):
-                    widget.cleanup()
-        for kwarg_box in self.kwarg_boxes:
-            for widget in kwarg_box.widgets:
-                if hasattr(widget, "cleanup"):
-                    widget.cleanup()
         super().cleanup()
 
 
