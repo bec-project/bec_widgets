@@ -26,7 +26,7 @@ from qtpy.QtCore import (
     Qt,
     QTimer,
 )
-from qtpy.QtGui import QColor
+from qtpy.QtGui import QPalette
 from qtpy.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -49,20 +49,12 @@ from thefuzz import fuzz
 
 from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.colors import apply_theme
+from bec_widgets.utils.colors import apply_theme, get_accent_colors
 from bec_widgets.utils.error_popups import SafeSlot
 
 logger = bec_logger.logger
 
 MODULE_PATH = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-
-_DEFAULT_LOG_COLORS = {
-    LogLevel.INFO.name: QColor("#FFFFFF"),
-    LogLevel.SUCCESS.name: QColor("#00FF00"),
-    LogLevel.WARNING.name: QColor("#FFCC00"),
-    LogLevel.ERROR.name: QColor("#FF0000"),
-    LogLevel.DEBUG.name: QColor("#0000CC"),
-}
 
 
 @dataclass(frozen=True)
@@ -215,7 +207,15 @@ class BecLogsTableModel(QAbstractTableModel):
             return self._map_log_level_color(self.log_queue.cell_data(index.row(), "level"))
 
     def _map_log_level_color(self, data):
-        return _DEFAULT_LOG_COLORS.get(data)
+        """Resolve the display color for a log level from the current theme. INFO and
+        unmapped levels return None so the view uses the default palette text color."""
+        accent_colors = get_accent_colors()
+        return {
+            LogLevel.SUCCESS.name: accent_colors.success,
+            LogLevel.WARNING.name: accent_colors.warning,
+            LogLevel.ERROR.name: accent_colors.emergency,
+            LogLevel.DEBUG.name: QApplication.palette().color(QPalette.ColorRole.PlaceholderText),
+        }.get(data)
 
     def handle_new_messages(self):
         self.dataChanged.emit(
@@ -377,17 +377,6 @@ class LogPanel(BECWidget, QWidget):
         if show_toolbar:
             self._connect_toolbar()
         self._proxy.show_service_column.connect(self._show_service_column)
-        colors = QApplication.instance().theme.accent_colors  # type: ignore
-        dict_colors = QApplication.instance().theme.colors  # type: ignore
-        _DEFAULT_LOG_COLORS.update(
-            {
-                LogLevel.INFO.name: dict_colors["FG"],
-                LogLevel.SUCCESS.name: colors.success,
-                LogLevel.WARNING.name: colors.warning,
-                LogLevel.ERROR.name: colors.emergency,
-                LogLevel.DEBUG.name: dict_colors["BORDER"],
-            }
-        )
         self._table.scrollToBottom()
 
     def _setup_models(self, service_filter: set[str] | None, level_filter: LogLevel | None):
