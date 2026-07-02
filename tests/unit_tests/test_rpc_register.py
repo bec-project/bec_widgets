@@ -189,3 +189,34 @@ def test_broadcast_without_callbacks_skips_registry_walk(rpc_register, monkeypat
     rpc_register.broadcast()
     walk.assert_called_once()
     assert len(received) == 1
+
+
+def test_broadcast_prunes_callbacks_of_destroyed_qobjects(rpc_register, qapp):
+    """A bound-method callback whose QObject was destroyed (Python wrapper still
+    referenced, C++ side gone — the shutdown scenario) must be pruned, not called."""
+    import shiboken6
+    from qtpy.QtCore import QObject
+
+    class Listener(QObject):
+        def __init__(self):
+            super().__init__()
+            self.received = []
+
+        def on_update(self, connections):
+            self.received.append(connections)
+
+    listener = Listener()
+    rpc_register.add_callback(listener.on_update)
+    rpc_register.mark_broadcast_pending()
+    rpc_register.broadcast()
+    assert len(listener.received) == 1
+    callbacks_before = len(rpc_register.callbacks)
+
+    shiboken6.delete(listener)
+    assert not shiboken6.isValid(listener)
+
+    rpc_register.mark_broadcast_pending()
+    rpc_register.broadcast()  # must neither call the dead callback nor raise
+
+    assert len(listener.received) == 1
+    assert len(rpc_register.callbacks) == callbacks_before - 1
