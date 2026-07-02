@@ -31,7 +31,6 @@ BEAMLINE_STATE_STATUS_LABELS = {
 
 SUPPORTED_BEAMLINE_STATES: tuple[type[bl_states.BeamlineState], ...] = (
     bl_states.DeviceWithinLimitsState,
-    bl_states.ShutterState,
 )
 
 

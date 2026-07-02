@@ -45,13 +45,6 @@ def _limits_state(name: str = "limits", **overrides) -> messages.BeamlineStateCo
     return _wire_state(bl_states.DeviceWithinLimitsState, config)
 
 
-def _shutter_state(
-    name: str = "shutter_open", device: str = "samy"
-) -> messages.BeamlineStateConfig:
-    config = bl_states.ShutterState.CONFIG_CLASS(name=name, device=device)
-    return _wire_state(bl_states.ShutterState, config)
-
-
 def _as_status_list(value: str | list[str]) -> list[str]:
     return [value] if isinstance(value, str) else list(value)
 
@@ -88,19 +81,19 @@ def _install_fake_scan_interlock(
 
 
 def test_beamline_state_pill_updates_from_message(qtbot, mocked_client):
-    pill = create_widget(qtbot, BeamlineStatePill, state_name="shutter_open", client=mocked_client)
-    pill.update_state({"name": "shutter_open", "status": "valid", "label": "Shutter is open."}, {})
+    pill = create_widget(qtbot, BeamlineStatePill, state_name="limits", client=mocked_client)
+    pill.update_state({"name": "limits", "status": "valid", "label": "Within limits."}, {})
 
-    assert pill._state_name == "shutter_open"
-    assert pill._name_label.text() == "shutter_open"
+    assert pill._state_name == "limits"
+    assert pill._name_label.text() == "limits"
     assert pill._status_label.text() == "VALID"
-    assert pill._detail_label.text() == "Shutter is open."
+    assert pill._detail_label.text() == "Within limits."
     assert not pill._icon_label.pixmap().isNull()
-    assert pill.toolTip() == "Shutter is open."
+    assert pill.toolTip() == "Within limits."
 
 
 def test_beamline_state_pill_ignores_other_states(qtbot, mocked_client):
-    pill = create_widget(qtbot, BeamlineStatePill, state_name="shutter_open", client=mocked_client)
+    pill = create_widget(qtbot, BeamlineStatePill, state_name="limits", client=mocked_client)
     pill.update_state(
         {"name": "other_state", "status": "invalid", "label": "Should be ignored."}, {}
     )
@@ -256,16 +249,16 @@ def test_beamline_state_manager_adds_and_removes_pills(qtbot, mocked_client):
     beamline_state_manager.update_available_states(
         {
             "states": [
-                _state("shutter_open", "ShutterState"),
                 _state("limits", "DeviceWithinLimitsState"),
+                _limits_state(name="samy_limits", device="samy"),
             ]
         },
         {},
     )
 
-    assert sorted(beamline_state_manager._state_pills) == ["limits", "shutter_open"]
+    assert sorted(beamline_state_manager._state_pills) == ["limits", "samy_limits"]
     assert beamline_state_manager._model.rowCount() == 2
-    assert beamline_state_manager._state_pills["shutter_open"]._name_label.text() == "shutter_open"
+    assert beamline_state_manager._state_pills["samy_limits"]._name_label.text() == "samy_limits"
     assert not beamline_state_manager._empty_label.isVisible()
 
     beamline_state_manager._state_pills["limits"].update_state(
@@ -273,7 +266,7 @@ def test_beamline_state_manager_adds_and_removes_pills(qtbot, mocked_client):
     )
     summary = beamline_state_manager.state_summary()
     assert summary["limits"] == {"status": "valid", "label": "Within limits."}
-    assert summary["shutter_open"]["status"] == "unknown"
+    assert summary["samy_limits"]["status"] == "unknown"
 
     beamline_state_manager.update_available_states(
         {"states": [_state("limits", "DeviceWithinLimitsState")]}, {}
@@ -299,19 +292,21 @@ def test_beamline_state_manager_ignores_unchanged_available_states(qtbot, mocked
 def test_beamline_state_manager_adds_state_without_recreating_existing_pills(qtbot, mocked_client):
     beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
     limits_state = _limits_state()
-    shutter_state = _state("shutter_open", "ShutterState")
+    samy_limits_state = _limits_state(name="samy_limits", device="samy")
 
     beamline_state_manager.update_available_states({"states": [limits_state]}, {})
     pill = beamline_state_manager._state_pills["limits"]
     pill.set_expanded(True)
     config_form = pill._config_form
 
-    beamline_state_manager.update_available_states({"states": [limits_state, shutter_state]}, {})
+    beamline_state_manager.update_available_states(
+        {"states": [limits_state, samy_limits_state]}, {}
+    )
 
     assert beamline_state_manager._state_pills["limits"] is pill
     assert pill._config_form is config_form
     assert pill.is_expanded()
-    assert sorted(beamline_state_manager._state_pills) == ["limits", "shutter_open"]
+    assert sorted(beamline_state_manager._state_pills) == ["limits", "samy_limits"]
 
 
 def test_beamline_state_manager_header_click_expands_pill_once(qtbot, mocked_client):
@@ -343,7 +338,7 @@ def test_beamline_state_manager_preserves_expanded_pill_on_refresh(qtbot, mocked
 def test_beamline_state_manager_filters_status(qtbot, mocked_client):
     beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
     beamline_state_manager.update_available_states(
-        {"states": [_shutter_state(), _limits_state()]}, {}
+        {"states": [_limits_state(name="samy_limits", device="samy"), _limits_state()]}, {}
     )
 
     assert isinstance(beamline_state_manager._toolbar, ModularToolBar)
@@ -352,8 +347,8 @@ def test_beamline_state_manager_filters_status(qtbot, mocked_client):
     beamline_state_manager._state_pills["limits"].update_state(
         {"name": "limits", "status": "valid", "label": "Within limits."}, {}
     )
-    beamline_state_manager._state_pills["shutter_open"].update_state(
-        {"name": "shutter_open", "status": "invalid", "label": "Closed."}, {}
+    beamline_state_manager._state_pills["samy_limits"].update_state(
+        {"name": "samy_limits", "status": "invalid", "label": "Out of limits."}, {}
     )
     beamline_state_manager._selected_statuses = {"valid"}
     beamline_state_manager._apply_filters()
@@ -364,22 +359,22 @@ def test_beamline_state_manager_filters_status(qtbot, mocked_client):
         beamline_state_manager._model.index_for_name("limits").row()
     )
     assert beamline_state_manager._view.isRowHidden(
-        beamline_state_manager._model.index_for_name("shutter_open").row()
+        beamline_state_manager._model.index_for_name("samy_limits").row()
     )
 
     beamline_state_manager._hidden_summary.click()
 
     assert not beamline_state_manager._view.isRowHidden(
-        beamline_state_manager._model.index_for_name("shutter_open").row()
+        beamline_state_manager._model.index_for_name("samy_limits").row()
     )
-    assert shiboken6.isValid(beamline_state_manager._state_pills["shutter_open"])
+    assert shiboken6.isValid(beamline_state_manager._state_pills["samy_limits"])
 
     beamline_state_manager._hidden_summary.click()
 
     assert beamline_state_manager._view.isRowHidden(
-        beamline_state_manager._model.index_for_name("shutter_open").row()
+        beamline_state_manager._model.index_for_name("samy_limits").row()
     )
-    assert shiboken6.isValid(beamline_state_manager._state_pills["shutter_open"])
+    assert shiboken6.isValid(beamline_state_manager._state_pills["samy_limits"])
 
 
 def test_beamline_state_manager_status_filter_reacts_to_state_changes(qtbot, mocked_client):
@@ -447,8 +442,7 @@ def test_beamline_state_manager_filters_devices(qtbot, mocked_client, monkeypatc
 def test_beamline_state_manager_collapse_all(qtbot, mocked_client):
     beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
     beamline_state_manager.update_available_states(
-        {"states": [_limits_state(), _state("shutter_open", "ShutterState", {"device": "samy"})]},
-        {},
+        {"states": [_limits_state(), _limits_state(name="samy_limits", device="samy")]}, {}
     )
 
     for pill in beamline_state_manager._state_pills.values():
@@ -628,7 +622,7 @@ def test_beamline_state_manager_toolbar_scan_interlock_on_right(qtbot, mocked_cl
 def test_beamline_state_manager_groups_states_under_headers(qtbot, mocked_client):
     beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
     beamline_state_manager.update_available_states(
-        {"states": [_limits_state(), _shutter_state()]}, {}
+        {"states": [_limits_state(), _limits_state(name="samy_limits", device="samy")]}, {}
     )
     model = beamline_state_manager._model
 
@@ -636,30 +630,30 @@ def test_beamline_state_manager_groups_states_under_headers(qtbot, mocked_client
     assert model.data(model.index(0, 0), model.HeaderRole) is None
 
     _install_fake_scan_interlock(
-        beamline_state_manager, _FakeScanInterlock(states_watched={"shutter_open": "valid"})
+        beamline_state_manager, _FakeScanInterlock(states_watched={"samy_limits": "valid"})
     )
 
     assert model.rowCount() == 4
     assert model.data(model.index(0, 0), model.HeaderRole) == model.INTERLOCK_HEADER
     assert model.data(model.index(0, 0), Qt.ItemDataRole.DisplayRole) == "Scan interlock states"
-    assert model.data(model.index(1, 0), model.NameRole) == "shutter_open"
+    assert model.data(model.index(1, 0), model.NameRole) == "samy_limits"
     assert model.data(model.index(2, 0), model.HeaderRole) == model.OTHERS_HEADER
     assert (
         model.data(model.index(2, 0), Qt.ItemDataRole.DisplayRole)
         == "Not included in scan interlock"
     )
     assert model.data(model.index(3, 0), model.NameRole) == "limits"
-    assert sorted(beamline_state_manager._state_pills) == ["limits", "shutter_open"]
+    assert sorted(beamline_state_manager._state_pills) == ["limits", "samy_limits"]
 
     _install_fake_scan_interlock(
         beamline_state_manager,
-        _FakeScanInterlock(states_watched={"shutter_open": "valid", "limits": "valid"}),
+        _FakeScanInterlock(states_watched={"samy_limits": "valid", "limits": "valid"}),
     )
 
     assert model.rowCount() == 3
     assert model.data(model.index(0, 0), model.HeaderRole) == model.INTERLOCK_HEADER
     assert model.data(model.index(1, 0), model.NameRole) == "limits"
-    assert model.data(model.index(2, 0), model.NameRole) == "shutter_open"
+    assert model.data(model.index(2, 0), model.NameRole) == "samy_limits"
 
     _install_fake_scan_interlock(beamline_state_manager, _FakeScanInterlock())
 
@@ -670,24 +664,24 @@ def test_beamline_state_manager_groups_states_under_headers(qtbot, mocked_client
 def test_beamline_state_manager_header_visibility_follows_filters(qtbot, mocked_client):
     beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
     beamline_state_manager.update_available_states(
-        {"states": [_limits_state(), _shutter_state()]}, {}
+        {"states": [_limits_state(), _limits_state(name="samy_limits", device="samy")]}, {}
     )
     _install_fake_scan_interlock(
-        beamline_state_manager, _FakeScanInterlock(states_watched={"shutter_open": "valid"})
+        beamline_state_manager, _FakeScanInterlock(states_watched={"samy_limits": "valid"})
     )
 
     beamline_state_manager._state_pills["limits"].update_state(
         {"name": "limits", "status": "invalid", "label": "Out of limits."}, {}
     )
-    beamline_state_manager._state_pills["shutter_open"].update_state(
-        {"name": "shutter_open", "status": "valid", "label": "Open."}, {}
+    beamline_state_manager._state_pills["samy_limits"].update_state(
+        {"name": "samy_limits", "status": "valid", "label": "Within limits."}, {}
     )
     beamline_state_manager._selected_statuses = {"valid"}
     beamline_state_manager._apply_filters()
 
     model = beamline_state_manager._model
     assert not beamline_state_manager._view.isRowHidden(0)
-    assert not beamline_state_manager._view.isRowHidden(model.index_for_name("shutter_open").row())
+    assert not beamline_state_manager._view.isRowHidden(model.index_for_name("samy_limits").row())
     assert beamline_state_manager._view.isRowHidden(2)
     assert beamline_state_manager._view.isRowHidden(model.index_for_name("limits").row())
 
@@ -699,40 +693,40 @@ def test_beamline_state_manager_header_visibility_follows_filters(qtbot, mocked_
 def test_beamline_state_manager_interlock_states_bypass_filters(qtbot, mocked_client):
     beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
     beamline_state_manager.update_available_states(
-        {"states": [_limits_state(), _shutter_state()]}, {}
+        {"states": [_limits_state(), _limits_state(name="samy_limits", device="samy")]}, {}
     )
     _install_fake_scan_interlock(
-        beamline_state_manager, _FakeScanInterlock(states_watched={"shutter_open": "valid"})
+        beamline_state_manager, _FakeScanInterlock(states_watched={"samy_limits": "valid"})
     )
 
     beamline_state_manager._state_pills["limits"].update_state(
         {"name": "limits", "status": "invalid", "label": "Out of limits."}, {}
     )
-    beamline_state_manager._state_pills["shutter_open"].update_state(
-        {"name": "shutter_open", "status": "invalid", "label": "Closed."}, {}
+    beamline_state_manager._state_pills["samy_limits"].update_state(
+        {"name": "samy_limits", "status": "invalid", "label": "Out of limits."}, {}
     )
     beamline_state_manager._selected_statuses = {"valid"}
     beamline_state_manager._apply_filters()
 
     model = beamline_state_manager._model
-    assert not beamline_state_manager._view.isRowHidden(model.index_for_name("shutter_open").row())
+    assert not beamline_state_manager._view.isRowHidden(model.index_for_name("samy_limits").row())
     assert beamline_state_manager._view.isRowHidden(model.index_for_name("limits").row())
     assert "1 state is hidden" in beamline_state_manager._hidden_summary.text()
 
     beamline_state_manager._device_filter_text = "nonexistent_device"
     beamline_state_manager._apply_filters()
 
-    assert not beamline_state_manager._view.isRowHidden(model.index_for_name("shutter_open").row())
+    assert not beamline_state_manager._view.isRowHidden(model.index_for_name("samy_limits").row())
 
 
 def test_beamline_state_manager_section_headers_are_widgets(qtbot, mocked_client):
     beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
     beamline_state_manager.update_available_states(
-        {"states": [_limits_state(), _shutter_state()]}, {}
+        {"states": [_limits_state(), _limits_state(name="samy_limits", device="samy")]}, {}
     )
     _install_fake_scan_interlock(
         beamline_state_manager,
-        _FakeScanInterlock(enabled=True, states_watched={"shutter_open": "valid"}),
+        _FakeScanInterlock(enabled=True, states_watched={"samy_limits": "valid"}),
     )
 
     model = beamline_state_manager._model
@@ -754,19 +748,19 @@ def test_beamline_state_manager_section_headers_are_widgets(qtbot, mocked_client
 
 def test_beamline_state_manager_marks_triggered_pills(qtbot, mocked_client):
     beamline_state_manager = create_widget(qtbot, BeamlineStateManager, client=mocked_client)
-    beamline_state_manager.update_available_states({"states": [_shutter_state()]}, {})
-    fake_interlock = _FakeScanInterlock(enabled=True, states_watched={"shutter_open": "valid"})
+    beamline_state_manager.update_available_states({"states": [_limits_state()]}, {})
+    fake_interlock = _FakeScanInterlock(enabled=True, states_watched={"limits": "valid"})
     _install_fake_scan_interlock(beamline_state_manager, fake_interlock)
 
-    pill = beamline_state_manager._state_pills["shutter_open"]
+    pill = beamline_state_manager._state_pills["limits"]
     assert pill._interlock_required_statuses == ["valid"]
     assert pill._interlock_triggered
 
-    pill.update_state({"name": "shutter_open", "status": "valid", "label": "Open."}, {})
+    pill.update_state({"name": "limits", "status": "valid", "label": "Within limits."}, {})
 
     assert not pill._interlock_triggered
 
-    pill.update_state({"name": "shutter_open", "status": "invalid", "label": "Closed."}, {})
+    pill.update_state({"name": "limits", "status": "invalid", "label": "Out of limits."}, {})
 
     assert pill._interlock_triggered
 
@@ -834,7 +828,7 @@ def test_beamline_state_manager_orders_by_status_severity_on_initial_render(
     # severity order must hold from the very first render. ``get_last`` is patched (rather than
     # writing to the session-shared fake connector) so the seeded statuses can't leak into and
     # pollute other tests.
-    seeded = {"limits": "valid", "shutter_open": "invalid"}
+    seeded = {"limits": "valid", "samy_limits": "invalid"}
     real_get_last = mocked_client.connector.get_last
 
     def fake_get_last(endpoint, *args, **kwargs):
@@ -847,13 +841,13 @@ def test_beamline_state_manager_orders_by_status_severity_on_initial_render(
     monkeypatch.setattr(mocked_client.connector, "get_last", fake_get_last)
 
     beamline_state_manager.update_available_states(
-        {"states": [_limits_state(), _shutter_state()]}, {}
+        {"states": [_limits_state(), _limits_state(name="samy_limits", device="samy")]}, {}
     )
 
     model = beamline_state_manager._model
     names = [model.data(model.index(row, 0), model.NameRole) for row in range(model.rowCount())]
-    assert names == ["shutter_open", "limits"]
-    assert beamline_state_manager._state_pills["shutter_open"]._status == "invalid"
+    assert names == ["samy_limits", "limits"]
+    assert beamline_state_manager._state_pills["samy_limits"]._status == "invalid"
 
 
 def test_beamline_state_manager_toolbar_toggle_writes_backend(qtbot, mocked_client):
@@ -984,6 +978,7 @@ def test_add_beamline_state_dialog_uses_generated_widgets_and_normalizes_name(qt
     add_state_dialog = create_widget(qtbot, AddBeamlineStateDialog, client=mocked_client)
     limits_index = add_state_dialog._type_combo.findText(bl_states.DeviceWithinLimitsState.__name__)
     assert limits_index >= 0
+    assert add_state_dialog._type_combo.findText("ShutterState") == -1
     add_state_dialog._type_combo.setCurrentIndex(limits_index)
 
     assert add_state_dialog._config_form.model is bl_states.DeviceWithinLimitsState.CONFIG_CLASS
@@ -1118,32 +1113,6 @@ def test_add_beamline_state_dialog_generates_name_only_after_valid_device_select
     device.set_device("samx")
 
     assert name.text() == "samx_device_within_limits_state"
-
-
-def test_add_beamline_state_dialog_switches_state_type_without_collapsing(qtbot, mocked_client):
-    add_state_dialog = create_widget(qtbot, AddBeamlineStateDialog, client=mocked_client)
-    initial_height = add_state_dialog.height()
-    limits_index = add_state_dialog._type_combo.findText("DeviceWithinLimitsState")
-    assert limits_index >= 0
-    shutter_index = add_state_dialog._type_combo.findText("ShutterState")
-    assert shutter_index >= 0
-
-    add_state_dialog._type_combo.setCurrentIndex(shutter_index)
-    qtbot.wait(0)
-
-    assert add_state_dialog._config_form.model is bl_states.DeviceStateConfig
-    assert add_state_dialog._config_form_host.count() == 1
-    assert not add_state_dialog._config_form.isHidden()
-    assert not add_state_dialog._buttons.isHidden()
-    assert add_state_dialog.sizeHint().height() > add_state_dialog._buttons.sizeHint().height()
-    assert add_state_dialog.minimumHeight() == add_state_dialog.maximumHeight()
-
-    add_state_dialog._type_combo.setCurrentIndex(limits_index)
-    qtbot.wait(0)
-
-    assert add_state_dialog._config_form.model is bl_states.DeviceWithinLimitsState.CONFIG_CLASS
-    assert add_state_dialog.height() >= initial_height
-    assert add_state_dialog.minimumHeight() == add_state_dialog.maximumHeight()
 
 
 def test_add_beamline_state_dialog_cleanup_deletes_device_widgets(qtbot, mocked_client):
