@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.21.4 (2026-07-02)
+
+### Bug Fixes
+
+- **stop_button**: Improve emergency stop button test assertions and timing
+  ([`7b3ccec`](https://github.com/bec-project/bec_widgets/commit/7b3ccec3527b77296b950f89d78ff675fbe17121))
+
+
 ## v3.21.3 (2026-07-01)
 
 ### Bug Fixes
