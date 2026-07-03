@@ -115,6 +115,54 @@ def test_dispatcher_disconnect_one(bec_dispatcher_w_connector, qtbot, send_msg_e
 
 
 @pytest.mark.parametrize("topics_msg_list", [(("topic1", dummy_msg),)])
+def test_dispatcher_disconnect_wrong_topic_is_safe_noop(
+    bec_dispatcher_w_connector, qtbot, send_msg_event
+):
+    bec_dispatcher = bec_dispatcher_w_connector
+    cb1 = mock.Mock(spec=[])
+
+    bec_dispatcher.connect_slot(cb1, "topic1")
+    # disconnecting a topic the slot is NOT subscribed to must not release topic1
+    bec_dispatcher.disconnect_slot(cb1, "topic-wrong")
+    assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 1
+
+    send_msg_event.set()
+    qtbot.wait(10)
+    cb1.assert_called_once()
+
+    bec_dispatcher.disconnect_slot(cb1, "topic1")
+    assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 0
+
+
+@pytest.mark.parametrize("topics_msg_list", [(("topic1", dummy_msg), ("topic2", dummy_msg))])
+def test_dispatcher_disconnect_selects_wrapper_by_topic(
+    bec_dispatcher_w_connector, qtbot, send_msg_event
+):
+    # The same callback registered twice with different cb_info produces two wrappers;
+    # disconnecting a topic must release it from the wrapper that actually holds it,
+    # not silently no-op on the first wrapper that matches the callback.
+    bec_dispatcher = bec_dispatcher_w_connector
+    cb1 = mock.Mock(spec=[])
+
+    bec_dispatcher.connect_slot(cb1, "topic1", cb_info={"scan": "a"})
+    bec_dispatcher.connect_slot(cb1, "topic2", cb_info={"scan": "b"})
+    assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 2
+
+    bec_dispatcher.disconnect_slot(cb1, "topic2")
+    remaining = bec_dispatcher.client.connector._managed_connection._topics_cb
+    assert len(remaining) == 1
+    assert "topic1" in remaining
+
+    # release the remaining subscription explicitly instead of leaning on fixture teardown
+    bec_dispatcher.disconnect_slot(cb1, "topic1")
+    assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 0
+
+    # unblock the fixture's message generator so connector.shutdown() can join
+    send_msg_event.set()
+    qtbot.wait(10)
+
+
+@pytest.mark.parametrize("topics_msg_list", [(("topic1", dummy_msg),)])
 def test_dispatcher_2_cb_same_topic(bec_dispatcher_w_connector, qtbot, send_msg_event):
     # test for BEC issue #276
     bec_dispatcher = bec_dispatcher_w_connector

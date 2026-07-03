@@ -265,28 +265,42 @@ class BECDispatcher:
         """
         Disconnect a slot from a topic.
 
+        Among the wrappers matching the callback (and ``cb_info``, when given), the one
+        actually subscribed to the requested topics is released. If none of them is
+        subscribed to these topics, nothing is released and a warning names the actual
+        subscriptions — a blind unregister on the wrong wrapper would silently no-op.
+
         Args:
             slot(Callable): The slot to disconnect
             topics EndpointInfo | str | list[EndpointInfo] | list[str]: A topic or list of topics to unsub from.
             cb_info(dict | None): When the same slot was registered multiple times with
                 different cb_info payloads (e.g. per-signal async subscriptions), pass the
-                payload to select the exact registration; without it the first wrapper
-                matching the callback is used.
+                payload to narrow the candidate registrations before the topic match.
         """
         # find the right slot to disconnect from ;
         # slot callbacks are wrapped in QtThreadSafeCallback objects,
         # but the slot we receive here is the original callable
-        for connected_slot in self._registered_slots.values():
-            if connected_slot.cb != slot:
-                continue
-            if cb_info is not None and connected_slot.cb_info != cb_info:
-                continue
-            break
-        else:
+        topics_str, _ = self.client.connector.extract_raw_endpoints_from_info(topics)
+        requested = set(topics_str)
+        candidates = [
+            connected_slot
+            for connected_slot in self._registered_slots.values()
+            if connected_slot.cb == slot and (cb_info is None or connected_slot.cb_info == cb_info)
+        ]
+        # Among wrappers for this callback, pick the one actually subscribed to the
+        # requested topics; a bare unregister on the wrong wrapper would silently no-op
+        # and leave the real subscription alive.
+        connected_slot = next((s for s in candidates if s.topics & requested), None)
+        if connected_slot is None:
+            if candidates:
+                logger.warning(
+                    f"disconnect_slot({slot!r}): no registration matches topics "
+                    f"{sorted(requested)}; the slot is subscribed to "
+                    f"{sorted(set().union(*(s.topics for s in candidates)))}. Nothing released."
+                )
             return
         self.client.connector.unregister(topics, cb=connected_slot)
-        topics_str, _ = self.client.connector.extract_raw_endpoints_from_info(topics)
-        self._registered_slots[connected_slot].topics.difference_update(set(topics_str))
+        self._registered_slots[connected_slot].topics.difference_update(requested)
         if not self._registered_slots[connected_slot].topics:
             del self._registered_slots[connected_slot]
 
