@@ -257,7 +257,10 @@ class BECDispatcher:
             logger.warning(f"Attempted to create duplicate stream subscription for {topics=}")
 
     def disconnect_slot(
-        self, slot: Callable, topics: EndpointInfo | str | list[EndpointInfo] | list[str]
+        self,
+        slot: Callable,
+        topics: EndpointInfo | str | list[EndpointInfo] | list[str],
+        cb_info: dict | None = None,
     ):
         """
         Disconnect a slot from a topic.
@@ -265,13 +268,20 @@ class BECDispatcher:
         Args:
             slot(Callable): The slot to disconnect
             topics EndpointInfo | str | list[EndpointInfo] | list[str]: A topic or list of topics to unsub from.
+            cb_info(dict | None): When the same slot was registered multiple times with
+                different cb_info payloads (e.g. per-signal async subscriptions), pass the
+                payload to select the exact registration; without it the first wrapper
+                matching the callback is used.
         """
         # find the right slot to disconnect from ;
         # slot callbacks are wrapped in QtThreadSafeCallback objects,
         # but the slot we receive here is the original callable
         for connected_slot in self._registered_slots.values():
-            if connected_slot.cb == slot:
-                break
+            if connected_slot.cb != slot:
+                continue
+            if cb_info is not None and connected_slot.cb_info != cb_info:
+                continue
+            break
         else:
             return
         self.client.connector.unregister(topics, cb=connected_slot)
