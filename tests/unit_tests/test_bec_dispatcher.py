@@ -259,3 +259,16 @@ def test_qt_redis_connector_logs_rpc_before_qt_callback(monkeypatch):
         assert "request_id=dispatcher-request" in warning_message
     finally:
         connector.shutdown()
+
+
+def test_stop_cli_server_is_idempotent(bec_dispatcher):
+    """Both GUIServer.shutdown and BECConnector.terminate stop the CLI server at
+    application exit; the second call must be a silent no-op, not an ERROR."""
+    from unittest import mock
+
+    from bec_widgets.utils import bec_dispatcher as bd_module
+
+    with mock.patch.object(bd_module, "logger") as mock_logger:
+        bec_dispatcher.stop_cli_server()
+        bec_dispatcher.stop_cli_server()
+    mock_logger.error.assert_not_called()

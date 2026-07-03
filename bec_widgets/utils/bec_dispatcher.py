@@ -416,10 +416,13 @@ class BECDispatcher:
 
     def stop_cli_server(self):
         """
-        Stop the CLI server.
+        Stop the CLI server. Idempotent: application teardown has several owners
+        (``GUIServer.shutdown`` and the generic ``BECConnector.terminate`` exit
+        handler both run on ``aboutToQuit``), so a second stop is an expected
+        no-op, not an error.
         """
         if self.cli_server is None:
-            logger.error("Cannot stop CLI server without starting it first")
+            logger.debug("CLI server already stopped or never started")
             return
         self.cli_server.shutdown()
         self.cli_server = None

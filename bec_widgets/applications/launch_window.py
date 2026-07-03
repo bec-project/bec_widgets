@@ -741,6 +741,10 @@ class LaunchWindow(BECMainWindow):
             return
 
         event.accept()
+        # Chain to the base implementation so BECWidget.cleanup() runs on the normal
+        # close path (not only via WA_DeleteOnClose / DeferredDelete). Keeps this method
+        # a correct closeEvent template.
+        super().closeEvent(event)
 
 
 if __name__ == "__main__":  # pragma: no cover

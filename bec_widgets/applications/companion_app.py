@@ -198,8 +198,14 @@ class GUIServer:
 
         def stop_dispatcher():
             if self.dispatcher:
-                self.dispatcher.stop_cli_server()
+                # disconnect_all() must run BEFORE stop_cli_server(). stop_cli_server()
+                # -> RPCServer.shutdown() historically tore the client down, which nulls
+                # the connector's listener thread; a later disconnect_all() would then
+                # early-return in ManagedRedisConnection.unregister and leave subscriptions
+                # alive. This ordering matches BECConnector.terminate (disconnect_all ->
+                # stop_cli_server).
                 self.dispatcher.disconnect_all()
+                self.dispatcher.stop_cli_server()
 
         self._run_shutdown_step("close_launcher_window", close_launcher_window)
         self._run_shutdown_step("stop_pylsp_server", stop_pylsp_server)
