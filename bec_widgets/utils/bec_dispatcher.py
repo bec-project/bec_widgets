@@ -307,21 +307,41 @@ class BECDispatcher:
         # pylint: disable=protected-access
         self.disconnect_topics(self.client.connector._topics_cb)
 
-    def disconnect_owner(self, owner: BECWidget):
+    def disconnect_owner(self, owner: BECWidget) -> int:
         """
         Disconnect all slots owned by a particular widget.
 
+        Called by ``BECWidget.cleanup``, so widgets never need to disconnect their own
+        slots at teardown. Idempotent: calling it again (or for an owner without
+        subscriptions) is a no-op.
+
         Args:
             owner(BECWidget): The owner widget whose slots should be disconnected
+
+        Returns:
+            int: The number of released slot wrappers.
         """
-        slots_to_disconnect = []
-        for connected_slot in self._registered_slots.values():
-            if connected_slot.cb_owner is not None and connected_slot.cb_owner() == owner:
-                slots_to_disconnect.append(connected_slot)
-        for slot in slots_to_disconnect:
-            topics = slot.topics.copy()
-            for topic in topics:
-                self.disconnect_slot(slot.cb, topic)
+        slots_to_disconnect = [
+            connected_slot
+            for connected_slot in list(self._registered_slots.values())
+            if connected_slot.cb_owner is not None and connected_slot.cb_owner() is owner
+        ]
+        for qt_slot in slots_to_disconnect:
+            self._release_slot(qt_slot)
+        if slots_to_disconnect:
+            logger.info(
+                f"Released {len(slots_to_disconnect)} dispatcher slot(s) owned by "
+                f"{type(owner).__name__}"
+            )
+        return len(slots_to_disconnect)
+
+    def _release_slot(self, qt_slot: QtThreadSafeCallback) -> None:
+        """Unregister all topics of a slot wrapper and drop it from the registry."""
+        topics = list(qt_slot.topics)
+        if topics:
+            self.client.connector.unregister(topics, cb=qt_slot)
+        qt_slot.topics.clear()
+        self._registered_slots.pop(qt_slot, None)
 
     def start_cli_server(self, gui_id: str | None = None):
         """
