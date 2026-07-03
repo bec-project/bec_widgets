@@ -11,7 +11,9 @@ class QtRedisMessageWaiter:
         self.response = None
         self.connector = redis_connector
         self.message_to_wait = message_to_wait
-        self.pubsub = redis_connector._redis_conn.pubsub()
+        # Access the managed (buffered) connection directly; the connector-level
+        # _redis_conn accessor is deprecated in bec_lib.
+        self.pubsub = redis_connector._managed_connection._redis_conn.pubsub()
         self.pubsub.subscribe(self.message_to_wait.endpoint)
         fd = self.pubsub.connection._sock.fileno()
         self.notifier = QSocketNotifier(fd, QSocketNotifier.Read)

@@ -85,7 +85,7 @@ def test_dispatcher_disconnect_all(bec_dispatcher_w_connector, qtbot, send_msg_e
     bec_dispatcher.connect_slot(cb1, "topic2")
     bec_dispatcher.connect_slot(cb2, "topic2")
     bec_dispatcher.connect_slot(cb2, "topic3")
-    assert len(bec_dispatcher.client.connector._topics_cb) == 3
+    assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 3
     send_msg_event.set()
     qtbot.wait(10)
     assert cb1.call_count == 2
@@ -93,7 +93,7 @@ def test_dispatcher_disconnect_all(bec_dispatcher_w_connector, qtbot, send_msg_e
 
     bec_dispatcher.disconnect_all()
 
-    assert len(bec_dispatcher.client.connector._topics_cb) == 0
+    assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 0
 
 
 @pytest.mark.parametrize("topics_msg_list", [(("topic1", dummy_msg), ("topic2", dummy_msg))])
@@ -104,9 +104,9 @@ def test_dispatcher_disconnect_one(bec_dispatcher_w_connector, qtbot, send_msg_e
 
     bec_dispatcher.connect_slot(cb1, "topic1")
     bec_dispatcher.connect_slot(cb2, "topic2")
-    assert len(bec_dispatcher.client.connector._topics_cb) == 2
+    assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 2
     bec_dispatcher.disconnect_slot(cb1, "topic1")
-    assert len(bec_dispatcher.client.connector._topics_cb) == 1
+    assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 1
 
     send_msg_event.set()
     qtbot.wait(10)
@@ -127,10 +127,10 @@ def test_dispatcher_2_cb_same_topic(bec_dispatcher_w_connector, qtbot, send_msg_
     bec_dispatcher.connect_slot(cb2, "topic1")
 
     # The redis connector should only subscribe once to the topic
-    assert len(bec_dispatcher.client.connector._topics_cb) == 1
+    assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 1
 
     # The the given topic, two callbacks should be registered
-    assert len(bec_dispatcher.client.connector._topics_cb["topic1"]) == 2
+    assert len(bec_dispatcher.client.connector._managed_connection._topics_cb["topic1"]) == 2
 
     # The dispatcher should have two slots
     assert len(bec_dispatcher._registered_slots) == num_slots + 2
@@ -150,7 +150,7 @@ def test_dispatcher_2_cb_same_topic_same_slot(bec_dispatcher_w_connector, qtbot,
 
     bec_dispatcher.connect_slot(cb1, "topic1")
     bec_dispatcher.connect_slot(cb1, "topic1")
-    assert len(bec_dispatcher.client.connector._topics_cb) == 1
+    assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 1
     assert (
         len(list(filter(lambda slot: slot.cb == cb1, bec_dispatcher._registered_slots.values())))
         == 1
@@ -173,9 +173,9 @@ def test_dispatcher_2_topic_same_cb(bec_dispatcher_w_connector, qtbot, send_msg_
 
     bec_dispatcher.connect_slot(cb1, "topic1")
     bec_dispatcher.connect_slot(cb1, "topic2")
-    assert len(bec_dispatcher.client.connector._topics_cb) == 2
+    assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 2
     bec_dispatcher.disconnect_slot(cb1, "topic1")
-    assert len(bec_dispatcher.client.connector._topics_cb) == 1
+    assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 1
 
     send_msg_event.set()
     qtbot.wait(10)
@@ -205,10 +205,10 @@ def test_dispatcher_2_topic_same_cb_with_boundmethod(
             )
         )
 
-    assert len(bec_dispatcher.client.connector._topics_cb) == 1
+    assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 1
     assert len(_get_slots()) == 1
     bec_dispatcher.disconnect_slot(cb1.mock_slot, "topic1")
-    assert len(bec_dispatcher.client.connector._topics_cb) == 0
+    assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 0
     assert len(_get_slots()) == 0
 
     send_msg_event.set()
