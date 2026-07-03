@@ -4,8 +4,9 @@ import collections
 import random
 import string
 import time
+import weakref
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, DefaultDict, Hashable, Union
+from typing import TYPE_CHECKING, Any, DefaultDict, Hashable
 
 import louie
 import redis
@@ -63,26 +64,49 @@ def _log_rpc_dispatcher_receive(msg_content: Any, metadata: Any) -> None:
 
 
 class QtThreadSafeCallback(QObject):
-    """QtThreadSafeCallback is a wrapper around a callback function to make it thread-safe for Qt."""
+    """
+    QtThreadSafeCallback is a wrapper around a callback function to make it thread-safe for Qt.
+
+    Bound methods are held only through weak references: the dispatcher must never keep
+    the owning widget alive. Non-method callables (lambdas, partials, module functions)
+    have no owning object whose lifetime could be tracked, so they are kept alive by the
+    wrapper itself; pass ``owner=`` to ``connect_slot`` to bind their lifetime to a widget.
+    """
 
     cb_signal = pyqtSignal(dict, dict)
 
-    def __init__(self, cb: Callable, cb_info: dict | None = None):
+    def __init__(self, cb: Callable, cb_info: dict | None = None, owner: object | None = None):
         """
         Initialize the QtThreadSafeCallback.
 
         Args:
             cb (Callable): The callback function to be wrapped.
             cb_info (dict, optional): Additional information about the callback. Defaults to None.
+            owner (object, optional): Lifetime anchor for non-method callables. Ignored for
+                bound methods (their ``__self__`` is the owner). Defaults to None.
         """
         super().__init__()
         self.cb_info = cb_info
 
-        self.cb = cb
-        self.cb_owner = louie.saferef.safe_ref(cb.__self__) if hasattr(cb, "__self__") else None
+        if hasattr(cb, "__self__"):
+            # Bound method: the owner is the method's instance; hold NO strong reference
+            # anywhere so the dispatcher can never keep a widget alive.
+            self.cb_owner = louie.saferef.safe_ref(cb.__self__)
+            self._strong_cb = None
+        else:
+            # No trackable owner on the callable itself: keep it alive explicitly,
+            # released together with this wrapper (disconnect_owner / dead-slot sweep
+            # when owner is given, disconnect_slot otherwise).
+            self.cb_owner = louie.saferef.safe_ref(owner) if owner is not None else None
+            self._strong_cb = cb
         self.cb_ref = louie.saferef.safe_ref(cb)
-        self.cb_signal.connect(self.cb)
+        self.cb_signal.connect(cb)
         self.topics = set()
+
+    @property
+    def cb(self) -> Callable | None:
+        """The wrapped callback, or None if it has been garbage collected."""
+        return self.cb_ref()
 
     def __hash__(self):
         # make 2 differents QtThreadSafeCallback to look
@@ -197,6 +221,7 @@ class BECDispatcher:
         slot: Callable,
         topics: EndpointInfo | str | list[EndpointInfo] | list[str],
         cb_info: dict | None = None,
+        owner: object | None = None,
         **kwargs,
     ) -> None:
         """Connect widget's qt slot, so that it is called on new pub/sub topic message.
@@ -206,8 +231,17 @@ class BECDispatcher:
                 the corresponding pub/sub message
             topics EndpointInfo | str | list[EndpointInfo] | list[str]: A topic or list of topics that can typically be acquired via bec_lib.MessageEndpoints
             cb_info (dict | None): A dictionary containing information about the callback. Defaults to None.
+            owner (object | None): Lifetime anchor for non-method callables (lambdas, partials,
+                module functions): the subscription is released when the owner is cleaned up or
+                destroyed. Bound methods already carry their owner and ignore this. Defaults to None.
         """
-        qt_slot = QtThreadSafeCallback(cb=slot, cb_info=cb_info)
+        if not hasattr(slot, "__self__") and owner is None:
+            logger.warning(
+                f"connect_slot({slot!r}) on {topics}: the callable has no owner, so it cannot be "
+                "released automatically and stays subscribed until disconnect_slot is called. "
+                "Pass owner=<widget> to bind its lifetime to a widget."
+            )
+        qt_slot = QtThreadSafeCallback(cb=slot, cb_info=cb_info, owner=owner)
         if not self.client.connector.any_stream_is_registered(topics, qt_slot):
             if qt_slot not in self._registered_slots:
                 self._registered_slots[qt_slot] = qt_slot
