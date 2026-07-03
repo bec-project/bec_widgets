@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, DefaultDict, Hashable
 
 import louie
 import redis
+import shiboken6
 from bec_lib.client import BECClient
 from bec_lib.logger import bec_logger
 from bec_lib.redis_connector import MessageObject, RedisConnector
@@ -241,6 +242,9 @@ class BECDispatcher:
                 "released automatically and stays subscribed until disconnect_slot is called. "
                 "Pass owner=<widget> to bind its lifetime to a widget."
             )
+        # Self-healing: reap subscriptions whose owners died without any close event
+        # before adding new ones, so stale registrations never accumulate.
+        self.cleanup_dead_slots()
         qt_slot = QtThreadSafeCallback(cb=slot, cb_info=cb_info, owner=owner)
         if not self.client.connector.any_stream_is_registered(topics, qt_slot):
             if qt_slot not in self._registered_slots:
@@ -342,6 +346,41 @@ class BECDispatcher:
             self.client.connector.unregister(topics, cb=qt_slot)
         qt_slot.topics.clear()
         self._registered_slots.pop(qt_slot, None)
+
+    def cleanup_dead_slots(self) -> int:
+        """
+        Release subscriptions whose callback or owner no longer exists.
+
+        Covers every death path that never delivers a close event: widgets destroyed
+        together with a parent, C++ objects deleted while a Python reference lingers,
+        and owners that were simply garbage collected. Runs automatically whenever a
+        BECWidget is destroyed and on every connect_slot, so stale subscriptions never
+        accumulate.
+
+        Returns:
+            int: The number of released slot wrappers.
+        """
+        dead_slots = []
+        for qt_slot in list(self._registered_slots.values()):
+            cb = qt_slot.cb
+            if cb is None:
+                # The callback itself was garbage collected.
+                dead_slots.append(qt_slot)
+                continue
+            owner = qt_slot.cb_owner() if qt_slot.cb_owner is not None else None
+            if qt_slot.cb_owner is not None and owner is None:
+                # The owner was garbage collected (also anchors owner-bound lambdas).
+                dead_slots.append(qt_slot)
+                continue
+            if isinstance(owner, QObject) and not shiboken6.isValid(owner):
+                # The owner's C++ object was destroyed (e.g. with its parent) while a
+                # Python reference keeps the wrapper alive.
+                dead_slots.append(qt_slot)
+        for qt_slot in dead_slots:
+            self._release_slot(qt_slot)
+        if dead_slots:
+            logger.info(f"Released {len(dead_slots)} dispatcher slot(s) with dead owners")
+        return len(dead_slots)
 
     def start_cli_server(self, gui_id: str | None = None):
         """
