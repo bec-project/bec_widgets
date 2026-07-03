@@ -87,6 +87,19 @@ class RPCRegister:
             raise ValueError(f"RPC object {rpc} must have a 'gui_id' attribute.")
         self._rpc_register.pop(rpc.gui_id, None)
 
+    @broadcast_update
+    def remove_rpc_by_id(self, gui_id: str):
+        """
+        Remove an RPC object from the register by its gui_id.
+
+        Unlike remove_rpc, this does not need the object itself, so it is safe to call
+        from a QObject.destroyed handler where the object is no longer accessible.
+
+        Args:
+            gui_id(str): The gui_id of the RPC object to be removed.
+        """
+        self._rpc_register.pop(gui_id, None)
+
     def get_rpc_by_id(self, gui_id: str) -> QObject | None:
         """
         Get an RPC object by its ID.
