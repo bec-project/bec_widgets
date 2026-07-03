@@ -639,11 +639,10 @@ class Ring(BECWidget, QWidget):
     def cleanup(self):
         """
         Cleanup the ring widget.
-        Disconnect any registered slots.
         """
-        if self.registered_slot is not None:
-            self.bec_dispatcher.disconnect_slot(*self.registered_slot)
-            self.registered_slot = None
+        # Dispatcher slots are released by BECWidget.cleanup via disconnect_owner;
+        # no per-widget disconnect is needed at teardown.
+        self.registered_slot = None
         self.progress_tracker.cleanup()
         self._hover_animation.stop()
         super().cleanup()

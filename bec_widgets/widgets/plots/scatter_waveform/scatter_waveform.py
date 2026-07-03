@@ -740,8 +740,7 @@ class ScatterWaveform(PlotBase):
             self.scatter_dialog.deleteLater()
         if self.scatter_curve_settings is not None:
             self.scatter_curve_settings.cleanup()
-        self.bec_dispatcher.disconnect_slot(self.on_scan_status, MessageEndpoints.scan_status())
-        self.bec_dispatcher.disconnect_slot(self.on_scan_progress, MessageEndpoints.scan_progress())
+        # Dispatcher slots are released by BECWidget.cleanup via disconnect_owner.
         self.plot_item.removeItem(self._main_curve)
         self._main_curve = None
         super().cleanup()

@@ -1068,8 +1068,7 @@ class Image(ImageBase):
         except Exception:  # noqa: BLE001
             pass
 
-        self.bec_dispatcher.disconnect_slot(self.on_scan_status, MessageEndpoints.scan_status())
-        self.bec_dispatcher.disconnect_slot(self.on_scan_progress, MessageEndpoints.scan_progress())
+        # Dispatcher slots are released by BECWidget.cleanup via disconnect_owner.
         super().cleanup()
 
 
