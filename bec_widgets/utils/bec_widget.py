@@ -3,11 +3,12 @@ from __future__ import annotations
 import os
 import tempfile
 from datetime import datetime
+from functools import partial
 from typing import TYPE_CHECKING
 
 import shiboken6
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import QBuffer, QByteArray, QIODevice, QObject, Qt
+from qtpy.QtCore import QBuffer, QByteArray, QEvent, QIODevice, QObject, Qt
 from qtpy.QtGui import QFont, QPixmap
 from qtpy.QtWidgets import QApplication, QFileDialog, QLabel, QVBoxLayout, QWidget
 
@@ -24,6 +25,35 @@ if TYPE_CHECKING:  # pragma: no cover
     from bec_widgets.utils.busy_loader import BusyLoaderOverlay
 
 logger = bec_logger.logger
+
+
+def _forget_destroyed_widget(gui_id: str, *_args) -> None:
+    """
+    Purge registry and dispatcher state of a widget whose QObject was destroyed.
+
+    Connected to ``QObject.destroyed`` with the gui_id captured as a plain string:
+    when this runs, the Python wrapper is already invalid, so nothing here may touch
+    the widget itself. This is the safety net for destruction paths that never deliver
+    a close event (parent destruction, deleteLater without close).
+    """
+    # pylint: disable=import-outside-toplevel
+    from bec_widgets.utils.bec_dispatcher import BECDispatcher
+
+    # A destroyed handler runs in destructor context and must never raise: during late
+    # application shutdown the client/connector may already be gone, making the registry
+    # broadcast or the unregister fail. Guard each step independently so a failing
+    # broadcast never prevents the dispatcher sweep.
+    try:
+        RPCRegister().remove_rpc_by_id(gui_id)
+    except Exception as exc:
+        logger.warning(f"Registry purge for destroyed widget {gui_id} failed: {exc}")
+    # Only sweep an already-running singleton dispatcher; never construct one during teardown.
+    dispatcher = BECDispatcher._instance
+    if dispatcher is not None and getattr(dispatcher, "_initialized", False):
+        try:
+            dispatcher.cleanup_dead_slots()
+        except Exception as exc:
+            logger.warning(f"Dead-slot sweep for destroyed widget {gui_id} failed: {exc}")
 
 
 class BECWidget(BECConnector):
@@ -62,6 +92,10 @@ class BECWidget(BECConnector):
         super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
         if not isinstance(self, QObject):
             raise RuntimeError(f"{repr(self)} is not a subclass of QWidget")
+        # Safety net for destruction without a close event (e.g. destroyed together with
+        # a parent): purge registry and dispatcher state by gui_id. The partial captures
+        # only the string, never the widget.
+        self.destroyed.connect(partial(_forget_destroyed_widget, self.gui_id))
         self._connect_to_theme_change()
 
         # Initialize optional busy loader overlay utility (lazy by default)
@@ -371,6 +405,9 @@ class BECWidget(BECConnector):
         with RPCRegister.delayed_broadcast():
             # All widgets need to call super().cleanup() in their cleanup method
             logger.info(f"Registry cleanup for widget {self.__class__.__name__}")
+            # Release every dispatcher subscription owned by this widget; subclasses
+            # do not need to disconnect their own slots at teardown.
+            self.bec_dispatcher.disconnect_owner(self)
             self.rpc_register.remove_rpc(self)
             children = self.findChildren(BECWidget)
             for child in children:
@@ -401,12 +438,26 @@ class BECWidget(BECConnector):
                 except Exception as exc:
                     logger.warning(f"Failed to delete busy overlay: {exc}")
 
+    def event(self, event):
+        """
+        Run cleanup when the widget is deleted via deleteLater without ever being
+        closed: the DeferredDelete event is the last point where the widget is still
+        fully alive. Together with closeEvent (explicit close) and the destroyed hook
+        (parent destruction), every destruction path releases the widget's resources.
+        """
+        if event.type() == QEvent.Type.DeferredDelete and not self._destroyed:
+            try:
+                self.cleanup()
+                self._destroyed = True
+            except Exception:
+                logger.exception(f"Cleanup on deferred delete failed for {self.__class__.__name__}")
+        return super().event(event)  # pylint: disable=no-member
+
     def closeEvent(self, event):
-        """Wrap the close even to ensure the rpc_register is cleaned up."""
+        """Wrap the close event to ensure the widget is cleaned up."""
         try:
             if not self._destroyed:
                 self._destroyed = True
-                self.bec_dispatcher.disconnect_owner(self)
                 self.cleanup()
         finally:
             super().closeEvent(event)  # pylint: disable=no-member
