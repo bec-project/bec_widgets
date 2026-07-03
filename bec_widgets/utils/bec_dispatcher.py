@@ -308,8 +308,11 @@ class BECDispatcher:
             *args: Arbitrary positional arguments
             **kwargs: Arbitrary keyword arguments
         """
-        # pylint: disable=protected-access
-        self.disconnect_topics(self.client.connector._topics_cb)
+        topics = set()
+        for connected_slot in self._registered_slots.values():
+            topics.update(connected_slot.topics)
+        if topics:
+            self.disconnect_topics(list(topics))
 
     def disconnect_owner(self, owner: BECWidget) -> int:
         """
