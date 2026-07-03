@@ -531,8 +531,15 @@ class RPCServer:
     def shutdown(self):
         """
         Shut the RPC server down: stop the heartbeat, release the dispatcher
-        subscription and the registry callback, and shut the client down.
-        Safe to call multiple times.
+        subscription and the registry callback. Safe to call multiple times.
+
+        The BEC client is intentionally NOT shut down here: it is shared with the
+        dispatcher (and, in the companion app, with the exit ``terminate`` handler).
+        Shutting it down here would stop the connector's listener thread, so a later
+        ``dispatcher.disconnect_all()`` (which routes through
+        ``ManagedRedisConnection.unregister``) would early-return and silently leave
+        subscriptions alive. Client teardown is left to ``BECConnector.terminate`` /
+        the dispatcher fixture, which own the client lifecycle.
         """
         self.status = messages.BECStatus.IDLE
         self._heartbeat_timer.stop()
@@ -542,4 +549,3 @@ class RPCServer:
         )
         self.rpc_register.remove_callback(self.broadcast_registry_update)
         logger.info("Succeeded in shutting down CLI server")
-        self.client.shutdown()

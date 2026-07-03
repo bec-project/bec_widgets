@@ -339,3 +339,37 @@ def test_rpc_register_remove_callback_is_noop_for_unknown(rpc_register=None):
 
     register = RPCRegister()
     register.remove_callback(lambda connections: None)  # must not raise
+
+
+def test_rpc_server_shutdown_does_not_shut_down_client(mocked_client):
+    """RPCServer.shutdown must not tear down the shared client: doing so nulls the
+    connector's listener thread and turns a later disconnect_all() into a silent no-op."""
+    from unittest.mock import patch
+
+    server = RPCServer(gui_id="no_client_teardown", client=mocked_client)
+    with patch.object(mocked_client, "shutdown") as client_shutdown:
+        server.shutdown()
+    client_shutdown.assert_not_called()
+    # idempotent + still no client shutdown
+    with patch.object(mocked_client, "shutdown") as client_shutdown2:
+        server.shutdown()
+    client_shutdown2.assert_not_called()
+
+
+def test_gui_server_stop_dispatcher_disconnects_before_stopping_cli_server(gui_server):
+    """disconnect_all() must run before stop_cli_server() so subscriptions are released
+    while the connector's listener thread is still alive."""
+    from unittest.mock import MagicMock, patch
+
+    calls = []
+    disp = MagicMock()
+    disp.disconnect_all.side_effect = lambda *a, **k: calls.append("disconnect_all")
+    disp.stop_cli_server.side_effect = lambda *a, **k: calls.append("stop_cli_server")
+    gui_server.dispatcher = disp
+    gui_server.launcher_window = MagicMock()
+    with (
+        patch.object(companion_app_module.shiboken6, "isValid", return_value=True),
+        patch.object(companion_app_module.pylsp_server, "is_running", return_value=False),
+    ):
+        gui_server.shutdown()
+    assert calls == ["disconnect_all", "stop_cli_server"]

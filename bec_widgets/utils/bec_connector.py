@@ -155,7 +155,14 @@ class BECConnector:
                 client.shutdown()
 
             BECConnector.EXIT_HANDLERS[self.client] = terminate
-            QApplication.instance().aboutToQuit.connect(terminate)
+            app = QApplication.instance()
+            if app is not None:
+                app.aboutToQuit.connect(terminate)
+            else:
+                logger.warning(
+                    "No QApplication instance available; skipping aboutToQuit "
+                    "registration for BEC client teardown handler."
+                )
 
         if config:
             self.config = config

@@ -1,5 +1,6 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
 import time
+from unittest import mock
 
 import pytest
 from qtpy.QtCore import QObject
@@ -203,3 +204,18 @@ def test_bec_connector_export_settings():
     config = {"my_str_property": "new_value"}
     widget.load_settings(config)
     assert widget.my_str_property == "new_value"
+
+
+def test_bec_connector_terminate_registration_no_qapp_instance(qtbot):
+    """Constructing a BECConnector before a QApplication exists must not raise; the exit
+    handler is still registered, only the aboutToQuit wiring is skipped."""
+    import bec_widgets.utils.bec_connector as m
+
+    fresh_client = mock.MagicMock(name="fresh_client")
+    assert fresh_client not in BECConnector.EXIT_HANDLERS
+    try:
+        with mock.patch.object(m.QApplication, "instance", return_value=None):
+            BECConnectorQObject(client=fresh_client)  # must not raise
+        assert fresh_client in BECConnector.EXIT_HANDLERS
+    finally:
+        BECConnector.EXIT_HANDLERS.pop(fresh_client, None)

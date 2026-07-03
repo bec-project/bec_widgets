@@ -224,19 +224,28 @@ def test_launch_window_closes(bec_launch_window, qtbot, connection_names, close_
         else:
             conn = _launcher_child_connection(bec_launch_window, name)
         connections[name] = conn
-    close_event = mock.MagicMock()
+    # A real QCloseEvent (accepted by default) so closeEvent can chain to
+    # super().closeEvent(event); patch cleanup to assert it runs on the accept path and
+    # to avoid exercising real teardown of the shared fixture under --random-order.
+    from qtpy.QtGui import QCloseEvent
+
+    close_event = QCloseEvent()
     with mock.patch.object(
         bec_launch_window.register, "list_all_connections", return_value=connections
     ):
-        with mock.patch.object(bec_launch_window, "hide") as mock_hide:
+        with (
+            mock.patch.object(bec_launch_window, "hide") as mock_hide,
+            mock.patch.object(bec_launch_window, "cleanup") as mock_cleanup,
+        ):
             bec_launch_window.closeEvent(close_event)
             if close_called:
                 mock_hide.assert_not_called()
-                close_event.accept.assert_called_once()
+                assert close_event.isAccepted()
+                mock_cleanup.assert_called_once()  # cleanup runs on the normal close path
             else:
                 mock_hide.assert_called_once()
-                close_event.accept.assert_not_called()
-                close_event.ignore.assert_called_once()
+                assert not close_event.isAccepted()  # ignore() flips the default True->False
+                mock_cleanup.assert_not_called()
 
 
 def test_main_label_fits_tile_width(bec_launch_window, qtbot):
