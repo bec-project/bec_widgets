@@ -235,7 +235,7 @@ class BECDispatcher:
         else:
             return
         self.client.connector.unregister(topics, cb=connected_slot)
-        topics_str, _ = self.client.connector._convert_endpointinfo(topics)
+        topics_str, _ = self.client.connector.extract_raw_endpoints_from_info(topics)
         self._registered_slots[connected_slot].topics.difference_update(set(topics_str))
         if not self._registered_slots[connected_slot].topics:
             del self._registered_slots[connected_slot]
