@@ -78,6 +78,9 @@ class BECMainWindow(BECWidget, QMainWindow):
         self.bec_dispatcher.connect_slot(
             self.display_client_message, MessageEndpoints.client_info()
         )
+        self.bec_dispatcher.connect_slot(
+            self.on_active_account_update, MessageEndpoints.account(), newest_only=True
+        )
 
     def setCentralWidget(self, widget: QWidget, qt_default: bool = False):  # type: ignore[override]
         """
@@ -121,20 +124,22 @@ class BECMainWindow(BECWidget, QMainWindow):
 
         # BEC Specific UI
         self.display_app_id()
+        self.display_active_account()
 
     def _init_status_bar_widgets(self):
         """
         Prepare the BEC specific widgets in the status bar.
         """
 
-        # Left: App‑ID label
-        self._app_id_label = QLabel()
-        self._app_id_label.setAlignment(
+        # Left: active-account label
+        self._account_label = QLabel()
+        self._account_label.setToolTip("Currently active account")
+        self._account_label.setAlignment(
             Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
         )
-        self.status_bar.addWidget(self._app_id_label)
+        self.status_bar.addWidget(self._account_label)
 
-        # Add a separator after the app ID label
+        # Add a separator after the account label
         self._add_separator()
 
         # Centre: Client‑info label (stretch=1 so it expands)
@@ -379,21 +384,56 @@ class BECMainWindow(BECWidget, QMainWindow):
 
         help_menu.addAction(bec_docs)
         help_menu.addAction(bug_report)
+        help_menu.addSeparator()
+
+        self._app_id_action = QAction(self)
+        self._app_id_action.triggered.connect(self._copy_app_id_to_clipboard)
+        help_menu.addAction(self._app_id_action)
+
+    def _copy_app_id_to_clipboard(self):
+        """
+        Copy the app ID to the clipboard.
+        """
+        cli_server = getattr(self.bec_dispatcher, "cli_server", None)
+        if cli_server is None:
+            return
+
+        clipboard = QApplication.clipboard()
+        clipboard.setText(cli_server.gui_id)
 
     ################################################################################
     # Status Bar Addons
     ################################################################################
+    def display_active_account(self, account: str | None = None):
+        """
+        Display the active account in the status bar.
+        """
+        if account is None:
+            account = self.client.active_account
+
+        if not isinstance(account, str) or not account:
+            account = "-"
+
+        self._account_label.setText(account)
+
     def display_app_id(self):
         """
-        Display the app ID in the status bar.
+        Display the app ID in the Help menu.
         """
         if self.bec_dispatcher.cli_server is None:
-            status_message = "Not connected"
+            action_message = "App ID: Not connected"
         else:
-            # Get the server ID from the dispatcher
             server_id = self.bec_dispatcher.cli_server.gui_id
-            status_message = f"App ID: {server_id}"
-        self._app_id_label.setText(status_message)
+            action_message = f"App ID: {server_id}"
+
+        self._app_id_action.setText(action_message)
+
+    @SafeSlot(dict, dict)
+    def on_active_account_update(self, msg: dict, meta: dict):
+        """
+        Update the active account label from Redis account messages.
+        """
+        self.display_active_account(msg.get("value"))
 
     @SafeSlot(dict, dict)
     def display_client_message(self, msg: dict, meta: dict):
