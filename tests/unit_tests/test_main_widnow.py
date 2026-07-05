@@ -1,7 +1,7 @@
 import os
 import webbrowser
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 from qtpy.QtCore import QEvent, QPoint, QPointF, QSettings
@@ -39,7 +39,7 @@ def test_bec_main_window_initialization(bec_main_window):
     assert bec_main_window.windowTitle() == "BEC"
     assert bec_main_window.app is not None
     assert bec_main_window.statusBar() is not None
-    assert bec_main_window._app_id_label is not None
+    assert bec_main_window._account_label is not None
 
 
 def test_bec_main_window_display_client_message(qtbot, bec_main_window):
@@ -59,16 +59,51 @@ def test_status_bar_has_separator(bec_main_window):
     assert separators, "Expected at least one QFrame separator in the status bar."
 
 
+def test_display_active_account_empty(bec_main_window):
+    with patch.object(
+        type(bec_main_window.client), "active_account", new_callable=PropertyMock
+    ) as mock_account:
+        mock_account.return_value = ""
+        bec_main_window.display_active_account()
+        assert bec_main_window._account_label.text() == "-"
+
+
+def test_display_active_account_connected(bec_main_window):
+    with patch.object(
+        type(bec_main_window.client), "active_account", new_callable=PropertyMock
+    ) as mock_account:
+        mock_account.return_value = "e12345"
+        bec_main_window.display_active_account()
+        assert bec_main_window._account_label.text() == "e12345"
+
+
+def test_on_active_account_update(bec_main_window):
+    bec_main_window.on_active_account_update({"value": "p12345"}, {})
+    assert bec_main_window._account_label.text() == "p12345"
+
+
 def test_display_app_id_not_connected(bec_main_window):
     with patch.object(bec_main_window.bec_dispatcher, "cli_server", None):
         bec_main_window.display_app_id()
-        assert bec_main_window._app_id_label.text() == "Not connected"
+        assert bec_main_window._app_id_action.text() == "App ID: Not connected"
 
 
 def test_display_app_id_connected(bec_main_window):
     with patch.object(bec_main_window.bec_dispatcher, "cli_server", MagicMock(gui_id="gui_123")):
         bec_main_window.display_app_id()
-        assert bec_main_window._app_id_label.text() == "App ID: gui_123"
+        assert bec_main_window._app_id_action.text() == "App ID: gui_123"
+
+
+def test_copy_app_id_to_clipboard(bec_main_window):
+    clipboard = MagicMock()
+
+    with (
+        patch.object(bec_main_window.bec_dispatcher, "cli_server", MagicMock(gui_id="gui_123")),
+        patch.object(QApplication, "clipboard", return_value=clipboard),
+    ):
+        bec_main_window._copy_app_id_to_clipboard()
+
+    clipboard.setText.assert_called_once_with("gui_123")
 
 
 def test_get_launcher_from_qapp_returns_none_when_absent(bec_main_window):
