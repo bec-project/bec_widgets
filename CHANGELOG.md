@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.21.5 (2026-07-06)
+
+### Bug Fixes
+
+- **logpanel**: Refresh log colors on theme change
+  ([`dc46ae4`](https://github.com/bec-project/bec_widgets/commit/dc46ae4f931866c5eb68f3c20074e9e55d2f3ecb))
+
+
 ## v3.21.4 (2026-07-02)
 
 ### Bug Fixes
