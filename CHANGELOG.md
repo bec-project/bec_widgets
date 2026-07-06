@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.22.0 (2026-07-06)
+
+### Features
+
+- Replace app id with account is status label
+  ([`c6a8c27`](https://github.com/bec-project/bec_widgets/commit/c6a8c27488553db7edee2e4179c9257c989bc8b7))
+
+
 ## v3.21.6 (2026-07-06)
 
 ### Bug Fixes
