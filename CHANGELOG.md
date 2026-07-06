@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.22.1 (2026-07-06)
+
+### Bug Fixes
+
+- Deprecate ShutterState
+  ([`1dbeda3`](https://github.com/bec-project/bec_widgets/commit/1dbeda396c2b0d43d89b5c28e92c63e4b87908a8))
+
+
 ## v3.22.0 (2026-07-06)
 
 ### Features
