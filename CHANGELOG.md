@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.21.6 (2026-07-06)
+
+### Bug Fixes
+
+- **bec_dispatcher**: Update method to extract raw endpoints from info
+  ([`7e92f33`](https://github.com/bec-project/bec_widgets/commit/7e92f335835e3c2506e2d92fefcb4f264fdcb63f))
+
+
 ## v3.21.5 (2026-07-06)
 
 ### Bug Fixes
