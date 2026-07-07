@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.22.2 (2026-07-07)
+
+### Bug Fixes
+
+- Remove deprecated docs
+  ([`09dc178`](https://github.com/bec-project/bec_widgets/commit/09dc178826a5869c680e6da95e75ae229dbc7a81))
+
+
 ## v3.22.1 (2026-07-06)
 
 ### Bug Fixes
