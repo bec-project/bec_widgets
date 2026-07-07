@@ -1,6 +1,34 @@
 # CHANGELOG
 
 
+## v3.22.3 (2026-07-07)
+
+### Bug Fixes
+
+- Add zoom level functionality to BecConsole and related tests
+  ([`6d08f02`](https://github.com/bec-project/bec_widgets/commit/6d08f02d646fa8a0c9d29bbfc6180c2684bec926))
+
+- Allow writing to shared terminal without ownership
+  ([`f446dde`](https://github.com/bec-project/bec_widgets/commit/f446dde5a8746cc044492d26387ccf399d95e31e))
+
+- Refactor zoom level handling in BecConsoleRegistry for improved clarity
+  ([`6067311`](https://github.com/bec-project/bec_widgets/commit/60673117898209d8e896500176c885e645fcc82a))
+
+- Set BEC shell as the default active tab in console dock
+  ([`e530cba`](https://github.com/bec-project/bec_widgets/commit/e530cbaa41c5f8c13ad4f441f3eba6f40852e332))
+
+- Update ctrl c for qtermwidget
+  ([`c9d05e4`](https://github.com/bec-project/bec_widgets/commit/c9d05e42f73db3906f29d5b9a28b719e1e08471a))
+
+- Update Ctrl+C handling in BecConsole to support shared terminal sessions
+  ([`909211f`](https://github.com/bec-project/bec_widgets/commit/909211f484db3c5f178a6f0a69635beae687a68e))
+
+### Chores
+
+- Fix formatter
+  ([`de6b795`](https://github.com/bec-project/bec_widgets/commit/de6b795591db9887a63f88a1d55aabe242be7a45))
+
+
 ## v3.22.2 (2026-07-07)
 
 ### Bug Fixes
