@@ -91,6 +91,10 @@ designer_plugins = {
     ),
     "SBBMonitor": ("bec_widgets.widgets.editors.sbb_monitor.sbb_monitor", "SBBMonitor"),
     "ScanControl": ("bec_widgets.widgets.control.scan_control.scan_control", "ScanControl"),
+    "ScanIndexComboBox": (
+        "bec_widgets.widgets.utility.scan_index_combobox.scan_index_combobox",
+        "ScanIndexComboBox",
+    ),
     "ScanMetadata": ("bec_widgets.widgets.editors.scan_metadata.scan_metadata", "ScanMetadata"),
     "ScanProgressBar": (
         "bec_widgets.widgets.progress.scan_progressbar.scan_progressbar",
@@ -156,6 +160,7 @@ widget_icons = {
     "RingProgressBar": "track_changes",
     "SBBMonitor": "train",
     "ScanControl": "tune",
+    "ScanIndexComboBox": "history",
     "ScanMetadata": "list_alt",
     "ScanProgressBar": "timelapse",
     "ScatterWaveform": "scatter_plot",
