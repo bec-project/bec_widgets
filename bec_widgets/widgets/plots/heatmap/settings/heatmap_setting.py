@@ -113,8 +113,10 @@ class HeatmapSettings(SettingWidget):
             self.ui.enforce_interpolation.setChecked(
                 getattr(self.target_widget._image_config, "enforce_interpolation", False)
             )
+        self.ui.scan_index.refresh_scan_indices()
+        self.ui.scan_index.set_scan_id(self.target_widget._history_scan_id)
 
-    @SafeSlot()
+    @SafeSlot(popup_error=True)
     def accept_changes(self):
         """
         Apply all properties from the settings widget to the target widget.
@@ -130,6 +132,7 @@ class HeatmapSettings(SettingWidget):
         interpolation = self.ui.interpolation.currentText()
         oversampling_factor = self.ui.oversampling_factor.value()
         enforce_interpolation = self.ui.enforce_interpolation.isChecked()
+        scan_id = self.ui.scan_index.scan_id
 
         self.target_widget.plot(
             device_x=device_x,
@@ -143,6 +146,7 @@ class HeatmapSettings(SettingWidget):
             interpolation=interpolation,
             oversampling_factor=oversampling_factor,
             enforce_interpolation=enforce_interpolation,
+            scan_id=scan_id,
             reload=True,
         )
 
@@ -159,5 +163,7 @@ class HeatmapSettings(SettingWidget):
         self.ui.device_z.deleteLater()
         self.ui.signal_z.close()
         self.ui.signal_z.deleteLater()
+        self.ui.scan_index.close()
+        self.ui.scan_index.deleteLater()
         self.ui.interpolation.close()
         self.ui.interpolation.deleteLater()

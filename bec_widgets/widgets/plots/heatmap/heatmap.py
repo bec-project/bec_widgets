@@ -9,13 +9,15 @@ import pyqtgraph as pg
 from bec_lib import bec_logger, messages
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.utils.import_utils import lazy_import, lazy_import_from
+from bec_qthemes import material_icon
 from pydantic import BaseModel, Field, field_validator
 from qtpy.QtCore import QObject, Qt, QThread, QTimer, Signal
 from qtpy.QtGui import QTransform
+from qtpy.QtWidgets import QDialog, QPushButton, QVBoxLayout
 from toolz import partition
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
-from bec_widgets.utils.colors import Colors
+from bec_widgets.utils.colors import Colors, get_accent_colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.toolbars.actions import MaterialIconAction
@@ -23,6 +25,7 @@ from bec_widgets.widgets.plots.heatmap.settings.heatmap_setting import HeatmapSe
 from bec_widgets.widgets.plots.image.image_base import ImageBase
 from bec_widgets.widgets.plots.image.image_item import ImageItem
 from bec_widgets.widgets.plots.plot_base import PlotBase
+from bec_widgets.widgets.services.scan_history_browser.components import ScanHistoryView
 
 logger = bec_logger.logger
 
@@ -268,6 +271,11 @@ class Heatmap(ImageBase):
         self._interpolation_worker: _StepInterpolationWorker | None = None
         self._pending_interpolation_request: _InterpolationRequest | None = None
         self.heatmap_dialog = None
+        self.scan_history_dialog = None
+        self.scan_history_widget = None
+        # Scan ID the widget is pinned to when plotting from history; None means live mode.
+        self._history_scan_id: str | None = None
+        self._selected_history_scan_id: str | None = None
         bg_color = pg.mkColor((240, 240, 240, 150))
         self.config_label = pg.LegendItem(
             labelTextColor=(0, 0, 0), offset=(-30, 1), brush=pg.mkBrush(bg_color), horSpacing=0
@@ -425,8 +433,10 @@ class Heatmap(ImageBase):
             self.update_with_scan_history(scan_id=scan_id)
             return
 
+        self._history_scan_id = None
         self._fetch_running_scan()
-        self.sync_signal_update.emit()
+        # Also notifies settings widgets and triggers a plot update via sync_signal_update
+        self.heatmap_property_changed.emit()
 
     def _fetch_running_scan(self):
         scan = self.client.queue.scan_storage.current_scan
@@ -480,7 +490,12 @@ class Heatmap(ImageBase):
         else:
             self.scan_id = self.scan_item.scan_id
 
-        self.sync_signal_update.emit()
+        # Pin the widget to the history scan; live scan updates are ignored until
+        # plot() is called again without a scan_id.
+        self._history_scan_id = self.scan_id
+
+        # Also notifies settings widgets and triggers a plot update via sync_signal_update
+        self.heatmap_property_changed.emit()
 
     def update_labels(self):
         """
@@ -529,6 +544,20 @@ class Heatmap(ImageBase):
             self.show_heatmap_settings
         )
 
+        self.toolbar.components.add_safe(
+            "scan_history",
+            MaterialIconAction(
+                icon_name="manage_search",
+                tooltip="Open Scan History browser",
+                checkable=True,
+                parent=self,
+            ),
+        )
+        self.toolbar.get_bundle("axis_popup").add_action("scan_history")
+        self.toolbar.components.get_action("scan_history").action.triggered.connect(
+            self.show_scan_history_popup
+        )
+
         # disable all processing actions except for the fft and log
         bundle = self.toolbar.get_bundle("image_processing")
         for name, action in bundle.bundle_actions.items():
@@ -569,6 +598,71 @@ class Heatmap(ImageBase):
             self.heatmap_dialog.activateWindow()
             heatmap_settings_action.setChecked(True)  # keep it toggled
 
+    ################################################################################
+    # Scan History browser popup
+
+    def show_scan_history_popup(self):
+        """
+        Show the scan history popup with the scan history browser and a plotting button.
+        Requesting a plot pins the heatmap to the selected scan instead of the live acquisition.
+        """
+        scan_history_action = self.toolbar.components.get_action("scan_history").action
+        if self.scan_history_dialog is None or not self.scan_history_dialog.isVisible():
+            self.scan_history_widget = ScanHistoryView(parent=self)
+            self.scan_history_widget.scan_selected.connect(self._on_history_scan_selected)
+            self.scan_history_widget.no_scan_selected.connect(self._on_history_scan_deselected)
+            request_plotting_button = QPushButton(
+                material_icon("play_arrow", size=(24, 24), color=get_accent_colors().success),
+                "Request Plotting",
+            )
+            request_plotting_button.clicked.connect(self._request_history_plot)
+            self.scan_history_dialog = QDialog(modal=False)
+            self.scan_history_dialog.setWindowTitle(f"{self.object_name} - Scan History Browser")
+            self.scan_history_dialog.layout = QVBoxLayout(self.scan_history_dialog)
+            self.scan_history_dialog.layout.addWidget(self.scan_history_widget)
+            self.scan_history_dialog.layout.addWidget(request_plotting_button)
+            self.scan_history_dialog.finished.connect(self._scan_history_closed)
+            self.scan_history_dialog.show()
+            self.scan_history_dialog.resize(380, 320)
+            scan_history_action.setChecked(True)
+        else:
+            # If already open, bring it to the front
+            self.scan_history_dialog.raise_()
+            self.scan_history_dialog.activateWindow()
+            scan_history_action.setChecked(True)  # keep it toggle
+
+    @SafeSlot(dict, dict)
+    def _on_history_scan_selected(self, content: dict, metadata: dict):
+        """Track the scan selected in the scan history browser."""
+        self._selected_history_scan_id = content["scan_id"]
+
+    @SafeSlot()
+    def _on_history_scan_deselected(self):
+        """Clear the tracked scan when no scan is selected in the scan history browser."""
+        self._selected_history_scan_id = None
+
+    @SafeSlot()
+    def _request_history_plot(self):
+        """Plot the currently configured devices for the scan selected in the history browser."""
+        if self._selected_history_scan_id is None:
+            logger.info("No scan selected in the scan history browser; skipping plot request.")
+            return
+        self.update_with_scan_history(scan_id=self._selected_history_scan_id)
+
+    def _scan_history_closed(self):
+        """
+        Slot for when the scan history dialog is closed.
+        """
+        if self.scan_history_dialog is None:
+            return
+        self.scan_history_widget.close()
+        self.scan_history_widget.deleteLater()
+        self.scan_history_widget = None
+        self.scan_history_dialog.deleteLater()
+        self.scan_history_dialog = None
+        self._selected_history_scan_id = None
+        self.toolbar.components.get_action("scan_history").action.setChecked(False)
+
     def toggle_interpolation_info(self):
         """
         Toggle the visibility of the interpolation info label.
@@ -595,6 +689,8 @@ class Heatmap(ImageBase):
             msg(dict): The message content.
             meta(dict): The message metadata.
         """
+        if self._history_scan_id is not None:
+            return
         current_scan_id = msg.get("scan_id", None)
         if current_scan_id is None:
             return
@@ -612,6 +708,8 @@ class Heatmap(ImageBase):
 
     @SafeSlot(dict, dict)
     def on_scan_progress(self, msg: dict, meta: dict):
+        if self._history_scan_id is not None:
+            return
         self.sync_signal_update.emit()
         status = msg.get("done")
         if status:
@@ -877,7 +975,9 @@ class Heatmap(ImageBase):
         self.config_label.setOffset((-30, 1))
         self.config_label.setVisible(True)
         self.config_label.clear()
-        self.config_label.addItem(self.plot_item, f"Scan: {scan_msg.scan_number}")
+        # Indicate whether the widget follows the live acquisition or is pinned to a history scan
+        mode = "history" if self._history_scan_id is not None else "live"
+        self.config_label.addItem(self.plot_item, f"Scan: {scan_msg.scan_number} ({mode})")
         self.config_label.addItem(self.plot_item, f"Scan Name: {scan_msg.scan_name}")
         if scan_msg.scan_name != "grid_scan" or self._image_config.enforce_interpolation:
             self.config_label.addItem(
@@ -1581,6 +1681,9 @@ class Heatmap(ImageBase):
 
     def cleanup(self):
         self._finish_interpolation_thread()
+        if self.scan_history_dialog is not None:
+            self.scan_history_dialog.reject()
+            self.scan_history_dialog = None
         super().cleanup()
 
 
