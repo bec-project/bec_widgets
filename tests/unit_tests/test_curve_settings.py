@@ -3,14 +3,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from bec_lib.scan_history import ScanHistory
-from qtpy.QtGui import QValidator
 from qtpy.QtWidgets import QComboBox, QVBoxLayout
 
 from bec_widgets.widgets.plots.waveform.settings.curve_settings.curve_setting import CurveSetting
-from bec_widgets.widgets.plots.waveform.settings.curve_settings.curve_tree import (
-    CurveTree,
-    ScanIndexValidator,
-)
+from bec_widgets.widgets.plots.waveform.settings.curve_settings.curve_tree import CurveTree
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
 from tests.unit_tests.client_mocks import dap_plugin_message, mocked_client, mocked_client_with_dap
 from tests.unit_tests.conftest import create_widget
@@ -447,32 +443,10 @@ def test_primary_model_change_removes_duplicate_composite_model(curve_tree_fixtu
     assert dap_child.composite_button.text() == "Composite (2)"
 
 
-def test_scan_index_validator_behavior():
-    """
-    Test ScanIndexValidator allows empty, 'live', partial 'live', valid scan numbers,
-    and rejects invalid or disallowed inputs under the new allowed-set API.
-    """
-    validator = ScanIndexValidator(allowed_scans={1, 2, 3})
-
-    def state(txt):
-        s, _, _ = validator.validate(txt, 0)
-        return s
-
-    assert state("") == QValidator.State.Acceptable
-    assert state("live") == QValidator.State.Acceptable
-    assert state("l") == QValidator.State.Intermediate
-    assert state("liv") == QValidator.State.Intermediate
-    assert state("1") == QValidator.State.Acceptable
-    assert state("3") == QValidator.State.Acceptable
-    assert state("4") == QValidator.State.Invalid
-    assert state("0") == QValidator.State.Invalid
-    assert state("abc") == QValidator.State.Invalid
-
-
 def test_export_data_history_curve(curve_tree_fixture, scan_history_factory):
     """
     Test that export_data for a history curve row correctly serializes scan_number
-    and resets scan_id when a numeric scan is selected.
+    and scan_id when a numeric scan is typed into the scan index combobox.
     """
     curve_tree, wf = curve_tree_fixture
     # Inject two history scans into the waveform client
@@ -494,5 +468,5 @@ def test_export_data_history_curve(curve_tree_fixture, scan_history_factory):
     exported = device_row.export_data()
     assert exported["source"] == "history"
     assert exported["scan_number"] == 2
-    assert exported["scan_id"] is None
+    assert exported["scan_id"] == "hid2"
     assert exported["label"] == "bpm4i-bpm4i-scan-2"

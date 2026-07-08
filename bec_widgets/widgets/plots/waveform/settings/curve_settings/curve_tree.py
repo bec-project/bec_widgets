@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 
 from bec_lib.logger import bec_logger
 from bec_qthemes._icon.material_icons import material_icon
-from qtpy.QtGui import QValidator
 from qtpy.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -39,6 +38,7 @@ from bec_widgets.widgets.control.device_input.device_combobox.device_combobox im
 from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import SignalComboBox
 from bec_widgets.widgets.dap.dap_combo_box.dap_combo_box import DapComboBox
 from bec_widgets.widgets.plots.waveform.curve import CurveConfig, DeviceSignal
+from bec_widgets.widgets.utility.scan_index_combobox.scan_index_combobox import ScanIndexComboBox
 from bec_widgets.widgets.utility.visual.color_button_native.color_button_native import (
     ColorButtonNative,
 )
@@ -49,31 +49,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 logger = bec_logger.logger
-
-
-class ScanIndexValidator(QValidator):
-    """Validator to allow only 'live' or integer scan numbers from an allowed set."""
-
-    def __init__(self, allowed_scans: set[int] | None = None, parent=None):
-        super().__init__(parent)
-        self.allowed_scans = allowed_scans or set()
-
-    def validate(self, input_str: str, pos: int):
-        # Accept empty or 'live'
-        if input_str == "" or input_str == "live":
-            return QValidator.State.Acceptable, input_str, pos
-        # Allow partial editing of "live"
-        if "live".startswith(input_str):
-            return QValidator.State.Intermediate, input_str, pos
-        # Accept integer only if present in the allowed set
-        if input_str.isdigit():
-            try:
-                num = int(input_str)
-            except ValueError:
-                return QValidator.State.Invalid, input_str, pos
-            if num in self.allowed_scans:
-                return QValidator.State.Acceptable, input_str, pos
-        return QValidator.State.Invalid, input_str, pos
 
 
 def _normalize_dap_selection(
@@ -184,6 +159,7 @@ class CurveRow(QTreeWidgetItem):
         # BEC user input
         self.device_edit = None
         self.dap_combo = None
+        self.scan_index_combo = None
         self.composite_models: list[str] = []
 
         self.dev = device_manager
@@ -205,51 +181,9 @@ class CurveRow(QTreeWidgetItem):
         """Create the Scan # editable combobox in column 3."""
         if self.source not in ("device", "history"):
             return
-        self.scan_index_combo = QComboBox()
-        self.scan_index_combo.setEditable(True)
-        # Populate 'live' and all available history scan indices
-        self.scan_index_combo.addItem("live", None)
-
-        scan_number_list = []
-        scan_id_list = []
-        try:
-            history = getattr(self.curve_tree.client, "history", None)
-            if history is not None:
-                scan_number_list = getattr(history, "_scan_numbers", []) or []
-                scan_id_list = getattr(history, "_scan_ids", []) or []
-        except Exception as e:
-            logger.error(f"Cannot fetch scan numbers from BEC client: {e}")
-            # If scan numbers cannot be fetched, only provide 'live' option
-            scan_number_list = []
-            scan_id_list = []
-
-        # Restrict input to 'live' or valid scan numbers
-        allowed = set()
-        try:
-            allowed = set(int(n) for n in scan_number_list if isinstance(n, (int, str)))
-        except Exception:
-            allowed = set()
-        validator = ScanIndexValidator(allowed, self.scan_index_combo)
-        self.scan_index_combo.lineEdit().setValidator(validator)
-
-        # Add items: show scan numbers, store scan IDs as item data
-        if scan_number_list and scan_id_list and len(scan_number_list) == len(scan_id_list):
-            for num, sid in zip(scan_number_list, scan_id_list):
-                self.scan_index_combo.addItem(str(num), sid)
-        else:
-            logger.error("Scan number and ID lists are mismatched or empty.")
-
+        self.scan_index_combo = ScanIndexComboBox(parent=self.tree, client=self.curve_tree.client)
         # Select current based on existing config
-        selected = False
-        if getattr(self.config, "scan_id", None):  # scan_id matching only
-            for i in range(self.scan_index_combo.count()):
-                if self.scan_index_combo.itemData(i) == self.config.scan_id:
-                    self.scan_index_combo.setCurrentIndex(i)
-                    selected = True
-                    break
-        if not selected:
-            self.scan_index_combo.setCurrentText("live")
-
+        self.scan_index_combo.set_scan_id(self.config.scan_id)
         self.tree.setItemWidget(self, 3, self.scan_index_combo)
 
     def _init_actions(self):
@@ -461,6 +395,11 @@ class CurveRow(QTreeWidgetItem):
             self.entry_edit.deleteLater()
             self.entry_edit = None
 
+        if self.scan_index_combo is not None:
+            self.scan_index_combo.close()
+            self.scan_index_combo.deleteLater()
+            self.scan_index_combo = None
+
         if getattr(self, "dap_combo", None) is not None:
             self.dap_combo.close()
             self.dap_combo.deleteLater()
@@ -514,23 +453,18 @@ class CurveRow(QTreeWidgetItem):
                     )
 
             self.config.signal = DeviceSignal(device=device_name, signal=device_entry)
-            scan_combo_text = self.scan_index_combo.currentText()
-            if scan_combo_text == "live" or scan_combo_text == "":
+            scan_number = self.scan_index_combo.scan_number
+            if scan_number is None:
                 self.config.scan_number = None
                 self.config.scan_id = None
                 self.config.source = "device"
                 self.config.label = f"{device_name}-{device_entry}"
-            if scan_combo_text.isdigit():
-                try:
-                    scan_num = int(scan_combo_text)
-                except ValueError:
-                    scan_num = None
-                self.config.scan_number = scan_num
-                self.config.scan_id = self.scan_index_combo.currentData()
+            else:
+                self.config.scan_number = scan_number
+                self.config.scan_id = self.scan_index_combo.scan_id
                 self.config.source = "history"
                 # Label history curves with scan number suffix
-                if scan_num is not None:
-                    self.config.label = f"{device_name}-{device_entry}-scan-{scan_num}"
+                self.config.label = f"{device_name}-{device_entry}-scan-{scan_number}"
         else:
             # DAP logic
             parent_conf_dict = {}
