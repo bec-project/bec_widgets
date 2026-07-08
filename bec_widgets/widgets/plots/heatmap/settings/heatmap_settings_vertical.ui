@@ -49,6 +49,24 @@
     </layout>
    </item>
    <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_scan">
+     <item>
+      <widget class="QLabel" name="label_scan_index">
+       <property name="text">
+        <string>Scan #</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="ScanIndexComboBox" name="scan_index">
+       <property name="toolTip">
+        <string>Plot the selected scan from history, or 'live' for live acquisition.</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
     <widget class="QGroupBox" name="groupBox">
      <property name="title">
       <string>X Device</string>
@@ -261,6 +279,11 @@
    <class>BECColorMapWidget</class>
    <extends>QWidget</extends>
    <header>bec_color_map_widget</header>
+  </customwidget>
+  <customwidget>
+   <class>ScanIndexComboBox</class>
+   <extends>QComboBox</extends>
+   <header>scan_index_combo_box</header>
   </customwidget>
  </customwidgets>
  <tabstops>

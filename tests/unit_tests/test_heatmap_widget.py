@@ -948,3 +948,149 @@ def test_device_properties_with_none_values(heatmap_widget):
     # Entry None should not change anything
     heatmap_widget.signal_y = None
     assert heatmap_widget.signal_y  # Should still have validated entry
+
+
+def test_heatmap_history_mode_ignores_live_scan_updates(heatmap_widget):
+    """
+    Once pinned to a history scan, the heatmap ignores live scan status/progress updates
+    until plot() is called again without a scan_id.
+    """
+    history_scan = mock.MagicMock()
+    history_scan.scan_id = "scan-456"
+
+    with mock.patch.object(heatmap_widget, "get_history_scan_item", return_value=history_scan):
+        heatmap_widget.update_with_scan_history(scan_id="scan-456")
+
+    assert heatmap_widget._history_scan_id == "scan-456"
+
+    scan_msg = messages.ScanStatusMessage(scan_id="live-scan", status="open", metadata={}, info={})
+    with mock.patch.object(heatmap_widget, "reset") as reset_mock:
+        heatmap_widget.on_scan_status(scan_msg.content, scan_msg.metadata)
+    reset_mock.assert_not_called()
+    assert heatmap_widget.scan_id == "scan-456"
+
+    with mock.patch.object(heatmap_widget, "sync_signal_update") as sync_mock:
+        heatmap_widget.on_scan_progress({"done": False}, {})
+    sync_mock.emit.assert_not_called()
+
+    # Plotting without a scan_id returns to live mode
+    heatmap_widget.plot(device_x="samx", device_y="samy", device_z="bpm4i")
+    assert heatmap_widget._history_scan_id is None
+    with mock.patch.object(heatmap_widget, "reset") as reset_mock:
+        heatmap_widget.on_scan_status(scan_msg.content, scan_msg.metadata)
+    reset_mock.assert_called_once()
+
+
+def test_heatmap_scan_history_popup(heatmap_widget, qtbot):
+    """
+    Test that the scan history popup opens with the browser view and a plot request button,
+    and that requesting a plot pins the heatmap to the selected scan.
+    """
+    scan_action = heatmap_widget.toolbar.components.get_action("scan_history").action
+    assert not scan_action.isChecked()
+    assert heatmap_widget.scan_history_dialog is None
+
+    heatmap_widget.show_scan_history_popup()
+    qtbot.waitUntil(lambda: heatmap_widget.scan_history_dialog is not None)
+    assert heatmap_widget.scan_history_dialog.isVisible()
+    assert scan_action.isChecked()
+    assert heatmap_widget.scan_history_widget is not None
+
+    # Without a selection, requesting a plot does nothing
+    with mock.patch.object(heatmap_widget, "update_with_scan_history") as update_mock:
+        heatmap_widget._request_history_plot()
+    update_mock.assert_not_called()
+
+    # With a selection, requesting a plot pins to the selected scan
+    heatmap_widget._on_history_scan_selected({"scan_id": "scan-789"}, {})
+    with mock.patch.object(heatmap_widget, "update_with_scan_history") as update_mock:
+        heatmap_widget._request_history_plot()
+    update_mock.assert_called_once_with(scan_id="scan-789")
+
+    heatmap_widget._on_history_scan_deselected()
+    assert heatmap_widget._selected_history_scan_id is None
+
+    heatmap_widget.scan_history_dialog.close()
+    qtbot.waitUntil(lambda: heatmap_widget.scan_history_dialog is None)
+    assert not scan_action.isChecked()
+
+
+def test_heatmap_settings_scan_index(heatmap_widget, qtbot):
+    """
+    Test that the settings dialog exposes the scan index combobox and that accepting
+    the dialog with a history scan selected plots that scan.
+    """
+    heatmap_widget.plot(device_x="samx", device_y="samy", device_z="bpm4i")
+    heatmap_widget.show_heatmap_settings()
+    qtbot.waitUntil(lambda: heatmap_widget.heatmap_dialog is not None)
+
+    dialog = heatmap_widget.heatmap_dialog
+    assert hasattr(dialog.widget.ui, "scan_index")
+    assert dialog.widget.ui.scan_index.currentText() == "live"
+
+    dialog.widget.ui.scan_index.addItem("42", "scan-hist-42")
+    dialog.widget.ui.scan_index.setCurrentIndex(dialog.widget.ui.scan_index.count() - 1)
+
+    with mock.patch.object(heatmap_widget, "update_with_scan_history") as update_mock:
+        dialog.accept()
+    qtbot.waitUntil(lambda: heatmap_widget.heatmap_dialog is None)
+    update_mock.assert_called_once_with(scan_id="scan-hist-42")
+
+
+def test_heatmap_config_label_shows_live_or_history(heatmap_widget):
+    """The config label marks the scan number with (live) or (history) depending on the mode."""
+    scan_msg = mock.MagicMock()
+    scan_msg.scan_number = 5
+    scan_msg.scan_name = "line_scan"
+    heatmap_widget.status_message = scan_msg
+    heatmap_widget._image_config.show_config_label = True
+
+    heatmap_widget.redraw_config_label()
+    labels = [label.text for _, label in heatmap_widget.config_label.items]
+    assert "Scan: 5 (live)" in labels
+
+    heatmap_widget._history_scan_id = "scan-1"
+    heatmap_widget.redraw_config_label()
+    labels = [label.text for _, label in heatmap_widget.config_label.items]
+    assert "Scan: 5 (history)" in labels
+
+
+def test_heatmap_settings_scan_index_syncs_with_widget(heatmap_widget, qtbot, scan_history_factory):
+    """
+    The scan index combobox in the settings dialog mirrors the heatmap state:
+    it shows the pinned history scan number, or 'live' in live mode, with scans
+    ordered live -> latest -> oldest.
+    """
+    from bec_lib.scan_history import ScanHistory
+
+    msgs = [
+        scan_history_factory(scan_id="hid1", scan_number=1),
+        scan_history_factory(scan_id="hid2", scan_number=2),
+    ]
+    heatmap_widget.client.history = ScanHistory(heatmap_widget.client, False)
+    for msg in msgs:
+        heatmap_widget.client.history._scan_data[msg.scan_id] = msg
+        heatmap_widget.client.history._scan_ids.append(msg.scan_id)
+        heatmap_widget.client.history._scan_numbers.append(msg.scan_number)
+
+    heatmap_widget.plot(device_x="samx", device_y="samy", device_z="bpm4i")
+    heatmap_widget.show_heatmap_settings()
+    qtbot.waitUntil(lambda: heatmap_widget.heatmap_dialog is not None)
+    combo = heatmap_widget.heatmap_dialog.widget.ui.scan_index
+
+    assert [combo.itemText(i) for i in range(combo.count())] == ["live", "2", "1"]
+    assert combo.currentText() == "live"
+
+    # Pinning the widget to a history scan updates the open settings dialog
+    history_scan = mock.MagicMock()
+    history_scan.scan_id = "hid2"
+    with mock.patch.object(heatmap_widget, "get_history_scan_item", return_value=history_scan):
+        heatmap_widget.update_with_scan_history(scan_id="hid2")
+    assert combo.currentText() == "2"
+
+    # Returning to live mode updates the dialog as well
+    heatmap_widget.plot(device_x="samx", device_y="samy", device_z="bpm4i")
+    assert combo.currentText() == "live"
+
+    heatmap_widget.heatmap_dialog.reject()
+    qtbot.waitUntil(lambda: heatmap_widget.heatmap_dialog is None)
