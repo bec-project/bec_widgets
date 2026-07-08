@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v3.23.0 (2026-07-08)
+
+### Bug Fixes
+
+- **scan_control**: Box cleanups
+  ([`cd2141b`](https://github.com/bec-project/bec_widgets/commit/cd2141b27c0e67dc20000ac9a3c0d54e193f3f04))
+
+### Features
+
+- **flow_layout**: New flow layout added; implementation to ScanControl widget
+  ([`1c05a17`](https://github.com/bec-project/bec_widgets/commit/1c05a17d5f98682099526e546fce6a6bfecd24e7))
+
+
 ## v3.22.3 (2026-07-07)
 
 ### Bug Fixes
