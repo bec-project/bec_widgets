@@ -87,7 +87,9 @@ class IDEExplorer(BECWidget, QWidget):
         local_scripts_section = CollapsibleSection(title="Local", show_add_button=True, parent=self)
         local_scripts_section.header_add_button.clicked.connect(self._add_local_script)
         local_scripts_section.set_widget(script_widget)
-        local_script_dir = self.client._service_config.model.user_scripts.base_path
+        local_script_dir = os.path.expanduser(
+            self.client._service_config.model.user_scripts.base_path
+        )
         if not os.path.exists(local_script_dir):
             os.makedirs(local_script_dir)
         script_widget.set_directory(local_script_dir)
@@ -130,7 +132,9 @@ class IDEExplorer(BECWidget, QWidget):
         local_macros_section = CollapsibleSection(title="Local", show_add_button=True, parent=self)
         local_macros_section.header_add_button.clicked.connect(self._add_local_macro)
         local_macros_section.set_widget(macro_widget)
-        local_macro_dir = self.client._service_config.model.user_macros.base_path
+        local_macro_dir = os.path.expanduser(
+            self.client._service_config.model.user_macros.base_path
+        )
         if not os.path.exists(local_macro_dir):
             os.makedirs(local_macro_dir)
         macro_widget.set_directory(local_macro_dir)
