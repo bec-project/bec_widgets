@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.24.0 (2026-07-09)
+
+### Features
+
+- **qtermwidget**: Add clipboard shortcuts for copy and paste functionality
+  ([`bcc3940`](https://github.com/bec-project/bec_widgets/commit/bcc39400e7ff3509d9cd349430c84f2a04839737))
+
+
 ## v3.23.0 (2026-07-08)
 
 ### Bug Fixes
