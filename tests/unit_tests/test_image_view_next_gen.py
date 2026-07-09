@@ -100,6 +100,30 @@ def test_set_vrange(qtbot, mocked_client):
     assert bec_image_view.main_image.config.v_range == (10, 100)
 
 
+@pytest.mark.parametrize("colorbar_type", [None, "simple", "full"])
+def test_set_vrange_keeps_fractional_values(qtbot, mocked_client, colorbar_type):
+    """Regression: tuple ranges went through QPoint, which truncates to int, so
+    e.g. v_max = 10.5 could never produce a non-integer level."""
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    bec_image_view.main_image.set_data(np.arange(100, dtype=float).reshape(10, 10))
+    if colorbar_type is not None:
+        bec_image_view.enable_colorbar(True, colorbar_type)
+
+    bec_image_view.v_range = (0.25, 10.5)
+    assert bec_image_view.v_range == QPointF(0.25, 10.5)
+    assert bec_image_view.main_image.v_range == (0.25, 10.5)
+
+    bec_image_view.v_max = 42.5
+    assert bec_image_view.main_image.v_range == (0.25, 42.5)
+    bec_image_view.v_min = 0.75
+    assert bec_image_view.main_image.v_range == (0.75, 42.5)
+
+    if colorbar_type == "simple":
+        assert bec_image_view._color_bar.levels() == (0.75, 42.5)
+    elif colorbar_type == "full":
+        assert tuple(bec_image_view._color_bar.getLevels()) == (0.75, 42.5)
+
+
 def test_enable_simple_colorbar(qtbot, mocked_client):
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
     bec_image_view.enable_simple_colorbar = True
@@ -142,11 +166,12 @@ def test_colorbar_menu_set_levels_updates_vrange(qtbot, mocked_client):
     bec_image_view.enable_full_colorbar = True
     assert bec_image_view.autorange is True
 
-    # Simulate the "Set levels…" context-menu action (image scaling via the region).
-    bec_image_view._color_bar.sigColorLevelsChangeRequested.emit((0, 50))
+    # Simulate the "Set levels…" context-menu action (image scaling via the
+    # region); fractional values must survive (regression: QPoint truncation).
+    bec_image_view._color_bar.sigColorLevelsChangeRequested.emit((0.5, 50.5))
 
-    assert bec_image_view.v_range == QPointF(0, 50)
-    assert bec_image_view.main_image.levels == (0, 50)
+    assert bec_image_view.v_range == QPointF(0.5, 50.5)
+    assert bec_image_view.main_image.levels == (0.5, 50.5)
     # Setting explicit levels disables autorange.
     assert bec_image_view.autorange is False
 

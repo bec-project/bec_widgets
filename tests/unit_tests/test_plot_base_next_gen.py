@@ -528,3 +528,13 @@ def test_minimal_crosshair_precision_after_hook(qtbot, mocked_client):
 
     assert sig.args == ["minimal_crosshair_precision", 1]
     assert pb.crosshair.min_precision == 1
+
+
+def test_limits_accept_fractional_values(qtbot, mocked_client):
+    """Regression: tuple limits were converted through QPoint, silently truncating
+    fractional values to integers."""
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    pb.x_limits = (0.5, 9.25)
+    pb.y_limits = (-1.75, 3.5)
+    assert (pb.x_limits.x(), pb.x_limits.y()) == (0.5, 9.25)
+    assert (pb.y_limits.x(), pb.y_limits.y()) == (-1.75, 3.5)

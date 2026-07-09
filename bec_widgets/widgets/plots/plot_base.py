@@ -623,7 +623,9 @@ class PlotBase(BECWidget, QWidget):
             raise TypeError("Limits must be numbers.")
         if min_val > max_val:
             raise ValueError("Minimum limit cannot be greater than maximum limit.")
-        return QPoint(*tuple)
+        # QPointF, not QPoint: QPoint truncates to int and silently discarded the
+        # fractional part of every range set from a tuple (v_range, x/y limits).
+        return QPointF(*tuple)
 
     ################################################################################
     # X limits, has to be SaveProperty("QPointF") because of the tuple conversion for designer,
