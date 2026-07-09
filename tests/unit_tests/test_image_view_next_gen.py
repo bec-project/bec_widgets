@@ -1158,6 +1158,73 @@ def test_detached_pin_can_be_removed_with_right_click(qtbot, mocked_client, monk
     assert cleared == [True]
 
 
+def test_active_pin_label_intensity_updates_on_image_update(qtbot, mocked_client):
+    """Pinned crosshair label intensity follows image updates at the pinned position."""
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    bec_image_view.on_image_update_2d({"data": np.arange(25).reshape(5, 5)}, {})
+    bec_image_view.hook_crosshair()
+
+    bec_image_view.crosshair.set_pin(2.0, 3.0)
+    assert bec_image_view.crosshair.pinned_label.toPlainText() == (
+        "pin (2.500, 3.500)\nIntensity: 13.000"
+    )
+
+    bec_image_view.on_image_update_2d({"data": np.arange(25).reshape(5, 5) + 100}, {})
+
+    qtbot.waitUntil(
+        lambda: bec_image_view.crosshair.pinned_label.toPlainText()
+        == "pin (2.500, 3.500)\nIntensity: 113.000",
+        timeout=500,
+    )
+
+
+def test_image_update_does_not_replay_active_crosshair_mouse_handling(
+    qtbot, mocked_client, monkeypatch
+):
+    """Image updates refresh a pin without re-snapping or emitting live crosshair updates."""
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    bec_image_view.on_image_update_2d({"data": np.arange(25).reshape(5, 5)}, {})
+    bec_image_view.hook_crosshair()
+    bec_image_view.crosshair.set_pin(2.0, 3.0)
+
+    mouse_moves = []
+    monkeypatch.setattr(
+        bec_image_view.crosshair,
+        "mouse_moved",
+        lambda *args, **kwargs: mouse_moves.append((args, kwargs)),
+    )
+
+    bec_image_view.on_image_update_2d({"data": np.arange(25).reshape(5, 5) + 100}, {})
+
+    qtbot.waitUntil(
+        lambda: bec_image_view.crosshair.pinned_label.toPlainText()
+        == "pin (2.500, 3.500)\nIntensity: 113.000",
+        timeout=500,
+    )
+    assert mouse_moves == []
+
+
+def test_detached_pin_label_intensity_updates_on_image_update(qtbot, mocked_client):
+    """Detached pin labels keep following image updates while crosshair is disabled."""
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    bec_image_view.on_image_update_2d({"data": np.arange(25).reshape(5, 5)}, {})
+    bec_image_view.hook_crosshair()
+    bec_image_view.crosshair.set_pin(2.0, 3.0)
+    bec_image_view.unhook_crosshair()
+
+    assert bec_image_view.crosshair is None
+    assert bec_image_view._detached_pin is not None
+    assert bec_image_view._detached_pin["label"].toPlainText() == (
+        "pin (2.500, 3.500)\nIntensity: 13.000"
+    )
+
+    bec_image_view.on_image_update_2d({"data": np.arange(25).reshape(5, 5) + 200}, {})
+
+    qtbot.waitUntil(
+        lambda: bec_image_view._detached_pin["label"].toPlainText()
+        == "pin (2.500, 3.500)\nIntensity: 213.000",
+        timeout=500,
+    )
 
 
 ##############################################

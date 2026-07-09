@@ -1136,6 +1136,65 @@ class PlotBase(BECWidget, QWidget):
         if had_pin:
             self.crosshair_pin_cleared.emit()
 
+    def update_crosshair_on_image_change(self) -> None:
+        """Refresh image-dependent crosshair state without replaying mouse movement."""
+        if self.crosshair is not None:
+            self.crosshair.update_image_marker_geometry()
+            self.crosshair.update_pinned_label()
+            return
+        self._update_detached_pin_label()
+
+    def _update_detached_pin_label(self) -> None:
+        """Refresh a detached pin label against the current image data."""
+        if self._detached_pin is None:
+            return
+        pos = self._detached_pin.get("pos")
+        label = self._detached_pin.get("label")
+        if pos is None or label is None:
+            return
+
+        x, y = pos
+        precision = self._current_crosshair_precision()
+        x_scaled, y_scaled = self._scale_crosshair_coordinates(x, y)
+        text = f"pin ({x_scaled:.{precision}f}, {y_scaled:.{precision}f})"
+        for item in self.plot_item.items:
+            if not isinstance(item, pg.ImageItem) or item.image is None:
+                continue
+
+            if item.image_transform is not None:
+                inv_transform, _ = item.image_transform.inverted()
+                pt = inv_transform.map(QPointF(x, y))
+                px, py = pt.x(), pt.y()
+            else:
+                px, py = x, y
+
+            ix = int(np.clip(px, 0, item.image.shape[0] - 1))
+            iy = int(np.clip(py, 0, item.image.shape[1] - 1))
+            text += f"\nIntensity: {item.image[ix, iy]:.{precision}f}"
+            break
+
+        label.setText(text)
+
+    def _current_crosshair_precision(self) -> int:
+        """Return crosshair precision using the same dynamic rule as Crosshair."""
+        view_range = self.plot_item.vb.viewRange()
+        x_span = abs(view_range[0][1] - view_range[0][0])
+        y_span = abs(view_range[1][1] - view_range[1][0])
+        spans = [span for span in (x_span, y_span) if span > 0]
+        span = min(spans) if spans else 1.0
+
+        exponent = np.floor(np.log10(span))
+        decimals = max(0, int(-exponent) + 1)
+        return max(self._minimal_crosshair_precision, decimals)
+
+    def _scale_crosshair_coordinates(self, x: float, y: float) -> tuple[float, float]:
+        """Scale coordinates for log axes using Crosshair's display convention."""
+        if self.plot_item.axes["bottom"]["item"].logMode:
+            x = 10**x
+        if self.plot_item.axes["left"]["item"].logMode:
+            y = 10**y
+        return x, y
+
     def toggle_crosshair(self, enabled: bool | None = None) -> None:
         """Toggle the crosshair on all plots.
 

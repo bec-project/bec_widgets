@@ -260,6 +260,19 @@ def test_update_coord_label_2D(image_widget_with_crosshair):
     assert crosshair.coord_label.isVisible()
 
 
+def test_update_markers_on_image_change_accepts_image_without_transform(
+    image_widget_with_crosshair,
+):
+    crosshair, plot_item = image_widget_with_crosshair
+    image_item = next(item for item in plot_item.items if isinstance(item, pg.ImageItem))
+    image_item.image_transform = None
+
+    crosshair.update_markers_on_image_change()
+
+    assert crosshair.marker_2d_row.transform() == QTransform()
+    assert crosshair.marker_2d_col.transform() == QTransform()
+
+
 def test_crosshair_precision_properties(plot_widget_with_crosshair):
     """
     Ensure Crosshair.precision and Crosshair.min_precision behave correctly
@@ -571,6 +584,19 @@ def test_set_pin_2d_emits_pixel_coordinates(image_widget_with_crosshair):
     assert len(pinned) == 1
     _, px, py = pinned[0]
     assert (px, py) == (40, 60)
+
+
+def test_set_pin_2d_label_includes_intensity(image_widget_with_crosshair):
+    crosshair, plot_item = image_widget_with_crosshair
+    image = np.arange(10_000, dtype=float).reshape(100, 100)
+    for item in plot_item.items:
+        if isinstance(item, pg.ImageItem):
+            item.setImage(image)
+
+    crosshair.set_pin(40, 60)
+
+    assert crosshair.pinned_label is not None
+    assert crosshair.pinned_label.toPlainText() == "pin (40.500, 60.500)\nIntensity: 4060.000"
 
 
 def test_reset_preserves_pin_cleanup_removes_it(image_widget_with_crosshair):

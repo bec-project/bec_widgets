@@ -276,6 +276,9 @@ class ImageBase(PlotBase):
         )
         self.layer_manager.add("main")
         self._init_image_base_toolbar()
+        self._crosshair_image_update_proxy = pg.SignalProxy(
+            self.image_updated, rateLimit=10, slot=self._on_crosshair_image_update
+        )
 
         self.autorange = True
         self.autorange_mode = "mean"
@@ -305,6 +308,11 @@ class ImageBase(PlotBase):
         if self.x_roi is not None and self.y_roi is not None:
             self.x_roi.apply_theme(theme)
             self.y_roi.apply_theme(theme)
+
+    @SafeSlot(object)
+    def _on_crosshair_image_update(self, _event=None) -> None:
+        """Rate-limited crosshair refresh after image data changes."""
+        self.update_crosshair_on_image_change()
 
     def add_layer(self, name: str | None = None, **kwargs) -> ImageLayer:
         """
@@ -1125,6 +1133,9 @@ class ImageBase(PlotBase):
         Cleanup the widget.
         """
         self.toolbar.cleanup()
+        if self._crosshair_image_update_proxy is not None:
+            self._crosshair_image_update_proxy.disconnect()
+            self._crosshair_image_update_proxy = None
 
         # Remove all ROIs
         rois = self.rois

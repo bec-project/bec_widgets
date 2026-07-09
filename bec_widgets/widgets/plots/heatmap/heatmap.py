@@ -741,8 +741,6 @@ class Heatmap(ImageBase):
         if self._color_bar is not None:
             self._color_bar.blockSignals(False)
         self.image_updated.emit()
-        if self.crosshair is not None:
-            self.crosshair.update_markers_on_image_change()
 
     def _request_step_scan_interpolation(
         self,

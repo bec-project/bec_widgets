@@ -130,6 +130,7 @@ class Crosshair(QObject):
         self.marker_clicked_1d = {}
         self.marker_2d_row = None
         self.marker_2d_col = None
+        self._image_marker_geometry = None
         # Pinned marker (a single persistent marker placed on click). The live
         # crosshair keeps tracking the cursor; the pin stays until removed.
         self.pinned_point = None
@@ -331,27 +332,72 @@ class Crosshair(QObject):
         Update markers when the image changes, e.g. when the
         image shape or transformation changes.
         """
+        self.update_image_marker_geometry()
+        self.update_pinned_label()
+
+        # Explicit callers may need the live crosshair refreshed from the
+        # cursor. Image update notifications intentionally do not take this
+        # path: synthesizing mouse moves for each incoming frame is expensive.
+        views = self.plot_item.vb.scene().views()
+        if not views:
+            return
+        view = views[0]
+        global_pos = QCursor.pos()
+        view_pos = view.mapFromGlobal(global_pos)
+        scene_pos = view.mapToScene(view_pos)
+
+        if self.plot_item.vb.sceneBoundingRect().contains(scene_pos):
+            plot_pt = self.plot_item.vb.mapSceneToView(scene_pos)
+            self.mouse_moved(manual_pos=(plot_pt.x(), plot_pt.y()))
+
+    def update_image_marker_geometry(self) -> None:
+        """Update 2D marker geometry only when the image geometry changes."""
+        geometry = {}
         for item in self.items:
-            if not isinstance(item, pg.ImageItem):
+            if not isinstance(item, pg.ImageItem) or item.image is None:
                 continue
+            transform = item.image_transform or QTransform()
+            geometry[id(item)] = (
+                item.image.shape[0],
+                item.image.shape[1],
+                self._transform_signature(transform),
+            )
+
+        if geometry == self._image_marker_geometry:
+            return
+
+        self._image_marker_geometry = geometry
+        for item in self.items:
+            if not isinstance(item, pg.ImageItem) or item.image is None:
+                continue
+            transform = item.image_transform or QTransform()
             if self.marker_2d_row is not None:
                 self.marker_2d_row.setSize([item.image.shape[0], 1])
-                self.marker_2d_row.setTransform(item.image_transform)
+                self.marker_2d_row.setTransform(transform)
             if self.marker_2d_col is not None:
                 self.marker_2d_col.setSize([1, item.image.shape[1]])
-                self.marker_2d_col.setTransform(item.image_transform)
-            # Get the current mouse position
-            views = self.plot_item.vb.scene().views()
-            if not views:
-                return
-            view = views[0]
-            global_pos = QCursor.pos()
-            view_pos = view.mapFromGlobal(global_pos)
-            scene_pos = view.mapToScene(view_pos)
+                self.marker_2d_col.setTransform(transform)
 
-            if self.plot_item.vb.sceneBoundingRect().contains(scene_pos):
-                plot_pt = self.plot_item.vb.mapSceneToView(scene_pos)
-                self.mouse_moved(manual_pos=(plot_pt.x(), plot_pt.y()))
+    @staticmethod
+    def _transform_signature(transform: QTransform) -> tuple[float, ...]:
+        """Return a value-based transform signature for geometry change detection."""
+        return (
+            transform.m11(),
+            transform.m12(),
+            transform.m13(),
+            transform.m21(),
+            transform.m22(),
+            transform.m23(),
+            transform.m31(),
+            transform.m32(),
+            transform.m33(),
+        )
+
+    def update_pinned_label(self) -> None:
+        """Refresh the pinned marker label against the current plotted data."""
+        if self.pinned_pos is None or self.pinned_label is None:
+            return
+        self.pinned_label.setText(self._coord_label_text(*self.pinned_pos, prefix="pin "))
 
     def snap_to_data(
         self, x: float, y: float
@@ -698,9 +744,7 @@ class Crosshair(QObject):
             self.pinned_label.skip_auto_range = True
             self.pinned_label.setZValue(1000)
             self.plot_item.addItem(self.pinned_label)
-        x_scaled, y_scaled = self.scale_emitted_coordinates(x, y)
-        precision = self._current_precision()
-        self.pinned_label.setText(f"pin ({x_scaled:.{precision}f}, {y_scaled:.{precision}f})")
+        self.pinned_label.setText(self._coord_label_text(x, y, prefix="pin "))
         self.pinned_label.setPos(x, y)
         self.pinned_label.setVisible(True)
 
@@ -811,6 +855,7 @@ class Crosshair(QObject):
 
     def clear_markers(self):
         """Clears the markers from the plot."""
+        self._image_marker_geometry = None
         for marker in self.marker_moved_1d.values():
             self.plot_item.removeItem(marker)
         for markers in self.marker_clicked_1d.values():
@@ -842,9 +887,16 @@ class Crosshair(QObject):
             pos (tuple): The (x, y) position of the crosshair.
         """
         x, y = pos
+        # Update coordinate label
+        self.coord_label.setText(self._coord_label_text(x, y))
+        self.coord_label.setPos(x, y)
+        self.coord_label.setVisible(True)
+
+    def _coord_label_text(self, x: float, y: float, *, prefix: str = "") -> str:
+        """Return coordinate label text, including image intensity for 2D plots."""
         x_scaled, y_scaled = self.scale_emitted_coordinates(x, y)
         precision = self._current_precision()
-        text = f"({x_scaled:.{precision}f}, {y_scaled:.{precision}f})"
+        text = f"{prefix}({x_scaled:.{precision}f}, {y_scaled:.{precision}f})"
         for item in self.items:
             if isinstance(item, pg.ImageItem):
                 image = item.image
@@ -865,10 +917,7 @@ class Crosshair(QObject):
                 intensity = image[ix, iy]
                 text += f"\nIntensity: {intensity:.{precision}f}"
                 break
-        # Update coordinate label
-        self.coord_label.setText(text)
-        self.coord_label.setPos(x, y)
-        self.coord_label.setVisible(True)
+        return text
 
     def check_log(self):
         """Checks if the x or y axis is in log scale and updates the internal state accordingly."""
