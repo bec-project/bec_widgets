@@ -1457,3 +1457,25 @@ def test_adjust_image_buffer_coerces_list_and_scalar(qtbot, mocked_client):
     assert buf.shape == (1, 3)
     buf = view.adjust_image_buffer(image, np.array(42.0))  # 0-d scalar
     assert buf.shape[0] == 2
+
+
+##############################################
+# Teardown safety
+##############################################
+
+
+def test_layer_accessors_safe_after_teardown(qtbot, mocked_client):
+    """Once layer_manager is gone (post-cleanup), signal-driven accessors must
+    not raise. They used to subscript None or resurrect the 'main' layer."""
+    view = create_widget(qtbot, Image, client=mocked_client)
+    view.enable_full_colorbar = True
+    view.layer_manager = None  # simulate post-cleanup state
+
+    # None of these should raise:
+    assert view.autorange is False
+    assert view.autorange_mode == "mean"
+    view.toggle_autorange(True, "mean")
+    view._set_autorange(True)
+    view.autorange_mode = "max"
+    view._sync_autorange_switch()
+    view._sync_colorbar_levels()

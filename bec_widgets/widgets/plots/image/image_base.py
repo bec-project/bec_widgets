@@ -1036,6 +1036,8 @@ class ImageBase(PlotBase):
         """
 
         # FIXME: this should be made more general
+        if not self.layer_manager:
+            return False
         return self.layer_manager["main"].image.autorange
 
     @autorange.setter
@@ -1056,6 +1058,8 @@ class ImageBase(PlotBase):
             enabled(bool): Whether to enable autorange.
             sync(bool): Whether to synchronize the autorange state across all layers.
         """
+        if not self.layer_manager:
+            return
         for layer in self.layer_manager:
             if not layer.sync.autorange:
                 continue
@@ -1077,6 +1081,8 @@ class ImageBase(PlotBase):
             - "mean": Use the mean value of the image for autoranging.
 
         """
+        if not self.layer_manager:
+            return "mean"
         return self.layer_manager["main"].image.autorange_mode
 
     @autorange_mode.setter
@@ -1089,6 +1095,8 @@ class ImageBase(PlotBase):
         """
         # for qt Designer
         if mode not in ["max", "mean"]:
+            return
+        if not self.layer_manager:
             return
         for layer in self.layer_manager:
             if not layer.sync.autorange_mode:
@@ -1125,6 +1133,8 @@ class ImageBase(PlotBase):
         """
         Synchronize the autorange switch with the current autorange state and mode if changed from outside.
         """
+        if not self.layer_manager:
+            return
         action: SwitchableToolBarAction = self.toolbar.components.get_action("image_autorange")  # type: ignore
         with action.signal_blocker():
             action.set_default_action(f"{self.layer_manager['main'].image.autorange_mode}")
@@ -1133,7 +1143,7 @@ class ImageBase(PlotBase):
     def _sync_colorbar_levels(self):
         """Immediately propagate current levels to the active colorbar."""
 
-        if not self._color_bar:
+        if not self._color_bar or not self.layer_manager:
             return
 
         total_vrange = (0, 0)
