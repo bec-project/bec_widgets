@@ -2,12 +2,13 @@
 Simply displays a message in a QLabel if the dependency is not installed."""
 
 import os
+import sys
 from functools import wraps
 from typing import Sequence
 
 from qtpy.QtCore import QIODevice, QPoint, QSize, QUrl, Signal  # type: ignore
-from qtpy.QtGui import QAction, QFont, QKeyEvent, QResizeEvent, Qt  # type: ignore
-from qtpy.QtWidgets import QLabel, QVBoxLayout, QWidget
+from qtpy.QtGui import QAction, QFont, QKeyEvent, QKeySequence, QResizeEvent, Qt  # type: ignore
+from qtpy.QtWidgets import QLabel, QShortcut, QVBoxLayout, QWidget
 
 try:
     from pyside6_qtermwidget import QTermWidget
@@ -50,6 +51,7 @@ class BecQTerm(QWidget):
         super().__init__(parent)
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
+        self._clipboard_shortcuts: dict[str, QShortcut] = {}
         if QTermWidget:
             self._main_widget = QTermWidget(parent=self)
             self._main_widget.activity.connect(self.activity)
@@ -71,6 +73,7 @@ class BecQTerm(QWidget):
             self._layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self._main_widget = QLabel("pyside6_qterminal is not installed!")
 
+        self._install_clipboard_shortcuts()
         self._layout.addWidget(self._main_widget)
 
     def write(self, text: str, add_newline: bool = True):
@@ -96,6 +99,36 @@ class BecQTerm(QWidget):
     def send_ctrl_c(self):
         """Send Ctrl+C to the terminal."""
         self.write("\x03", add_newline=False)  # Send Ctrl+C character to the terminal
+
+    def _install_clipboard_shortcuts(self) -> None:
+        copy_sequence: QKeySequence | str
+        paste_sequence: QKeySequence | str
+        if sys.platform == "darwin":
+            copy_sequence = QKeySequence(QKeySequence.StandardKey.Copy)
+            paste_sequence = QKeySequence(QKeySequence.StandardKey.Paste)
+        else:
+            # Let's not override the Ctrl+C shortcut
+            copy_sequence = "Ctrl+Shift+C"
+            paste_sequence = "Ctrl+Shift+V"
+
+        self._clipboard_shortcuts["copy"] = self._make_shortcut(
+            copy_sequence, self._handle_copy_shortcut
+        )
+        self._clipboard_shortcuts["paste"] = self._make_shortcut(
+            paste_sequence, self._handle_paste_shortcut
+        )
+
+    def _make_shortcut(self, sequence: QKeySequence | str, slot) -> QShortcut:
+        shortcut = QShortcut(QKeySequence(sequence), self)
+        shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        shortcut.activated.connect(slot)
+        return shortcut
+
+    def _handle_copy_shortcut(self) -> None:
+        self._copyClipboard()
+
+    def _handle_paste_shortcut(self) -> None:
+        self._pasteClipboard()
 
     # automatically forwarded to the widget only if it exists
     @_forward
