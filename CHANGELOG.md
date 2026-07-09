@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v3.25.1 (2026-07-09)
+
+### Bug Fixes
+
+- **ide-explorer**: Improve check directory check
+  ([`74469f2`](https://github.com/bec-project/bec_widgets/commit/74469f229906cff1f2e7d08f916aedda5d63ac54))
+
+- **ide_explorer**: Expand user base path for scripts and macros
+  ([`a341723`](https://github.com/bec-project/bec_widgets/commit/a341723352f51ec40aa090c3dc1e5105939ba29d))
+
+
 ## v3.25.0 (2026-07-09)
 
 ### Features
