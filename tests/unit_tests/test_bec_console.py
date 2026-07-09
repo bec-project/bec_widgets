@@ -14,6 +14,7 @@ from bec_widgets.widgets.editors.bec_console.bec_console import (
     ConsoleMode,
     _bec_console_registry,
 )
+from bec_widgets.widgets.utility.bec_term.qtermwidget_wrapper import BecQTerm
 
 from .client_mocks import mocked_client
 
@@ -354,3 +355,18 @@ def test_plain_console_terminal_removed_after_last_unregister(qtbot):
     _bec_console_registry.unregister(widget)
 
     assert "plain_terminal" not in _bec_console_registry._terminal_registry
+
+
+def test_bec_qterm_clipboard_shortcuts_call_terminal_clipboard_methods(qtbot):
+    term = BecQTerm()
+    qtbot.addWidget(term)
+
+    with (
+        mock.patch.object(term, "_copyClipboard") as mock_copy,
+        mock.patch.object(term, "_pasteClipboard") as mock_paste,
+    ):
+        term._clipboard_shortcuts["copy"].activated.emit()
+        term._clipboard_shortcuts["paste"].activated.emit()
+
+    mock_copy.assert_called_once_with()
+    mock_paste.assert_called_once_with()
