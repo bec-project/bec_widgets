@@ -382,6 +382,11 @@ class BECDockArea(DockAreaWidget):
                 "Add Circular ProgressBar",
                 "RingProgressBar",
             ),
+            "scan_progress_bar": (
+                widget_icons["ScanProgressBar"],
+                "Add Scan Progress Bar",
+                "ScanProgressBar",
+            ),
             "terminal": (widget_icons["BecConsole"], "Add Terminal", "BecConsole"),
             "bec_shell": (widget_icons["BECShell"], "Add BEC Shell", "BECShell"),
             "sbb_monitor": (widget_icons["SBBMonitor"], "Add SBB Monitor", "SBBMonitor"),

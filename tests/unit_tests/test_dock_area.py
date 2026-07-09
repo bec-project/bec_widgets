@@ -876,6 +876,7 @@ class TestToolbarFunctionality:
             "terminal",
             "status",
             "progress_bar",
+            "scan_progress_bar",
             "sbb_monitor",
             "beamline_state_manager",
         ]
@@ -2483,6 +2484,7 @@ class TestFlatToolbarActions:
             "flat_queue",
             "flat_status",
             "flat_progress_bar",
+            "flat_scan_progress_bar",
             "flat_terminal",
             "flat_bec_shell",
             "flat_sbb_monitor",
@@ -2528,6 +2530,7 @@ class TestFlatToolbarActions:
             "flat_queue": "BECQueue",
             "flat_status": "BECStatusBox",
             "flat_progress_bar": "RingProgressBar",
+            "flat_scan_progress_bar": "ScanProgressBar",
             "flat_terminal": "BecConsole",
             "flat_bec_shell": "BECShell",
             "flat_sbb_monitor": "SBBMonitor",
