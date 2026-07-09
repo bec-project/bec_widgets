@@ -1440,3 +1440,20 @@ def test_image_processor_log_is_finite_for_non_positive():
     assert out[0, 0] == pytest.approx(-1.0)
     assert out[1, 0] == pytest.approx(-1.0)
     assert proc.log(np.array([[1.0]]))[0, 0] == pytest.approx(0.0)
+
+
+##############################################
+# Shape / dtype edge cases in the data path
+##############################################
+
+
+def test_adjust_image_buffer_coerces_list_and_scalar(qtbot, mocked_client):
+    """Non-ndarray payloads (python list, 0-d scalar) must not crash the
+    1D buffer accumulation."""
+    view = create_widget(qtbot, Image, client=mocked_client)
+    image = view.main_image
+
+    buf = view.adjust_image_buffer(image, [1, 2, 3])  # python list
+    assert buf.shape == (1, 3)
+    buf = view.adjust_image_buffer(image, np.array(42.0))  # 0-d scalar
+    assert buf.shape[0] == 2
