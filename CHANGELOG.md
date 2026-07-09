@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.25.0 (2026-07-09)
+
+### Features
+
+- Add feedback dialog
+  ([`4d90869`](https://github.com/bec-project/bec_widgets/commit/4d90869ec21cf3031db19bf7c72d516be7dad158))
+
+
 ## v3.24.0 (2026-07-09)
 
 ### Features
