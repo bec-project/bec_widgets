@@ -959,6 +959,8 @@ class Image(ImageBase):
         Returns:
             np.ndarray: The updated image buffer with adjusted shapes.
         """
+        # Guard for wrong data shapes
+        new_data = np.atleast_1d(np.asarray(new_data))
         new_len = new_data.shape[0]
         if not hasattr(image, "buffer"):
             image.buffer = []
