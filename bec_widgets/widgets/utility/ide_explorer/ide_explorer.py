@@ -90,8 +90,7 @@ class IDEExplorer(BECWidget, QWidget):
         local_script_dir = os.path.expanduser(
             self.client._service_config.model.user_scripts.base_path
         )
-        if not os.path.exists(local_script_dir):
-            os.makedirs(local_script_dir)
+        os.makedirs(local_script_dir, exist_ok=True)
         script_widget.set_directory(local_script_dir)
         script_explorer.add_section(local_scripts_section)
 
@@ -135,8 +134,7 @@ class IDEExplorer(BECWidget, QWidget):
         local_macro_dir = os.path.expanduser(
             self.client._service_config.model.user_macros.base_path
         )
-        if not os.path.exists(local_macro_dir):
-            os.makedirs(local_macro_dir)
+        os.makedirs(local_macro_dir, exist_ok=True)
         macro_widget.set_directory(local_macro_dir)
         macro_explorer.add_section(local_macros_section)
 
