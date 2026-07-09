@@ -954,6 +954,11 @@ class ImageBase(PlotBase):
 
         vmin, vmax = value.x(), value.y()
 
+        # Non-finite levels would crash pyqtgraph's colorbar
+        if not (np.isfinite(vmin) and np.isfinite(vmax)):
+            logger.warning(f"Ignoring non-finite v_range ({vmin}, {vmax}).")
+            return
+
         for layer in self.layer_manager:
             if not layer.sync.v_range:
                 continue

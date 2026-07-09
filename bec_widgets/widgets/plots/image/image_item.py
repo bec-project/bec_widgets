@@ -142,6 +142,13 @@ class ImageItem(BECConnector, pg.ImageItem):
         self.set_v_range(vrange, disable_autorange=True)
 
     def set_v_range(self, vrange: tuple[float, float], disable_autorange=True):
+        vmin, vmax = vrange
+        if not (np.isfinite(vmin) and np.isfinite(vmax)):
+            logger.warning(f"Ignoring non-finite v_range ({vmin}, {vmax}).")
+            return
+        if vmin > vmax:
+            vmin, vmax = vmax, vmin
+        vrange = (float(vmin), float(vmax))
         if disable_autorange:
             self.config.autorange = False
             self.vRangeChangedManually.emit(vrange)
@@ -200,8 +207,10 @@ class ImageItem(BECConnector, pg.ImageItem):
         """Update the v_range based on the stats of the image."""
         fumble_factor = 2
         if self.config.autorange_mode == "mean":
-            vmin = max(stats.mean - fumble_factor * stats.std, 0)
+            vmin = stats.mean - fumble_factor * stats.std
             vmax = stats.mean + fumble_factor * stats.std
+            if stats.minimum >= 0:
+                vmin = max(vmin, 0)
         elif self.config.autorange_mode == "max":
             vmin, vmax = stats.minimum, stats.maximum
         else:

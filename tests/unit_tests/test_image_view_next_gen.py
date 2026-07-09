@@ -5,6 +5,7 @@ from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtCore import QPointF, Qt
 
 from bec_widgets.widgets.plots.image.image import Image
+from bec_widgets.widgets.plots.image.image_processor import ImageProcessor, ProcessingConfig
 from tests.unit_tests.client_mocks import mocked_client
 from tests.unit_tests.conftest import create_widget
 
@@ -1366,3 +1367,76 @@ def test_signal_syncs_from_toolbar(qtbot, mocked_client):
     view._sync_signal_from_toolbar()
 
     assert view.signal == "img_b"
+
+
+##############################################
+# Log scale / non-finite data crash regression
+##############################################
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        -np.abs(np.random.rand(20, 30)).astype(np.float32) - 1.0,  # all negative -> all NaN
+        np.zeros((20, 30), dtype=np.uint16),  # all zeros -> uniform floor
+        np.where(np.eye(20, 30) > 0, -5.0, 3.0).astype(np.float32),  # mixed sign
+    ],
+    ids=["all_negative", "all_zeros", "mixed_sign"],
+)
+def test_log_scale_does_not_crash_with_full_colorbar(qtbot, mocked_client, data):
+    """Log scaling of non-positive data must not produce NaN levels that crash
+    the full (HistogramLUTItem) colorbar. Regression for fix/image-crashing."""
+    view = create_widget(qtbot, Image, client=mocked_client)
+    view.enable_full_colorbar = True
+    assert isinstance(view._color_bar, pg.HistogramLUTItem)
+
+    view.log = True
+    # This is the exact path that used to raise "Cannot set range [nan, nan]".
+    view.on_image_update_2d({"data": data}, {})
+
+    vmin, vmax = view.main_image.v_range
+    assert np.isfinite(vmin) and np.isfinite(vmax)
+    assert vmin <= vmax
+    # Colorbar levels stay finite as well.
+    low, high = view._color_bar.getLevels()
+    assert np.isfinite(low) and np.isfinite(high)
+
+
+def test_log_scale_all_negative_keeps_finite_image(qtbot, mocked_client):
+    """All-negative input must still yield a finite, displayed image under log."""
+    view = create_widget(qtbot, Image, client=mocked_client)
+    view.log = True
+    data = (-np.abs(np.random.rand(15, 15)) - 1.0).astype(np.float32)
+
+    view.on_image_update_2d({"data": data}, {})
+
+    assert view.main_image.image is not None
+    assert np.all(np.isfinite(view.main_image.image))
+
+
+def test_set_v_range_ignores_non_finite_levels(qtbot, mocked_client):
+    """Non-finite v_range requests are rejected rather than forwarded to pg."""
+    view = create_widget(qtbot, Image, client=mocked_client)
+    view.on_image_update_2d({"data": np.random.rand(10, 10)}, {})
+    good = view.main_image.v_range
+
+    view.main_image.set_v_range((np.nan, np.nan))
+    assert view.main_image.v_range == good  # unchanged
+
+    # Inverted ranges are normalised, not propagated as-is.
+    view.main_image.set_v_range((10.0, 2.0))
+    lo, hi = view.main_image.v_range
+    assert (lo, hi) == (2.0, 10.0)
+
+
+def test_image_processor_log_is_finite_for_non_positive():
+    """ImageProcessor.log must never emit NaN/inf for zero/negative input."""
+    proc = ImageProcessor(config=ProcessingConfig(log=True))
+    data = np.array([[-100.0, -1.0], [0.0, 1000.0]], dtype=np.float32)
+    out = proc.log(data)
+    assert np.all(np.isfinite(out))
+    # Non-positive pixels collapse to the floor log10(0.1) == -1; a count of 1
+    # maps to 0.
+    assert out[0, 0] == pytest.approx(-1.0)
+    assert out[1, 0] == pytest.approx(-1.0)
+    assert proc.log(np.array([[1.0]]))[0, 0] == pytest.approx(0.0)

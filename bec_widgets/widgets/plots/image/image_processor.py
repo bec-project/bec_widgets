@@ -28,10 +28,10 @@ class ImageStats:
             ImageStats: The statistics of the image data.
         """
         return cls(
-            maximum=np.nanmax(data),
-            minimum=np.nanmin(data),
-            mean=np.nanmean(data),
-            std=np.nanstd(data),
+            maximum=float(np.nanmax(data)),
+            minimum=float(np.nanmin(data)),
+            mean=float(np.nanmean(data)),
+            std=float(np.nanstd(data)),
         )
 
 
@@ -123,11 +123,11 @@ class ImageProcessor(QObject):
         Returns:
             np.ndarray: The processed data.
         """
-        # TODO this is not final solution -> data should stay as int16
-        data = data.astype(np.float32)
-        offset = 1e-6
-        data_offset = data + offset
-        return np.log10(data_offset)
+        data = np.asarray(data, dtype=np.float32)
+        # Detector data is counts (>= 0): clipping at 0.1 maps zero-count pixels
+        # to -1 and single counts to 0, keeping the log image finite without
+        # stretching the display range down to the float epsilon.
+        return np.log10(np.clip(data, 0.1, None))
 
     def update_image_stats(self, data: np.ndarray) -> None:
         """Get the statistics of the image data.
@@ -136,10 +136,10 @@ class ImageProcessor(QObject):
             data(np.ndarray): The image data.
 
         """
-        self.config.stats.maximum = np.max(data)
-        self.config.stats.minimum = np.min(data)
-        self.config.stats.mean = np.mean(data)
-        self.config.stats.std = np.std(data)
+        self.config.stats.maximum = float(np.nanmax(data))
+        self.config.stats.minimum = float(np.nanmin(data))
+        self.config.stats.mean = float(np.nanmean(data))
+        self.config.stats.std = float(np.nanstd(data))
 
     def process_image(self, data: np.ndarray) -> np.ndarray:
         """Core processing logic without threading overhead."""
