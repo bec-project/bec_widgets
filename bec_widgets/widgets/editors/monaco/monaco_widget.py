@@ -72,11 +72,15 @@ class MonacoWidget(BECWidget, QWidget):
         self._original_content = ""
         self.metadata = {}
         if init_lsp:
+            app_id = self.bec_dispatcher.cli_server.gui_id
             self.editor.update_workspace_configuration(
                 {
                     "pylsp": {
                         "plugins": {
-                            "pylsp-bec": {"service_config": self.client._service_config.config}
+                            "pylsp-bec": {
+                                "service_config": self.client._service_config.config,
+                                "gui_app_id": app_id,
+                            }
                         }
                     }
                 }

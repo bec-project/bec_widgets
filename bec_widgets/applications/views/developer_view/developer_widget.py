@@ -132,7 +132,7 @@ class DeveloperWidget(DockAreaWidget):
         self.monaco.macro_file_updated.connect(self.explorer.refresh_macro_file)
         self.monaco.focused_editor.connect(self._on_focused_editor_changed)
 
-        self.toolbar.show_bundles(["save", "execution", "settings"])
+        self.toolbar.show_bundles(["new", "save", "execution", "settings"])
 
     def _initialize_layout(self) -> None:
         """Create the default dock arrangement for the developer workspace."""
@@ -207,6 +207,23 @@ class DeveloperWidget(DockAreaWidget):
 
     def init_developer_toolbar(self):
         """Initialize the developer toolbar with necessary actions and widgets."""
+        new_script_button = MaterialIconAction(
+            icon_name="note_add", tooltip="New Script", label_text="New Script", parent=self
+        )
+        new_script_button.action.triggered.connect(self.on_new_script)
+        self.toolbar.components.add_safe("new_script", new_script_button)
+
+        new_macro_button = MaterialIconAction(
+            icon_name="add_circle", tooltip="New Macro", label_text="New Macro", parent=self
+        )
+        new_macro_button.action.triggered.connect(self.on_new_macro)
+        self.toolbar.components.add_safe("new_macro", new_macro_button)
+
+        new_bundle = ToolbarBundle("new", self.toolbar.components)
+        new_bundle.add_action("new_script")
+        new_bundle.add_action("new_macro")
+        self.toolbar.add_bundle(new_bundle)
+
         save_button = MaterialIconAction(
             icon_name="save", tooltip="Save", label_text="Save", filled=True, parent=self
         )
@@ -295,6 +312,16 @@ class DeveloperWidget(DockAreaWidget):
     def on_save_as(self):
         """Save the currently focused file in the Monaco editor with a 'Save As' dialog."""
         self.monaco.save_file(force_save_as=True)
+
+    @SafeSlot()
+    def on_new_script(self):
+        """Open the new script dialog from the explorer."""
+        self.explorer._add_local_script()
+
+    @SafeSlot()
+    def on_new_macro(self):
+        """Open the new macro dialog from the explorer."""
+        self.explorer._add_local_macro()
 
     @SafeSlot()
     def on_vim_triggered(self):

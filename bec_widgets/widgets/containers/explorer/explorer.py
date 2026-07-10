@@ -150,14 +150,16 @@ if __name__ == "__main__":
 
     from qtpy.QtWidgets import QApplication, QLabel
 
-    from bec_widgets.widgets.containers.explorer.script_tree_widget import ScriptTreeWidget
+    from bec_widgets.widgets.containers.explorer.file_browser_tree_widget import (
+        FileBrowserTreeWidget,
+    )
 
     app = QApplication([])
     explorer = Explorer()
     section = CollapsibleSection(title="SCRIPTS", indentation=0)
 
     script_explorer = Explorer()
-    script_widget = ScriptTreeWidget()
+    script_widget = FileBrowserTreeWidget()
     local_scripts_section = CollapsibleSection(title="Local")
     local_scripts_section.set_widget(script_widget)
     script_widget.set_directory(os.path.abspath("./"))
@@ -166,7 +168,7 @@ if __name__ == "__main__":
     section.set_widget(script_explorer)
     explorer.add_section(section)
     shared_script_section = CollapsibleSection(title="Shared")
-    shared_script_widget = ScriptTreeWidget()
+    shared_script_widget = FileBrowserTreeWidget()
     shared_script_widget.set_directory(os.path.abspath("./"))
     shared_script_section.set_widget(shared_script_widget)
     script_explorer.add_section(shared_script_section)

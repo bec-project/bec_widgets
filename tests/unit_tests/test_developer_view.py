@@ -104,7 +104,7 @@ class TestDeveloperViewInitialization:
 
         # Check for expected toolbar actions
         toolbar_components = developer_view.toolbar.components
-        expected_actions = ["save", "save_as", "run", "stop", "vim"]
+        expected_actions = ["new_script", "new_macro", "save", "save_as", "run", "stop", "vim"]
 
         for action_name in expected_actions:
             assert toolbar_components.exists(action_name)
@@ -207,6 +207,18 @@ class TestFileOperations:
         with mock.patch.object(developer_view.monaco, "save_file") as mock_save:
             developer_view.on_save_as()
             mock_save.assert_called_once_with(force_save_as=True)
+
+    def test_new_script_functionality(self, developer_view):
+        """Test the new script toolbar action handler."""
+        with mock.patch.object(developer_view.explorer, "_add_local_script") as mock_new_script:
+            developer_view.on_new_script()
+            mock_new_script.assert_called_once()
+
+    def test_new_macro_functionality(self, developer_view):
+        """Test the new macro toolbar action handler."""
+        with mock.patch.object(developer_view.explorer, "_add_local_macro") as mock_new_macro:
+            developer_view.on_new_macro()
+            mock_new_macro.assert_called_once()
 
 
 class TestMonacoEditorIntegration:
