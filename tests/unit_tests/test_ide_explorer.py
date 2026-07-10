@@ -24,6 +24,41 @@ def test_ide_explorer_initialization(ide_explorer):
     assert ide_explorer.main_explorer.sections[0].title == "SCRIPTS"
 
 
+def test_script_section_has_info_tooltip(ide_explorer):
+    """Scripts section exposes click-to-open help on the info icon."""
+    scripts_section = ide_explorer.main_explorer.get_section("SCRIPTS")
+
+    assert not scripts_section.header_button.toolTip()
+    assert not scripts_section.header_info_button.isHidden()
+    assert scripts_section.header_info_button.isEnabled()
+    assert scripts_section.header_info_button.toolTip() == "Show help"
+
+
+def test_macro_section_has_info_tooltip(ide_explorer):
+    """Macros section exposes click-to-open help on the info icon."""
+    macros_section = ide_explorer.main_explorer.get_section("MACROS")
+
+    assert not macros_section.header_button.toolTip()
+    assert not macros_section.header_info_button.isHidden()
+    assert macros_section.header_info_button.isEnabled()
+    assert macros_section.header_info_button.toolTip() == "Show help"
+
+
+def test_script_section_info_button_opens_help_popup(ide_explorer, qtbot):
+    """Clicking the info button should show the styled help popup."""
+    scripts_section = ide_explorer.main_explorer.get_section("SCRIPTS")
+
+    scripts_section.header_info_button.click()
+    qtbot.waitUntil(
+        lambda: scripts_section._help_tooltip is not None
+        and scripts_section._help_tooltip.isVisible(),
+        timeout=1000,
+    )
+
+    assert scripts_section._help_tooltip.content.text().startswith("Scripts are executable")
+    scripts_section._cleanup_help_tooltip()
+
+
 def test_ide_explorer_add_local_script(ide_explorer, qtbot, tmpdir):
     local_script_section = ide_explorer.main_explorer.get_section(
         "SCRIPTS"

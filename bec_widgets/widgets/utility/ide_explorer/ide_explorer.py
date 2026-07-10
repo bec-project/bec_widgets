@@ -78,7 +78,15 @@ class IDEExplorer(BECWidget, QWidget):
             self._remove_section(section)
 
     def add_script_section(self):
-        section = CollapsibleSection(parent=self, title="SCRIPTS", indentation=0)
+        section = CollapsibleSection(
+            parent=self,
+            title="SCRIPTS",
+            indentation=0,
+            tooltip="Scripts are executable Python files for scan workflows, "
+            "automation, and quick experiments.\n"
+            "In contrast to macros, scripts can contain executable code outside of function definitions.\n"
+            "Scripts can be run directly from the IDE by clicking the 'Run' button in the toolbar.",
+        )
 
         script_explorer = Explorer(parent=self)
         local_script_dir = os.path.expanduser(
@@ -120,7 +128,10 @@ class IDEExplorer(BECWidget, QWidget):
             title="MACROS",
             indentation=0,
             show_add_button=True,
-            tooltip="Macros are reusable functions that can be called from scripts or the console.",
+            tooltip="Macros are reusable Python functions that can be called from scripts or the console.\n"
+            "All macros are automatically loaded and available for use. As a result,\n"
+            "macros must not have executable code outside of function definitions to\n"
+            "avoid unintended execution when imported.",
         )
         section.header_add_button.setIcon(
             material_icon("refresh", size=(20, 20), convert_to_pixmap=False)
