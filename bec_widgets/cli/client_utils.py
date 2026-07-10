@@ -712,10 +712,13 @@ class BECGuiClient(RPCBase):
 
     def _start(self, wait: bool = False) -> None:
         self._killed = False
-        self._client.connector.unregister(cb=self._handle_registry_update)
-        self._client.connector.register(
-            MessageEndpoints.gui_registry_state(self._gui_id), cb=self._handle_registry_update
-        )
+        endpoint = MessageEndpoints.gui_registry_state(self._gui_id)
+        # connect_to_gui_server may already have registered this callback with from_start=True;
+        # replacing that subscription here would lose the replay of the current registry state.
+        if not self._client.connector.any_stream_is_registered(
+            endpoint, cb=self._handle_registry_update
+        ):
+            self._client.connector.register(endpoint, cb=self._handle_registry_update)
         return self._start_server(wait=wait)
 
     def _handle_registry_update(self, msg: dict[str, GUIRegistryStateMessage]) -> None:

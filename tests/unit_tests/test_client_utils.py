@@ -309,6 +309,40 @@ def test_client_utils_gui_client_set_rpc_timeout():
     assert gui._rpc_timeout == 10
 
 
+def test_client_utils_start_preserves_connect_to_gui_server_subscription():
+    """
+    Regression test for `bec --gui-id <id>`: connect_to_gui_server registers the registry-state
+    stream with from_start=True so the current state of an already-running server is replayed.
+    The subsequent show() -> _start() must not replace that subscription with a plain one.
+    """
+    gui = BECGuiClient()
+    gui._client = mock.MagicMock()
+    connector = gui._client.connector
+
+    gui.connect_to_gui_server("external_gui")
+    assert connector.register.call_args.kwargs["from_start"] is True
+
+    connector.any_stream_is_registered.return_value = True
+    with mock.patch.object(gui, "_start_server"):
+        gui._start(wait=False)
+
+    connector.register.assert_called_once()
+    connector.unregister.assert_called_once()  # only the one from connect_to_gui_server
+
+
+def test_client_utils_start_registers_registry_state_when_missing():
+    gui = BECGuiClient()
+    gui._client = mock.MagicMock()
+    connector = gui._client.connector
+    connector.any_stream_is_registered.return_value = False
+
+    with mock.patch.object(gui, "_start_server") as mock_start_server:
+        gui._start(wait=False)
+
+    connector.register.assert_called_once()
+    mock_start_server.assert_called_once_with(wait=False)
+
+
 def test_client_utils_kill_server_waits_for_process_before_joining_output_thread():
     gui = BECGuiClient()
     gui._client = mock.MagicMock()
