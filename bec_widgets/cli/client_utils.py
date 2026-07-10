@@ -382,17 +382,10 @@ class BECGuiClient(RPCBase):
             raise ValueError("Timeout must be a non-negative number.")
         self._rpc_timeout = timeout
 
-    def _safe_register_stream(self, endpoint: EndpointInfo, cb: Callable, **kwargs):
-        """Check if already registered for registration in idempotent functions."""
-        if not self._client.connector.any_stream_is_registered(endpoint, cb=cb):
-            self._client.connector.register(endpoint, cb=cb, **kwargs)
-
     def connect_to_gui_server(self, gui_id: str) -> None:
         """Connect to a GUI server"""
         # Unregister the old callback
-        self._client.connector.unregister(
-            MessageEndpoints.gui_registry_state(self._gui_id), cb=self._handle_registry_update
-        )
+        self._client.connector.unregister(cb=self._handle_registry_update)
         self._gui_id = gui_id
 
         # reset the namespace
@@ -402,7 +395,7 @@ class BECGuiClient(RPCBase):
         self._ipython_registry = {}
 
         # Register the new callback
-        self._safe_register_stream(
+        self._client.connector.register(
             MessageEndpoints.gui_registry_state(self._gui_id),
             cb=self._handle_registry_update,
             from_start=True,
@@ -613,9 +606,7 @@ class BECGuiClient(RPCBase):
             self._process_output_processing_thread = None
 
         # Unregister the registry state
-        self._client.connector.unregister(
-            MessageEndpoints.gui_registry_state(self._gui_id), cb=self._handle_registry_update
-        )
+        self._client.connector.unregister(cb=self._handle_registry_update)
         # Remove all reference from top level
         self._top_level.clear()
         self._server_registry.clear()
@@ -723,7 +714,8 @@ class BECGuiClient(RPCBase):
 
     def _start(self, wait: bool = False) -> None:
         self._killed = False
-        self._safe_register_stream(
+        self._client.connector.unregister(cb=self._handle_registry_update)
+        self._client.connector.register(
             MessageEndpoints.gui_registry_state(self._gui_id), cb=self._handle_registry_update
         )
         return self._start_server(wait=wait)
