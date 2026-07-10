@@ -12,16 +12,15 @@ import threading
 import time
 from contextlib import contextmanager
 from threading import Lock
-from typing import TYPE_CHECKING, Callable, Literal, TypeAlias, cast
+from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
-from bec_lib.endpoints import EndpointInfo, MessageEndpoints
+from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import, lazy_import_from
 from rich.console import Console
 from rich.table import Table
 
 from bec_widgets.cli.rpc.rpc_base import RPCBase, RPCReference
-from bec_widgets.utils.serialization import register_serializer_extension
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.messages import GUIRegistryStateMessage
@@ -360,7 +359,6 @@ class BECGuiClient(RPCBase):
         self._server_registry: dict[str, RegistryState] = {}
         self._ipython_registry: dict[str, RPCReference] = {}
         self.available_widgets = AvailableWidgetsNamespace()
-        register_serializer_extension()
         self._rpc_timeout = 60
 
     ####################
