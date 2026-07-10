@@ -1049,7 +1049,7 @@ def test_pinned_roi_profiles_freeze_and_clear(qtbot, mocked_client):
 
 def test_pinned_roi_profiles_keep_style_on_theme_change(qtbot, mocked_client):
     """Theme changes re-pen the live profile curves but must not restyle the
-    frozen (amber) pinned reference curves."""
+    frozen (dashed) pinned reference curves."""
     import numpy as np
 
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
@@ -1065,7 +1065,7 @@ def test_pinned_roi_profiles_keep_style_on_theme_change(qtbot, mocked_client):
 
     bec_image_view.x_roi.apply_theme("light")
 
-    # The frozen reference keeps its amber styling, the live curve is re-penned.
+    # The pinned reference keeps its amber styling, the live curve is re-penned.
     assert pinned.opts["pen"].color().name() == "#f2c037"
     assert bec_image_view.x_roi_curve.opts["pen"].color().name() == "#000000"
 
@@ -1156,6 +1156,88 @@ def test_detached_pin_can_be_removed_with_right_click(qtbot, mocked_client, monk
     assert pin_point not in bec_image_view.plot_item.items
     assert event.accepted is True
     assert cleared == [True]
+
+
+def test_pinned_profiles_follow_image_updates(qtbot, mocked_client):
+    """Pinned profile curves keep their position but follow incoming image data,
+    exactly like the pin's intensity label."""
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    test_data = np.arange(25, dtype=float).reshape(5, 5)
+    bec_image_view.on_image_update_2d({"data": test_data}, {})
+    switch = bec_image_view.toolbar.components.get_action("image_switch_crosshair")
+    switch.actions["crosshair_roi"].action.trigger()
+    qtbot.wait(50)
+
+    bec_image_view.crosshair.set_pin(2.0, 3.0)
+    _, x_pinned = bec_image_view.x_roi_pinned.getData()
+    np.testing.assert_array_equal(x_pinned, test_data[:, 3])
+
+    updated = test_data + 100.0
+    bec_image_view.on_image_update_2d({"data": updated}, {})
+
+    qtbot.waitUntil(
+        lambda: np.array_equal(bec_image_view.x_roi_pinned.getData()[1], updated[:, 3]), timeout=500
+    )
+    y_pinned, _ = bec_image_view.y_roi_pinned.getData()
+    np.testing.assert_array_equal(y_pinned, updated[2])
+
+
+def test_detached_pin_profiles_follow_image_updates(qtbot, mocked_client):
+    """Pinned profiles keep following image data while the crosshair is toggled off."""
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    test_data = np.arange(25, dtype=float).reshape(5, 5)
+    bec_image_view.on_image_update_2d({"data": test_data}, {})
+    switch = bec_image_view.toolbar.components.get_action("image_switch_crosshair")
+    switch.actions["crosshair_roi"].action.trigger()
+    qtbot.wait(50)
+
+    bec_image_view.crosshair.set_pin(2.0, 3.0)
+    bec_image_view.toggle_crosshair(False)  # pin becomes detached, panels stay active
+    assert bec_image_view.crosshair is None
+    assert bec_image_view.x_roi_pinned is not None
+
+    updated = test_data + 100.0
+    bec_image_view.on_image_update_2d({"data": updated}, {})
+
+    qtbot.waitUntil(
+        lambda: np.array_equal(bec_image_view.x_roi_pinned.getData()[1], updated[:, 3]), timeout=500
+    )
+
+
+def test_crosshair_moves_update_profiles_immediately(qtbot, mocked_client):
+    """Crosshair moves update the live profiles synchronously; new frames refresh
+    them at the current crosshair position."""
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    test_data = np.arange(25, dtype=float).reshape(5, 5)
+    bec_image_view.on_image_update_2d({"data": test_data}, {})
+    switch = bec_image_view.toolbar.components.get_action("image_switch_crosshair")
+    switch.actions["crosshair_roi"].action.trigger()
+    qtbot.wait(50)
+
+    # Position the crosshair lines and emit the snapped pixel (as mouse_moved does).
+    bec_image_view.crosshair.mouse_moved(manual_pos=(1.2, 2.2))
+
+    np.testing.assert_array_equal(bec_image_view.x_roi_curve.getData()[1], test_data[:, 2])
+
+    # New frames refresh the live profile at the crosshair position.
+    updated = test_data + 100.0
+    bec_image_view.on_image_update_2d({"data": updated}, {})
+    np.testing.assert_array_equal(bec_image_view.x_roi_curve.getData()[1], updated[:, 2])
+
+
+def test_live_label_intensity_updates_on_image_update(qtbot, mocked_client):
+    """The live crosshair label refreshes its intensity when the image changes,
+    not only when the mouse moves."""
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    test_data = np.arange(25, dtype=float).reshape(5, 5)
+    bec_image_view.on_image_update_2d({"data": test_data}, {})
+    bec_image_view.hook_crosshair()
+
+    bec_image_view.crosshair.mouse_moved(manual_pos=(2.5, 3.5))
+    assert "Intensity: 13.000" in bec_image_view.crosshair.coord_label.toPlainText()
+
+    bec_image_view.on_image_update_2d({"data": test_data + 100.0}, {})
+    assert "Intensity: 113.000" in bec_image_view.crosshair.coord_label.toPlainText()
 
 
 def test_active_pin_label_intensity_updates_on_image_update(qtbot, mocked_client):

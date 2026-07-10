@@ -393,6 +393,20 @@ class Crosshair(QObject):
             transform.m33(),
         )
 
+    @SafeSlot()
+    def update_on_image_change(self) -> None:
+        """Refresh image-dependent crosshair state after the image data changed.
+
+        The live and the pinned coordinate use the same mechanism: each label is
+        rebuilt from its coordinate against the current image (the live label
+        otherwise only refreshes on mouse moves, which would leave a stale
+        intensity under a streaming image).
+        """
+        self.update_image_marker_geometry()
+        if self.coord_label.isVisible():
+            self.update_coord_label((self.v_line.value(), self.h_line.value()))
+        self.update_pinned_label()
+
     def update_pinned_label(self) -> None:
         """Refresh the pinned marker label against the current plotted data."""
         if self.pinned_pos is None or self.pinned_label is None:
@@ -744,9 +758,10 @@ class Crosshair(QObject):
             self.pinned_label.skip_auto_range = True
             self.pinned_label.setZValue(1000)
             self.plot_item.addItem(self.pinned_label)
-        self.pinned_label.setText(self._coord_label_text(x, y, prefix="pin "))
+        self.pinned_pos = (x, y)
         self.pinned_label.setPos(x, y)
         self.pinned_label.setVisible(True)
+        self.update_pinned_label()
 
     def clear_pin(self):
         """Remove the pinned marker (if any) and notify consumers via :attr:`pinCleared`."""

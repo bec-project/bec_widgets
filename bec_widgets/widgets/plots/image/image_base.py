@@ -276,9 +276,14 @@ class ImageBase(PlotBase):
         )
         self.layer_manager.add("main")
         self._init_image_base_toolbar()
-        self._crosshair_image_update_proxy = pg.SignalProxy(
-            self.image_updated, rateLimit=10, slot=self._on_crosshair_image_update
-        )
+        # The pinned array coordinates are tracked at widget level so the pinned
+        # profiles can refresh regardless of the crosshair lifecycle.
+        self.crosshair_coordinates_pinned.connect(self._on_pin_coordinates)
+        self.crosshair_pin_cleared.connect(self._on_pin_cleared)
+        # Live and pinned crosshair coordinates share one refresh mechanism; the
+        # live label otherwise only refreshes on mouse moves, which would leave a
+        # stale intensity under a streaming image.
+        self.image_updated.connect(self._on_image_updated_refresh)
 
         self.autorange = True
         self.autorange_mode = "mean"
@@ -309,10 +314,32 @@ class ImageBase(PlotBase):
             self.x_roi.apply_theme(theme)
             self.y_roi.apply_theme(theme)
 
-    @SafeSlot(object)
-    def _on_crosshair_image_update(self, _event=None) -> None:
-        """Rate-limited crosshair refresh after image data changes."""
-        self.update_crosshair_on_image_change()
+    @SafeSlot(tuple)
+    def _on_pin_coordinates(self, coordinates: tuple) -> None:
+        """Track the pinned array coordinates.
+
+        Args:
+            coordinates (tuple): ``(name, row, col)`` as emitted by the crosshair.
+        """
+        self._pinned_slice_coords = (coordinates[1], coordinates[2])
+
+    @SafeSlot()
+    def _on_pin_cleared(self) -> None:
+        """Forget the pinned coordinates once the pin is removed."""
+        self._pinned_slice_coords = None
+
+    @SafeSlot()
+    def _on_image_updated_refresh(self) -> None:
+        """Refresh crosshair labels and pinned profiles after the image changed.
+
+        The live and the pinned coordinate use the same mechanism: each label and
+        each profile is rebuilt from its coordinate against the current image.
+        """
+        if self.crosshair is not None:
+            self.crosshair.update_on_image_change()
+        else:
+            self._update_detached_pin_label()
+        self.update_image_slices(pinned=True)
 
     def add_layer(self, name: str | None = None, **kwargs) -> ImageLayer:
         """
@@ -617,11 +644,14 @@ class ImageBase(PlotBase):
         self.y_roi.plot_item.setYLink(self.plot_item)
 
         # Persistent live profile curves (updated in place so a pinned reference
-        # curve is not wiped on every crosshair move) and the frozen pinned curves.
+        # curve is not wiped on every crosshair move) and the pinned curves that
+        # follow the image data at a fixed pixel.
         self.x_roi_curve = None
         self.y_roi_curve = None
         self.x_roi_pinned = None
         self.y_roi_pinned = None
+        # Pinned pixel (array indices) for the pinned profile refreshes.
+        self._pinned_slice_coords: tuple[int, int] | None = None
         self.x_roi.apply_theme("dark")
         self.y_roi.apply_theme("dark")
 
@@ -662,65 +692,91 @@ class ImageBase(PlotBase):
             self.side_panel_x.show_panel(self.x_panel_index)
             self.side_panel_y.show_panel(self.y_panel_index)
             self.crosshair.coordinatesChanged2D.connect(self.update_image_slices)
-            # Clicking pins a static copy of the current X/Y profiles for comparison.
+            # Clicking pins the X/Y profiles at a fixed pixel for comparison.
             self.crosshair.coordinatesPinned2D.connect(self.pin_image_slices)
             self.crosshair.pinCleared.connect(self.clear_pinned_slices)
             self.image_updated.connect(self.update_image_slices)
-            # If a pin survived a previous toggle, rebuild its frozen profiles now that
+            self.update_image_slices()
+            # If a pin survived a previous toggle, rebuild its profiles now that
             # the consumer slots are connected again.
             if self.crosshair.pinned_pos is not None:
                 self.crosshair.reemit_pin()
         else:
             self.unhook_crosshair()
             # Hide the ROI panels (the crosshair is destroyed, so its pin signals
-            # disconnect automatically; just drop any frozen reference curves).
+            # disconnect automatically; just drop the pinned reference curves).
             self.clear_pinned_slices()
             self.side_panel_x.hide_panel()
             self.side_panel_y.hide_panel()
             self.image_updated.disconnect(self.update_image_slices)
 
     @SafeSlot()
-    def update_image_slices(self, coordinates: tuple[int, int, int] = None):
+    def update_image_slices(
+        self, coordinates: tuple[int, int, int] | None = None, *, pinned: bool = False
+    ):
         """
-        Update the image slices based on the crosshair position.
+        Update the X/Y profile curves at a pixel position.
+
+        The live crosshair and the pinned marker share this logic; ``pinned``
+        selects which pair of curves is updated and how it is styled. The live
+        pixel comes from ``coordinates`` (or the crosshair lines), the pinned
+        pixel is the stored pin position.
 
         Args:
-            coordinates(tuple): The coordinates of the crosshair.
+            coordinates(tuple): ``(name, row, col)`` pixel coordinates for the
+                live curves; ignored for the pinned curves.
+            pinned(bool): Update the pinned reference curves instead of the live ones.
         """
-        if coordinates is None:
-            # Try to get coordinates from crosshair position (like in crosshair mouse_moved)
-            if (
-                hasattr(self, "crosshair")
-                and hasattr(self.crosshair, "v_line")
-                and hasattr(self.crosshair, "h_line")
-            ):
-                x = int(round(self.crosshair.v_line.value()))
-                y = int(round(self.crosshair.h_line.value()))
-            else:
+        if pinned:
+            if self._pinned_slice_coords is None:
                 return
+            row, col = self._pinned_slice_coords
+        elif coordinates is not None:
+            row, col = coordinates[1], coordinates[2]
+        elif (
+            hasattr(self, "crosshair")
+            and hasattr(self.crosshair, "v_line")
+            and hasattr(self.crosshair, "h_line")
+        ):
+            # Fall back to the crosshair line positions (like crosshair mouse_moved).
+            row = int(round(self.crosshair.v_line.value()))
+            col = int(round(self.crosshair.h_line.value()))
         else:
-            x = coordinates[1]
-            y = coordinates[2]
+            return
+
         image_item = self.layer_manager["main"].image
-        slices = self._compute_image_slices(image_item, x, y)
+        slices = self._compute_image_slices(image_item, row, col)
         if slices is None:
             return
         h_world_x, h_slice, v_world_y, v_slice = slices
 
-        # Update the live curves in place. They are persistent (rather than
-        # clear()+plot() each time) so a pinned reference curve survives.
+        # Curves are persistent and updated in place (rather than clear()+plot())
+        # so the other pair survives every refresh.
+        if pinned:
+            if self.x_roi_pinned is None:
+                # Solid pen on purpose: Qt's dash stroker on a many-segment profile
+                # curve is 10-20x more expensive to paint and dominates the whole
+                # panel repaint.
+                pen = pg.mkPen("#f2c037", width=2)
+                self.x_roi_pinned = self.x_roi.plot_item.plot(h_world_x, h_slice, pen=pen)
+                self.y_roi_pinned = self.y_roi.plot_item.plot(v_slice, v_world_y, pen=pen)
+                # Keep the pinned styling when the ROI plots re-pen on theme change.
+                self.x_roi_pinned.is_pinned_reference = True
+                self.y_roi_pinned.is_pinned_reference = True
+            else:
+                self.x_roi_pinned.setData(h_world_x, h_slice)
+                self.y_roi_pinned.setData(v_slice, v_world_y)
+            return
+
         if self.x_roi_curve is None:
             self.x_roi_curve = self.x_roi.plot_item.plot(
                 h_world_x, h_slice, pen=pg.mkPen(self.x_roi.curve_color, width=3)
             )
-        else:
-            self.x_roi_curve.setData(h_world_x, h_slice)
-
-        if self.y_roi_curve is None:
             self.y_roi_curve = self.y_roi.plot_item.plot(
                 v_slice, v_world_y, pen=pg.mkPen(self.y_roi.curve_color, width=3)
             )
         else:
+            self.x_roi_curve.setData(h_world_x, h_slice)
             self.y_roi_curve.setData(v_slice, v_world_y)
 
     def _compute_image_slices(self, image_item, row: int, col: int):
@@ -762,34 +818,22 @@ class ImageBase(PlotBase):
         return h_world_x, h_slice, v_world_y, v_slice
 
     @SafeSlot(tuple)
-    def pin_image_slices(self, coordinates: tuple):
-        """Freeze the X/Y profiles at the pinned pixel as static reference curves.
+    def pin_image_slices(self, _coordinates: tuple):
+        """Create or update the pinned profile curves at the pinned pixel.
 
         Args:
-            coordinates (tuple): ``(name, row, col)`` pixel coordinates of the pin, as
-                emitted by the crosshair's ``coordinatesPinned2D`` signal.
+            _coordinates (tuple): ``(name, row, col)`` from ``coordinatesPinned2D``;
+                the pixel itself is tracked by ``_on_pin_coordinates``.
         """
-        image_item = self.layer_manager["main"].image
-        slices = self._compute_image_slices(image_item, coordinates[1], coordinates[2])
-        if slices is None:
-            return
-        h_world_x, h_slice, v_world_y, v_slice = slices
-        # Single pin: drop any previously frozen curves first.
-        self.clear_pinned_slices()
-        # Solid pen on purpose: Qt's dash stroker on a many-segment profile curve is
-        # 10-20x more expensive to paint than a solid stroke, which stalls the GUI
-        # thread on every image update while a pin is active. The straight pin
-        # InfiniteLines can stay dashed cheaply; these data curves cannot.
-        pen = pg.mkPen("#f2c037", width=2)
-        self.x_roi_pinned = self.x_roi.plot_item.plot(h_world_x, h_slice, pen=pen)
-        self.y_roi_pinned = self.y_roi.plot_item.plot(v_slice, v_world_y, pen=pen)
-        # Keep the frozen reference styling when the ROI plots re-pen on theme change.
-        self.x_roi_pinned.is_pinned_reference = True
-        self.y_roi_pinned.is_pinned_reference = True
+        self.update_image_slices(pinned=True)
 
     @SafeSlot()
     def clear_pinned_slices(self):
-        """Remove the frozen pinned profile curves, if present."""
+        """Remove the pinned profile curves, if present.
+
+        The pinned coordinates are kept: the pin itself may still exist (e.g. the
+        ROI panels were toggled off) and its label keeps following the image.
+        """
         if self.x_roi_pinned is not None:
             self.x_roi.plot_item.removeItem(self.x_roi_pinned)
             self.x_roi_pinned = None
@@ -1133,9 +1177,6 @@ class ImageBase(PlotBase):
         Cleanup the widget.
         """
         self.toolbar.cleanup()
-        if self._crosshair_image_update_proxy is not None:
-            self._crosshair_image_update_proxy.disconnect()
-            self._crosshair_image_update_proxy = None
 
         # Remove all ROIs
         rois = self.rois

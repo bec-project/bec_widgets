@@ -587,6 +587,8 @@ def test_set_pin_2d_emits_pixel_coordinates(image_widget_with_crosshair):
 
 
 def test_set_pin_2d_label_includes_intensity(image_widget_with_crosshair):
+    """The pin label includes the image intensity at the pinned pixel and follows
+    image changes through update_on_image_change (same mechanism as the live label)."""
     crosshair, plot_item = image_widget_with_crosshair
     image = np.arange(10_000, dtype=float).reshape(100, 100)
     for item in plot_item.items:
@@ -597,6 +599,12 @@ def test_set_pin_2d_label_includes_intensity(image_widget_with_crosshair):
 
     assert crosshair.pinned_label is not None
     assert crosshair.pinned_label.toPlainText() == "pin (40.500, 60.500)\nIntensity: 4060.000"
+
+    for item in plot_item.items:
+        if isinstance(item, pg.ImageItem):
+            item.setImage(image + 100.0)
+    crosshair.update_on_image_change()
+    assert crosshair.pinned_label.toPlainText() == "pin (40.500, 60.500)\nIntensity: 4160.000"
 
 
 def test_reset_preserves_pin_cleanup_removes_it(image_widget_with_crosshair):

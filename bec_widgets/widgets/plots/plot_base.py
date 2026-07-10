@@ -1136,16 +1136,12 @@ class PlotBase(BECWidget, QWidget):
         if had_pin:
             self.crosshair_pin_cleared.emit()
 
-    def update_crosshair_on_image_change(self) -> None:
-        """Refresh image-dependent crosshair state without replaying mouse movement."""
-        if self.crosshair is not None:
-            self.crosshair.update_image_marker_geometry()
-            self.crosshair.update_pinned_label()
-            return
-        self._update_detached_pin_label()
-
     def _update_detached_pin_label(self) -> None:
-        """Refresh a detached pin label against the current image data."""
+        """Refresh a detached pin label against the current image data.
+
+        Uses the same pull mechanism as the crosshair labels: the label is rebuilt
+        from the pinned coordinate against the currently plotted image.
+        """
         if self._detached_pin is None:
             return
         pos = self._detached_pin.get("pos")
