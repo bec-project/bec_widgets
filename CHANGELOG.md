@@ -1,6 +1,29 @@
 # CHANGELOG
 
 
+## v3.27.0 (2026-07-10)
+
+### Features
+
+- **crosshair**: Add click-to-pin marker with frozen ROI profiles
+  ([`d6445ce`](https://github.com/bec-project/bec_widgets/commit/d6445ce462b38fef89920b91bde72a8d1ffc89b6))
+
+- **crosshair**: Keep the pin across data/scan resets
+  ([`41c01e6`](https://github.com/bec-project/bec_widgets/commit/41c01e661215be9092e20f17966e635e03b80eb6))
+
+- **crosshair**: Keep the pinned marker when the crosshair is toggled off
+  ([`34e432e`](https://github.com/bec-project/bec_widgets/commit/34e432e0edf8b6e2c1429bfae4298c681a4557a6))
+
+- **crosshair**: Pin crosshair has Intensity label for 2D
+  ([`e3bb7f8`](https://github.com/bec-project/bec_widgets/commit/e3bb7f83684bc65bf227cd17e72161953a50a5e2))
+
+- **crosshair**: Restore frozen ROI profiles when a pin is re-adopted
+  ([`4a6c351`](https://github.com/bec-project/bec_widgets/commit/4a6c351be38d616c31560ac85635151e65a76324))
+
+- **crosshair**: Update labels and ROI profiles on image changes
+  ([`e013078`](https://github.com/bec-project/bec_widgets/commit/e013078976ccd5b796be0b32cc23163f6c96ed1e))
+
+
 ## v3.26.0 (2026-07-10)
 
 ### Features
