@@ -3,9 +3,18 @@ from __future__ import annotations
 from bec_qthemes import material_icon
 from qtpy.QtCore import QMimeData, Qt, Signal
 from qtpy.QtGui import QDrag
-from qtpy.QtWidgets import QHBoxLayout, QPushButton, QSizePolicy, QToolButton, QVBoxLayout, QWidget
+from qtpy.QtWidgets import (
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSizePolicy,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from bec_widgets.utils.error_popups import SafeProperty
+from bec_widgets.widgets.containers.main_window.addons.hover_widget import WidgetTooltip
 
 
 class CollapsibleSection(QWidget):
@@ -34,6 +43,9 @@ class CollapsibleSection(QWidget):
         super().__init__(parent=parent)
         self.title = title
         self.content_widget = None
+        self._help_text = tooltip
+        self._help_tooltip: WidgetTooltip | None = None
+        self.destroyed.connect(self._cleanup_help_tooltip)
         self.setAcceptDrops(True)
         self._expanded = True
 
@@ -58,13 +70,24 @@ class CollapsibleSection(QWidget):
         self.header_button.mouseMoveEvent = self._header_mouse_move_event
         self.header_button.dragEnterEvent = self._header_drag_enter_event
         self.header_button.dropEvent = self._header_drop_event
-        if tooltip:
-            self.header_button.setToolTip(tooltip)
 
         self.drag_start_position = None
 
         # Add header to layout
         header_layout.addWidget(self.header_button)
+        self.header_info_button = QToolButton()
+        self.header_info_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.header_info_button.setFixedSize(20, 20)
+        self.header_info_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self.header_info_button.setAutoRaise(True)
+        self.header_info_button.setEnabled(bool(self._help_text))
+        self.header_info_button.setVisible(bool(self._help_text))
+        self.header_info_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.header_info_button.setIcon(material_icon("info", convert_to_pixmap=False))
+        if self._help_text:
+            self.header_info_button.setToolTip("Show help")
+            self.header_info_button.clicked.connect(self._toggle_help_tooltip)
+        header_layout.addWidget(self.header_info_button)
         header_layout.addStretch()
 
         # Add button in header (icon-only)
@@ -145,6 +168,37 @@ class CollapsibleSection(QWidget):
             slot: The function to call when the add button is clicked.
         """
         self.header_add_button.clicked.connect(slot)
+
+    def closeEvent(self, event):
+        self._cleanup_help_tooltip()
+        super().closeEvent(event)
+
+    def _toggle_help_tooltip(self):
+        """Show or hide the section help popover near the info button."""
+        if not self._help_text:
+            return
+
+        if self._help_tooltip is not None and self._help_tooltip.isVisible():
+            self._help_tooltip.hide()
+            return
+
+        if self._help_tooltip is None:
+            help_label = QLabel(self._help_text)
+            help_label.setWordWrap(True)
+            help_label.setMinimumWidth(220)
+            help_label.setMaximumWidth(320)
+            self._help_tooltip = WidgetTooltip(help_label)
+
+        anchor = self.header_info_button.mapToGlobal(self.header_info_button.rect().center())
+        self._help_tooltip.show_near(anchor)
+
+    def _cleanup_help_tooltip(self, *_args):
+        """Close and release any help popup owned by this section."""
+        if self._help_tooltip is None:
+            return
+        self._help_tooltip.close()
+        self._help_tooltip.deleteLater()
+        self._help_tooltip = None
 
     def _header_mouse_press_event(self, event):
         """Handle mouse press on header for drag start"""
