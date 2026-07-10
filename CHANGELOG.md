@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.26.0 (2026-07-10)
+
+### Features
+
+- **dock_area**: Add ScanProgressBar to Utils selection menu
+  ([`65d0b50`](https://github.com/bec-project/bec_widgets/commit/65d0b50bbb71c9ddff3c69409f0c245664ca8d91))
+
+
 ## v3.25.1 (2026-07-09)
 
 ### Bug Fixes
