@@ -85,6 +85,45 @@ class TestFocusEditor:
         assert editor1 != editor2
         assert editor2 is not None
 
+    def test_close_file_force_discards_unsaved_changes(
+        self, qtbot, monaco_dock: MonacoDock, tmpdir
+    ):
+        """Test force-closing an open file bypasses the save prompt."""
+        file_path = tmpdir.join("force_close.py")
+        file_path.write("print('before')")
+
+        monaco_dock.open_file(str(file_path))
+        qtbot.wait(300)
+
+        editor_widget = monaco_dock.last_focused_editor.widget()
+        assert isinstance(editor_widget, MonacoWidget)
+        editor_widget.set_text("print('after')")
+        qtbot.wait(100)
+        assert editor_widget.modified
+
+        with mock.patch.object(QMessageBox, "question") as mock_question:
+            assert monaco_dock.close_file(str(file_path), force=True)
+
+        assert not mock_question.called
+        assert editor_widget.current_file is None
+        assert editor_widget.get_text() == ""
+
+    def test_rename_open_path_updates_open_editor(self, qtbot, monaco_dock: MonacoDock, tmpdir):
+        """Test renaming an open file updates the tracked editor path and tooltip."""
+        file_path = tmpdir.join("rename_me.py")
+        file_path.write("print('before')")
+
+        monaco_dock.open_file(str(file_path))
+        qtbot.wait(300)
+
+        new_file_path = str(tmpdir.join("renamed.py"))
+        monaco_dock.rename_open_path(str(file_path), new_file_path)
+
+        editor_widget = monaco_dock.last_focused_editor.widget()
+        assert isinstance(editor_widget, MonacoWidget)
+        assert editor_widget.current_file == new_file_path
+        assert monaco_dock._get_open_files() == [new_file_path]
+
 
 class TestSaveFiles:
     def test_save_file_existing_file_no_macros(self, qtbot, monaco_dock: MonacoDock, tmpdir):

@@ -115,11 +115,15 @@ class MonacoDock(DockAreaWidget):
             self.last_focused_editor = new_widget
 
     def _on_editor_close_requested(self, dock: CDockWidget, widget: QWidget):
+        self._close_editor_dock(dock, prompt_to_save=True)
+
+    def _close_editor_dock(self, dock: CDockWidget, prompt_to_save: bool) -> bool:
+        """Close a docked editor, optionally prompting to save unsaved changes."""
         # Cast widget to MonacoWidget since we know that's what it is
-        monaco_widget = cast(MonacoWidget, widget)
+        monaco_widget = cast(MonacoWidget, dock.widget())
 
         # Check if we have unsaved changes
-        if monaco_widget.modified:
+        if prompt_to_save and monaco_widget.modified:
             # Prompt the user to save changes
             response = QMessageBox.question(
                 self,
@@ -131,8 +135,10 @@ class MonacoDock(DockAreaWidget):
             )
             if response == QMessageBox.StandardButton.Yes:
                 self.save_file(monaco_widget)
+                if monaco_widget.modified:
+                    return False
             elif response == QMessageBox.StandardButton.Cancel:
-                return
+                return False
 
         # Count all editor docks managed by this dock manager
         total = len(self.dock_manager.dockWidgets())
@@ -146,7 +152,7 @@ class MonacoDock(DockAreaWidget):
             icon = self._resolve_dock_icon(monaco_widget, dock_icon=None, apply_widget_icon=True)
             dock.setIcon(icon)
             self.last_focused_editor = dock
-            return
+            return True
 
         # Otherwise, proceed to close and delete the dock
         monaco_widget.close()
@@ -156,6 +162,7 @@ class MonacoDock(DockAreaWidget):
             self.last_focused_editor = None
         # After topology changes, make sure single-tab areas get a plus button
         self._scan_and_fix_areas()
+        return True
 
     @staticmethod
     def reset_widget(widget: MonacoWidget):
@@ -446,6 +453,55 @@ class MonacoDock(DockAreaWidget):
             if editor_widget.current_file == file_name:
                 return widget
         return None
+
+    def close_file(self, file_name: str, force: bool = False) -> bool:
+        """
+        Close an open file by path.
+
+        Args:
+            file_name (str): The file path to close.
+            force (bool): If True, discard unsaved changes without prompting.
+
+        Returns:
+            bool: True if the file was closed or not open, False if closing was cancelled.
+        """
+        editor_dock = self._get_editor_dock(file_name)
+        if editor_dock is None:
+            return True
+        return self._close_editor_dock(editor_dock, prompt_to_save=not force)
+
+    def rename_open_path(self, old_path: str, new_path: str) -> None:
+        """
+        Update open editor paths after a file or directory rename.
+
+        Args:
+            old_path: Original file or directory path.
+            new_path: Replacement file or directory path.
+        """
+        old_path = os.path.abspath(old_path)
+        new_path = os.path.abspath(new_path)
+
+        for dock in self.dock_manager.dockWidgets():
+            editor_widget = cast(MonacoWidget, dock.widget())
+            current_file = editor_widget.current_file
+            if current_file is None:
+                continue
+
+            current_file = os.path.abspath(current_file)
+            if current_file == old_path:
+                updated_path = new_path
+            else:
+                try:
+                    if os.path.commonpath([current_file, old_path]) != old_path:
+                        continue
+                except ValueError:
+                    continue
+                updated_path = os.path.join(new_path, os.path.relpath(current_file, old_path))
+
+            editor_widget._current_file = updated_path
+            dock.setWindowTitle(os.path.basename(updated_path))
+            dock.setTabToolTip(updated_path)
+            self._update_tab_title_for_modification(dock, editor_widget.modified)
 
     def set_file_readonly(self, file_name: str, read_only: bool = True) -> bool:
         """

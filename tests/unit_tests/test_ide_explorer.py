@@ -258,10 +258,129 @@ def test_ide_explorer_add_local_macro(ide_explorer, qtbot, tmpdir):
         assert os.path.exists(expected_file)
 
         # Check that the file contains the expected function
-        with open(expected_file, "r") as f:
+        with open(expected_file, "r", encoding="utf-8") as f:
             content = f.read()
             assert "def test_macro_function():" in content
             assert "test_macro_function macro" in content
+
+
+def test_ide_explorer_delete_local_script(ide_explorer, tmpdir):
+    """Test deleting a local script file."""
+    local_script_section = ide_explorer.main_explorer.get_section(
+        "SCRIPTS"
+    ).content_widget.get_section("Local")
+    local_script_section.content_widget.set_directory(str(tmpdir))
+
+    file_path = os.path.join(tmpdir, "delete_me.py")
+    Path(file_path).write_text("print('delete me')", encoding="utf-8")
+
+    with mock.patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.Yes):
+        ide_explorer._delete_local_script(file_path)
+
+    assert not os.path.exists(file_path)
+
+
+def test_ide_explorer_delete_local_script_directory(ide_explorer, tmpdir):
+    """Test deleting a local script directory."""
+    local_script_section = ide_explorer.main_explorer.get_section(
+        "SCRIPTS"
+    ).content_widget.get_section("Local")
+    local_script_section.content_widget.set_directory(str(tmpdir))
+
+    script_dir = Path(tmpdir) / "subdir"
+    script_dir.mkdir()
+    nested_file = script_dir / "nested.py"
+    nested_file.write_text("print('nested')", encoding="utf-8")
+
+    with mock.patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.Yes):
+        ide_explorer._delete_local_script(str(script_dir))
+
+    assert not script_dir.exists()
+
+
+def test_ide_explorer_delete_local_macro_broadcasts_removals(ide_explorer, tmpdir):
+    """Test deleting a local macro unloads loaded macros and removes the file."""
+    ide_explorer.clear()
+    ide_explorer.sections = ["macros"]
+
+    local_macros_section = ide_explorer.main_explorer.get_section(
+        "MACROS"
+    ).content_widget.get_section("Local")
+    local_macros_section.content_widget.set_directory(str(tmpdir))
+
+    file_path = os.path.join(tmpdir, "delete_macro.py")
+    Path(file_path).write_text("def delete_macro():\n    pass\n", encoding="utf-8")
+
+    ide_explorer.client.macros = mock.MagicMock()
+    ide_explorer.client.macros._update_handler = mock.MagicMock()
+    ide_explorer.client.macros._update_handler.get_existing_macros.return_value = {
+        "delete_macro": {"fname": file_path}
+    }
+
+    with mock.patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.Yes):
+        ide_explorer._delete_local_macro(file_path)
+
+    ide_explorer.client.macros._update_handler.broadcast.assert_called_once_with(
+        action="remove", name="delete_macro"
+    )
+    assert not os.path.exists(file_path)
+
+
+def test_ide_explorer_delete_local_macro_directory_broadcasts_removals(ide_explorer, tmpdir):
+    """Test deleting a local macro directory unloads macros from contained files."""
+    ide_explorer.clear()
+    ide_explorer.sections = ["macros"]
+
+    local_macros_section = ide_explorer.main_explorer.get_section(
+        "MACROS"
+    ).content_widget.get_section("Local")
+    local_macros_section.content_widget.set_directory(str(tmpdir))
+
+    macro_dir = Path(tmpdir) / "subdir"
+    macro_dir.mkdir()
+    file_path = macro_dir / "delete_macro.py"
+    file_path.write_text("def delete_macro():\n    pass\n", encoding="utf-8")
+
+    ide_explorer.client.macros = mock.MagicMock()
+    ide_explorer.client.macros._update_handler = mock.MagicMock()
+    ide_explorer.client.macros._update_handler.get_existing_macros.return_value = {
+        "delete_macro": {"fname": str(file_path)}
+    }
+
+    with mock.patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.Yes):
+        ide_explorer._delete_local_macro(str(macro_dir))
+
+    ide_explorer.client.macros._update_handler.broadcast.assert_called_once_with(
+        action="remove", name="delete_macro"
+    )
+    assert not macro_dir.exists()
+
+
+def test_ide_explorer_rename_local_macro_path_reloads_macros(ide_explorer, tmpdir):
+    """Test local macro renames refresh open-editor and macro state."""
+    ide_explorer.clear()
+    ide_explorer.sections = ["macros"]
+
+    local_macros_section = ide_explorer.main_explorer.get_section(
+        "MACROS"
+    ).content_widget.get_section("Local")
+    local_macros_section.content_widget.set_directory(str(tmpdir))
+
+    old_path = os.path.join(tmpdir, "old_name.py")
+    new_path = os.path.join(tmpdir, "new_name.py")
+
+    ide_explorer.client.macros = mock.MagicMock()
+    ide_explorer.client.macros._update_handler = mock.MagicMock()
+
+    with (
+        mock.patch.object(ide_explorer, "_rename_open_editor_path") as mock_rename_open_editor,
+        mock.patch.object(ide_explorer, "_broadcast_removed_macros") as mock_broadcast_removed,
+    ):
+        ide_explorer._rename_local_macro_path(old_path, new_path)
+
+    mock_broadcast_removed.assert_called_once_with(old_path)
+    mock_rename_open_editor.assert_called_once_with(old_path, new_path)
+    ide_explorer.client.macros.load_all_user_macros.assert_called_once()
 
 
 def test_ide_explorer_add_local_macro_invalid_name(ide_explorer, qtbot, tmpdir):
@@ -410,14 +529,12 @@ def test_ide_explorer_refresh_macro_file_local(ide_explorer, qtbot, tmpdir):
     macro_file = Path(tmpdir) / "test_macro.py"
     macro_file.write_text("def test_function(): pass")
 
-    # Mock the refresh_file_item method
-    with mock.patch.object(
-        local_macros_section.content_widget, "refresh_file_item"
-    ) as mock_refresh:
+    # Mock the refresh method
+    with mock.patch.object(local_macros_section.content_widget, "refresh") as mock_refresh:
         ide_explorer.refresh_macro_file(str(macro_file))
 
-        # Should call refresh_file_item with the file path
-        mock_refresh.assert_called_once_with(str(macro_file))
+        # Should refresh the file browser
+        mock_refresh.assert_called_once_with()
 
 
 def test_ide_explorer_refresh_macro_file_no_match(ide_explorer, qtbot, tmpdir):
@@ -434,13 +551,11 @@ def test_ide_explorer_refresh_macro_file_no_match(ide_explorer, qtbot, tmpdir):
     # Try to refresh a file that's not in any macro directory
     unrelated_file = "/some/other/path/unrelated.py"
 
-    # Mock the refresh_file_item method
-    with mock.patch.object(
-        local_macros_section.content_widget, "refresh_file_item"
-    ) as mock_refresh:
+    # Mock the refresh method
+    with mock.patch.object(local_macros_section.content_widget, "refresh") as mock_refresh:
         ide_explorer.refresh_macro_file(unrelated_file)
 
-        # Should not call refresh_file_item
+        # Should not refresh for unrelated files
         mock_refresh.assert_not_called()
 
 
