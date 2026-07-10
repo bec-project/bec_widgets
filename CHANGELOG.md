@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.28.0 (2026-07-10)
+
+### Features
+
+- **ring_progress_bar**: Add set_progress_state for one-call ring + label updates
+  ([`5b1dd82`](https://github.com/bec-project/bec_widgets/commit/5b1dd82c1bb5d3c8eaf976adbb0a7e73c889b4db))
+
+
 ## v3.27.0 (2026-07-10)
 
 ### Features
