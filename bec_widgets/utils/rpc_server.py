@@ -485,7 +485,7 @@ class RPCServer:
             MessageEndpoints.gui_registry_state(self.gui_id),
             msg_dict={"data": messages.GUIRegistryStateMessage(state=data)},
             max_size=1,
-            expire=60,
+            expire=3600,
         )
 
     def _serialize_bec_connector(self, connector: BECConnector, wait=False) -> dict:
