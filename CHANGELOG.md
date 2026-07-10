@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v3.29.0 (2026-07-10)
+
+### Features
+
+- **heatmap**: Scan history plotting via browser popup and settings scan selection
+  ([`53b2172`](https://github.com/bec-project/bec_widgets/commit/53b21725fd604a47a6cb4894ef2af0ff508d5cca))
+
+- **utility**: Add scan index combobox widget
+  ([`567b10c`](https://github.com/bec-project/bec_widgets/commit/567b10c137bf5f47d469b8884af9aa0710c4536a))
+
+### Refactoring
+
+- **curve_tree**: Use shared scan index combobox
+  ([`d2b5c74`](https://github.com/bec-project/bec_widgets/commit/d2b5c74204d585b1a0f3d575aba10f2ea8aac7a3))
+
+
 ## v3.28.0 (2026-07-10)
 
 ### Features
