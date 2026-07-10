@@ -740,6 +740,8 @@ class Heatmap(ImageBase):
         self.main_image.set_data(img, transform=transform)
         if self._color_bar is not None:
             self._color_bar.blockSignals(False)
+        # Crosshair labels and pinned profiles refresh via image_updated
+        # (ImageBase._on_image_updated_refresh).
         self.image_updated.emit()
 
     def _request_step_scan_interpolation(
