@@ -1,6 +1,23 @@
 # CHANGELOG
 
 
+## v3.29.1 (2026-07-13)
+
+### Bug Fixes
+
+- **RPCServer**: Increase message expiration time from 60 to 3600 seconds
+  ([`5de1afa`](https://github.com/bec-project/bec_widgets/commit/5de1afa292d6291cd41441d184680b79f63d9ff0))
+
+### Refactoring
+
+- **BECGuiClient**: Remove unused import of register_serializer_extension
+  ([`cb6a7c5`](https://github.com/bec-project/bec_widgets/commit/cb6a7c5ab27ee572923fe12b9b09f936650a18bc))
+
+- **BECGuiClient**: Streamline GUI server connection handling by removing redundant stream
+  registration
+  ([`b0e71aa`](https://github.com/bec-project/bec_widgets/commit/b0e71aac7785a9d7bc8d62e8eb15a75e1d05107f))
+
+
 ## v3.29.0 (2026-07-10)
 
 ### Features
