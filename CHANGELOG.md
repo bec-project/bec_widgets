@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v3.29.3 (2026-07-14)
+
+### Bug Fixes
+
+- Replace custom tree with builtin filebrowser
+  ([`cfa38e5`](https://github.com/bec-project/bec_widgets/commit/cfa38e549fb3cc24a04096bef23bc479bd74c48d))
+
+- **ide-explorer**: Add tooltips for scripts and macros sections with help popups
+  ([`e4159b9`](https://github.com/bec-project/bec_widgets/commit/e4159b97871870b863fcf3fe21bfc12bae925390))
+
+- **ide-explorer**: Enhance file selection behavior across scripts and macros
+  ([`70b8022`](https://github.com/bec-project/bec_widgets/commit/70b8022648b776792910902f6c8db115649aedb1))
+
+
 ## v3.29.2 (2026-07-14)
 
 ### Bug Fixes
