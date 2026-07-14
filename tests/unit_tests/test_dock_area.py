@@ -490,6 +490,21 @@ class TestBasicDockArea:
             assert vertical == [2, 3]
             assert overrides == {(): [9], (1, 0): [5, 5]}
 
+    def test_first_dock_title_bar_preference_survives_second_dock(self, basic_dock_area):
+        first = QWidget(parent=basic_dock_area)
+        first.setObjectName("first_panel")
+        second = QWidget(parent=basic_dock_area)
+        second.setObjectName("second_panel")
+
+        first_dock = basic_dock_area.new(first, return_dock=True, show_title_bar=False)
+        assert first_dock.dockAreaWidget().titleBar().isHidden()
+
+        # Adding a second dock makes ADS force-reshow the first area's title bar;
+        # the stored preference must win.
+        basic_dock_area.new(second, where="bottom", relative_to=first_dock, show_title_bar=False)
+
+        assert first_dock.dockAreaWidget().titleBar().isHidden()
+
     def test_show_settings_action_defaults_disabled(self, basic_dock_area):
         widget = QWidget(parent=basic_dock_area)
         widget.setObjectName("settings_default")

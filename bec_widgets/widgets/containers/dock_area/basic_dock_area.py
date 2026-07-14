@@ -601,7 +601,7 @@ class DockAreaWidget(BECWidget, QWidget):
             apply_widget_icon=spec.apply_widget_icon,
         )
         self.dock_manager.setFocus()
-        self._apply_dock_preferences(dock)
+        self._apply_all_dock_preferences()
         if spec.promote_central:
             self.set_central_dock(dock)
         return dock
@@ -1251,6 +1251,20 @@ class DockAreaWidget(BECWidget, QWidget):
 
         apply()
 
+    def _apply_all_dock_preferences(self) -> None:
+        """
+        Re-apply the stored appearance preferences of every dock.
+
+        Qt ADS force-reshows the first dock area's title bar when a container grows
+        from one dock area to two (``DockContainerWidgetPrivate::addDockAreasToList``),
+        so preferences already applied to existing docks must be re-asserted whenever
+        a dock is added.
+        """
+        for dock in self.dock_list():
+            if dock is None or not isValid(dock):
+                continue
+            self._apply_dock_preferences(dock)
+
     def set_central_dock(self, dock: CDockWidget | QWidget | str) -> None:
         """
         Promote an existing dock to be the dock manager's central widget.
@@ -1433,6 +1447,7 @@ class DockAreaWidget(BECWidget, QWidget):
                 self.dock_manager.addDockWidgetTab(
                     QtAds.DockWidgetArea.RightDockWidgetArea, dock, target
                 )
+        self._apply_all_dock_preferences()
 
     @SafeSlot(str)
     def delete(self, object_name: str) -> bool:
