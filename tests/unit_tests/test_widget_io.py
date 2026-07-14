@@ -80,7 +80,7 @@ def test_export_import_config(example_widget):
                 "value": 10,
             },
             "QTableWidget ()": {
-                "QAbstractButton ()": {},
+                "QAbstractButton (qt_tableview_cornerbutton)": {},
                 "QAbstractTableModel ()": {},
                 "QHeaderView ()": {
                     "QItemSelectionModel ()": {},

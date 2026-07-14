@@ -531,6 +531,7 @@ class TestDeviceManagerView:
         # Assign the mocked client
         widget.device_manager_widget.client = mocked_client
         qtbot.addWidget(widget)
+        widget.show()
         qtbot.waitExposed(widget)
         yield widget
 

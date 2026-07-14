@@ -10,8 +10,8 @@ classifiers = [
 ]
 dependencies = [
   "PyJWT~=2.9",
-  "PySide6==6.9.0",
-  "PySide6-QtAds==4.4.0",
+  "PySide6==6.11.1",
+  "PySide6-QtAds==5.0.0",
   "bec_ipython_client~=3.134", # needed for jupyter console
   "bec_lib~=3.134",
   "bec_qthemes~=1.0, >=1.3.4",
@@ -23,7 +23,7 @@ dependencies = [
   "ophyd_devices~=1.29, >=1.29.1",
   "pydantic~=2.0",
   "pylsp-bec~=1.2",
-  "pyqtgraph==0.13.7",
+  "pyqtgraph==0.14.0",
   "python-slugify~=8.0",
   "qtconsole~=5.5, >=5.5.1",             # needed for jupyter console
   "qtmonaco~=0.8, >=0.8.1",
@@ -57,7 +57,7 @@ dev = [
   "watchdog~=6.0",
   "pre_commit~=4.2",
 ]
-qtermwidget = ["pyside6_qtermwidget"]
+qtermwidget = ["pyside6_qtermwidget==0.5.6.11.1"]
 
 
 

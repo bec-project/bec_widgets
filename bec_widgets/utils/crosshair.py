@@ -529,10 +529,10 @@ class Crosshair(QObject):
             if event is None:
                 return  # nothing to do
             scene_pos = event[0]  # SignalProxy bundle
-            if not self.plot_item.vb.sceneBoundingRect().contains(scene_pos):
-                return
             view_pos = self.plot_item.vb.mapSceneToView(scene_pos)
             x, y = view_pos.x(), view_pos.y()
+        if not self._is_within_view_range(x, y):
+            return
 
         # Update cross‑hair visuals
         self.v_line.setPos(x)
@@ -594,8 +594,12 @@ class Crosshair(QObject):
         if event.button() != Qt.MouseButton.LeftButton:
             return
         self.update_markers()
-        if self.plot_item.vb.sceneBoundingRect().contains(event._scenePos):
-            mouse_point = self.plot_item.vb.mapSceneToView(event._scenePos)
+        scene_pos_getter = getattr(event, "scenePos", None)
+        if not callable(scene_pos_getter):
+            return
+        scene_pos = scene_pos_getter()
+        mouse_point = self.plot_item.vb.mapSceneToView(scene_pos)
+        if self._is_within_view_range(mouse_point.x(), mouse_point.y()):
             x, y = mouse_point.x(), mouse_point.y()
             # Keep the raw click position; ``x``/``y`` are reused/snapped below.
             pin_x, pin_y = mouse_point.x(), mouse_point.y()
@@ -652,7 +656,7 @@ class Crosshair(QObject):
             # removes it, otherwise (re)place a single pin at the clicked point.
             if event.double():
                 self.clear_pin()
-            elif self._pin_hit(event._scenePos):
+            elif self._pin_hit(scene_pos):
                 self.clear_pin()
             else:
                 self.set_pin(pin_x, pin_y, x_snap_values, y_snap_values)
@@ -852,6 +856,10 @@ class Crosshair(QObject):
         pin_scene = self.plot_item.vb.mapViewToScene(QPointF(*self.pinned_pos))
         delta = pin_scene - scene_pos
         return (delta.x() ** 2 + delta.y() ** 2) ** 0.5 <= self._pin_hit_radius_px
+
+    def _is_within_view_range(self, x: float, y: float) -> bool:
+        x_range, y_range = self.plot_item.vb.viewRange()
+        return min(x_range) <= x <= max(x_range) and min(y_range) <= y <= max(y_range)
 
     def _get_transformed_position(
         self, x: float, y: float, transform: QTransform

@@ -11,7 +11,7 @@ from bec_lib.endpoints import MessageEndpoints
 from bec_lib.utils.import_utils import lazy_import, lazy_import_from
 from bec_qthemes import material_icon
 from pydantic import BaseModel, Field, field_validator
-from qtpy.QtCore import QObject, Qt, QThread, QTimer, Signal
+from qtpy.QtCore import QObject, QRectF, Qt, QThread, QTimer, Signal
 from qtpy.QtGui import QTransform
 from qtpy.QtWidgets import QDialog, QPushButton, QVBoxLayout
 from toolz import partition
@@ -91,6 +91,30 @@ class HeatmapConfig(ConnectionConfig):
 
     model_config: dict = {"validate_assignment": True}
     _validate_color_palette = field_validator("color_map")(Colors.validate_color_map)
+
+
+class _TextOnlyLegendSample(pg.graphicsItems.LegendItem.ItemSample):
+    """Zero-size legend sample for text-only rows in the config label.
+
+    The stock ItemSample expects a plottable item with an ``opts`` dict; since
+    PySide 6.10 an exception raised inside its paint() override propagates out
+    of the C++ paint loop and crashes the application, so the config label rows
+    must not carry a real sample item.
+    """
+
+    def __init__(self):
+        super().__init__(item=None)
+        self.setFixedWidth(0)
+        self.setFixedHeight(0)
+
+    def boundingRect(self):
+        return QRectF(0, 0, 0, 0)
+
+    def paint(self, p, *args):
+        pass
+
+    def mouseClickEvent(self, event):
+        event.ignore()
 
 
 @dataclass
@@ -977,14 +1001,14 @@ class Heatmap(ImageBase):
         self.config_label.clear()
         # Indicate whether the widget follows the live acquisition or is pinned to a history scan
         mode = "history" if self._history_scan_id is not None else "live"
-        self.config_label.addItem(self.plot_item, f"Scan: {scan_msg.scan_number} ({mode})")
-        self.config_label.addItem(self.plot_item, f"Scan Name: {scan_msg.scan_name}")
+        self.config_label.addItem(_TextOnlyLegendSample(), f"Scan: {scan_msg.scan_number} ({mode})")
+        self.config_label.addItem(_TextOnlyLegendSample(), f"Scan Name: {scan_msg.scan_name}")
         if scan_msg.scan_name != "grid_scan" or self._image_config.enforce_interpolation:
             self.config_label.addItem(
-                self.plot_item, f"Interpolation: {self._image_config.interpolation}"
+                _TextOnlyLegendSample(), f"Interpolation: {self._image_config.interpolation}"
             )
             self.config_label.addItem(
-                self.plot_item, f"Oversampling: {self._image_config.oversampling_factor}x"
+                _TextOnlyLegendSample(), f"Oversampling: {self._image_config.oversampling_factor}x"
             )
 
     def get_image_data(
