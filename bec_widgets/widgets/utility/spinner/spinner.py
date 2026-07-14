@@ -58,7 +58,9 @@ class SpinnerWidget(QWidget):
 
         color_palette = get_theme_palette()
 
-        color = QColor(color_palette.accent().color())
+        # Use the theme highlight color; palette.accent() resolved to it before Qt 6.10,
+        # but now falls back to the platform accent since the theme does not set the role.
+        color = QColor(color_palette.highlight().color())
 
         rect.adjust(line_width, line_width, -line_width, -line_width)
 

@@ -68,6 +68,10 @@ def qapplication(qtbot, request, testable_qtimer_class):  # pylint: disable=unus
     # stop pyepics dispatcher for leaking tests
 
     _dispatcher.stop()
+    from bec_widgets.widgets.editors.bec_console.bec_console import _bec_console_registry
+
+    _bec_console_registry.clear()
+    process_all_deferred_deletes(qapp)
     if request.node.stash._storage.get("failed"):
         print("Test failed, skipping cleanup checks")
         return

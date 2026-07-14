@@ -13,6 +13,7 @@ from bec_widgets.widgets.plots.heatmap.heatmap import (
     HeatmapDeviceSignal,
     _InterpolationRequest,
     _StepInterpolationWorker,
+    _TextOnlyLegendSample,
 )
 
 # pytest: disable=unused-import
@@ -1053,6 +1054,27 @@ def test_heatmap_config_label_shows_live_or_history(heatmap_widget):
     heatmap_widget.redraw_config_label()
     labels = [label.text for _, label in heatmap_widget.config_label.items]
     assert "Scan: 5 (history)" in labels
+
+
+def test_heatmap_config_label_paints_without_error(heatmap_widget):
+    """The config label rows must survive a real paint pass.
+
+    A stock ItemSample around a PlotItem raises in paint(); since PySide 6.10
+    override exceptions propagate out of the C++ paint loop and segfault.
+    """
+    scan_msg = mock.MagicMock()
+    scan_msg.scan_number = 5
+    scan_msg.scan_name = "line_scan"
+    heatmap_widget.status_message = scan_msg
+    heatmap_widget._image_config.show_config_label = True
+    heatmap_widget.redraw_config_label()
+
+    samples = [sample for sample, _ in heatmap_widget.config_label.items]
+    assert samples
+    assert all(isinstance(sample, _TextOnlyLegendSample) for sample in samples)
+
+    pixmap = heatmap_widget.grab()
+    assert not pixmap.isNull()
 
 
 def test_heatmap_settings_scan_index_syncs_with_widget(heatmap_widget, qtbot, scan_history_factory):

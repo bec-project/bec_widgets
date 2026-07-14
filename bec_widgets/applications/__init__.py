@@ -1,12 +1,4 @@
-import os
-import sys
-
 import bec_widgets.widgets.containers.qt_ads as QtAds
-
-if sys.platform.startswith("linux"):
-    qt_platform = os.environ.get("QT_QPA_PLATFORM", "")
-    if qt_platform != "offscreen":
-        os.environ["QT_QPA_PLATFORM"] = "xcb"
 
 # Default QtAds configuration
 QtAds.CDockManager.setConfigFlag(QtAds.CDockManager.eConfigFlag.FocusHighlighting, True)

@@ -1391,6 +1391,9 @@ def test_crosshair_moves_update_profiles_immediately(qtbot, mocked_client):
     switch = bec_image_view.toolbar.components.get_action("image_switch_crosshair")
     switch.actions["crosshair_roi"].action.trigger()
     qtbot.wait(50)
+    bec_image_view.crosshair.plot_item.vb.setRange(
+        xRange=(0, test_data.shape[0]), yRange=(0, test_data.shape[1]), padding=0
+    )
 
     # Position the crosshair lines and emit the snapped pixel (as mouse_moved does).
     bec_image_view.crosshair.mouse_moved(manual_pos=(1.2, 2.2))
@@ -1410,6 +1413,9 @@ def test_live_label_intensity_updates_on_image_update(qtbot, mocked_client):
     test_data = np.arange(25, dtype=float).reshape(5, 5)
     bec_image_view.on_image_update_2d({"data": test_data}, {})
     bec_image_view.hook_crosshair()
+    bec_image_view.crosshair.plot_item.vb.setRange(
+        xRange=(0, test_data.shape[0]), yRange=(0, test_data.shape[1]), padding=0
+    )
 
     bec_image_view.crosshair.mouse_moved(manual_pos=(2.5, 3.5))
     assert "Intensity: 13.000" in bec_image_view.crosshair.coord_label.toPlainText()
