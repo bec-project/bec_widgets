@@ -1,4 +1,5 @@
 import os
+from fnmatch import fnmatch
 from pathlib import Path
 
 from bec_lib.logger import bec_logger
@@ -6,6 +7,7 @@ from qtpy.QtCore import QModelIndex, QPoint, QSortFilterProxyModel, Qt, Signal
 from qtpy.QtWidgets import (
     QAbstractItemView,
     QAction,
+    QApplication,
     QFileSystemModel,
     QInputDialog,
     QMenu,
@@ -43,8 +45,24 @@ class FileBrowserTreeWidget(QWidget):
     file_delete_requested = Signal(str)
     file_renamed = Signal(str, str)
 
-    def __init__(self, parent=None, directory: str | None = None, read_only: bool = False):
+    def __init__(
+        self,
+        parent=None,
+        directory: str | None = None,
+        read_only: bool = False,
+        name_filters: list[str] | None = None,
+    ):
+        """
+        A file browser tree widget that displays files and directories in a tree view.
+
+        Args:
+            parent: The parent widget.
+            directory: The initial directory to display. If None, the browser will be empty.
+            read_only: If True, the browser will be in read-only mode (no drag-and-drop, no renaming, no deletion).
+            name_filters: A list of name filters (e.g., ["*.py", "*.txt"]) to filter displayed files. If None, all files are displayed.
+        """
         super().__init__(parent)
+        self.name_filters = name_filters or ["*.py"]
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -56,14 +74,14 @@ class FileBrowserTreeWidget(QWidget):
         self.tree.setSortingEnabled(True)
         self.tree.setAnimated(True)
         self.tree.setAlternatingRowColors(False)
-        self.tree.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.tree.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.tree.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.tree.setDefaultDropAction(Qt.DropAction.MoveAction)
         self.tree.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
 
         self.model = QFileSystemModel(parent=self)
-        self.model.setNameFilters(["*.py"])
+        self.model.setNameFilters(self.name_filters)
         self.model.setNameFilterDisables(False)
         self.proxy_model = _FileBrowserFilterProxyModel(parent=self)
         self.proxy_model.setRecursiveFilteringEnabled(True)
@@ -77,6 +95,7 @@ class FileBrowserTreeWidget(QWidget):
         self._apply_styling()
 
         self.directory: str | None = None
+        self._selection_extending = False
 
         self.tree.clicked.connect(self._on_item_clicked)
         self.tree.doubleClicked.connect(self._on_item_double_clicked)
@@ -133,17 +152,33 @@ class FileBrowserTreeWidget(QWidget):
 
     def _on_item_clicked(self, index: QModelIndex):
         """Emit a selection signal for Python files."""
+        self._selection_extending = self._is_multi_selection_modifier_pressed()
         source_index = self._map_to_source(index)
         if not source_index.isValid() or self.model.isDir(source_index):
+            return
+
+        selection_model = self.tree.selectionModel()
+        if selection_model is not None and not selection_model.isSelected(index):
             return
 
         file_path = self.model.filePath(source_index)
         if not file_path or not os.path.isfile(file_path):
             return
 
-        if Path(file_path).suffix.lower() == ".py":
+        if self._matches_name_filters(file_path):
             logger.info(f"File selected: {file_path}")
             self.file_selected.emit(file_path)
+
+    def is_selection_extending(self) -> bool:
+        """Return whether the current click is extending an existing selection."""
+        return self._selection_extending
+
+    @staticmethod
+    def _is_multi_selection_modifier_pressed() -> bool:
+        modifiers = QApplication.keyboardModifiers()
+        return bool(
+            modifiers & (Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.MetaModifier)
+        )
 
     def _on_item_double_clicked(self, index: QModelIndex):
         """Emit an open signal for Python files."""
@@ -188,6 +223,13 @@ class FileBrowserTreeWidget(QWidget):
         if not file_path or not os.path.isfile(file_path):
             return None
         return file_path
+
+    def clear_selection(self) -> None:
+        """Clear the highlighted selection in the tree view."""
+        selection_model = self.tree.selectionModel()
+        if selection_model is not None:
+            selection_model.clear()
+        self.tree.setCurrentIndex(QModelIndex())
 
     def _show_context_menu(self, position: QPoint) -> None:
         """Show a right-click context menu for editable items."""
@@ -302,3 +344,11 @@ class FileBrowserTreeWidget(QWidget):
         if not index.isValid():
             return QModelIndex()
         return self.proxy_model.mapToSource(index)
+
+    def _matches_name_filters(self, file_path: str) -> bool:
+        """Return whether file_path matches the configured name filters."""
+        if not self.name_filters:
+            return True
+
+        file_name = Path(file_path).name.lower()
+        return any(fnmatch(file_name, name_filter.lower()) for name_filter in self.name_filters)
