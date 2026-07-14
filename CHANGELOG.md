@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v3.29.2 (2026-07-14)
+
+### Bug Fixes
+
+- **image**: Guard layer access during/after teardown
+  ([`9c6fa74`](https://github.com/bec-project/bec_widgets/commit/9c6fa74f656957166f38eabbb3ac4f4caafcfff2))
+
+- **image**: Guard shape/dtype edge cases in the data path
+  ([`c1ea65f`](https://github.com/bec-project/bec_widgets/commit/c1ea65f7f958a95d51051fead6f7f33894f18307))
+
+- **image**: Prevent log-scale crash from non-finite color levels
+  ([`aca13fb`](https://github.com/bec-project/bec_widgets/commit/aca13fb305e73c4138581c15a6d728aecd471197))
+
+
 ## v3.29.1 (2026-07-13)
 
 ### Bug Fixes
