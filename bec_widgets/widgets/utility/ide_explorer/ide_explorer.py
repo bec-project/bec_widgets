@@ -29,6 +29,7 @@ class IDEExplorer(BECWidget, QWidget):
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent=parent, **kwargs)
         self._sections = []  # Use list to maintain order instead of set
+        self._file_browsers: list[FileBrowserTreeWidget] = []
         self.main_explorer = Explorer(parent=self)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -76,6 +77,7 @@ class IDEExplorer(BECWidget, QWidget):
         """Clear all sections from the explorer."""
         for section in reversed(self._sections):
             self._remove_section(section)
+        self._file_browsers.clear()
 
     def add_script_section(self):
         section = CollapsibleSection(
@@ -97,7 +99,7 @@ class IDEExplorer(BECWidget, QWidget):
             parent=self, directory=local_script_dir, read_only=False
         )
         script_widget.file_open_requested.connect(self._emit_file_open_scripts_local)
-        script_widget.file_selected.connect(self._emit_file_preview_scripts_local)
+        self._register_file_browser(script_widget, "scripts/local")
         script_widget.file_delete_requested.connect(self._delete_local_script)
         script_widget.file_renamed.connect(self._rename_local_script_path)
         local_scripts_section = CollapsibleSection(title="Local", show_add_button=True, parent=self)
@@ -120,7 +122,7 @@ class IDEExplorer(BECWidget, QWidget):
         shared_script_section.set_widget(shared_script_widget)
         script_explorer.add_section(shared_script_section)
         shared_script_widget.file_open_requested.connect(self._emit_file_open_scripts_shared)
-        shared_script_widget.file_selected.connect(self._emit_file_preview_scripts_shared)
+        self._register_file_browser(shared_script_widget, "scripts/shared")
 
     def add_macro_section(self):
         section = CollapsibleSection(
@@ -148,7 +150,7 @@ class IDEExplorer(BECWidget, QWidget):
             parent=self, directory=local_macro_dir, read_only=False
         )
         macro_widget.file_open_requested.connect(self._emit_file_open_macros_local)
-        macro_widget.file_selected.connect(self._emit_file_preview_macros_local)
+        self._register_file_browser(macro_widget, "macros/local")
         macro_widget.file_delete_requested.connect(self._delete_local_macro)
         macro_widget.file_renamed.connect(self._rename_local_macro_path)
         local_macros_section = CollapsibleSection(title="Local", show_add_button=True, parent=self)
@@ -171,7 +173,26 @@ class IDEExplorer(BECWidget, QWidget):
         shared_macro_section.set_widget(shared_macro_widget)
         macro_explorer.add_section(shared_macro_section)
         shared_macro_widget.file_open_requested.connect(self._emit_file_open_macros_shared)
-        shared_macro_widget.file_selected.connect(self._emit_file_preview_macros_shared)
+        self._register_file_browser(shared_macro_widget, "macros/shared")
+
+    def _register_file_browser(self, widget: FileBrowserTreeWidget, scope: str) -> None:
+        """Track file browsers so only one file remains highlighted in the IDE explorer."""
+        self._file_browsers.append(widget)
+        widget.file_selected.connect(
+            lambda file_name, source=widget, source_scope=scope: self._on_file_selected(
+                source, file_name, source_scope
+            )
+        )
+
+    def _on_file_selected(
+        self, source_widget: FileBrowserTreeWidget, file_name: str, scope: str
+    ) -> None:
+        """Clear other file browser selections and emit the preview request."""
+        if not source_widget.is_selection_extending():
+            for widget in self._file_browsers:
+                if widget is not source_widget:
+                    widget.clear_selection()
+        self.file_preview_requested.emit(file_name, scope)
 
     def _get_plugin_dir(self, dir_name: Literal["scripts", "macros"]) -> str | None:
         """Get the path to the specified directory within the BEC plugin.

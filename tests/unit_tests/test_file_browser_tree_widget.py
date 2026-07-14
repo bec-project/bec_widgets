@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pytest
-from qtpy.QtCore import QModelIndex, QPoint, Qt
+from qtpy.QtCore import QItemSelectionModel, QModelIndex, QPoint, Qt
 from qtpy.QtWidgets import QAbstractItemView, QInputDialog, QMenu
 
 from bec_widgets.widgets.containers.explorer.file_browser_tree_widget import FileBrowserTreeWidget
@@ -48,7 +48,11 @@ def test_file_browser_tree_hides_filtered_entries(file_browser_tree, qtbot):
 def test_file_browser_tree_native_browser_configuration(file_browser_tree):
     """Test that the tree is configured like a plain native file browser."""
     assert file_browser_tree.model.isReadOnly() is False
+    assert file_browser_tree.model.nameFilters() == ["*.py"]
     assert file_browser_tree.tree.alternatingRowColors() is False
+    assert (
+        file_browser_tree.tree.selectionMode() == QAbstractItemView.SelectionMode.ExtendedSelection
+    )
     assert file_browser_tree.tree.dragDropMode() == QAbstractItemView.DragDropMode.InternalMove
     assert file_browser_tree.tree.defaultDropAction() == Qt.DropAction.MoveAction
     assert (
@@ -95,6 +99,10 @@ def test_file_browser_tree_on_item_clicked(file_browser_tree, qtbot):
     py_file_index = None
     qtbot.waitUntil(has_py_file)
 
+    file_browser_tree.tree.selectionModel().select(
+        py_file_index,
+        QItemSelectionModel.SelectionFlag.ClearAndSelect | QItemSelectionModel.SelectionFlag.Rows,
+    )
     file_browser_tree._on_item_clicked(py_file_index)
     qtbot.wait(100)
 
@@ -108,6 +116,50 @@ def test_file_browser_tree_on_item_clicked(file_browser_tree, qtbot):
     assert Path(file_selected_signals[0]).name == "test_file.py"
     assert len(file_open_requested_signals) == 1
     assert Path(file_open_requested_signals[0]).name == "test_file.py"
+
+
+@pytest.mark.timeout(10)
+def test_file_browser_tree_accepts_custom_name_filters(qtbot, tmpdir):
+    """Test that the file browser can be configured for non-Python files."""
+    (Path(tmpdir) / "config.yaml").touch()
+    (Path(tmpdir) / "settings.yml").touch()
+    (Path(tmpdir) / "script.py").touch()
+
+    widget = FileBrowserTreeWidget(directory=str(tmpdir), name_filters=["*.yaml", "*.yml"])
+    qtbot.addWidget(widget)
+    qtbot.waitExposed(widget)
+
+    selected = []
+    widget.file_selected.connect(selected.append)
+
+    def visible_names():
+        root_index = widget.tree.rootIndex()
+        return [
+            widget.proxy_model.data(widget.proxy_model.index(i, 0, root_index))
+            for i in range(widget.proxy_model.rowCount(root_index))
+        ]
+
+    qtbot.waitUntil(lambda: "config.yaml" in visible_names(), timeout=5000)
+    assert "settings.yml" in visible_names()
+    assert "script.py" not in visible_names()
+
+    root_index = widget.tree.rootIndex()
+    yaml_index = None
+    for i in range(widget.proxy_model.rowCount(root_index)):
+        index = widget.proxy_model.index(i, 0, root_index)
+        if widget.proxy_model.data(index) == "config.yaml":
+            yaml_index = index
+            break
+
+    assert yaml_index is not None
+    widget.tree.selectionModel().select(
+        yaml_index,
+        QItemSelectionModel.SelectionFlag.ClearAndSelect | QItemSelectionModel.SelectionFlag.Rows,
+    )
+    widget._on_item_clicked(yaml_index)
+
+    assert len(selected) == 1
+    assert Path(selected[0]).name == "config.yaml"
 
 
 def test_file_browser_tree_delete_request_emits_selected_file(file_browser_tree, qtbot):
@@ -136,6 +188,30 @@ def test_file_browser_tree_delete_request_emits_selected_file(file_browser_tree,
 
     assert len(delete_requests) == 1
     assert Path(delete_requests[0]).name == "test_file.py"
+
+
+def test_file_browser_tree_clear_selection(file_browser_tree, qtbot):
+    """Test clearing the current highlighted file selection."""
+
+    def get_test_file_index():
+        root_index = file_browser_tree.tree.rootIndex()
+        for i in range(file_browser_tree.proxy_model.rowCount(root_index)):
+            index = file_browser_tree.proxy_model.index(i, 0, root_index)
+            if file_browser_tree.proxy_model.data(index) == "test_file.py":
+                return index
+        return None
+
+    qtbot.waitUntil(lambda: get_test_file_index() is not None, timeout=5000)
+    file_index = get_test_file_index()
+    assert file_index is not None
+    file_browser_tree.tree.setCurrentIndex(file_index)
+
+    assert file_browser_tree.tree.selectionModel().hasSelection()
+
+    file_browser_tree.clear_selection()
+
+    assert not file_browser_tree.tree.selectionModel().hasSelection()
+    assert not file_browser_tree.tree.currentIndex().isValid()
 
 
 def test_file_browser_tree_context_menu_rename_action(file_browser_tree, qtbot, monkeypatch):

@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
+from qtpy.QtCore import QItemSelectionModel
 from qtpy.QtWidgets import QMessageBox
 
 from bec_widgets.widgets.utility.ide_explorer.ide_explorer import IDEExplorer
@@ -172,6 +173,123 @@ def test_shared_sections_not_added_when_directory_empty(ide_explorer, tmpdir):
 
         assert local_section is not None
         assert shared_section is None
+
+
+def test_file_selection_highlight_is_global_across_scripts_and_macros(ide_explorer, qtbot, tmpdir):
+    """Selecting a script file clears the previous macro file highlight."""
+    scripts_dir = tmpdir.mkdir("scripts")
+    macros_dir = tmpdir.mkdir("macros")
+    script_file = scripts_dir.join("script.py")
+    macro_file = macros_dir.join("macro.py")
+    script_file.write("print('script')")
+    macro_file.write("def macro():\n    pass\n")
+
+    scripts_browser = (
+        ide_explorer.main_explorer.get_section("SCRIPTS")
+        .content_widget.get_section("Local")
+        .content_widget
+    )
+    macros_browser = (
+        ide_explorer.main_explorer.get_section("MACROS")
+        .content_widget.get_section("Local")
+        .content_widget
+    )
+    scripts_browser.set_directory(str(scripts_dir))
+    macros_browser.set_directory(str(macros_dir))
+
+    def get_index(browser, file_name):
+        root_index = browser.tree.rootIndex()
+        for i in range(browser.proxy_model.rowCount(root_index)):
+            index = browser.proxy_model.index(i, 0, root_index)
+            if browser.proxy_model.data(index) == file_name:
+                return index
+        return None
+
+    qtbot.waitUntil(
+        lambda: get_index(scripts_browser, "script.py") is not None
+        and get_index(macros_browser, "macro.py") is not None,
+        timeout=5000,
+    )
+
+    macro_index = get_index(macros_browser, "macro.py")
+    assert macro_index is not None
+    macros_browser.tree.setCurrentIndex(macro_index)
+    macros_browser.tree.selectionModel().select(
+        macro_index,
+        QItemSelectionModel.SelectionFlag.ClearAndSelect | QItemSelectionModel.SelectionFlag.Rows,
+    )
+    macros_browser.file_selected.emit(str(macro_file))
+
+    assert macros_browser.tree.selectionModel().hasSelection()
+
+    script_index = get_index(scripts_browser, "script.py")
+    assert script_index is not None
+    scripts_browser.tree.setCurrentIndex(script_index)
+    scripts_browser.tree.selectionModel().select(
+        script_index,
+        QItemSelectionModel.SelectionFlag.ClearAndSelect | QItemSelectionModel.SelectionFlag.Rows,
+    )
+    scripts_browser.file_selected.emit(str(script_file))
+
+    assert scripts_browser.tree.selectionModel().hasSelection()
+    assert not macros_browser.tree.selectionModel().hasSelection()
+
+
+def test_modifier_file_selection_keeps_existing_highlights(ide_explorer, qtbot, tmpdir):
+    """Modifier-click selection keeps earlier highlights across scripts and macros."""
+    scripts_dir = tmpdir.mkdir("scripts")
+    macros_dir = tmpdir.mkdir("macros")
+    script_file = scripts_dir.join("script.py")
+    macro_file = macros_dir.join("macro.py")
+    script_file.write("print('script')")
+    macro_file.write("def macro():\n    pass\n")
+
+    scripts_browser = (
+        ide_explorer.main_explorer.get_section("SCRIPTS")
+        .content_widget.get_section("Local")
+        .content_widget
+    )
+    macros_browser = (
+        ide_explorer.main_explorer.get_section("MACROS")
+        .content_widget.get_section("Local")
+        .content_widget
+    )
+    scripts_browser.set_directory(str(scripts_dir))
+    macros_browser.set_directory(str(macros_dir))
+
+    def get_index(browser, file_name):
+        root_index = browser.tree.rootIndex()
+        for i in range(browser.proxy_model.rowCount(root_index)):
+            index = browser.proxy_model.index(i, 0, root_index)
+            if browser.proxy_model.data(index) == file_name:
+                return index
+        return None
+
+    qtbot.waitUntil(
+        lambda: get_index(scripts_browser, "script.py") is not None
+        and get_index(macros_browser, "macro.py") is not None,
+        timeout=5000,
+    )
+
+    macro_index = get_index(macros_browser, "macro.py")
+    assert macro_index is not None
+    macros_browser.tree.selectionModel().select(
+        macro_index,
+        QItemSelectionModel.SelectionFlag.ClearAndSelect | QItemSelectionModel.SelectionFlag.Rows,
+    )
+    macros_browser.file_selected.emit(str(macro_file))
+
+    script_index = get_index(scripts_browser, "script.py")
+    assert script_index is not None
+    scripts_browser.tree.selectionModel().select(
+        script_index,
+        QItemSelectionModel.SelectionFlag.ClearAndSelect | QItemSelectionModel.SelectionFlag.Rows,
+    )
+    scripts_browser._selection_extending = True
+    scripts_browser.file_selected.emit(str(script_file))
+
+    assert scripts_browser.tree.selectionModel().hasSelection()
+    assert macros_browser.tree.selectionModel().hasSelection()
 
 
 @pytest.mark.parametrize(
