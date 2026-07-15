@@ -13,6 +13,9 @@ from bec_widgets.tests.utils import FakePositioner, Positioner
 
 @pytest.fixture(scope="function")
 def mocked_client(bec_dispatcher):
+    # A fresh session has no scan executed; otherwise the auto-generated MagicMock
+    # leaks into widgets as scan_item and its mock metadata ends up in device lookups.
+    bec_dispatcher.client.queue.scan_storage.current_scan = None
 
     # Ensure isinstance check for Positioner passes
     original_isinstance = isinstance
