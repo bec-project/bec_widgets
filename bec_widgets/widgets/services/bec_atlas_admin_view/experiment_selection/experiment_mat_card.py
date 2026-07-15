@@ -48,7 +48,7 @@ class ExperimentMatCard(BECWidget, QWidget):
         title: str = "Next Experiment",
         **kwargs,
     ):
-        super().__init__(parent=parent, theme_update=True, **kwargs)
+        super().__init__(parent=parent, **kwargs)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(12, 8, 12, 8)

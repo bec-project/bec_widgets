@@ -25,7 +25,7 @@ class PaletteViewer(BECWidget, QWidget):
     RPC = False
 
     def __init__(self, *args, parent=None, **kwargs):
-        super().__init__(parent=parent, theme_update=True, **kwargs)
+        super().__init__(parent=parent, **kwargs)
         self.setFixedSize(400, 600)
         layout = QVBoxLayout(self)
         dark_mode_button = DarkModeButton(self)

@@ -257,7 +257,7 @@ class Heatmap(ImageBase):
                 device_y=None,
                 device_z=None,
             )
-        super().__init__(parent=parent, config=config, theme_update=True, **kwargs)
+        super().__init__(parent=parent, config=config, **kwargs)
         self._image_config = config
         self.scan_id = None
         self.old_scan_id = None

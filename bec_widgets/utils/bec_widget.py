@@ -40,7 +40,6 @@ class BECWidget(BECConnector):
         client=None,
         config: ConnectionConfig = None,
         gui_id: str | None = None,
-        theme_update: bool = False,
         start_busy: bool = False,
         **kwargs,
     ):
@@ -53,19 +52,17 @@ class BECWidget(BECConnector):
         >>>         super().__init__(parent=parent, client=client, config=config, gui_id=gui_id)
 
 
+        Every BECWidget follows application theme changes; override ``apply_theme`` to react.
+
         Args:
             client(BECClient, optional): The BEC client.
             config(ConnectionConfig, optional): The connection configuration.
             gui_id(str, optional): The GUI ID.
-            theme_update(bool, optional): Whether to subscribe to theme updates. Defaults to False. When set to True, the
-                widget's apply_theme method will be called when the theme changes.
         """
         super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
         if not isinstance(self, QObject):
             raise RuntimeError(f"{repr(self)} is not a subclass of QWidget")
-        if theme_update:
-            logger.debug(f"Subscribing to theme updates for {self.__class__.__name__}")
-            self._connect_to_theme_change()
+        self._connect_to_theme_change()
 
         # Initialize optional busy loader overlay utility (lazy by default)
         self._busy_overlay: "BusyLoaderOverlay" | None = None

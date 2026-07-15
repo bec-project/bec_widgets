@@ -155,14 +155,7 @@ class DeviceComboBox(BECWidget, QComboBox):
         **kwargs,
     ):
         self.config = self._process_config(config)
-        super().__init__(
-            parent=parent,
-            client=client,
-            config=self.config,
-            gui_id=gui_id,
-            theme_update=True,
-            **kwargs,
-        )
+        super().__init__(parent=parent, client=client, config=self.config, gui_id=gui_id, **kwargs)
         self.get_bec_shortcuts()
 
         self._device_filter: list[BECDeviceFilter] = []

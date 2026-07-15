@@ -208,8 +208,6 @@ class Waveform(PlotBase):
 
         self.update_with_scan_history(-1)
 
-        # for updating a color scheme of curves
-        self._connect_to_theme_change()
         # To fix the ViewAll action with clipToView activated
         self._connect_viewbox_menu_actions()
 

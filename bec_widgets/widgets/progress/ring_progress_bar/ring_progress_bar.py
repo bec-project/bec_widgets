@@ -397,7 +397,7 @@ class RingProgressBar(BECWidget, QWidget):
     ]
 
     def __init__(self, parent: QWidget | None = None, client=None, **kwargs):
-        super().__init__(parent=parent, client=client, theme_update=True, **kwargs)
+        super().__init__(parent=parent, client=client, **kwargs)
 
         self.setWindowTitle("Ring Progress Bar")
 

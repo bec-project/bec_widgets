@@ -73,7 +73,6 @@ class BECMainWindow(BECWidget, QMainWindow):
 
         # Init ui
         self._init_ui()
-        self._connect_to_theme_change()
 
         # Connections to BEC Notifications
         self.bec_dispatcher.connect_slot(

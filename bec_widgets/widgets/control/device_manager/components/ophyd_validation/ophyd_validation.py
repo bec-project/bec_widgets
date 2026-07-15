@@ -309,7 +309,7 @@ class OphydValidation(BECWidget, QtWidgets.QWidget):
     multiple_validations_completed = QtCore.Signal(list)
 
     def __init__(self, parent=None, client=None, hide_legend: bool = False):
-        super().__init__(parent=parent, client=client, theme_update=True)
+        super().__init__(parent=parent, client=client)
         self._running_ophyd_tests = False
         self._keep_visible_after_validation: list[str] = []
         if not READY_TO_TEST:

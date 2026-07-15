@@ -191,7 +191,6 @@ class PlotBase(BECWidget, QWidget):
 
         self._init_ui()
 
-        self._connect_to_theme_change()
         self._update_theme(None)
 
     def apply_theme(self, theme: str):

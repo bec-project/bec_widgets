@@ -61,9 +61,7 @@ class BECProgressBar(BECWidget, QWidget):
         enable_dynamic_stylesheet: bool = True,
         **kwargs,
     ):
-        super().__init__(
-            parent=parent, client=client, gui_id=gui_id, config=config, theme_update=True, **kwargs
-        )
+        super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
 
         accent_colors = get_accent_colors()
 

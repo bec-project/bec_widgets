@@ -9,10 +9,8 @@ from .client_mocks import mocked_client
 
 
 class _TestBusyWidget(BECWidget, QWidget):
-    def __init__(
-        self, parent=None, *, start_busy: bool = False, theme_update: bool = False, **kwargs
-    ):
-        super().__init__(parent=parent, theme_update=theme_update, start_busy=start_busy, **kwargs)
+    def __init__(self, parent=None, *, start_busy: bool = False, **kwargs):
+        super().__init__(parent=parent, start_busy=start_busy, **kwargs)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.addWidget(QLabel("content", self))
