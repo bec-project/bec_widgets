@@ -25,6 +25,7 @@ jobs:
       PROJECT_PATH: ${{ github.repository }}
       QTWEBENGINE_DISABLE_SANDBOX: 1
       QT_QPA_PLATFORM: "offscreen"
+      QTWEBENGINE_CHROMIUM_FLAGS: "--disable-gpu"
 
     permissions:
       contents: write
