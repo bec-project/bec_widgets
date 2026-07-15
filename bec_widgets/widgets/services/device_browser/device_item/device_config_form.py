@@ -4,7 +4,6 @@ from functools import partial
 
 from bec_lib.atlas_models import Device as DeviceConfigModel
 from pydantic import BaseModel
-from qtpy.QtWidgets import QApplication
 
 from bec_widgets.utils.colors import get_theme_name
 from bec_widgets.utils.forms_from_types import styles
@@ -47,7 +46,6 @@ class DeviceConfigForm(PydanticModelForm):
         pred, _ = self._widget_types["dict"]
         self._widget_types["dict"] = pred, self._custom_device_config_item
         self._validity.setVisible(True)
-        self._connect_to_theme_change()
         self.populate()
 
     def _post_init(self): ...
@@ -68,12 +66,6 @@ class DeviceConfigForm(PydanticModelForm):
     def get_form_data(self):
         """Get the entered metadata as a dict."""
         return self._md_schema.model_validate(super().get_form_data()).model_dump()
-
-    def _connect_to_theme_change(self):
-        """Connect to the theme change signal."""
-        qapp = QApplication.instance()
-        if hasattr(qapp, "theme_signal"):
-            qapp.theme_signal.theme_updated.connect(self.set_pretty_display_theme)  # type: ignore
 
     def set_schema(self, schema: type[BaseModel]):
         if not issubclass(schema, DeviceConfigModel):

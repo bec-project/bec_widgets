@@ -20,19 +20,11 @@ class SignalDisplay(BECWidget, QWidget):
         device: str = "",
         config: ConnectionConfig = None,
         gui_id: str | None = None,
-        theme_update: bool = False,
         **kwargs,
     ):
         """A widget to display all the signals from a given device, and allow getting
         a fresh reading."""
-        super().__init__(
-            parent=parent,
-            client=client,
-            config=config,
-            gui_id=gui_id,
-            theme_update=theme_update,
-            **kwargs,
-        )
+        super().__init__(parent=parent, client=client, config=config, gui_id=gui_id, **kwargs)
         self.get_bec_shortcuts()
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)

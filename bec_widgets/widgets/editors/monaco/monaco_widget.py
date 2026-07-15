@@ -55,9 +55,7 @@ class MonacoWidget(BECWidget, QWidget):
     def __init__(
         self, parent=None, config=None, client=None, gui_id=None, init_lsp: bool = True, **kwargs
     ):
-        super().__init__(
-            parent=parent, client=client, gui_id=gui_id, config=config, theme_update=True, **kwargs
-        )
+        super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         self.editor = qtmonaco.Monaco(self)

@@ -22,7 +22,7 @@ class DarkModeButton(BECWidget, QWidget):
         toolbar: bool = False,
         **kwargs,
     ) -> None:
-        super().__init__(parent=parent, client=client, gui_id=gui_id, theme_update=True, **kwargs)
+        super().__init__(parent=parent, client=client, gui_id=gui_id, **kwargs)
         self.setProperty("skip_settings", True)
 
         self._dark_mode_enabled = False

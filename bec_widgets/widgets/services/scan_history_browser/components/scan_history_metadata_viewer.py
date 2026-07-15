@@ -26,7 +26,6 @@ class ScanHistoryMetadataViewer(BECWidget, QtWidgets.QGroupBox):
         client=None,
         config: ConnectionConfig | None = None,
         gui_id: str | None = None,
-        theme_update: bool = True,
         scan_history_msg: ScanHistoryMessage | None = None,
     ):
         """
@@ -37,12 +36,9 @@ class ScanHistoryMetadataViewer(BECWidget, QtWidgets.QGroupBox):
             client: The BEC client.
             config (ConnectionConfig, optional): The connection configuration.
             gui_id (str, optional): The GUI ID.
-            theme_update (bool, optional): Whether to subscribe to theme updates. Defaults to True.
             scan_history_msg (ScanHistoryMessage, optional): The scan history message to display. Defaults
         """
-        super().__init__(
-            parent=parent, client=client, config=config, gui_id=gui_id, theme_update=theme_update
-        )
+        super().__init__(parent=parent, client=client, config=config, gui_id=gui_id)
         self._scan_history_msg_labels = {
             "scan_id": "Scan ID",
             "dataset_number": "Dataset Nr",

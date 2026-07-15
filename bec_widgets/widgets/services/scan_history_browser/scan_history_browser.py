@@ -24,7 +24,6 @@ class ScanHistoryBrowser(BECWidget, QtWidgets.QWidget):
         client=None,
         config: ConnectionConfig = None,
         gui_id: str | None = None,
-        theme_update: bool = False,
         **kwargs,
     ):
         """
@@ -35,27 +34,19 @@ class ScanHistoryBrowser(BECWidget, QtWidgets.QWidget):
             client: The BEC client.
             config (ConnectionConfig, optional): The connection configuration.
             gui_id (str, optional): The GUI ID.
-            theme_update (bool, optional): Whether to subscribe to theme updates. Defaults to False.
         """
-        super().__init__(
-            parent=parent,
-            client=client,
-            config=config,
-            gui_id=gui_id,
-            theme_update=theme_update,
-            **kwargs,
-        )
+        super().__init__(parent=parent, client=client, config=config, gui_id=gui_id, **kwargs)
         layout = QtWidgets.QHBoxLayout()
         self.setLayout(layout)
 
         self.scan_history_view = ScanHistoryView(
-            parent=self, client=client, config=config, gui_id=gui_id, theme_update=theme_update
+            parent=self, client=client, config=config, gui_id=gui_id
         )
         self.scan_history_metadata_viewer = ScanHistoryMetadataViewer(
-            parent=self, client=client, config=config, gui_id=gui_id, theme_update=theme_update
+            parent=self, client=client, config=config, gui_id=gui_id
         )
         self.scan_history_device_viewer = ScanHistoryDeviceViewer(
-            parent=self, client=client, config=config, gui_id=gui_id, theme_update=theme_update
+            parent=self, client=client, config=config, gui_id=gui_id
         )
 
         self.init_layout()

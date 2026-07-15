@@ -36,7 +36,7 @@ class HelpInspector(BECWidget, QtWidgets.QWidget):
     bec_widget_help = QtCore.Signal(str)  # Emits md formatted help string from BECWidget class
 
     def __init__(self, parent=None, client=None):
-        super().__init__(client=client, parent=parent, theme_update=True)
+        super().__init__(client=client, parent=parent)
         self._app = QtWidgets.QApplication.instance()
         layout = QtWidgets.QHBoxLayout(self)  # type: ignore
         layout.setContentsMargins(0, 0, 0, 0)

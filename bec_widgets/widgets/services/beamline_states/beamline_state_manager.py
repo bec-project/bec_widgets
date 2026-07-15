@@ -323,9 +323,7 @@ class BeamlineStateManager(BECWidget, QWidget):
         gui_id: str | None = None,
         **kwargs,
     ) -> None:
-        super().__init__(
-            parent=parent, client=client, config=config, gui_id=gui_id, theme_update=True, **kwargs
-        )
+        super().__init__(parent=parent, client=client, config=config, gui_id=gui_id, **kwargs)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._state_pills: dict[str, BeamlineStatePill] = {}
         self._section_headers: dict[str, _BeamlineStateSectionHeader] = {}

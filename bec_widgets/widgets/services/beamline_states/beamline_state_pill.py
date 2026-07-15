@@ -85,9 +85,7 @@ class BeamlineStatePill(BECWidget, QWidget):
         gui_id: str | None = None,
         **kwargs,
     ) -> None:
-        super().__init__(
-            parent=parent, client=client, config=config, gui_id=gui_id, theme_update=True, **kwargs
-        )
+        super().__init__(parent=parent, client=client, config=config, gui_id=gui_id, **kwargs)
         self.setObjectName("BeamlineStatePill")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)

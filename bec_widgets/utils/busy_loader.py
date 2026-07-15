@@ -269,7 +269,7 @@ if __name__ == "__main__":  # pragma: no cover
 
     class DemoWidget(BECWidget, QWidget):  # pragma: no cover
         def __init__(self, parent=None, start_busy: bool = False):
-            super().__init__(parent=parent, theme_update=True, start_busy=start_busy)
+            super().__init__(parent=parent, start_busy=start_busy)
 
             self._title = QLabel("Demo Content", self)
             self._title.setAlignment(Qt.AlignCenter)

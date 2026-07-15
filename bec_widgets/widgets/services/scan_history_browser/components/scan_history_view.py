@@ -89,17 +89,9 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
         config: ConnectionConfig = None,
         gui_id: str = None,
         max_length: int = 100,
-        theme_update: bool = True,
         **kwargs,
     ):
-        super().__init__(
-            parent=parent,
-            client=client,
-            config=config,
-            gui_id=gui_id,
-            theme_update=theme_update,
-            **kwargs,
-        )
+        super().__init__(parent=parent, client=client, config=config, gui_id=gui_id, **kwargs)
         self.status_icons = self._create_status_icons()
         self.column_header = ["Scan Nr", "Scan Name", "Status"]
         self.scan_history: list[ScanHistoryMessage] = []  # newest at index 0

@@ -94,17 +94,9 @@ class ScanHistoryDeviceViewer(BECWidget, QtWidgets.QWidget):
         client=None,
         config: ConnectionConfig = None,
         gui_id: str = None,
-        theme_update: bool = True,
         **kwargs,
     ):
-        super().__init__(
-            parent=parent,
-            client=client,
-            config=config,
-            gui_id=gui_id,
-            theme_update=theme_update,
-            **kwargs,
-        )
+        super().__init__(parent=parent, client=client, config=config, gui_id=gui_id, **kwargs)
         # Current scan history message
         self.scan_history_msg: ScanHistoryMessage | None = None
         self._last_device_name: str | None = None
