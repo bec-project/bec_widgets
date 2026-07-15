@@ -215,7 +215,7 @@ class PydanticModelForm(TypedForm):
         self._layout.addWidget(self._validity)
         self.value_changed.connect(self.validate_form)
 
-        self._connect_to_theme_change()
+        self._connect_pretty_display_theme()
 
     @SafeSlot()
     def clear(self): ...
@@ -224,8 +224,8 @@ class PydanticModelForm(TypedForm):
         if self._pretty_display:
             self.setStyleSheet(styles.pretty_display_theme(theme))
 
-    def _connect_to_theme_change(self):
-        """Connect to the theme change signal."""
+    def _connect_pretty_display_theme(self):
+        """Connect the pretty-display styling to the theme-updated signal."""
         qapp = QApplication.instance()
         if hasattr(qapp, "theme_signal"):
             qapp.theme_signal.theme_updated.connect(self.set_pretty_display_theme)  # type: ignore
