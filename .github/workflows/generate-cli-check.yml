@@ -1,5 +1,5 @@
 name: Run bw-generate-cli
-on: [workflow_call]
+on: [ workflow_call ]
 
 jobs:
   pytest:
@@ -15,6 +15,7 @@ jobs:
       PROJECT_PATH: ${{ github.repository }}
       QTWEBENGINE_DISABLE_SANDBOX: 1
       QT_QPA_PLATFORM: "offscreen"
+      QTWEBENGINE_CHROMIUM_FLAGS: "--disable-gpu"
 
     steps:
       - uses: actions/checkout@v4
@@ -32,18 +33,18 @@ jobs:
 
       - name: Clone and install dependencies
         run: |
-            echo -e "\033[35;1m Using branch $BEC_CORE_BRANCH of BEC CORE \033[0;m";
-            git clone --branch $BEC_CORE_BRANCH https://github.com/bec-project/bec.git
-            echo -e "\033[35;1m Using branch $OPHYD_DEVICES_BRANCH of OPHYD_DEVICES \033[0;m";
-            git clone --branch $OPHYD_DEVICES_BRANCH https://github.com/bec-project/ophyd_devices.git
-            export OHPYD_DEVICES_PATH=$PWD/ophyd_devices
-            pip install -e ./ophyd_devices
-            pip install -e ./bec/bec_lib[dev]
-            pip install -e ./bec/bec_ipython_client
-            pip install -e .[dev,pyside6]
+          echo -e "\033[35;1m Using branch $BEC_CORE_BRANCH of BEC CORE \033[0;m";
+          git clone --branch $BEC_CORE_BRANCH https://github.com/bec-project/bec.git
+          echo -e "\033[35;1m Using branch $OPHYD_DEVICES_BRANCH of OPHYD_DEVICES \033[0;m";
+          git clone --branch $OPHYD_DEVICES_BRANCH https://github.com/bec-project/ophyd_devices.git
+          export OHPYD_DEVICES_PATH=$PWD/ophyd_devices
+          pip install -e ./ophyd_devices
+          pip install -e ./bec/bec_lib[dev]
+          pip install -e ./bec/bec_ipython_client
+          pip install -e .[dev,pyside6]
 
       - name: Run bw-generate-cli
         run: |
-            bw-generate-cli --target bec_widgets 
-            git diff --exit-code
+          bw-generate-cli --target bec_widgets 
+          git diff --exit-code
             
