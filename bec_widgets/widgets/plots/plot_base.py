@@ -1156,6 +1156,8 @@ class PlotBase(BECWidget, QWidget):
         for item in self.plot_item.items:
             if not isinstance(item, pg.ImageItem) or item.image is None:
                 continue
+            if item.image.ndim > 2:
+                continue
 
             if item.image_transform is not None:
                 inv_transform, _ = item.image_transform.inverted()
