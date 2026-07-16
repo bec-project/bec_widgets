@@ -727,6 +727,12 @@ class ImageBase(PlotBase):
                 live curves; ignored for the pinned curves.
             pinned(bool): Update the pinned reference curves instead of the live ones.
         """
+        image_item = self.layer_manager["main"].image
+        image = image_item.image
+        if image is not None and image.ndim != 2:
+            self.clear_image_slices()
+            return
+
         if pinned:
             if self._pinned_slice_coords is None:
                 return
@@ -744,7 +750,6 @@ class ImageBase(PlotBase):
         else:
             return
 
-        image_item = self.layer_manager["main"].image
         slices = self._compute_image_slices(image_item, row, col)
         if slices is None:
             return
@@ -789,10 +794,10 @@ class ImageBase(PlotBase):
 
         Returns:
             tuple | None: ``(h_world_x, h_slice, v_world_y, v_slice)`` in world coordinates,
-            or ``None`` if there is no image or the pixel is out of bounds.
+            or ``None`` if the image is not scalar 2-D or the pixel is out of bounds.
         """
         image = image_item.image
-        if image is None:
+        if image is None or image.ndim != 2:
             return None
         max_row, max_col = image.shape[0] - 1, image.shape[1] - 1
         if not (0 <= row <= max_row and 0 <= col <= max_col):
@@ -816,6 +821,17 @@ class ImageBase(PlotBase):
                 image_item.image_transform.map(row + 0.5, yi + 0.5)[1] for yi in y_pixel_indices
             ]
         return h_world_x, h_slice, v_world_y, v_slice
+
+    @SafeSlot()
+    def clear_image_slices(self):
+        """Remove live and pinned profile curves for an unsupported image."""
+        if self.x_roi_curve is not None:
+            self.x_roi.plot_item.removeItem(self.x_roi_curve)
+            self.x_roi_curve = None
+        if self.y_roi_curve is not None:
+            self.y_roi.plot_item.removeItem(self.y_roi_curve)
+            self.y_roi_curve = None
+        self.clear_pinned_slices()
 
     @SafeSlot(tuple)
     def pin_image_slices(self, _coordinates: tuple):

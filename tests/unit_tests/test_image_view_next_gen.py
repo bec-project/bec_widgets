@@ -1011,6 +1011,33 @@ def test_roi_plot_data_from_image(qtbot, mocked_client):
     np.testing.assert_array_equal(h_slice, test_data[2])
 
 
+def test_roi_plots_ignore_rgb_images_and_clear_stale_curves(qtbot, mocked_client):
+    """RGB images have vector-valued pixels and cannot produce scalar profile curves."""
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    scalar_image = np.arange(25).reshape(5, 5)
+    bec_image_view.on_image_update_2d({"data": scalar_image}, {})
+
+    switch = bec_image_view.toolbar.components.get_action("image_switch_crosshair")
+    switch.actions["crosshair_roi"].action.trigger()
+    bec_image_view.update_image_slices((0, 2, 3))
+    bec_image_view.crosshair.set_pin(2.0, 3.0)
+    assert bec_image_view.x_roi_curve is not None
+    assert bec_image_view.y_roi_curve is not None
+    assert bec_image_view.x_roi_pinned is not None
+    assert bec_image_view.y_roi_pinned is not None
+
+    rgb_image = np.zeros((5, 5, 3), dtype=np.uint8)
+    bec_image_view.on_image_update_2d({"data": rgb_image}, {})
+
+    assert bec_image_view._compute_image_slices(bec_image_view.main_image, 2, 3) is None
+    assert bec_image_view.x_roi_curve is None
+    assert bec_image_view.y_roi_curve is None
+    assert bec_image_view.x_roi_pinned is None
+    assert bec_image_view.y_roi_pinned is None
+    assert bec_image_view.x_roi.plot_item.listDataItems() == []
+    assert bec_image_view.y_roi.plot_item.listDataItems() == []
+
+
 def test_pinned_roi_profiles_freeze_and_clear(qtbot, mocked_client):
     """Clicking pins a frozen copy of the X/Y profiles that survives live updates."""
     import numpy as np
