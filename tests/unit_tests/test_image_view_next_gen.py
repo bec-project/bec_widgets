@@ -1168,6 +1168,7 @@ def test_roi_plots_ignore_rgb_images_and_clear_stale_curves(qtbot, mocked_client
 
     switch = bec_image_view.toolbar.components.get_action("image_switch_crosshair")
     switch.actions["crosshair_roi"].action.trigger()
+    qtbot.waitUntil(lambda: bec_image_view.crosshair is not None, timeout=1000)
     bec_image_view.update_image_slices((0, 2, 3))
     bec_image_view.crosshair.set_pin(2.0, 3.0)
     assert bec_image_view.x_roi_curve is not None
