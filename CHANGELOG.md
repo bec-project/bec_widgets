@@ -1,6 +1,28 @@
 # CHANGELOG
 
 
+## v3.29.5 (2026-07-16)
+
+### Bug Fixes
+
+- Skip plugin manager tests
+  ([`02628d9`](https://github.com/bec-project/bec_widgets/commit/02628d9aedbea1ff268012192618d6ab6f7c82c3))
+
+- **crosshair**: Fix crosshair label for rgb
+  ([`99f6e0b`](https://github.com/bec-project/bec_widgets/commit/99f6e0b3dc22a2d39ede4d908a7ea20bef996546))
+
+- **image**: Fix crosshair intensity and roi slices for rgb image inputs
+  ([`a87e768`](https://github.com/bec-project/bec_widgets/commit/a87e768b65bf32d82db24142398b95e3757b9ee7))
+
+- **plot-base**: If image is rgb, skip update label intensity
+  ([`7ee8955`](https://github.com/bec-project/bec_widgets/commit/7ee895560d2f486d3089cc90f3d549611a09a299))
+
+### Refactoring
+
+- Wait for crosshair to be visible
+  ([`ffca33a`](https://github.com/bec-project/bec_widgets/commit/ffca33ad8203654a51925032c0c895d84176edcd))
+
+
 ## v3.29.4 (2026-07-16)
 
 ### Bug Fixes
