@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v3.29.4 (2026-07-16)
+
+### Bug Fixes
+
+- **image**: Custom colorbar histogram with a custom right-click menu for better UX
+  ([`b776499`](https://github.com/bec-project/bec_widgets/commit/b77649954fe27e0014b28d5a1ab769e1884b7158))
+
+- **plot_base**: Preserve fractional values when setting ranges from tuples
+  ([`170a9c0`](https://github.com/bec-project/bec_widgets/commit/170a9c0b1d6ed18417cfa42552e3d916d32189ce))
+
+
 ## v3.29.3 (2026-07-14)
 
 ### Bug Fixes
