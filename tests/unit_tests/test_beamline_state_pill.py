@@ -1,13 +1,16 @@
 import shiboken6
 from bec_lib import bl_states, messages
 from qtpy.QtCore import QCoreApplication, QEvent, Qt
-from qtpy.QtWidgets import QDialog, QMessageBox, QStyleOptionViewItem
+from qtpy.QtWidgets import QComboBox, QDialog, QMessageBox, QStyleOptionViewItem, QTreeWidget
 
 from bec_widgets.utils.eliding_label import ElidingLabel
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.services.beamline_states import beamline_state_manager as manager_module
 from bec_widgets.widgets.services.beamline_states import beamline_state_pill as pill_module
+from bec_widgets.widgets.services.beamline_states.aggregated_state_editor import (
+    AggregatedStateConfigEditor,
+)
 from bec_widgets.widgets.services.beamline_states.beamline_state_manager import BeamlineStateManager
 from bec_widgets.widgets.services.beamline_states.beamline_state_pill import BeamlineStatePill
 from bec_widgets.widgets.services.beamline_states.dialogs import AddBeamlineStateDialog
@@ -43,6 +46,50 @@ def _limits_state(name: str = "limits", **overrides) -> messages.BeamlineStateCo
     values.update(overrides)
     config = bl_states.DeviceWithinLimitsState.CONFIG_CLASS(name=name, **values)
     return _wire_state(bl_states.DeviceWithinLimitsState, config)
+
+
+def _aggregated_state(
+    name: str = "machine_mode", evaluation_method: str | None = "any"
+) -> messages.BeamlineStateConfig:
+    config = bl_states.AggregatedStateConfig(
+        name=name,
+        evaluation_method=evaluation_method,
+        states={
+            "alignment": {
+                "devices": {
+                    "samx": {
+                        "value": 0,
+                        "abs_tol": 0.1,
+                        "signals": {"velocity": {"value": 5, "abs_tol": 0.2}},
+                    },
+                    "samy": {"at": "in", "abs_tol": 0.1},
+                },
+                "transition_metadata": {"description": "Prepare alignment"},
+            },
+            "parked": {
+                "devices": {
+                    "samx": {
+                        "low_limit": {"at": "low", "abs_tol": 0.3},
+                        "high_limit": {"value": 10, "abs_tol": 0.4},
+                    }
+                }
+            },
+        },
+    )
+    return _wire_state(bl_states.AggregatedState, config)
+
+
+def _tree_rows(tree: QTreeWidget) -> list[list[str]]:
+    rows: list[list[str]] = []
+
+    def collect(item) -> None:
+        rows.append([item.text(column) for column in range(tree.columnCount())])
+        for index in range(item.childCount()):
+            collect(item.child(index))
+
+    for index in range(tree.topLevelItemCount()):
+        collect(tree.topLevelItem(index))
+    return rows
 
 
 def _as_status_list(value: str | list[str]) -> list[str]:
@@ -136,6 +183,95 @@ def test_beamline_state_pill_expands_and_emits_updated_limits(qtbot, mocked_clie
     assert signal.args[1].high_limit == 20.0
     assert signal.args[1].tolerance == 0.1
     assert not limits_pill._settings.isHidden()
+
+
+def test_aggregated_state_pill_displays_rule_inspector(qtbot, mocked_client):
+    pill = create_widget(qtbot, BeamlineStatePill, state_name="machine_mode", client=mocked_client)
+    pill.set_state_config(_aggregated_state())
+    pill.update_state({"name": "machine_mode", "status": "valid", "label": "alignment"}, {})
+
+    pill.set_expanded(True)
+
+    editor = pill._config_form
+    assert isinstance(editor, AggregatedStateConfigEditor)
+    assert editor.input_widget("evaluation_method").currentData() == "any"
+    assert editor._summary.text() == "2 labels · 2 devices · 5 requirements"
+    assert editor.tree.maximumHeight() == 360
+    assert editor.tree.topLevelItemCount() == 2
+
+    rows = _tree_rows(editor.tree)
+    assert ["alignment", "", ""] in rows
+    assert ["samx", "", ""] in rows
+    assert ["readback", "0", "± 0.1"] in rows
+    assert ["velocity", "5", "± 0.2"] in rows
+    assert ["readback", "at: in", "± 0.1"] in rows
+    assert ["low limit", "at: low", "± 0.3"] in rows
+    assert ["high limit", "10", "± 0.4"] in rows
+    assert any(row[0] == "Transition metadata" and "Prepare alignment" in row[2] for row in rows)
+
+    alignment = editor.tree.topLevelItem(0)
+    parked = editor.tree.topLevelItem(1)
+    assert alignment.text(0) == "alignment"
+    assert alignment.font(0).bold()
+    assert alignment.isExpanded()
+    assert not parked.font(0).bold()
+
+
+def test_aggregated_state_pill_updates_evaluation_method(qtbot, mocked_client):
+    pill = create_widget(qtbot, BeamlineStatePill, state_name="machine_mode", client=mocked_client)
+    pill.set_state_config(_aggregated_state())
+    pill.set_expanded(True)
+    editor = pill._config_form
+    assert isinstance(editor, AggregatedStateConfigEditor)
+    method_combo = editor.input_widget("evaluation_method")
+    assert isinstance(method_combo, QComboBox)
+
+    exclusive_index = next(
+        index
+        for index in range(method_combo.count())
+        if method_combo.itemData(index) == "exclusive"
+    )
+    method_combo.setCurrentIndex(exclusive_index)
+
+    assert pill._update_button.isEnabled()
+    assert pill._revert_button.isEnabled()
+    assert pill._settings_dirty_fields == {"evaluation_method"}
+    edited = pill.edited_config()
+    assert isinstance(edited, bl_states.AggregatedStateConfig)
+    assert edited.evaluation_method == "exclusive"
+    assert set(edited.states) == {"alignment", "parked"}
+
+    with qtbot.waitSignal(pill.update_requested) as signal:
+        pill._update_button.click()
+
+    assert signal.args[0] == "machine_mode"
+    assert signal.args[1].evaluation_method == "exclusive"
+    assert set(signal.args[1].states) == {"alignment", "parked"}
+
+
+def test_aggregated_state_pill_round_trips_disabled_evaluation_and_reverts(qtbot, mocked_client):
+    pill = create_widget(qtbot, BeamlineStatePill, state_name="machine_mode", client=mocked_client)
+    pill.set_state_config(_aggregated_state(evaluation_method=None))
+    pill.set_expanded(True)
+    editor = pill._config_form
+    assert isinstance(editor, AggregatedStateConfigEditor)
+    method_combo = editor.input_widget("evaluation_method")
+    assert isinstance(method_combo, QComboBox)
+    assert method_combo.currentData() is None
+    assert pill.edited_config().evaluation_method is None
+
+    any_index = next(
+        index for index in range(method_combo.count()) if method_combo.itemData(index) == "any"
+    )
+    method_combo.setCurrentIndex(any_index)
+    assert pill._update_button.isEnabled()
+
+    pill._revert_button.click()
+
+    assert method_combo.currentData() is None
+    assert pill.edited_config().evaluation_method is None
+    assert not pill._update_button.isEnabled()
+    assert not pill._revert_button.isEnabled()
 
 
 def test_beamline_state_pill_first_expand_uses_config_class_without_rebuild(

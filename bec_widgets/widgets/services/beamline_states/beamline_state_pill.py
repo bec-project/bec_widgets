@@ -6,7 +6,7 @@ from bec_lib import bl_states, messages
 from bec_lib.endpoints import MessageEndpoints
 from bec_qthemes import material_icon
 from qtpy.QtCore import Property, QEasingCurve, QPropertyAnimation, Qt, Signal
-from qtpy.QtGui import QColor, QMouseEvent, QPalette
+from qtpy.QtGui import QColor, QKeyEvent, QMouseEvent, QPalette
 from qtpy.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -30,6 +30,9 @@ from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.forms_from_types.pydantic_widget_form import (
     OptionalValueWidget,
     PydanticWidgetForm,
+)
+from bec_widgets.widgets.services.beamline_states.aggregated_state_editor import (
+    AggregatedStateConfigEditor,
 )
 from bec_widgets.widgets.services.beamline_states.dialogs import (
     BEAMLINE_STATE_STATUS_LABELS,
@@ -91,6 +94,7 @@ class BeamlineStatePill(BECWidget, QWidget):
         self.setObjectName("BeamlineStatePill")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         # Floor below which the pill keeps its structure; the title/detail elide rather than
         # pushing the pill wider or taller, so collapsed rows stay a consistent size.
         self.setMinimumWidth(200)
@@ -186,7 +190,7 @@ class BeamlineStatePill(BECWidget, QWidget):
         self._settings.setObjectName("beamline_state_settings")
         self._settings.setVisible(False)
         self._state_type_value = QLabel(self._settings)
-        self._config_form: PydanticWidgetForm | None = None
+        self._config_form: PydanticWidgetForm | AggregatedStateConfigEditor | None = None
         self._config_form_host = QVBoxLayout()
         self._config_form_host.setContentsMargins(0, 0, 0, 0)
         self._config_form_host.setSpacing(0)
@@ -404,6 +408,8 @@ class BeamlineStatePill(BECWidget, QWidget):
         status = str(content.get("status", "unknown")).lower()
         label = str(content.get("label", "No state information available."))
         self._set_visual_state(status, label)
+        if isinstance(self._config_form, AggregatedStateConfigEditor):
+            self._config_form.set_active_label_text(label)
         self.state_changed.emit(self._state_name or str(name or ""), status, label)
 
     @SafeSlot(str)
@@ -596,7 +602,15 @@ class BeamlineStatePill(BECWidget, QWidget):
 
     @SafeSlot()
     def _toggle_expanded(self) -> None:
+        self.setFocus(Qt.FocusReason.MouseFocusReason)
         self.set_expanded(not self._expanded)
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:  # noqa: N802
+        if event.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
+            self._emit_remove_requested()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
     def is_expanded(self) -> bool:
         """Return whether the editable settings panel is expanded."""
@@ -625,16 +639,22 @@ class BeamlineStatePill(BECWidget, QWidget):
 
     def _ensure_config_form(
         self, config_class: type[bl_states.BeamlineStateConfig] = bl_states.DeviceStateConfig
-    ) -> PydanticWidgetForm:
+    ) -> PydanticWidgetForm | AggregatedStateConfigEditor:
         if self._config_form is None:
-            self._config_form = PydanticWidgetForm(
-                config_class, parent=self._settings, client=self.client, read_only_fields={"name"}
-            )
+            if config_class is bl_states.AggregatedStateConfig:
+                self._config_form = AggregatedStateConfigEditor(parent=self._settings)
+            else:
+                self._config_form = PydanticWidgetForm(
+                    config_class,
+                    parent=self._settings,
+                    client=self.client,
+                    read_only_fields={"name"},
+                )
             self._config_form.changed.connect(self._update_settings_dirty_state)
             self._config_form_host.addWidget(self._config_form)
         return self._config_form
 
-    def _ensure_settings_form_current(self) -> PydanticWidgetForm:
+    def _ensure_settings_form_current(self) -> PydanticWidgetForm | AggregatedStateConfigEditor:
         if self._settings_form_stale:
             self._populate_settings()
             self.mark_current_settings_clean()
@@ -657,6 +677,11 @@ class BeamlineStatePill(BECWidget, QWidget):
         try:
             state_type = self._state_config.state_type if self._state_config is not None else ""
             config_class = None
+            if state_type in {
+                bl_states.AggregatedState.__name__,
+                bl_states.AggregatedState.CONFIG_CLASS.state_type,
+            }:
+                config_class = bl_states.AggregatedState.CONFIG_CLASS
             for state_class in SUPPORTED_BEAMLINE_STATES:
                 if state_type in {state_class.__name__, state_class.CONFIG_CLASS.state_type}:
                     config_class = state_class.CONFIG_CLASS
@@ -665,9 +690,13 @@ class BeamlineStatePill(BECWidget, QWidget):
                 raise ValueError(f"Unsupported beamline state type '{state_type}'.")
             config_form = self._ensure_config_form(config_class)
             if config_form.model is not config_class:
+                if isinstance(config_form, AggregatedStateConfigEditor):
+                    raise ValueError(f"Unsupported beamline state type change to '{state_type}'.")
                 config_form.set_model(config_class)
             self._state_type_value.setText(state_type or "-")
             config_form.set_partial_data(self._state_data_for_form(config_class))
+            if isinstance(config_form, AggregatedStateConfigEditor):
+                config_form.set_active_label_text(self._label)
             self._settings_form_stale = False
         finally:
             self._populating_settings = False

@@ -11,6 +11,7 @@ from qtpy.QtWidgets import (
     QAbstractItemView,
     QApplication,
     QDialog,
+    QFileDialog,
     QHBoxLayout,
     QLabel,
     QListView,
@@ -387,6 +388,9 @@ class BeamlineStateManager(BECWidget, QWidget):
     def _create_toolbar(self) -> ModularToolBar:
         toolbar = ModularToolBar(parent=self)
 
+        load_states = MaterialIconAction(
+            "file_open", "Load beamline states from config", filled=True, parent=self
+        )
         add_state = MaterialIconAction("add", "Add beamline state", filled=True, parent=self)
         filter_states = MaterialIconAction(
             "filter_alt", "Filter displayed state status", filled=True, parent=self
@@ -413,6 +417,7 @@ class BeamlineStateManager(BECWidget, QWidget):
             parent=self,
         )
 
+        load_states.action.triggered.connect(self.load_states_from_config)
         add_state.action.triggered.connect(self.open_add_state_dialog)
         filter_states.action.triggered.connect(self.open_status_filter_dialog)
         filter_devices.action.triggered.connect(self.open_device_filter_dialog)
@@ -420,6 +425,7 @@ class BeamlineStateManager(BECWidget, QWidget):
         collapse_all.action.triggered.connect(self.collapse_all)
         scan_interlock.action.toggled.connect(self._on_interlock_action_toggled)
 
+        toolbar.components.add_safe("load_states", load_states)
         toolbar.components.add_safe("add_state", add_state)
         toolbar.components.add_safe("filter_states", filter_states)
         toolbar.components.add_safe("filter_devices", filter_devices)
@@ -429,6 +435,7 @@ class BeamlineStateManager(BECWidget, QWidget):
         toolbar.components.add_safe("scan_interlock", scan_interlock)
 
         bundle = ToolbarBundle("beamline_state_manager", toolbar.components)
+        bundle.add_action("load_states")
         bundle.add_action("add_state")
         bundle.add_action("filter_states")
         bundle.add_action("filter_devices")
@@ -464,6 +471,14 @@ class BeamlineStateManager(BECWidget, QWidget):
         self._sync_interlock_action()
         self._refresh_section_headers()
         self._refresh_hidden_summary()
+
+    @SafeSlot()
+    def load_states_from_config(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Load beamline states from config", "", "YAML files (*.yaml *.yml);;All files (*)"
+        )
+        if path:
+            self.bec_dispatcher.client.state_machine.load_from_config(config_path=path)
 
     @SafeSlot()
     def open_add_state_dialog(self) -> None:
