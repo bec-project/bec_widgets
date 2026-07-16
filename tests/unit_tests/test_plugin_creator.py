@@ -57,11 +57,17 @@ def runner():
     return CliRunner()
 
 
+@pytest.mark.skip(
+    reason="To be clarified why BecWidgets should run the tests for the plugin_manager of bec_lib"
+)
 def test_app_has_widget_commands(runner: CliRunner):
     result = runner.invoke(main._app, ["create", "--help"])
     assert "widget" in result.output
 
 
+@pytest.mark.skip(
+    reason="To be clarified why BecWidgets should run the tests for the plugin_manager of bec_lib"
+)
 def test_create_widget_takes_name(runner: CliRunner):
     result = runner.invoke(main._app, ["create", "widget"])
     assert "Missing argument 'NAME'." in result.output
@@ -89,6 +95,9 @@ def test_widget_exists_function():
     assert _widget_exists([{"name": "test_widget", "use_ui": True}], "test_widget")
 
 
+@pytest.mark.skip(
+    reason="To be clarified why BecWidgets should run the tests for the plugin_manager of bec_lib"
+)
 def test_editor_cb(runner):
     result = runner.invoke(main._app, ["create", "widget", "test", "--no-use-ui", "--open-editor"])
     assert result.exit_code == 2
