@@ -260,6 +260,22 @@ def test_update_coord_label_2D(image_widget_with_crosshair):
     assert crosshair.coord_label.isVisible()
 
 
+def test_rgb_image_labels_omit_scalar_intensity(image_widget_with_crosshair):
+    """RGB pixels are arrays, so live and pinned labels only show coordinates."""
+    crosshair, plot_item = image_widget_with_crosshair
+    rgb_image = np.arange(12).reshape(2, 2, 3)
+
+    for item in plot_item.items:
+        if isinstance(item, pg.ImageItem):
+            item.setImage(rgb_image)
+
+    crosshair.update_coord_label((0.5, 1.2))
+    assert crosshair.coord_label.toPlainText() == "(0.500, 1.200)"
+
+    crosshair.set_pin(0.0, 1.0)
+    assert crosshair.pinned_label.toPlainText() == "pin (0.500, 1.500)"
+
+
 def test_update_markers_on_image_change_accepts_image_without_transform(
     image_widget_with_crosshair,
 ):

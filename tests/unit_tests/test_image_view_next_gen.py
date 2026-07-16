@@ -1459,6 +1459,19 @@ def test_detached_pin_label_intensity_updates_on_image_update(qtbot, mocked_clie
     )
 
 
+def test_detached_pin_label_omits_scalar_intensity_for_rgb_image(qtbot, mocked_client):
+    """Detached RGB pin labels only show coordinates because a pixel is an array."""
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    bec_image_view.on_image_update_2d({"data": np.zeros((5, 5, 3))}, {})
+    bec_image_view.hook_crosshair()
+    bec_image_view.crosshair.set_pin(2.0, 3.0)
+    bec_image_view.unhook_crosshair()
+
+    assert bec_image_view.crosshair is None
+    assert bec_image_view._detached_pin is not None
+    assert bec_image_view._detached_pin["label"].toPlainText() == "pin (2.500, 3.500)"
+
+
 ##############################################
 # Device selection toolbar sync
 ##############################################

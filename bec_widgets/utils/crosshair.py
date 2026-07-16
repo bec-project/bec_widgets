@@ -917,6 +917,8 @@ class Crosshair(QObject):
                 image = item.image
                 if image is None:
                     continue
+                if image.ndim > 2:
+                    continue
 
                 if item.image_transform is not None:
                     inv_transform, _ = item.image_transform.inverted()
