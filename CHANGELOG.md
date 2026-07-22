@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v3.29.6 (2026-07-22)
+
+### Bug Fixes
+
+- **widgets**: Remove theme_update kwarg; every BECWidget follows theme changes
+  ([`3fb3588`](https://github.com/bec-project/bec_widgets/commit/3fb35882bb0879291f10937e1abfb19a62360f63))
+
+### Refactoring
+
+- Remove 'Add' prefix from toolbar action labels
+  ([`1786dfc`](https://github.com/bec-project/bec_widgets/commit/1786dfc22b654e80135a7f6e4f6e1b767038545c))
+
+- **forms**: Rename pretty-display theme hookup to stop shadowing BECWidget method
+  ([`67007f7`](https://github.com/bec-project/bec_widgets/commit/67007f7e579c1df28b2b637e48f4e94041eef30c))
+
+
 ## v3.29.5 (2026-07-16)
 
 ### Bug Fixes
