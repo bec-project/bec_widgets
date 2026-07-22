@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.29.7 (2026-07-22)
+
+### Bug Fixes
+
+- **qt**: Correct SafeConnect double execution, stale connections, and SafeSlot override leakage
+  ([`775aedc`](https://github.com/bec-project/bec_widgets/commit/775aedc2abff605d78fdb1655337becd7f44cd92))
+
+
 ## v3.29.6 (2026-07-22)
 
 ### Bug Fixes
