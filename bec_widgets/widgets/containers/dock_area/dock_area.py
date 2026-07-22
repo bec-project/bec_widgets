@@ -350,7 +350,7 @@ class BECDockArea(DockAreaWidget):
         self.toolbar = ModularToolBar(parent=self)
 
         plot_actions = {
-            "waveform": (widget_icons["Waveform"], "Add Waveform", "Waveform"),
+            "waveform": (widget_icons["Waveform"], "Waveform", "Waveform"),
             "scatter_waveform": (
                 widget_icons["ScatterWaveform"],
                 "Add Scatter Waveform",
@@ -361,39 +361,39 @@ class BECDockArea(DockAreaWidget):
                 "Add Multi Waveform",
                 "MultiWaveform",
             ),
-            "image": (widget_icons["Image"], "Add Image", "Image"),
-            "motor_map": (widget_icons["MotorMap"], "Add Motor Map", "MotorMap"),
-            "heatmap": (widget_icons["Heatmap"], "Add Heatmap", "Heatmap"),
+            "image": (widget_icons["Image"], "Image", "Image"),
+            "motor_map": (widget_icons["MotorMap"], "Motor Map", "MotorMap"),
+            "heatmap": (widget_icons["Heatmap"], "Heatmap", "Heatmap"),
         }
         device_actions = {
-            "scan_control": (widget_icons["ScanControl"], "Add Scan Control", "ScanControl"),
-            "positioner_box": (widget_icons["PositionerBox"], "Add Device Box", "PositionerBox"),
+            "scan_control": (widget_icons["ScanControl"], "Scan Control", "ScanControl"),
+            "positioner_box": (widget_icons["PositionerBox"], "Device Box", "PositionerBox"),
             "positioner_box_2D": (
                 widget_icons["PositionerBox2D"],
-                "Add Device 2D Box",
+                "Device 2D Box",
                 "PositionerBox2D",
             ),
         }
         util_actions = {
-            "queue": (widget_icons["BECQueue"], "Add Scan Queue", "BECQueue"),
-            "status": (widget_icons["BECStatusBox"], "Add BEC Status Box", "BECStatusBox"),
+            "queue": (widget_icons["BECQueue"], "Scan Queue", "BECQueue"),
+            "status": (widget_icons["BECStatusBox"], "BEC Status Box", "BECStatusBox"),
             "progress_bar": (
                 widget_icons["RingProgressBar"],
-                "Add Circular ProgressBar",
+                "Circular ProgressBar",
                 "RingProgressBar",
             ),
             "scan_progress_bar": (
                 widget_icons["ScanProgressBar"],
-                "Add Scan Progress Bar",
+                "Scan Progress Bar",
                 "ScanProgressBar",
             ),
-            "terminal": (widget_icons["BecConsole"], "Add Terminal", "BecConsole"),
-            "bec_shell": (widget_icons["BECShell"], "Add BEC Shell", "BECShell"),
-            "sbb_monitor": (widget_icons["SBBMonitor"], "Add SBB Monitor", "SBBMonitor"),
-            "log_panel": (widget_icons["LogPanel"], "Add LogPanel", "LogPanel"),
+            "terminal": (widget_icons["BecConsole"], "Terminal", "BecConsole"),
+            "bec_shell": (widget_icons["BECShell"], "BEC Shell", "BECShell"),
+            "sbb_monitor": (widget_icons["SBBMonitor"], "SBB Monitor", "SBBMonitor"),
+            "log_panel": (widget_icons["LogPanel"], "LogPanel", "LogPanel"),
             "beamline_state_manager": (
                 widget_icons["BeamlineStateManager"],
-                "Add Beamline State Manager",
+                "Beamline State Manager",
                 "BeamlineStateManager",
             ),
         }
