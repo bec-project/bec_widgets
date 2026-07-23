@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v3.29.8 (2026-07-23)
+
+### Bug Fixes
+
+- **dock_area**: Fix hiding title window for the first dock after second is added, countering the
+  logic of QtADS DockContainerWidgetPrivate::addDockAreasToList code
+  ([`a6e66a9`](https://github.com/bec-project/bec_widgets/commit/a6e66a902b47ced46b38a9b0ccf9e96700375fd4))
+
+
 ## v3.29.7 (2026-07-22)
 
 ### Bug Fixes
