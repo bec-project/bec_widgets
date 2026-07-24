@@ -1,6 +1,68 @@
 # CHANGELOG
 
 
+## v3.30.0 (2026-07-24)
+
+### Bug Fixes
+
+- **bec-dispatcher**: Add disconnect_owner method to manage widget slot disconnections
+  ([`f477bb5`](https://github.com/bec-project/bec_widgets/commit/f477bb5838b5a67ed4a8fc3f97ac294019d03c68))
+
+- **bec_widget**: Run cleanup from deleteLater override instead of intercepting DeferredDelete
+  events
+  ([`6269919`](https://github.com/bec-project/bec_widgets/commit/6269919d0610590700f4a7ed9b58affa5073ae76))
+
+- **bec_widget**: Run cleanup on every destruction path, not only closeEvent
+  ([`029166f`](https://github.com/bec-project/bec_widgets/commit/029166f96ae4ae419b65bbbd89fdc41bf7f74216))
+
+- **dispatcher**: Hold bound-method callbacks weakly; anchor ownerless callables explicitly
+  ([`7f14e78`](https://github.com/bec-project/bec_widgets/commit/7f14e786899cd2245aec5b86ec8c45352aed0a7d))
+
+- **dispatcher**: Honor cb_info when disconnecting a multiply-registered slot
+  ([`f5e0467`](https://github.com/bec-project/bec_widgets/commit/f5e04675bd233194fbd2b884b3947befe47e37b1))
+
+- **dispatcher**: Release owner slots in bulk and match owners by identity
+  ([`e6c38ca`](https://github.com/bec-project/bec_widgets/commit/e6c38ca462c4691b0f2c6f49ba6215c501f14e30))
+
+### Build System
+
+- Support PySide6 6.11.1, pyqtgraph 0.14 and PySide6-QtAds 5.0.0, remove force x11 on Linux
+  ([`3ba078e`](https://github.com/bec-project/bec_widgets/commit/3ba078ea5b8cc52e7ff4c717651e9d9dba0bd615))
+
+### Continuous Integration
+
+- Fix OPHYD_DEVICES_PATH export typo
+  ([`eafabd4`](https://github.com/bec-project/bec_widgets/commit/eafabd43c0d2afbe5d8833b995afe96446dfbb30))
+
+- **qt_webengine**: Added QTWEBENGINE_CHROMIUM_FLAGS: "--disable-gpu" to prevent segfaults on ci
+  machines
+  ([`720c1d1`](https://github.com/bec-project/bec_widgets/commit/720c1d13c6307f8068fbeea3583a5a5abb431b7c))
+
+### Features
+
+- **dispatcher**: Sweep subscriptions of dead owners; self-heal on connect
+  ([`a8d4406`](https://github.com/bec-project/bec_widgets/commit/a8d440655148ba25d1dc6003d675140991dc9203))
+
+### Refactoring
+
+- Replace deprecated bec_lib connector internals
+  ([`70a32de`](https://github.com/bec-project/bec_widgets/commit/70a32dee4fca6fd22b320761964ce1a67e6207d6))
+
+- **widgets**: Drop teardown dispatcher disconnects now handled by disconnect_owner
+  ([`01c922e`](https://github.com/bec-project/bec_widgets/commit/01c922eb802dee25db86f86e54cb9ae41fe518ac))
+
+### Testing
+
+- Start mocked client with no current scan to prevent mock leakage into scan_item
+  ([`3c6b82d`](https://github.com/bec-project/bec_widgets/commit/3c6b82dceb8757c3abac54b9eaff87efa8d9562d))
+
+- **lifecycle**: Cover all destruction paths, owner-bound lambdas, and the dead-slot sweep
+  ([`b7d2194`](https://github.com/bec-project/bec_widgets/commit/b7d21944884acc4304fd9bac6aa8b69cf44ab853))
+
+- **spinner**: Remove snap_and_compare tests
+  ([`dc69265`](https://github.com/bec-project/bec_widgets/commit/dc69265a69ca9d304ad827c1fadfe00b4f287cdf))
+
+
 ## v3.29.8 (2026-07-23)
 
 ### Bug Fixes
