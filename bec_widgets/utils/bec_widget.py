@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 import shiboken6
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import QBuffer, QByteArray, QEvent, QIODevice, QObject, Qt
+from qtpy.QtCore import QBuffer, QByteArray, QIODevice, QObject, Qt
 from qtpy.QtGui import QFont, QPixmap
 from qtpy.QtWidgets import QApplication, QFileDialog, QLabel, QVBoxLayout, QWidget
 
@@ -438,20 +438,30 @@ class BECWidget(BECConnector):
                 except Exception as exc:
                     logger.warning(f"Failed to delete busy overlay: {exc}")
 
-    def event(self, event):
+    def deleteLater(self):
         """
-        Run cleanup when the widget is deleted via deleteLater without ever being
-        closed: the DeferredDelete event is the last point where the widget is still
-        fully alive. Together with closeEvent (explicit close) and the destroyed hook
-        (parent destruction), every destruction path releases the widget's resources.
+        Run cleanup when the widget is discarded via deleteLater without ever being
+        closed, then schedule the deletion. Together with closeEvent (explicit close)
+        and the destroyed hook (parent destruction), every destruction path releases
+        the widget's resources.
+
+        NOTE: deliberately a ``deleteLater`` override, not an ``event()`` override
+        intercepting DeferredDelete: routing every event through Python makes
+        shiboken wrap each C++ QEvent, and a stale pointer-cache entry of a
+        non-QObject (e.g. a QStandardItem freed by a combo box model) at a recycled
+        address then raises a TypeError inside the binding layer. Qt-internal (C++)
+        deleteLater calls bypass this override; those paths are covered by the
+        destroyed-signal safety net.
         """
-        if event.type() == QEvent.Type.DeferredDelete and not self._destroyed:
+        if not self._destroyed:
+            # Flag first (matching closeEvent): the widget counts as destroyed while its
+            # own cleanup runs, so nothing re-enters cleanup on this path.
+            self._destroyed = True
             try:
                 self.cleanup()
-                self._destroyed = True
             except Exception:
-                logger.exception(f"Cleanup on deferred delete failed for {self.__class__.__name__}")
-        return super().event(event)  # pylint: disable=no-member
+                logger.exception(f"Cleanup on deleteLater failed for {self.__class__.__name__}")
+        super().deleteLater()  # pylint: disable=no-member
 
     def closeEvent(self, event):
         """Wrap the close event to ensure the widget is cleaned up."""
