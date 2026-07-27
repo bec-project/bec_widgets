@@ -161,7 +161,7 @@ def test_signal_combobox(qtbot, device_signal_combobox):
     qtbot.wait(100)
     assert container == ["samx (readback)"]
     # Set the type of class from the FakeDevice to Signal
-    fake_signal = FakeSignal(name="fake_signal", info={"device_info": {"signals": {}}})
+    fake_signal = FakeSignal(name="fake_signal", info={"signals": {}})
     device_signal_combobox.client.device_manager.add_devices([fake_signal])
     device_signal_combobox.set_device("fake_signal")
     fake_signal = device_signal_combobox.dev.fake_signal
