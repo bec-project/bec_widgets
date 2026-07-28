@@ -1139,8 +1139,10 @@ class BECNotificationBroker(BECConnector, QObject):
             "traceback": detailed_trace,
             "lifetime_ms": lifetime,
         }
+        # close broadcasting and expiry pruning are wired inside add_notification,
+        # covering live and replayed toasts alike — no per-toast hookup needed here
         for centre in centres:
-            toast = centre.add_notification(
+            centre.add_notification(
                 title=title,
                 body=body_text,
                 traceback=detailed_trace,
@@ -1148,9 +1150,6 @@ class BECNotificationBroker(BECConnector, QObject):
                 lifetime_ms=lifetime,
                 notification_id=notification_id,
             )
-            # broadcast close events (expiry pruning is wired in add_notification so
-            # replayed toasts are covered as well)
-            toast.closed.connect(lambda nid=notification_id: self.notification_closed.emit(nid))
 
     @SafeSlot(dict, dict)
     def on_scan_status(self, msg: dict, meta: dict) -> None:
