@@ -30,12 +30,66 @@ def heatmap_widget(qtbot, mocked_client):
     yield widget
 
 
+class _FakeDataSubscription:
+    def __init__(self):
+        self.callback = None
+        self.devices = []
+        self.closed = False
+
+    def set_callback(self, callback):
+        self.callback = callback
+        return self
+
+    def add_device(self, device, signal):
+        self.devices.append((device, signal))
+        return self
+
+    def close(self):
+        self.closed = True
+
+
+class _FakeDataAPI:
+    def __init__(self, client):
+        self.client = client
+        self.create_subscription_calls = []
+        self.subscription = _FakeDataSubscription()
+
+    def create_subscription(self, **kwargs):
+        self.create_subscription_calls.append(kwargs)
+        return self.subscription
+
+
 def test_heatmap_plot(heatmap_widget):
     heatmap_widget.plot(device_x="samx", device_y="samy", device_z="bpm4i")
 
     assert heatmap_widget._image_config.device_x.device == "samx"
     assert heatmap_widget._image_config.device_y.device == "samy"
     assert heatmap_widget._image_config.device_z.device == "bpm4i"
+
+
+def test_heatmap_plot_sets_up_live_data_api_subscription(heatmap_widget, monkeypatch):
+    fake_data_api = _FakeDataAPI(heatmap_widget.client)
+    monkeypatch.setattr(
+        "bec_widgets.widgets.plots.heatmap.heatmap.DataAPI", lambda client: fake_data_api
+    )
+
+    heatmap_widget.plot(
+        device_x="samx",
+        device_y="samy",
+        device_z="bpm4i",
+        signal_x="samx",
+        signal_y="samy",
+        signal_z="bpm4i",
+    )
+
+    assert fake_data_api.create_subscription_calls == [{"live": True, "buffered": True}]
+    assert fake_data_api.subscription.callback == heatmap_widget.data_api_update.emit
+    assert fake_data_api.subscription.devices == [
+        ("samx", "samx"),
+        ("samy", "samy"),
+        ("bpm4i", "bpm4i"),
+    ]
+    assert heatmap_widget._data_subscription is fake_data_api.subscription
 
 
 def test_heatmap_plot_with_scan_id_uses_history(heatmap_widget):
@@ -84,6 +138,17 @@ def test_heatmap_update_with_scan_history_resets_cached_image_state(heatmap_widg
     assert heatmap_widget.status_message is None
     assert heatmap_widget.scan_item is history_scan
     assert heatmap_widget.scan_id == "scan-456"
+
+
+def test_heatmap_update_with_scan_history_closes_live_data_api_subscription(heatmap_widget):
+    history_scan = mock.MagicMock()
+    history_scan.scan_id = "scan-456"
+    heatmap_widget._data_subscription = _FakeDataSubscription()
+
+    with mock.patch.object(heatmap_widget, "get_history_scan_item", return_value=history_scan):
+        heatmap_widget.update_with_scan_history(scan_id="scan-456")
+
+    assert heatmap_widget._data_subscription is None
 
 
 def test_heatmap_on_scan_status_resets_after_history_scan_selection(heatmap_widget):
@@ -384,6 +449,45 @@ def test_heatmap_update_plot(heatmap_widget):
     )
     with mock.patch.object(heatmap_widget.main_image, "setImage") as mock_set_image:
         heatmap_widget.update_plot(_override_slot_params={"verify_sender": False})
+        img = mock_set_image.mock_calls[0].args[0]
+        assert img.shape == (10, 10)
+
+
+def test_heatmap_update_plot_from_buffered_data_api_payload(heatmap_widget):
+    heatmap_widget._image_config = HeatmapConfig(
+        parent_id="parent_id",
+        device_x=HeatmapDeviceSignal(device="samx", signal="samx"),
+        device_y=HeatmapDeviceSignal(device="samy", signal="samy"),
+        device_z=HeatmapDeviceSignal(device="bpm4i", signal="bpm4i"),
+        color_map="viridis",
+    )
+    heatmap_widget.scan_item = create_dummy_scan_item()
+    x_levels = np.linspace(-5, 5, 10).tolist()
+    y_levels = np.linspace(-5, 5, 10).tolist()
+    heatmap_widget.scan_item.status_message = messages.ScanStatusMessage(
+        scan_id="123",
+        status="open",
+        scan_name="grid_scan",
+        metadata={},
+        info={
+            "positions": _grid_positions(slow_levels=y_levels, fast_levels=x_levels, snaked=True)
+        },
+        request_inputs={"arg_bundle": ["samx", -5, 5, 10, "samy", -5, 5, 10], "kwargs": {}},
+    )
+    payload = {
+        "samx": {"samx": [{"value": value, "timestamp": idx} for idx, value in enumerate(x_levels)]},
+        "samy": {"samy": [{"value": value, "timestamp": idx} for idx, value in enumerate(y_levels)]},
+        "bpm4i": {
+            "bpm4i": [{"value": idx, "timestamp": idx} for idx in range(len(x_levels))]
+        },
+    }
+
+    with mock.patch.object(heatmap_widget.main_image, "setImage") as mock_set_image:
+        heatmap_widget.update_plot(
+            data=payload,
+            metadata={"scan_id": "123"},
+            _override_slot_params={"verify_sender": False},
+        )
         img = mock_set_image.mock_calls[0].args[0]
         assert img.shape == (10, 10)
 
