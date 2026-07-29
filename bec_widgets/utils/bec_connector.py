@@ -154,9 +154,16 @@ class BECConnector:
                 logger.info("Shutting down BEC Client", repr(client))
                 client.shutdown()
 
-            BECConnector.EXIT_HANDLERS[self.client] = terminate
+            # In our GUI processes a QApplication always exists by this point (and a
+            # QWidget-based connector could not even be constructed without one - Qt
+            # aborts first). The guard is defensive for QObject-only connectors, which
+            # Qt happily creates standalone, e.g. in headless tests or plugin code.
+            # Record the handler only once it is actually wired: otherwise the
+            # EXIT_HANDLERS entry would suppress the registration of a later connector
+            # created when an application does exist, silently losing client teardown.
             app = QApplication.instance()
             if app is not None:
+                BECConnector.EXIT_HANDLERS[self.client] = terminate
                 app.aboutToQuit.connect(terminate)
             else:
                 logger.warning(
