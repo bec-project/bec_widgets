@@ -207,8 +207,9 @@ def test_bec_connector_export_settings():
 
 
 def test_bec_connector_terminate_registration_no_qapp_instance(qtbot):
-    """Constructing a BECConnector before a QApplication exists must not raise; the exit
-    handler is still registered, only the aboutToQuit wiring is skipped."""
+    """Constructing a BECConnector without a QApplication (possible for QObject-only
+    connectors) must not raise, and must leave nothing registered: there is no
+    aboutToQuit to wire, so the exit handler is not recorded either."""
     import bec_widgets.utils.bec_connector as m
 
     fresh_client = mock.MagicMock(name="fresh_client")
@@ -216,6 +217,29 @@ def test_bec_connector_terminate_registration_no_qapp_instance(qtbot):
     try:
         with mock.patch.object(m.QApplication, "instance", return_value=None):
             BECConnectorQObject(client=fresh_client)  # must not raise
-        assert fresh_client in BECConnector.EXIT_HANDLERS
+        assert fresh_client not in BECConnector.EXIT_HANDLERS
     finally:
         BECConnector.EXIT_HANDLERS.pop(fresh_client, None)
+
+
+def test_bec_connector_terminate_registered_once_qapp_exists(qtbot):
+    """A connector created without a QApplication must not block the registration of a
+    later connector for the same client: once an application exists, teardown is wired."""
+    import bec_widgets.utils.bec_connector as m
+
+    fresh_client = mock.MagicMock(name="late_app_client")
+    try:
+        with mock.patch.object(m.QApplication, "instance", return_value=None):
+            BECConnectorQObject(client=fresh_client)
+
+        # now an application exists (qtbot guarantees one) -> handler gets wired
+        BECConnectorQObject(client=fresh_client)
+        assert fresh_client in BECConnector.EXIT_HANDLERS
+
+        fresh_client.shutdown.reset_mock()
+        QApplication.instance().aboutToQuit.emit()
+        assert fresh_client.shutdown.called, "client teardown must run on aboutToQuit"
+    finally:
+        handler = BECConnector.EXIT_HANDLERS.pop(fresh_client, None)
+        if handler is not None:
+            QApplication.instance().aboutToQuit.disconnect(handler)
