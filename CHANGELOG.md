@@ -1,6 +1,30 @@
 # CHANGELOG
 
 
+## v3.30.1 (2026-07-29)
+
+### Bug Fixes
+
+- **rpc**: Isolate broadcast callbacks and retry delivery after failures
+  ([`e07409c`](https://github.com/bec-project/bec_widgets/commit/e07409ca1b33731e06aa70340404d0e2a31816f8))
+
+- **rpc**: Release dispatcher slot and registry callback on server shutdown
+  ([`dc9b849`](https://github.com/bec-project/bec_widgets/commit/dc9b8497e53473eab4ae60f7bfb832b56479d76e))
+
+- **rpc**: Weak, deduplicated registry callbacks with owner-safe lifecycle
+  ([`5fd300d`](https://github.com/bec-project/bec_widgets/commit/5fd300d4037cd0d4dda2b6a64187c167e65df54a))
+
+### Performance Improvements
+
+- **rpc**: Skip registry broadcasts when nothing changed
+  ([`f29632b`](https://github.com/bec-project/bec_widgets/commit/f29632bfd626e2397738bac2ff54dc173ae637e1))
+
+### Testing
+
+- Adapt to simplified device info
+  ([`72c0076`](https://github.com/bec-project/bec_widgets/commit/72c007611b0f6e52a3608db359effcff1c3016b8))
+
+
 ## v3.30.0 (2026-07-24)
 
 ### Bug Fixes
