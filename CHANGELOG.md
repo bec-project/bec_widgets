@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v3.30.2 (2026-07-29)
+
+### Bug Fixes
+
+- **connector**: Register the exit handler only when it is wired to aboutToQuit
+  ([`9615626`](https://github.com/bec-project/bec_widgets/commit/961562616ed57b3325f8aa57ac9f2c8c4560243b))
+
+- **shutdown**: Correct client/dispatcher teardown ordering and run cleanup on all close paths
+  ([`6c9381f`](https://github.com/bec-project/bec_widgets/commit/6c9381fe6f25689e1ad359b08c7a8fcd134da361))
+
+
 ## v3.30.1 (2026-07-29)
 
 ### Bug Fixes
