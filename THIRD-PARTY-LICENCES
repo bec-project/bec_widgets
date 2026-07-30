@@ -22,7 +22,6 @@ Additional Dependencies (Testing/Development):
 - pytest-timeout: MIT License, see [here](https://github.com/pytest-dev/pytest-timeout/blob/main/LICENSE)
 - pytest-xvfb: MIT License, see [here](https://github.com/The-Compiler/pytest-xvfb/blob/master/LICENSE)
 - pytest: MIT License, see [here](https://github.com/pytest-dev/pytest/blob/main/LICENSE)
-- pytest-cov: MIT License, see [here](https://github.com/pytest-dev/pytest-cov/blob/main/LICENSE)
 - watchdog: Apache License 2.0, see [here](https://github.com/gorakhargosh/watchdog/blob/master/LICENSE)
 - pre_commit: MIT License, see [here](https://github.com/pre-commit/pre-commit/blob/main/LICENSE)
 
