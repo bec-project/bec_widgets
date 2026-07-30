@@ -93,7 +93,8 @@ class ScanControl(BECWidget, QWidget):
         self.previous_scan = None
 
         # Widget Default Parameters
-        self.config.default_scan = default_scan
+        if default_scan is not None:
+            self.config.default_scan = default_scan
         if allowed_scans is not None:
             self.config.allowed_scans = allowed_scans
 
@@ -140,6 +141,7 @@ class ScanControl(BECWidget, QWidget):
             material_icon("filter_list", size=(20, 20), convert_to_pixmap=False)
         )
         self.scan_selector_settings_button.setToolTip("Choose scans shown in the selector")
+        self.scan_selector_settings_button.setAccessibleName("Scan selector settings")
         scan_selection_layout.addWidget(self.comboBox_scan_selection_label, 0)
         scan_selection_layout.addWidget(self.comboBox_scan_selection, 1)
         scan_selection_layout.addWidget(self.scan_info_button, 0)
@@ -170,10 +172,6 @@ class ScanControl(BECWidget, QWidget):
         self.button_layout.addWidget(self.button_stop_scan)
         self.layout.addWidget(self.scan_control_group)
 
-        # Default scan from config
-        if self.config.default_scan is not None:
-            self.comboBox_scan_selection.setCurrentText(self.config.default_scan)
-
         # Connect signals
         self.comboBox_scan_selection.view().pressed.connect(self.save_current_scan_parameters)
         self.comboBox_scan_selection.currentIndexChanged.connect(self.on_scan_selection_changed)
@@ -185,6 +183,10 @@ class ScanControl(BECWidget, QWidget):
 
         # Initialize scan selection
         self.populate_scans()
+
+        # Default scan from config; applied after population so the entry exists
+        if self.config.default_scan is not None:
+            self.comboBox_scan_selection.setCurrentText(self.config.default_scan)
 
         # Append metadata form
         self._add_metadata_form()
