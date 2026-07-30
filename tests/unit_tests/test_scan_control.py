@@ -411,6 +411,23 @@ def test_configured_allowed_scans_are_preserved(qtbot, mocked_client):
     assert widget.comboBox_scan_selection.currentText() == "grid_scan"
 
 
+def test_configured_default_scan_is_preserved_and_applied(qtbot, mocked_client):
+    mocked_client.connector.set_and_publish(
+        MessageEndpoints.available_scans(), available_scans_message
+    )
+
+    widget = ScanControl(client=mocked_client, default_scan="grid_scan")
+    qtbot.addWidget(widget)
+    assert widget.comboBox_scan_selection.currentText() == "grid_scan"
+
+    # A default_scan from a passed-in config must not be wiped by the ctor default None
+    config = ScanControlConfig(widget_class="ScanControl", default_scan="grid_scan")
+    widget_from_config = ScanControl(client=mocked_client, config=config)
+    qtbot.addWidget(widget_from_config)
+    assert widget_from_config.config.default_scan == "grid_scan"
+    assert widget_from_config.comboBox_scan_selection.currentText() == "grid_scan"
+
+
 def test_scan_selector_settings_dialog_applies_checked_scans(scan_control, monkeypatch, qtbot):
     def select_line_scan(dialog):
         labels = [dialog.checkbox_for_scan(name).text() for name in ("line_scan", "grid_scan")]
