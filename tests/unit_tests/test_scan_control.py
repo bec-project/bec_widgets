@@ -5,13 +5,16 @@ from unittest.mock import MagicMock, patch
 import pytest
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.messages import AvailableResourceMessage, ScanHistoryMessage
-from qtpy.QtCore import QModelIndex, Qt
+from qtpy.QtCore import QModelIndex, QPoint, Qt
+from qtpy.QtWidgets import QCheckBox, QDialog, QStyle
 
 from bec_widgets.utils.forms_from_types.items import StrFormItem
 from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.control.scan_control import ScanControl
+from bec_widgets.widgets.control.scan_control.scan_control import ScanControlConfig
 from bec_widgets.widgets.control.scan_control.scan_info_adapter import ScanInfoAdapter
+from bec_widgets.widgets.control.scan_control.scan_selection_dialog import ScanSelectionDialog
 
 from .client_mocks import mocked_client
 
@@ -25,6 +28,13 @@ available_scans_message = AvailableResourceMessage(
         "line_scan": {
             "class": "LineScan",
             "base_class": "ScanBase",
+            "doc": (
+                "Run a line scan.\n\n"
+                "Args:\n"
+                "    device (DeviceBase | str): Device to move.\n\n"
+                "Examples:\n"
+                "    >>> scans.line_scan(samx, 0, 1)"
+            ),
             "arg_input": {"device": "device", "start": "float", "stop": "float"},
             "gui_config": {
                 "scan_class_name": "LineScan",
@@ -119,6 +129,7 @@ available_scans_message = AvailableResourceMessage(
         "grid_scan": {
             "class": "Scan",
             "base_class": "ScanBase",
+            "doc": "Run a grid scan over one or more devices.",
             "arg_input": {"device": "device", "start": "float", "stop": "float", "steps": "int"},
             "gui_config": {
                 "scan_class_name": "Scan",
@@ -279,6 +290,235 @@ def test_populate_scans(scan_control, mocked_client):
 
     assert scan_control.comboBox_scan_selection.count() == 2
     assert sorted(items) == sorted(expected_scans)
+
+
+def test_scan_selector_items_and_combo_show_doc_tooltips(scan_control):
+    line_index = scan_control.comboBox_scan_selection.findText("line_scan")
+    line_tooltip = scan_control.comboBox_scan_selection.itemData(
+        line_index, Qt.ItemDataRole.ToolTipRole
+    )
+
+    assert "line_scan" in line_tooltip
+    assert "Run a line scan." in line_tooltip
+    assert "Parameters:" in line_tooltip
+    assert "device: DeviceBase | str" in line_tooltip
+    assert scan_control.comboBox_scan_selection.toolTip() == line_tooltip
+
+    scan_control.comboBox_scan_selection.setCurrentText("grid_scan")
+
+    assert "grid_scan" in scan_control.comboBox_scan_selection.toolTip()
+    assert "Run a grid scan" in scan_control.comboBox_scan_selection.toolTip()
+
+
+def test_scan_info_button_shows_styled_selected_scan_docstring(scan_control, qtbot):
+    assert not scan_control.scan_info_button.icon().isNull()
+    assert scan_control.scan_info_button.accessibleName() == "Scan information"
+
+    with patch.object(scan_control.client.connector, "get") as connector_get:
+        qtbot.mouseClick(scan_control.scan_info_button, Qt.MouseButton.LeftButton)
+    connector_get.assert_not_called()
+
+    assert scan_control._scan_info_dialog.isVisible()
+    assert not scan_control._scan_info_dialog.isModal()
+    assert scan_control._scan_info_dialog.windowTitle() == "Scan information: line_scan"
+    plain_text = scan_control._scan_info_dialog.text_browser.toPlainText()
+    assert "line_scan" in plain_text
+    assert "Arguments" in plain_text
+    assert "device" in plain_text
+    assert "Examples" in plain_text
+    assert ">>> scans.line_scan" in plain_text
+    style = scan_control._scan_info_dialog.text_browser.document().defaultStyleSheet()
+    assert "h1" in style
+    assert "pre" in style
+
+
+def test_scan_info_button_handles_missing_docstring(scan_control, qtbot):
+    scan_control.available_scans["line_scan"].pop("doc")
+
+    qtbot.mouseClick(scan_control.scan_info_button, Qt.MouseButton.LeftButton)
+
+    assert "No documentation is available for this scan." in (
+        scan_control._scan_info_dialog.text_browser.toPlainText()
+    )
+
+
+def test_allowed_scans_property_filters_selector(scan_control):
+    scan_control.comboBox_scan_selection.setCurrentText("grid_scan")
+
+    scan_control.allowed_scans = ["line_scan", "unknown_scan", "line_scan"]
+
+    # The configured filter is kept verbatim (deduplicated) so that scans that are not
+    # available right now reappear once the scan server publishes them.
+    assert scan_control.allowed_scans == ["line_scan", "unknown_scan"]
+    assert scan_control.config.allowed_scans == ["line_scan", "unknown_scan"]
+    assert scan_control.comboBox_scan_selection.count() == 1
+    assert scan_control.current_scan == "line_scan"
+
+
+def test_allowed_scans_none_clears_filter(scan_control):
+    scan_control.allowed_scans = ["line_scan"]
+    assert scan_control.comboBox_scan_selection.count() == 1
+
+    scan_control.allowed_scans = None
+
+    assert scan_control.allowed_scans is None
+    assert scan_control.config.allowed_scans is None
+    assert scan_control.comboBox_scan_selection.count() == 2
+
+
+def test_allowed_scans_override_support_filter(scan_control):
+    scan_control.allowed_scans = ["not_supported_scan_class", "line_scan"]
+
+    items = [
+        scan_control.comboBox_scan_selection.itemText(i)
+        for i in range(scan_control.comboBox_scan_selection.count())
+    ]
+
+    assert items == ["not_supported_scan_class", "line_scan"]
+
+
+def test_filter_change_saves_current_scan_parameters(scan_control):
+    assert scan_control.current_scan == "line_scan"
+
+    scan_control.allowed_scans = ["grid_scan"]
+
+    assert scan_control.current_scan == "grid_scan"
+    assert "line_scan" in scan_control.config.scans
+
+
+def test_empty_allowed_scans_disable_scan_info_and_run(scan_control):
+    scan_control.allowed_scans = []
+
+    assert scan_control.comboBox_scan_selection.count() == 0
+    assert scan_control.comboBox_scan_selection.toolTip() == ""
+    assert not scan_control.scan_info_button.isEnabled()
+    assert not scan_control.button_run_scan.isEnabled()
+    # run_scan must not raise even if triggered without a selected scan
+    scan_control.run_scan()
+
+
+def test_configured_allowed_scans_are_preserved(qtbot, mocked_client):
+    mocked_client.connector.set_and_publish(
+        MessageEndpoints.available_scans(), available_scans_message
+    )
+    config = ScanControlConfig(widget_class="ScanControl", allowed_scans=["grid_scan"])
+
+    widget = ScanControl(client=mocked_client, config=config)
+    qtbot.addWidget(widget)
+
+    assert widget.allowed_scans == ["grid_scan"]
+    assert widget.comboBox_scan_selection.count() == 1
+    assert widget.comboBox_scan_selection.currentText() == "grid_scan"
+
+
+def test_scan_selector_settings_dialog_applies_checked_scans(scan_control, monkeypatch, qtbot):
+    def select_line_scan(dialog):
+        labels = [dialog.checkbox_for_scan(name).text() for name in ("line_scan", "grid_scan")]
+        assert labels == ["line_scan", "grid_scan"]
+        checkbox = dialog.checkbox_for_scan("grid_scan")
+        assert isinstance(checkbox, QCheckBox)
+        checkbox.setChecked(False)
+        return QDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(ScanSelectionDialog, "exec", select_line_scan)
+
+    qtbot.mouseClick(scan_control.scan_selector_settings_button, Qt.MouseButton.LeftButton)
+
+    assert scan_control.allowed_scans == ["line_scan"]
+    assert scan_control.comboBox_scan_selection.count() == 1
+    assert scan_control.comboBox_scan_selection.currentText() == "line_scan"
+
+
+def test_scan_selector_settings_dialog_all_checked_clears_filter(scan_control, monkeypatch, qtbot):
+    scan_control.allowed_scans = ["line_scan"]
+
+    def check_everything(dialog):
+        dialog.checkbox_for_scan("grid_scan").setChecked(True)
+        return QDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(ScanSelectionDialog, "exec", check_everything)
+
+    qtbot.mouseClick(scan_control.scan_selector_settings_button, Qt.MouseButton.LeftButton)
+
+    assert scan_control.allowed_scans is None
+    assert scan_control.comboBox_scan_selection.count() == 2
+
+
+def test_scan_selector_settings_dialog_is_released_after_use(scan_control, monkeypatch, qtbot):
+    monkeypatch.setattr(ScanSelectionDialog, "exec", lambda dialog: QDialog.DialogCode.Rejected)
+    with patch.object(ScanSelectionDialog, "deleteLater") as delete_later:
+        qtbot.mouseClick(scan_control.scan_selector_settings_button, Qt.MouseButton.LeftButton)
+    delete_later.assert_called_once()
+
+
+def test_scan_selector_dialog_whole_row_click_toggles_checkbox(qtbot):
+    dialog = ScanSelectionDialog(
+        scan_names=["line_scan", "grid_scan"], selected_scans=["line_scan"]
+    )
+    qtbot.addWidget(dialog)
+    dialog.show()
+    qtbot.waitExposed(dialog)
+
+    checkbox = dialog.checkbox_for_scan("line_scan")
+    assert isinstance(checkbox, QCheckBox)
+    assert checkbox.isChecked()
+
+    indicator_width = checkbox.style().pixelMetric(
+        QStyle.PixelMetric.PM_IndicatorWidth, widget=checkbox
+    )
+    label_right = indicator_width + 8 + checkbox.fontMetrics().horizontalAdvance(checkbox.text())
+    empty_row_x = checkbox.rect().right() - 8
+    assert empty_row_x > label_right
+    qtbot.mouseClick(
+        checkbox, Qt.MouseButton.LeftButton, pos=QPoint(empty_row_x, checkbox.rect().center().y())
+    )
+
+    assert not checkbox.isChecked()
+    assert dialog.selected_scans() == []
+
+
+def test_scan_selector_dialog_info_button_opens_docs_without_toggling(qtbot):
+    dialog = ScanSelectionDialog(
+        scan_names=["line_scan"],
+        selected_scans=["line_scan"],
+        scan_docs={"line_scan": available_scans_message.resource["line_scan"]["doc"]},
+    )
+    qtbot.addWidget(dialog)
+    dialog.setModal(True)
+    dialog.show()
+    qtbot.waitExposed(dialog)
+
+    checkbox = dialog.checkbox_for_scan("line_scan")
+    info_button = dialog.info_button_for_scan("line_scan")
+    qtbot.mouseClick(info_button, Qt.MouseButton.LeftButton)
+
+    assert checkbox.isChecked()
+    assert dialog._scan_info_dialog.parent() is dialog
+    assert dialog._scan_info_dialog.isVisible()
+    assert dialog._scan_info_dialog.windowTitle() == "Scan information: line_scan"
+    assert "Arguments" in dialog._scan_info_dialog.text_browser.toPlainText()
+
+
+def test_scan_selector_settings_properties_are_profile_safe(scan_control):
+    exported = scan_control.export_settings()
+
+    # "No filter" survives the round trip as None so that future scans keep appearing.
+    assert exported["allowed_scans"] is None
+    assert exported["hide_scan_selector_settings_button"] is False
+
+    scan_control.load_settings(
+        {"allowed_scans": ["grid_scan"], "hide_scan_selector_settings_button": True}
+    )
+
+    assert scan_control.allowed_scans == ["grid_scan"]
+    assert scan_control.comboBox_scan_selection.currentText() == "grid_scan"
+    assert scan_control.hide_scan_selector_settings_button is True
+    assert scan_control.scan_selector_settings_button.isHidden()
+
+    scan_control.load_settings({"allowed_scans": None})
+
+    assert scan_control.allowed_scans is None
+    assert scan_control.comboBox_scan_selection.count() == 2
 
 
 def test_scan_control_uses_gui_visibility_and_signature(qtbot, mocked_client):
