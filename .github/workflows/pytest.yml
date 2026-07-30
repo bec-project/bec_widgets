@@ -54,7 +54,11 @@ jobs:
 
       - name: Run Pytest with Coverage
         id: coverage
-        run: pytest --random-order --cov=bec_widgets --cov-config=pyproject.toml --cov-branch --cov-report=xml --no-cov-on-fail --ignore=tests/unit_tests/benchmarks tests/unit_tests/
+        run: |
+          cd ./bec_widgets
+          coverage run --branch --source=./bec_widgets -m pytest --random-order --ignore=tests/unit_tests/benchmarks tests/unit_tests/
+          coverage report
+          coverage xml -o coverage-unit.xml
 
       - name: Upload test artifacts
         uses: actions/upload-artifact@v4
@@ -69,3 +73,4 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: bec-project/bec_widgets
+          files: ./bec_widgets/coverage-unit.xml
