@@ -4,11 +4,13 @@ from bec_widgets.utils.widget_io import WidgetIO
 
 
 def test_scan_control_populate_scans_e2e(scan_control):
+    # cont_line_scan is not expected: its v4 signature has optional kwargs typed
+    # float | None (offset, atol), which ScanControl cannot render yet, so the
+    # widget filters it out of the scan selection.
     expected_scans = [
         "grid_scan",
         "fermat_scan",
         "round_scan",
-        "cont_line_scan",
         "cont_line_fly_scan",
         "round_scan_fly",
         "round_roi_scan",
