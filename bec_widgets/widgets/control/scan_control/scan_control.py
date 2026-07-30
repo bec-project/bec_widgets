@@ -3,17 +3,20 @@ from types import NoneType, SimpleNamespace
 from typing import Optional
 
 from bec_lib.endpoints import MessageEndpoints
+from bec_qthemes import material_icon
 from pydantic import BaseModel, Field
-from qtpy.QtCore import Qt, Signal
+from qtpy.QtCore import QSignalBlocker, Qt, Signal
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import (
     QApplication,
     QComboBox,
+    QDialog,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QPushButton,
     QSizePolicy,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -23,8 +26,11 @@ from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme, get_accent_colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.widgets.control.buttons.stop_button.stop_button import StopButton
+from bec_widgets.widgets.control.scan_control.scan_docstring import render_scan_tooltip_html
 from bec_widgets.widgets.control.scan_control.scan_group_box import ScanGroupBox
 from bec_widgets.widgets.control.scan_control.scan_info_adapter import ScanInfoAdapter
+from bec_widgets.widgets.control.scan_control.scan_info_dialog import ScanInfoDialog
+from bec_widgets.widgets.control.scan_control.scan_selection_dialog import ScanSelectionDialog
 from bec_widgets.widgets.editors.scan_metadata.scan_metadata import ScanMetadata
 
 
@@ -49,6 +55,7 @@ class ScanControl(BECWidget, QWidget):
     PLUGIN = True
     ICON_NAME = "tune"
     ARG_BOX_POSITION: int = 2
+    SUPPORTED_SCAN_BASE_CLASSES = {"ScanBase", "SyncFlyScanBase", "AsyncFlyScanBase", "ScanBaseV4"}
 
     scan_started = Signal()
     scan_selected = Signal(str)
@@ -87,7 +94,8 @@ class ScanControl(BECWidget, QWidget):
 
         # Widget Default Parameters
         self.config.default_scan = default_scan
-        self.config.allowed_scans = allowed_scans
+        if allowed_scans is not None:
+            self.config.allowed_scans = allowed_scans
 
         self._scan_metadata: dict | None = None
         self._metadata_form = ScanMetadata(parent=self)
@@ -96,7 +104,9 @@ class ScanControl(BECWidget, QWidget):
         self._hide_scan_control_buttons = False
         self._hide_metadata = False
         self._hide_scan_selection_combobox = False
+        self._hide_scan_selector_settings_button = False
         self._scan_info_adapter = ScanInfoAdapter()
+        self._scan_info_dialog: ScanInfoDialog | None = None
 
         # Create and set main layout
         self._init_UI()
@@ -119,8 +129,21 @@ class ScanControl(BECWidget, QWidget):
         scan_selection_layout = QHBoxLayout()
         self.comboBox_scan_selection_label = QLabel("Scan:", self.scan_selection_group)
         self.comboBox_scan_selection = QComboBox(self.scan_selection_group)
+        self.scan_info_button = QToolButton(self.scan_selection_group)
+        self.scan_info_button.setIcon(material_icon("info", size=(20, 20), convert_to_pixmap=False))
+        self.scan_info_button.setAutoRaise(True)
+        self.scan_info_button.setToolTip("Show information about the selected scan")
+        self.scan_info_button.setAccessibleName("Scan information")
+        self.scan_selector_settings_button = QToolButton(self.scan_selection_group)
+        self.scan_selector_settings_button.setAutoRaise(True)
+        self.scan_selector_settings_button.setIcon(
+            material_icon("filter_list", size=(20, 20), convert_to_pixmap=False)
+        )
+        self.scan_selector_settings_button.setToolTip("Choose scans shown in the selector")
         scan_selection_layout.addWidget(self.comboBox_scan_selection_label, 0)
         scan_selection_layout.addWidget(self.comboBox_scan_selection, 1)
+        scan_selection_layout.addWidget(self.scan_info_button, 0)
+        scan_selection_layout.addWidget(self.scan_selector_settings_button, 0)
         self.scan_selection_group.layout().addLayout(scan_selection_layout)
 
         # Button to reload the last scan parameters on demand.
@@ -154,6 +177,8 @@ class ScanControl(BECWidget, QWidget):
         # Connect signals
         self.comboBox_scan_selection.view().pressed.connect(self.save_current_scan_parameters)
         self.comboBox_scan_selection.currentIndexChanged.connect(self.on_scan_selection_changed)
+        self.scan_info_button.clicked.connect(self.show_selected_scan_info)
+        self.scan_selector_settings_button.clicked.connect(self.show_scan_selector_settings)
         self.button_run_scan.clicked.connect(self.run_scan)
 
         self.scan_selected.connect(self.scan_select)
@@ -178,31 +203,138 @@ class ScanControl(BECWidget, QWidget):
         self._metadata_form.form_data_cleared.connect(self.update_scan_metadata)
         self._metadata_form.validate_form()
 
+    def _scan_docstring(self, scan_name: str) -> str | None:
+        scan_info = self.available_scans.get(scan_name, {})
+        docstring = scan_info.get("doc") if isinstance(scan_info, dict) else None
+        return docstring if isinstance(docstring, str) else None
+
+    @SafeSlot()
+    @SafeSlot(bool)
+    def show_selected_scan_info(self, *_args) -> None:
+        """Show documentation for the currently selected scan without blocking the GUI."""
+        self.show_scan_info(self.comboBox_scan_selection.currentText())
+
+    @SafeSlot(str)
+    def show_scan_info(self, scan_name: str) -> None:
+        """Show documentation for a specific scan."""
+        if self._scan_info_dialog is None:
+            self._scan_info_dialog = ScanInfoDialog(self)
+        self._scan_info_dialog.show_scan(scan_name, self._scan_docstring(scan_name))
+
     def populate_scans(self):
         """Populates the scan selection combo box with available scans from BEC session."""
         self.available_scans = self.client.connector.get(
             MessageEndpoints.available_scans()
         ).resource
-        if self.config.allowed_scans is None:
-            supported_scans = ["ScanBase", "SyncFlyScanBase", "AsyncFlyScanBase", "ScanBaseV4"]
+        self._update_scan_selector()
 
-            def _is_scan_supported(scan_name):
-                scan_info = self.available_scans[scan_name]
-                return (
-                    scan_info.get("base_class") in supported_scans
-                    and self._scan_info_adapter.has_scan_ui_config(scan_info)
-                    and not scan_name.startswith("_")
-                )
+    def _supported_scan_names(self) -> list[str]:
+        """Return available scans that can be rendered by this widget."""
+        return [
+            scan_name
+            for scan_name, scan_info in self.available_scans.items()
+            if scan_info.get("base_class") in self.SUPPORTED_SCAN_BASE_CLASSES
+            and self._scan_info_adapter.has_scan_ui_config(scan_info)
+            and not scan_name.startswith("_")
+        ]
 
-            allowed_scans = filter(_is_scan_supported, self.available_scans.keys())
-
+    def _update_scan_selector(self) -> None:
+        """Apply the configured scan filter while preserving the current selection."""
+        current_scan = self.comboBox_scan_selection.currentText()
+        if current_scan:
+            self.save_current_scan_parameters()
+        allowed_scans = self.allowed_scans
+        if allowed_scans is None:
+            visible_scans = self._supported_scan_names()
         else:
-            allowed_scans = self.config.allowed_scans
-        self.comboBox_scan_selection.addItems(allowed_scans)
+            # An explicit filter overrides the support filter and keeps the caller's order;
+            # entries not currently available stay in the filter and reappear once published.
+            visible_scans = [scan for scan in allowed_scans if scan in self.available_scans]
+
+        with QSignalBlocker(self.comboBox_scan_selection):
+            self.comboBox_scan_selection.clear()
+            self.comboBox_scan_selection.addItems(visible_scans)
+            for index, scan_name in enumerate(visible_scans):
+                self.comboBox_scan_selection.setItemData(
+                    index,
+                    render_scan_tooltip_html(scan_name, self._scan_docstring(scan_name)),
+                    Qt.ItemDataRole.ToolTipRole,
+                )
+            if current_scan in visible_scans:
+                self.comboBox_scan_selection.setCurrentText(current_scan)
+
+        self.scan_info_button.setEnabled(bool(visible_scans))
+        self._update_run_button_state()
+        self._update_selected_scan_tooltip()
+        if self.comboBox_scan_selection.currentText() != current_scan:
+            self.on_scan_selection_changed(self.comboBox_scan_selection.currentIndex())
+
+    def _update_run_button_state(self) -> None:
+        """Start requires a selected scan and valid metadata."""
+        has_scan = bool(self.comboBox_scan_selection.currentText())
+        self.button_run_scan.setEnabled(has_scan and self._scan_metadata is not None)
+
+    def _update_selected_scan_tooltip(self) -> None:
+        """Mirror the selected item's documentation tooltip on the closed combo box."""
+        index = self.comboBox_scan_selection.currentIndex()
+        tooltip = self.comboBox_scan_selection.itemData(index, Qt.ItemDataRole.ToolTipRole)
+        self.comboBox_scan_selection.setToolTip(tooltip or "")
+
+    @SafeSlot()
+    @SafeSlot(bool)
+    def show_scan_selector_settings(self, *_):
+        """Open the scan filter dialog and apply accepted changes."""
+        scan_names = self._supported_scan_names()
+        allowed_scans = self.allowed_scans
+        if allowed_scans is not None:
+            # Keep configured entries visible in the dialog even when currently unsupported.
+            scan_names += [scan for scan in allowed_scans if scan not in scan_names]
+        dialog = ScanSelectionDialog(
+            scan_names=scan_names,
+            selected_scans=scan_names if allowed_scans is None else allowed_scans,
+            scan_docs={scan_name: self._scan_docstring(scan_name) for scan_name in scan_names},
+            parent=self,
+        )
+        try:
+            selected_scans = (
+                dialog.selected_scans() if dialog.exec() == QDialog.DialogCode.Accepted else None
+            )
+        finally:
+            dialog.deleteLater()
+        if selected_scans is not None:
+            # Everything checked means "no filter", so scans added later show up as well.
+            self.allowed_scans = None if selected_scans == scan_names else selected_scans
+
+    @SafeProperty(list)
+    def allowed_scans(self) -> list[str] | None:
+        """Scan filter for the selector; None shows every supported scan, including future ones."""
+        allowed_scans = getattr(self.config, "allowed_scans", None)
+        return None if allowed_scans is None else list(allowed_scans)
+
+    @allowed_scans.setter
+    def allowed_scans(self, scan_names: list[str] | str | None):
+        """Set the scans displayed in the selector; None clears the filter."""
+        if isinstance(scan_names, str):
+            scan_names = [scan_names]
+        if scan_names is not None:
+            scan_names = list(dict.fromkeys(scan_names))
+        self.config.allowed_scans = scan_names
+        self._update_scan_selector()
+
+    @SafeProperty(bool)
+    def hide_scan_selector_settings_button(self) -> bool:
+        """Whether the button for configuring visible scans is hidden."""
+        return self._hide_scan_selector_settings_button
+
+    @hide_scan_selector_settings_button.setter
+    def hide_scan_selector_settings_button(self, hide: bool):
+        self._hide_scan_selector_settings_button = bool(hide)
+        self.scan_selector_settings_button.setVisible(not self._hide_scan_selector_settings_button)
 
     def on_scan_selection_changed(self, index: int):
         """Callback for scan selection combo box"""
         selected_scan_name = self.comboBox_scan_selection.currentText()
+        self._update_selected_scan_tooltip()
         self.scan_selected.emit(selected_scan_name)
         self.restore_scan_parameters(selected_scan_name)
 
@@ -539,23 +671,27 @@ class ScanControl(BECWidget, QWidget):
     @SafeSlot(NoneType)
     def update_scan_metadata(self, md: dict | None):
         self._scan_metadata = md
-        if md is None:
-            self.button_run_scan.setEnabled(False)
-        else:
-            self.button_run_scan.setEnabled(True)
+        self._update_run_button_state()
 
     @SafeSlot(popup_error=True)
     def run_scan(self):
         """Starts the selected scan with the given parameters."""
+        scan_name = self.comboBox_scan_selection.currentText()
+        if not scan_name:
+            return
         args, kwargs = self.get_scan_parameters()
         self.scan_args.emit(args)
-        scan_function = getattr(self.scans, self.comboBox_scan_selection.currentText())
+        scan_function = getattr(self.scans, scan_name)
         if callable(scan_function):
             self.scan_started.emit()
             scan_function(*args, **kwargs)
 
     def cleanup(self):
         """Cleanup the scan control widget."""
+        if self._scan_info_dialog is not None:
+            self._scan_info_dialog.close()
+            self._scan_info_dialog.deleteLater()
+            self._scan_info_dialog = None
         super().cleanup()
 
 
