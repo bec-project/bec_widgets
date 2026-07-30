@@ -87,7 +87,7 @@ def test_dispatcher_disconnect_all(bec_dispatcher_w_connector, qtbot, send_msg_e
     bec_dispatcher.connect_slot(cb2, "topic3")
     assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 3
     send_msg_event.set()
-    qtbot.wait(10)
+    qtbot.waitUntil(lambda: cb1.call_count >= 2 and cb2.call_count >= 2)
     assert cb1.call_count == 2
     assert cb2.call_count == 2
 
@@ -109,7 +109,9 @@ def test_dispatcher_disconnect_one(bec_dispatcher_w_connector, qtbot, send_msg_e
     assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 1
 
     send_msg_event.set()
-    qtbot.wait(10)
+    # the topic2 message is dispatched after topic1's, so cb2 being called
+    # guarantees the topic1 message was already processed without calling cb1
+    qtbot.waitUntil(lambda: cb2.call_count >= 1)
     assert cb1.call_count == 0
     cb2.assert_called_once()
 
@@ -138,7 +140,7 @@ def test_dispatcher_2_cb_same_topic(bec_dispatcher_w_connector, qtbot, send_msg_
     assert len(bec_dispatcher._registered_slots) == num_slots + 1
 
     send_msg_event.set()
-    qtbot.wait(10)
+    qtbot.waitUntil(lambda: cb2.call_count >= 1)
     assert cb1.call_count == 0
     cb2.assert_called_once()
 
@@ -157,7 +159,7 @@ def test_dispatcher_2_cb_same_topic_same_slot(bec_dispatcher_w_connector, qtbot,
     )
 
     send_msg_event.set()
-    qtbot.wait(10)
+    qtbot.waitUntil(lambda: cb1.call_count >= 1)
     assert cb1.call_count == 1
     bec_dispatcher.disconnect_slot(cb1, "topic1")
     assert (
@@ -178,7 +180,7 @@ def test_dispatcher_2_topic_same_cb(bec_dispatcher_w_connector, qtbot, send_msg_
     assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 1
 
     send_msg_event.set()
-    qtbot.wait(10)
+    qtbot.waitUntil(lambda: cb1.call_count >= 1)
     cb1.assert_called_once()
 
 
