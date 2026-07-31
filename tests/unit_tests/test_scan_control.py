@@ -8,7 +8,7 @@ from bec_lib.endpoints import MessageEndpoints
 from bec_lib.messages import AvailableResourceMessage, ScanHistoryMessage
 from bec_lib.scan_history import ScanHistory
 from qtpy.QtCore import QModelIndex, QPoint, Qt
-from qtpy.QtWidgets import QCheckBox, QDialog, QStyle
+from qtpy.QtWidgets import QCheckBox, QComboBox, QDialog, QStyle
 
 from bec_widgets.utils.forms_from_types.items import StrFormItem
 from bec_widgets.utils.widget_io import WidgetIO
@@ -942,6 +942,90 @@ def test_current_scan(scan_control, mocked_client):
     new_scan = "grid_scan" if current_scan == "line_scan" else "line_scan"
     scan_control.current_scan = new_scan
     assert scan_control.current_scan == new_scan
+
+
+def test_scan_selection_is_editable_with_completer(scan_control):
+    combo = scan_control.comboBox_scan_selection
+    completer = combo.completer()
+
+    assert combo.isEditable()
+    assert combo.insertPolicy() == QComboBox.NoInsert
+    assert completer.caseSensitivity() == Qt.CaseInsensitive
+    assert completer.filterMode() == Qt.MatchContains
+
+    # the completer proposes the listed scans, matching anywhere in the name
+    completer.setCompletionPrefix("scan")
+    completion_model = completer.completionModel()
+    completions = {
+        completion_model.index(row, 0).data() for row in range(completion_model.rowCount())
+    }
+    assert completions == {"line_scan", "grid_scan"}
+
+
+def test_typing_scan_name_selects_scan(scan_control, qtbot):
+    combo = scan_control.comboBox_scan_selection
+    assert scan_control.current_scan == "line_scan"
+
+    with qtbot.waitSignal(scan_control.scan_selected) as blocker:
+        combo.setEditText("grid_scan")
+
+    assert blocker.args == ["grid_scan"]
+    assert scan_control.current_scan == "grid_scan"
+    assert combo.currentIndex() == combo.findText("grid_scan")
+    assert combo.styleSheet() == ""
+
+
+def test_typing_unknown_scan_name_is_rejected(scan_control, qtbot):
+    combo = scan_control.comboBox_scan_selection
+
+    combo.setEditText("grid")
+
+    # an incomplete name does not switch the scan, it is only flagged while editing
+    assert scan_control._metadata_form._scan_name == "line_scan"
+    assert "red" in combo.styleSheet()
+
+    qtbot.keyClick(combo.lineEdit(), Qt.Key_Return)
+
+    assert combo.currentText() == "line_scan"
+    assert combo.styleSheet() == ""
+
+
+def test_typing_scan_name_with_different_case_is_completed(scan_control, qtbot):
+    combo = scan_control.comboBox_scan_selection
+
+    combo.setEditText("GRID_SCAN")
+    qtbot.keyClick(combo.lineEdit(), Qt.Key_Return)
+
+    assert combo.currentText() == "grid_scan"
+    assert scan_control._metadata_form._scan_name == "grid_scan"
+
+
+def test_typing_scan_name_stores_previous_scan_parameters(scan_control):
+    for kwarg_box in scan_control.kwarg_boxes:
+        for widget in kwarg_box.widgets:
+            if widget.arg_name == "exp_time":
+                WidgetIO.set_value(widget, 3.0)
+
+    scan_control.comboBox_scan_selection.setEditText("grid_scan")
+
+    assert scan_control.previous_scan == "line_scan"
+    assert scan_control.config.scans["line_scan"].kwargs["exp_time"] == 3.0
+
+
+def test_run_scan_discards_unfinished_scan_name(scan_control):
+    combo = scan_control.comboBox_scan_selection
+    combo.setEditText("grid_scan")
+    combo.setEditText("grid_sca")
+
+    scans = SimpleNamespace(grid_scan=MagicMock())
+    with (
+        patch.object(scan_control, "scans", scans),
+        patch.object(scan_control, "get_scan_parameters", lambda: ((), {})),
+    ):
+        scan_control.run_scan()
+
+    assert combo.currentText() == "grid_scan"
+    scans.grid_scan.assert_called_once_with()
 
 
 def test_scan_switch_runs_cleanup_on_previous_inputs(scan_control):
