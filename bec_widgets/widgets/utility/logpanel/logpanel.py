@@ -248,7 +248,8 @@ class LogMsgProxyModel(QSortFilterProxyModel):
 
     @SafeSlot(int, int)
     def refresh(self, *_):
-        self.invalidateRowsFilter()
+        self.beginFilterChange()
+        self.endFilterChange(QSortFilterProxyModel.Direction.Rows)
 
     @SafeSlot(None)
     @SafeSlot(set)
@@ -257,9 +258,10 @@ class LogMsgProxyModel(QSortFilterProxyModel):
 
         Args:
             filter (set[str] | None): set of services for which to show logs"""
+        self.beginFilterChange()
         self._service_filter = filter
         self.show_service_column.emit(len(filter) != 1)
-        self.invalidateRowsFilter()
+        self.endFilterChange(QSortFilterProxyModel.Direction.Rows)
 
     @SafeSlot(None)
     @SafeSlot(LogLevel)
@@ -268,8 +270,9 @@ class LogMsgProxyModel(QSortFilterProxyModel):
 
         Args:
             filter (str | None): lowest log level to show"""
+        self.beginFilterChange()
         self._level_filter = filter
-        self.invalidateRowsFilter()
+        self.endFilterChange(QSortFilterProxyModel.Direction.Rows)
 
     @SafeSlot(str)
     def update_filter_text(self, filter: str):
@@ -277,8 +280,9 @@ class LogMsgProxyModel(QSortFilterProxyModel):
 
         Args:
             filter (str | None): set of services for which to show logs"""
+        self.beginFilterChange()
         self._filter_text = filter
-        self.invalidateRowsFilter()
+        self.endFilterChange(QSortFilterProxyModel.Direction.Rows)
 
     @SafeSlot(bool)
     def update_fuzzy(self, state: bool):
@@ -286,16 +290,18 @@ class LogMsgProxyModel(QSortFilterProxyModel):
 
         Args:
             state (bool): fuzzy search on"""
+        self.beginFilterChange()
         self._fuzzy_search = state
-        self.invalidateRowsFilter()
+        self.endFilterChange(QSortFilterProxyModel.Direction.Rows)
 
     @SafeSlot(TimestampUpdate)
     def update_timestamp(self, update: TimestampUpdate):
+        self.beginFilterChange()
         if update.update_type == "start":
             self._time_filter_start = update.value
         else:
             self._time_filter_end = update.value
-        self.invalidateRowsFilter()
+        self.endFilterChange(QSortFilterProxyModel.Direction.Rows)
 
     def filterAcceptsRow(self, source_row: int, source_parent) -> bool:
         # No service filter, and no filter text, display everything
