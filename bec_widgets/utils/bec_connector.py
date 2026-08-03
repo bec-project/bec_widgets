@@ -51,11 +51,16 @@ class ConnectionConfig(BaseModel):
 class WorkerSignals(QObject):
     progress = Signal(dict)
     completed = Signal()
+    failed = Signal(str)
 
 
 class Worker(QRunnable):
     """
     Worker class to run a function in a separate thread.
+
+    On success, ``signals.completed`` is emitted. If the function raises,
+    the exception is logged and ``signals.failed`` is emitted with the
+    formatted traceback instead; it never propagates into the thread pool.
     """
 
     def __init__(self, func, *args, **kwargs):
@@ -69,8 +74,16 @@ class Worker(QRunnable):
         """
         Run the specified function in the thread.
         """
-        self.func(*self.args, **self.kwargs)
-        self.signals.completed.emit()
+        try:
+            self.func(*self.args, **self.kwargs)
+        except Exception:
+            error_msg = traceback.format_exc()
+            logger.error(
+                f"Worker task {getattr(self.func, '__qualname__', self.func)} failed:\n{error_msg}"
+            )
+            self.signals.failed.emit(error_msg)
+        else:
+            self.signals.completed.emit()
 
 
 class BECConnector:
@@ -224,8 +237,9 @@ class BECConnector:
                 return None
             connector_parent = self._get_rpc_parent_ancestor()
             return connector_parent.gui_id if connector_parent else None
-        except:
-            logger.error(f"Error getting parent_id for {self.__class__.__name__}")
+        except Exception as e:
+            logger.error(f"Error getting parent_id for {self.__class__.__name__}: {e}")
+            return None
 
     def _get_rpc_parent_ancestor(self) -> BECConnector | None:
         """
@@ -375,8 +389,16 @@ class BECConnector:
             worker.signals.completed.connect(on_complete)
         # Keep a reference to the worker so it is not garbage collected.
         self._workers.append(worker)
-        # When the worker is done, remove it from our list.
-        worker.signals.completed.connect(lambda: self._workers.remove(worker))
+
+        # When the worker is done (success or failure), remove it from our list.
+        def _discard_worker(*_):
+            try:
+                self._workers.remove(worker)
+            except ValueError:
+                pass
+
+        worker.signals.completed.connect(_discard_worker)
+        worker.signals.failed.connect(_discard_worker)
         self._thread_pool.start(worker)
         return worker
 

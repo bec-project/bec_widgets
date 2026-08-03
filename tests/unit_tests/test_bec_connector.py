@@ -243,3 +243,30 @@ def test_bec_connector_terminate_registered_once_qapp_exists(qtbot):
         handler = BECConnector.EXIT_HANDLERS.pop(fresh_client, None)
         if handler is not None:
             QApplication.instance().aboutToQuit.disconnect(handler)
+
+
+def test_bec_connector_submit_task_failure_removes_worker(bec_connector, qtbot):
+    """Regression test for BW-006: a task that raises must not leak the worker
+    reference, must emit failed, and must not call on_complete."""
+    failures = []
+    completed = []
+
+    def boom():
+        raise RuntimeError("task failed on purpose")
+
+    worker = bec_connector.submit_task(boom, on_complete=lambda: completed.append(True))
+    worker.signals.failed.connect(lambda msg: failures.append(msg))
+
+    qtbot.waitUntil(lambda: worker not in bec_connector._workers, timeout=5000)
+    qtbot.waitUntil(lambda: len(failures) == 1, timeout=5000)
+    assert completed == []
+    assert "task failed on purpose" in failures[0]
+
+
+def test_bec_connector_parent_id_returns_none_on_error(bec_connector):
+    """Regression test for BW-007: parent_id must swallow only Exception and
+    return None explicitly."""
+    with mock.patch.object(
+        bec_connector, "_get_rpc_parent_ancestor", side_effect=ValueError("broken hierarchy")
+    ):
+        assert bec_connector.parent_id is None
