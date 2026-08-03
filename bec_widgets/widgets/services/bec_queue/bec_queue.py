@@ -4,6 +4,7 @@ import json
 
 from bec_lib import messages
 from bec_lib.endpoints import MessageEndpoints
+from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from qtpy.QtCore import Property, Qt, Signal, Slot
 from qtpy.QtGui import QColor
@@ -19,6 +20,8 @@ from bec_widgets.widgets.control.buttons.button_abort.button_abort import AbortB
 from bec_widgets.widgets.control.buttons.button_reset.button_reset import ResetButton
 from bec_widgets.widgets.control.buttons.button_resume.button_resume import ResumeButton
 from bec_widgets.widgets.control.buttons.stop_button.stop_button import StopButton
+
+logger = bec_logger.logger
 
 
 class BECQueue(BECWidget, CompactPopupWidget):
@@ -243,8 +246,8 @@ class BECQueue(BECWidget, CompactPopupWidget):
             try:
                 color = self.status_colors.get(content, "black")  # Default to black if not found
                 item.setForeground(QColor(color))
-            except:
-                return item
+            except Exception as e:
+                logger.warning(f"Could not apply status color for queue item '{content}': {e}")
         return item
 
     def set_row(
