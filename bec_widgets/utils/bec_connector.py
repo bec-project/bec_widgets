@@ -356,7 +356,9 @@ class BECConnector:
             self.rpc_register.mark_broadcast_pending()
             self.rpc_register.broadcast()
 
-    def submit_task(self, fn, *args, on_complete: SafeSlot = None, **kwargs) -> Worker:
+    def submit_task(
+        self, fn, *args, on_complete: SafeSlot = None, on_failed: SafeSlot = None, **kwargs
+    ) -> Worker:
         """
         Submit a task to run in a separate thread. The task will run the specified
         function with the provided arguments and emit the completed signal when done.
@@ -367,7 +369,11 @@ class BECConnector:
         Args:
             fn: Function to run in a separate thread.
             *args: Arguments for the function.
-            on_complete: Slot to run when the task is complete.
+            on_complete: Slot to run when the task completes successfully.
+            on_failed: Slot to run when the task raises; receives the formatted traceback
+                string. Pass it here rather than connecting to ``worker.signals.failed``
+                after this method returns: the worker starts before this method returns,
+                so a late connection can miss the emission of a fast-failing task.
             **kwargs: Keyword arguments for the function.
 
         Returns:
@@ -387,6 +393,8 @@ class BECConnector:
         worker = Worker(fn, *args, **kwargs)
         if on_complete:
             worker.signals.completed.connect(on_complete)
+        if on_failed:
+            worker.signals.failed.connect(on_failed)
         # Keep a reference to the worker so it is not garbage collected.
         self._workers.append(worker)
 

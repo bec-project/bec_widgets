@@ -293,3 +293,21 @@ def test_bec_connector_worker_completion_does_not_retain_owner(qtbot, mocked_cli
         gc.collect()
 
     assert ref() is None, "connector kept alive by worker completion closure"
+
+
+def test_bec_connector_on_failed_never_misses_fast_failures(bec_connector, qtbot):
+    """``on_failed`` passed to submit_task is connected before the worker starts, so
+    even a task that raises immediately cannot emit ``failed`` before the connection
+    exists. Connecting to ``worker.signals.failed`` after submit_task returns cannot
+    give this guarantee."""
+    failures = []
+
+    def boom():
+        raise RuntimeError("instant failure")
+
+    for _ in range(20):
+        bec_connector.submit_task(boom, on_failed=lambda msg: failures.append(msg))
+
+    qtbot.waitUntil(lambda: len(failures) == 20, timeout=5000)
+    qtbot.waitUntil(lambda: not bec_connector._workers, timeout=5000)
+    assert all("instant failure" in msg for msg in failures)
