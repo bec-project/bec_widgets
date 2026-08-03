@@ -1,12 +1,15 @@
+import threading
 from collections import defaultdict
-from types import NoneType, SimpleNamespace
+from functools import partial
+from types import NoneType
 from typing import Optional
 
 from bec_lib.endpoints import MessageEndpoints
+from bec_lib.logger import bec_logger
+from bec_lib.scan_history import ScanHistory
 from bec_qthemes import material_icon
 from pydantic import BaseModel, Field
-from qtpy.QtCore import QSignalBlocker, Qt, Signal
-from qtpy.QtGui import QColor
+from qtpy.QtCore import QSignalBlocker, Qt, QTimer, Signal
 from qtpy.QtWidgets import (
     QApplication,
     QComboBox,
@@ -23,7 +26,7 @@ from qtpy.QtWidgets import (
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.colors import apply_theme, get_accent_colors
+from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.widgets.control.buttons.stop_button.stop_button import StopButton
 from bec_widgets.widgets.control.scan_control.scan_docstring import render_scan_tooltip_html
@@ -32,6 +35,8 @@ from bec_widgets.widgets.control.scan_control.scan_info_adapter import ScanInfoA
 from bec_widgets.widgets.control.scan_control.scan_info_dialog import ScanInfoDialog
 from bec_widgets.widgets.control.scan_control.scan_selection_dialog import ScanSelectionDialog
 from bec_widgets.widgets.editors.scan_metadata.scan_metadata import ScanMetadata
+
+logger = bec_logger.logger
 
 
 class ScanParameterConfig(BaseModel):
@@ -56,11 +61,15 @@ class ScanControl(BECWidget, QWidget):
     ICON_NAME = "tune"
     ARG_BOX_POSITION: int = 2
     SUPPORTED_SCAN_BASE_CLASSES = {"ScanBase", "SyncFlyScanBase", "AsyncFlyScanBase", "ScanBaseV4"}
+    RECENT_SCAN_HISTORY_COUNT = 50
+    MAX_HISTORY_LOOKBACK = 500
+    LAST_SCAN_FETCH_TIMEOUT_MS = 30_000
 
     scan_started = Signal()
     scan_selected = Signal(str)
     device_selected = Signal(str)
     scan_args = Signal(list)
+    _last_scan_parameters_received = Signal(int, str, object)
 
     def __init__(
         self,
@@ -110,6 +119,18 @@ class ScanControl(BECWidget, QWidget):
         self._hide_scan_selector_settings_button = False
         self._scan_info_adapter = ScanInfoAdapter()
         self._scan_info_dialog: ScanInfoDialog | None = None
+        self._last_scan_parameters_received.connect(self._apply_last_scan_parameters)
+        # Window-lookup results memoized per scan name, valid while the stream tip is
+        # unchanged. Fetch workers can overlap - the watchdog re-enables the button while a
+        # hung worker is still running - so the memo is guarded by its own lock.
+        self._last_scan_lookup_memo: dict[str, tuple[str | None, tuple[list, dict] | None]] = {}
+        self._last_scan_lookup_lock = threading.Lock()
+        # Generation counter to discard results of superseded or timed-out fetches
+        self._last_scan_fetch_generation = 0
+        self._last_scan_fetch_watchdog = QTimer(self)
+        self._last_scan_fetch_watchdog.setSingleShot(True)
+        self._last_scan_fetch_watchdog.setInterval(self.LAST_SCAN_FETCH_TIMEOUT_MS)
+        self._last_scan_fetch_watchdog.timeout.connect(self._on_last_scan_parameters_timeout)
 
         # Create and set main layout
         self._init_UI()
@@ -118,14 +139,6 @@ class ScanControl(BECWidget, QWidget):
         """
         Initializes the UI of the scan control widget. Create the top box for scan selection and populate scans to main combobox.
         """
-        palette = get_accent_colors()
-        if palette is None:
-            palette = SimpleNamespace(
-                default=QColor("blue"),
-                success=QColor("green"),
-                warning=QColor("orange"),
-                emergency=QColor("red"),
-            )
         # Scan selection box
         self.scan_selection_group = QWidget(self)
         QVBoxLayout(self.scan_selection_group)
@@ -369,34 +382,192 @@ class ScanControl(BECWidget, QWidget):
         """
         Requests the last executed scan parameters from BEC and restores them to the scan control widget.
         """
+        if not self.last_scan_button.isEnabled():
+            return
         current_scan = self.comboBox_scan_selection.currentText()
-        history = (
-            self.client.connector.xread(
-                MessageEndpoints.scan_history(), from_start=True, user_id=self.object_name
+        if not current_scan:
+            # e.g. an empty selector after a filter change - nothing to restore
+            return
+        self.last_scan_button.setEnabled(False)
+        self._last_scan_fetch_generation += 1
+        generation = self._last_scan_fetch_generation
+        self._last_scan_fetch_watchdog.start()
+        try:
+            # ``completed`` is success-only; ``failed`` carries a traceback string, which
+            # _on_last_scan_parameters_finished does not take, so bind the generation instead.
+            self.submit_task(
+                self._fetch_last_executed_scan_parameters,
+                generation,
+                current_scan,
+                on_complete=partial(self._on_last_scan_parameters_finished, generation),
+                on_failed=lambda _msg, gen=generation: self._on_last_scan_parameters_finished(gen),
             )
-            or []
-        )
+        except Exception:
+            self._on_last_scan_parameters_finished(generation)
+            raise
 
+    def _fetch_last_executed_scan_parameters(self, generation: int, scan_name: str):
+        """Fetch the latest parameters for ``scan_name`` without touching the Qt UI."""
+        try:
+            parameters = self._lookup_last_scan_parameters(scan_name)
+        except Exception:
+            logger.exception(f"Failed to fetch parameters for scan {scan_name}")
+            return
+        if parameters is None:
+            return
+        try:
+            self._last_scan_parameters_received.emit(generation, scan_name, parameters)
+        except RuntimeError:
+            # the widget was deleted while the fetch was in flight - nothing to deliver to
+            logger.debug(f"ScanControl deleted before parameters for {scan_name} arrived")
+
+    def _lookup_last_scan_parameters(self, scan_name: str) -> tuple[list, dict] | None:
+        """
+        Find the newest parameters for ``scan_name`` in the client-side scan-history cache or
+        in a strictly bounded window of the scan-history stream.
+
+        There is deliberately no full-stream path: decoding an entry allocates hundreds of
+        GC-tracked objects, and the resulting stop-the-world collections stall the Qt event
+        loop from any thread.
+        """
+        endpoint = MessageEndpoints.scan_history()
+        # Single one-entry probe of the stream tip. The stream is append-only, so the tip
+        # both proves the in-memory cache is caught up (it lags when the newest scan's file
+        # is not readable yet, e.g. over NFS) and keys the memo: repeat lookups with an
+        # unchanged tip are answered for the cost of this one decode.
+        tip = self._read_history_window(endpoint, 1)
+        tip_id = getattr(tip[0].get("data"), "scan_id", None) if tip else None
+
+        parameters = self._find_parameters_in_history_cache(scan_name, tip_id)
+        if parameters is not None:
+            return parameters
+
+        # The lock is held only around the dict access, never across a redis read: a hung
+        # fetch must not block the worker that the watchdog let the user start.
+        with self._last_scan_lookup_lock:
+            memo = self._last_scan_lookup_memo.get(scan_name)
+        if memo is not None and memo[0] == tip_id:
+            logger.debug(f"Scan history unchanged; reusing memoized lookup for {scan_name}")
+            return memo[1]
+
+        parameters = self._search_history_windows(endpoint, scan_name)
+        with self._last_scan_lookup_lock:
+            # Overlapping workers race to write here; the loser stores a result for an
+            # older tip, which the tip comparison above discards on the next lookup.
+            self._last_scan_lookup_memo[scan_name] = (tip_id, parameters)
+        return parameters
+
+    def _search_history_windows(self, endpoint, scan_name: str) -> tuple[list, dict] | None:
+        """Search the recent, then the deep, stream window for ``scan_name``."""
+        history = self._read_history_window(endpoint, self.RECENT_SCAN_HISTORY_COUNT)
+        parameters = self._find_last_scan_parameters(scan_name, history)
+        if parameters is not None or len(history) < self.RECENT_SCAN_HISTORY_COUNT:
+            # fewer entries than requested means the whole stream was already searched
+            return parameters
+        if self.MAX_HISTORY_LOOKBACK <= self.RECENT_SCAN_HISTORY_COUNT:
+            return None
+
+        history = self._read_history_window(endpoint, self.MAX_HISTORY_LOOKBACK)
+        parameters = self._find_last_scan_parameters(scan_name, history)
+        if parameters is None and len(history) >= self.MAX_HISTORY_LOOKBACK:
+            logger.warning(
+                f"No execution of {scan_name} found within the last "
+                f"{self.MAX_HISTORY_LOOKBACK} scans; older history is not searched."
+            )
+        return parameters
+
+    def _read_history_window(self, endpoint, count: int) -> list[dict]:
+        """Read at most ``count`` newest scan-history entries, oldest-first."""
+        history = self.client.connector.get_last(endpoint, count=count)
+        if isinstance(history, dict):
+            # get_last returns a single message dict instead of a list for count == 1
+            history = [history]
+        return history or []
+
+    def _find_parameters_in_history_cache(
+        self, scan_name: str, tip_id: str | None
+    ) -> tuple[list, dict] | None:
+        """Search the in-memory scan history (newest first) for ``scan_name``.
+
+        The cache is only trusted when its newest entry matches the stream tip: it skips
+        scans whose file is not readable yet, so a lagging cache could otherwise return an
+        older execution than the stream holds.
+        """
+        history = getattr(self.client, "history", None)
+        if not isinstance(history, ScanHistory):
+            # not available before the client services are started (e.g. in Qt Designer)
+            return None
+        length = len(history)
+        if length == 0:
+            return None
+        newest = getattr(history[length - 1], "_msg", None)
+        if newest is None or newest.scan_id != tip_id:
+            return None
+        # iterate by index from the end instead of slicing to avoid copying the whole cache
+        for index in range(length - 1, -1, -1):
+            msg = getattr(history[index], "_msg", None)
+            if msg is not None and msg.scan_name == scan_name:
+                return self._parameters_from_request_inputs(msg.request_inputs)
+        return None
+
+    @staticmethod
+    def _parameters_from_request_inputs(request_inputs: dict | None) -> tuple[list, dict]:
+        """Split ``request_inputs`` into the argument bundle and merged keyword arguments."""
+        ri = request_inputs or {}
+        return ri.get("arg_bundle", []), {**ri.get("inputs", {}), **ri.get("kwargs", {})}
+
+    @staticmethod
+    def _find_last_scan_parameters(scan_name: str, history: list[dict]) -> tuple[list, dict] | None:
+        """Return the newest matching argument and keyword bundles from ``history``."""
         for scan in reversed(history):
             scan_data = scan.get("data")
             if not scan_data:
                 continue
 
-            if scan_data.scan_name != current_scan:
+            if scan_data.scan_name != scan_name:
                 continue
 
-            ri = getattr(scan_data, "request_inputs", {}) or {}
-            args_list = ri.get("arg_bundle", [])
-            if args_list and self.arg_box:
-                self.arg_box.set_parameters(args_list)
+            return ScanControl._parameters_from_request_inputs(
+                getattr(scan_data, "request_inputs", None)
+            )
+        return None
 
-            inputs = ri.get("inputs", {})
-            kwargs = ri.get("kwargs", {})
-            merged = {**inputs, **kwargs}
-            if merged and self.kwarg_boxes:
-                for box in self.kwarg_boxes:
-                    box.set_parameters(merged)
-            break
+    @SafeSlot(int, str, object)
+    def _apply_last_scan_parameters(
+        self, generation: int, scan_name: str, parameters: tuple[list, dict]
+    ):
+        """Apply asynchronously fetched parameters on the GUI thread."""
+        if generation != self._last_scan_fetch_generation:
+            # result of a timed-out or superseded fetch
+            return
+        if self.comboBox_scan_selection.currentText() != scan_name:
+            logger.debug(f"Discarding fetched parameters for {scan_name}: scan selection changed")
+            return
+
+        args_list, kwargs = parameters
+        if args_list and self.arg_box:
+            self.arg_box.set_parameters(args_list)
+
+        if kwargs and self.kwarg_boxes:
+            for box in self.kwarg_boxes:
+                box.set_parameters(kwargs)
+
+    @SafeSlot()
+    def _on_last_scan_parameters_finished(self, generation: int | None = None):
+        """Re-enable parameter restoration after the background request finishes."""
+        if generation is not None and generation != self._last_scan_fetch_generation:
+            # a stale fetch finished after a timeout or a newer request; leave the UI state alone
+            return
+        self._last_scan_fetch_watchdog.stop()
+        self.last_scan_button.setEnabled(True)
+
+    @SafeSlot()
+    def _on_last_scan_parameters_timeout(self):
+        """Recover the UI if the background fetch hangs (e.g. unreachable Redis)."""
+        logger.warning("Timed out while fetching the last executed scan parameters")
+        # invalidate the in-flight fetch so a late result is not applied
+        self._last_scan_fetch_generation += 1
+        self.last_scan_button.setEnabled(True)
 
     @SafeProperty(str)
     def current_scan(self):
@@ -713,6 +884,10 @@ class ScanControl(BECWidget, QWidget):
 
     def cleanup(self):
         """Cleanup the scan control widget."""
+        # Invalidate any in-flight fetch so a late result is dropped instead of being
+        # applied to (or logged against) a widget that is going away.
+        self._last_scan_fetch_generation += 1
+        self._last_scan_fetch_watchdog.stop()
         if self._scan_info_dialog is not None:
             self._scan_info_dialog.close()
             self._scan_info_dialog.deleteLater()
