@@ -300,3 +300,41 @@ def test_bec_connector_worker_completion_does_not_retain_owner(qtbot, mocked_cli
         gc.collect()
 
     assert ref() is None, "connector kept alive by worker completion closure"
+
+
+def test_bec_connector_on_failed_never_misses_fast_failures(bec_connector, qtbot):
+    """``on_failed`` passed to submit_task is connected before the worker starts, so
+    even a task that raises immediately cannot emit ``failed`` before the connection
+    exists. Connecting to ``worker.signals.failed`` after submit_task returns cannot
+    give this guarantee."""
+    failures = []
+
+    def boom():
+        raise RuntimeError("instant failure")
+
+    for _ in range(20):
+        bec_connector.submit_task(boom, on_failed=lambda msg: failures.append(msg))
+
+    qtbot.waitUntil(lambda: len(failures) == 20, timeout=5000)
+    qtbot.waitUntil(lambda: not bec_connector._workers, timeout=5000)
+    assert all("instant failure" in msg for msg in failures)
+
+
+def test_bec_connector_worker_outcome_survives_deleted_signal_source(bec_connector, qtbot, capfd):
+    """At application shutdown the WorkerSignals C++ object can die before a late worker
+    finishes; the outcome emit must not escape Worker.run into the thread pool."""
+    import threading
+
+    import shiboken6
+
+    gate = threading.Event()
+    worker = bec_connector.submit_task(lambda: gate.wait(timeout=5))
+    shiboken6.delete(worker.signals)
+    gate.set()
+
+    qtbot.wait(300)  # let the worker finish and attempt both emits
+    stderr = capfd.readouterr().err
+    assert "Error calling Python override of QRunnable::run()" not in stderr
+    # the discard connection died with the signal source; drop the worker manually
+    if worker in bec_connector._workers:
+        bec_connector._workers.remove(worker)
