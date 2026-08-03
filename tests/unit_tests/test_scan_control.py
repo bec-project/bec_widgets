@@ -468,6 +468,36 @@ def test_scan_selector_settings_dialog_is_released_after_use(scan_control, monke
     delete_later.assert_called_once()
 
 
+def test_scan_selector_dialog_select_all_and_clear_buttons(qtbot):
+    dialog = ScanSelectionDialog(
+        scan_names=["line_scan", "grid_scan"], selected_scans=["line_scan"]
+    )
+    qtbot.addWidget(dialog)
+    dialog.show()
+    qtbot.waitExposed(dialog)
+
+    qtbot.mouseClick(dialog.select_all_button, Qt.MouseButton.LeftButton)
+    assert dialog.selected_scans() == ["line_scan", "grid_scan"]
+
+    qtbot.mouseClick(dialog.clear_button, Qt.MouseButton.LeftButton)
+    assert dialog.selected_scans() == []
+
+
+def test_scan_selector_dialog_select_all_clears_the_filter(scan_control, monkeypatch, qtbot):
+    scan_control.allowed_scans = ["line_scan"]
+
+    def select_all(dialog):
+        dialog.set_all_checked(True)
+        return QDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(ScanSelectionDialog, "exec", select_all)
+
+    qtbot.mouseClick(scan_control.scan_selector_settings_button, Qt.MouseButton.LeftButton)
+
+    assert scan_control.allowed_scans is None
+    assert scan_control.comboBox_scan_selection.count() == 2
+
+
 def test_scan_selector_dialog_whole_row_click_toggles_checkbox(qtbot):
     dialog = ScanSelectionDialog(
         scan_names=["line_scan", "grid_scan"], selected_scans=["line_scan"]
