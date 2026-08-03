@@ -390,3 +390,33 @@ def scan_history_factory(tmpdir):
         return create_history_file(file_path, data, metadata)
 
     return _factory
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _register_worker_thread_dummies():
+    """Qt thread-pool threads register a permanent ``threading._DummyThread`` the first
+    time Python inspects them (e.g. a loguru call inside a background Worker). Saturate
+    the global pool once up front - with thread expiry disabled so the threads persist -
+    so bec_lib's threads_check fixture never sees these registrations appear mid-test."""
+    import threading
+
+    from qtpy.QtCore import QRunnable, QThreadPool
+
+    pool = QThreadPool.globalInstance()
+    pool.setExpiryTimeout(-1)
+    barrier = threading.Barrier(pool.maxThreadCount() + 1, timeout=10)
+
+    class _Warmup(QRunnable):
+        def run(self):
+            threading.current_thread()
+            try:
+                barrier.wait()
+            except threading.BrokenBarrierError:
+                pass
+
+    for _ in range(pool.maxThreadCount()):
+        pool.start(_Warmup())
+    try:
+        barrier.wait()
+    except threading.BrokenBarrierError:
+        pass
