@@ -374,26 +374,29 @@ class LogMsgProxyModel(QSortFilterProxyModel):
                 service; an empty set shows nothing."""
         self.beginFilterChange()
         self._service_filter = filter
-        self.show_service_column.emit(filter is None or len(filter) != 1)
         self.endFilterChange(QSortFilterProxyModel.Direction.Rows)
+        # emit outside the begin/end bracket: this is a public signal, and a raising
+        # subscriber must not be able to break the filter-change pairing
+        self.show_service_column.emit(filter is None or len(filter) != 1)
 
     @SafeSlot(None)
     @SafeSlot(LogLevel)
     def update_level_filter(self, filter: LogLevel | None):
-        """Filter to the selected log level
+        """Filter to the selected log level.
 
         Args:
-            filter (str | None): lowest log level to show"""
+            filter (LogLevel | None): lowest log level to show. None shows all levels."""
         self.beginFilterChange()
         self._level_num = filter.value if filter is not None else None
         self.endFilterChange(QSortFilterProxyModel.Direction.Rows)
 
     @SafeSlot(str)
     def update_filter_text(self, filter: str):
-        """Filter messages based on text
+        """Filter messages based on text.
 
         Args:
-            filter (str | None): set of services for which to show logs"""
+            filter (str): text to match in log messages, case-insensitive. Matching is
+                fuzzy when enabled via update_fuzzy; an empty string clears the filter."""
         self.beginFilterChange()
         self._filter_text = filter.lower()
         self.endFilterChange(QSortFilterProxyModel.Direction.Rows)
