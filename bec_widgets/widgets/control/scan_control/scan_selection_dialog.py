@@ -10,6 +10,7 @@ from qtpy.QtWidgets import (
     QHBoxLayout,
     QListWidget,
     QListWidgetItem,
+    QPushButton,
     QSizePolicy,
     QToolButton,
     QVBoxLayout,
@@ -76,6 +77,16 @@ class ScanSelectionDialog(QDialog):
             item.setSizeHint(row.sizeHint())
             self.scan_list.setItemWidget(item, row)
 
+        controls = QHBoxLayout()
+        controls.setContentsMargins(4, 4, 4, 0)
+        self.select_all_button = QPushButton("Select all", self)
+        self.clear_button = QPushButton("Clear", self)
+        self.select_all_button.clicked.connect(lambda: self.set_all_checked(True))
+        self.clear_button.clicked.connect(lambda: self.set_all_checked(False))
+        controls.addWidget(self.select_all_button)
+        controls.addWidget(self.clear_button)
+        controls.addStretch(1)
+
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, parent=self
         )
@@ -86,9 +97,15 @@ class ScanSelectionDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(4)
+        layout.addLayout(controls)
         layout.addWidget(self.scan_list)
         layout.addWidget(buttons)
         self.resize(360, 420)
+
+    def set_all_checked(self, checked: bool) -> None:
+        """Check or uncheck every scan in the list."""
+        for checkbox in self._scan_checkboxes.values():
+            checkbox.setChecked(checked)
 
     def checkbox_for_scan(self, scan_name: str) -> QCheckBox:
         """Return the checkbox belonging to ``scan_name``."""
