@@ -6,7 +6,7 @@ import os
 from collections import deque
 from dataclasses import dataclass
 from functools import partial
-from typing import Iterable, Literal
+from typing import Iterable, Literal, NamedTuple
 
 from bec_lib.client import BECClient
 from bec_lib.endpoints import MessageEndpoints
@@ -40,6 +40,8 @@ from qtpy.QtWidgets import (
     QLineEdit,
     QPushButton,
     QSizePolicy,
+    QStyle,
+    QStyledItemDelegate,
     QTableView,
     QToolButton,
     QVBoxLayout,
@@ -60,7 +62,8 @@ MODULE_PATH = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 @dataclass(frozen=True)
 class _Constants:
     FUZZ_THRESHOLD = 80
-    UPDATE_INTERVAL_MS = 200
+    UPDATE_INTERVAL_MS = 500
+    TRIM_CHUNK = 250
     headers = ["level", "timestamp", "service_name", "message", "function"]
 
 
@@ -73,11 +76,68 @@ class TimestampUpdate:
         self.update_type = update_type
 
 
+class _LogRec(NamedTuple):
+    """A log message flattened for display and filtering. The first five fields are the
+    table columns in `_Constants.headers` order, so `rec[column]` is the display value."""
+
+    level: str
+    timestamp: str
+    service_name: str | None
+    message: str
+    function: str | None
+    level_num: int | None
+    ts: float
+    message_lower: str
+    raw: LogMessage
+
+
+def _to_record(msg: LogMessage) -> _LogRec:
+    """Flatten a LogMessage once at ingest so paint and filter passes never re-traverse it.
+
+    This is the trust boundary for external Redis data: LogMessage.log_msg is typed
+    `dict | str` with no inner-shape validation, so every field is coerced to a stable
+    type here. The filter comparisons, the service-set membership check, and the
+    delegate's text painting all rely on that - an exception raised later inside a Qt
+    override (filterAcceptsRow, paint) is crash-class on PySide 6.10+.
+    """
+    level = msg.log_type.upper()
+    try:
+        level_num = LogLevel[level].value
+    except KeyError:
+        level_num = None
+    log_msg = msg.log_msg
+    if isinstance(log_msg, str):
+        return _LogRec(level, "", None, log_msg, None, level_num, 0.0, log_msg.lower(), msg)
+    record = log_msg.get("record")
+    if not isinstance(record, dict):
+        record = {}
+    time_info = record.get("time")
+    if not isinstance(time_info, dict):
+        time_info = {}
+    message = record.get("message")
+    if not isinstance(message, str):
+        message = "" if message is None else str(message)
+    service = log_msg.get("service_name")
+    if service is not None and not isinstance(service, str):
+        service = str(service)
+    function = record.get("function")
+    if function is not None and not isinstance(function, str):
+        function = str(function)
+    ts_repr = time_info.get("repr")
+    if not isinstance(ts_repr, str):
+        ts_repr = ""
+    try:
+        ts = float(time_info.get("timestamp") or 0.0)
+    except (TypeError, ValueError):
+        ts = 0.0
+    return _LogRec(level, ts_repr, service, message, function, level_num, ts, message.lower(), msg)
+
+
 class BecLogsQueue(BECConnector, QObject):
     """Manages getting logs from BEC Redis and formatting them for display"""
 
     RPC = False
-    new_messages = Signal()
+    new_records = Signal(list)
     paused = Signal(bool)
     _instance: BecLogsQueue | None = None
 
@@ -109,39 +169,25 @@ class BecLogsQueue(BECConnector, QObject):
         self._update_timer.timeout.connect(self._proc_update)
         QCoreApplication.instance().aboutToQuit.connect(self.cleanup)  # type: ignore
         self._update_timer.start()
+        # register here rather than only in instance() so direct construction cannot
+        # create a second, duplicate ingestion pipeline
+        BecLogsQueue._instance = self
 
     def __len__(self):
         return len(self._data)
+
+    @property
+    def max_length(self) -> int:
+        return self._max_length
+
+    def snapshot_records(self) -> list[_LogRec]:
+        """Convert the current history for a newly attached model."""
+        return [_to_record(msg) for msg in self._data]
 
     @SafeSlot()
     def toggle_pause(self):
         self._paused = not self._paused
         self.paused.emit(self._paused)
-
-    def row_data(self, index: int) -> LogMessage | None:
-        if index < 0 or index > (len(self._data) - 1):
-            return None
-        return self._data[index]
-
-    def cell_data(self, row: int, key: str):
-        if key == "level":
-            return self._data[row].log_type.upper()
-
-        msg_item = self._data[row].log_msg
-        if isinstance(msg_item, str):
-            return msg_item
-        if key == "service_name":
-            return msg_item.get(key)
-        elif key in ["service_name", "function", "message"]:
-            return msg_item.get("record", {}).get(key)
-        elif key == "timestamp":
-            return msg_item.get("record", {}).get("time", {}).get("repr")
-
-    def log_timestamp(self, row: int) -> float:
-        msg_item = self._data[row].log_msg
-        if isinstance(msg_item, str):
-            return 0
-        return msg_item.get("record", {}).get("time", {}).get("timestamp")
 
     def cleanup(self, *_):
         """Stop listening to the Redis log stream"""
@@ -165,20 +211,23 @@ class BecLogsQueue(BECConnector, QObject):
     def _proc_update(self):
         if self._paused or len(self._incoming) == 0:
             return
-        self._data.extend(self._incoming)
+        batch = list(self._incoming)
         self._incoming.clear()
-        self.new_messages.emit()
+        self._data.extend(batch)
+        self.new_records.emit([_to_record(msg) for msg in batch])
 
 
 class BecLogsTableModel(QAbstractTableModel):
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
         self.log_queue = BecLogsQueue.instance()
-        self.log_queue.new_messages.connect(self.handle_new_messages)
         self._headers = _CONST.headers
+        self._max_length = self.log_queue.max_length
+        self._rows: list[_LogRec] = self.log_queue.snapshot_records()
+        self.log_queue.new_records.connect(self._on_new_records)
 
     def rowCount(self, parent: QModelIndex | QPersistentModelIndex = QModelIndex()) -> int:
-        return len(self.log_queue)
+        return len(self._rows)
 
     def columnCount(self, parent: QModelIndex | QPersistentModelIndex = QModelIndex()) -> int:
         return len(self._headers)
@@ -188,25 +237,25 @@ class BecLogsTableModel(QAbstractTableModel):
             return self._headers[section]
         return None
 
+    def record(self, row: int) -> _LogRec:
+        return self._rows[row]
+
     def get_row_data(self, index: QModelIndex) -> LogMessage | None:
         """Return the row data for the given index."""
         if not index.isValid():
             return None
-        return self.log_queue.row_data(index.row())
-
-    def timestamp(self, row: int):
-        return QDateTime.fromMSecsSinceEpoch(int(self.log_queue.log_timestamp(row) * 1000))
+        return self._rows[index.row()].raw
 
     def data(self, index, role=int(Qt.ItemDataRole.DisplayRole)):
         """Return data for the given index and role."""
         if not index.isValid():
             return
         if role in [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole]:
-            return self.log_queue.cell_data(index.row(), self._headers[index.column()])
+            return self._rows[index.row()][index.column()]
         if role in [Qt.ItemDataRole.ForegroundRole]:
-            return self._map_log_level_color(self.log_queue.cell_data(index.row(), "level"))
+            return self._map_log_level_color(self._rows[index.row()].level)
 
-    def _map_log_level_color(self, data):
+    def _map_log_level_color(self, level: str):
         """Resolve the display color for a log level from the current theme. INFO and
         unmapped levels return None so the view uses the default palette text color."""
         accent_colors = get_accent_colors()
@@ -215,12 +264,29 @@ class BecLogsTableModel(QAbstractTableModel):
             LogLevel.WARNING.name: accent_colors.warning,
             LogLevel.ERROR.name: accent_colors.emergency,
             LogLevel.DEBUG.name: QApplication.palette().color(QPalette.ColorRole.PlaceholderText),
-        }.get(data)
+        }.get(level)
 
-    def handle_new_messages(self):
-        self.dataChanged.emit(
-            self.index(0, 0), self.index(self.rowCount() - 1, self.columnCount() - 1)
-        )
+    @SafeSlot(list)
+    def _on_new_records(self, batch: list[_LogRec]):
+        """Append a batch with proper model bracketing so views and proxies update
+        incrementally instead of re-evaluating the whole buffer. The buffer is trimmed
+        in chunks of TRIM_CHUNK (so it may transiently exceed max_length by up to that
+        amount) to keep most ticks append-only."""
+        overflow = len(self._rows) + len(batch) - self._max_length
+        if overflow >= len(self._rows):
+            # the batch alone fills (or overfills) the buffer: replace everything
+            self.beginResetModel()
+            self._rows = list(batch[-self._max_length :])
+            self.endResetModel()
+            return
+        if overflow >= _CONST.TRIM_CHUNK:
+            self.beginRemoveRows(QModelIndex(), 0, overflow - 1)
+            del self._rows[:overflow]
+            self.endRemoveRows()
+        first = len(self._rows)
+        self.beginInsertRows(QModelIndex(), first, first + len(batch) - 1)
+        self._rows.extend(batch)
+        self.endInsertRows()
 
 
 class LogMsgProxyModel(QSortFilterProxyModel):
@@ -234,22 +300,17 @@ class LogMsgProxyModel(QSortFilterProxyModel):
     ):
         super().__init__(parent)
         self._service_filter = service_filter or set()
-        self._level_filter: LogLevel | None = level_filter
+        self._level_num: int | None = level_filter.value if level_filter is not None else None
         self._filter_text: str = ""
         self._fuzzy_search: bool = False
-        self._time_filter_start: QDateTime | None = None
-        self._time_filter_end: QDateTime | None = None
+        self._ts_start: float | None = None
+        self._ts_end: float | None = None
 
     def get_row_data(self, rows: Iterable[QModelIndex]) -> Iterable[LogMessage | None]:
         return (self.sourceModel().get_row_data(self.mapToSource(idx)) for idx in rows)
 
     def sourceModel(self) -> BecLogsTableModel:
         return super().sourceModel()  # type: ignore
-
-    @SafeSlot(int, int)
-    def refresh(self, *_):
-        self.beginFilterChange()
-        self.endFilterChange(QSortFilterProxyModel.Direction.Rows)
 
     @SafeSlot(None)
     @SafeSlot(set)
@@ -271,7 +332,7 @@ class LogMsgProxyModel(QSortFilterProxyModel):
         Args:
             filter (str | None): lowest log level to show"""
         self.beginFilterChange()
-        self._level_filter = filter
+        self._level_num = filter.value if filter is not None else None
         self.endFilterChange(QSortFilterProxyModel.Direction.Rows)
 
     @SafeSlot(str)
@@ -281,7 +342,7 @@ class LogMsgProxyModel(QSortFilterProxyModel):
         Args:
             filter (str | None): set of services for which to show logs"""
         self.beginFilterChange()
-        self._filter_text = filter
+        self._filter_text = filter.lower()
         self.endFilterChange(QSortFilterProxyModel.Direction.Rows)
 
     @SafeSlot(bool)
@@ -297,64 +358,122 @@ class LogMsgProxyModel(QSortFilterProxyModel):
     @SafeSlot(TimestampUpdate)
     def update_timestamp(self, update: TimestampUpdate):
         self.beginFilterChange()
+        ts = update.value.toMSecsSinceEpoch() / 1000 if update.value is not None else None
         if update.update_type == "start":
-            self._time_filter_start = update.value
+            self._ts_start = ts
         else:
-            self._time_filter_end = update.value
+            self._ts_end = ts
         self.endFilterChange(QSortFilterProxyModel.Direction.Rows)
 
     def filterAcceptsRow(self, source_row: int, source_parent) -> bool:
-        # No service filter, and no filter text, display everything
-        possible_filters = [
-            self._service_filter,
-            self._level_filter,
-            self._filter_text,
-            self._time_filter_start,
-            self._time_filter_end,
-        ]
-        if not any(map(bool, possible_filters)):
-            return True
-        model = self.sourceModel()
-        # Filter out services
-        if self._service_filter:
-            col = _CONST.headers.index("service_name")
-            if model.data(model.index(source_row, col, source_parent)) not in self._service_filter:
-                return False
-        # Filter out levels
-        if self._level_filter:
-            col = _CONST.headers.index("level")
-            level: str = model.data(model.index(source_row, col, source_parent))  # type: ignore
-            if LogLevel[level] < self._level_filter:
-                return False
-        # Filter time
-        if self._time_filter_start:
-            if model.timestamp(source_row) < self._time_filter_start:
-                return False
-        if self._time_filter_end:
-            if model.timestamp(source_row) > self._time_filter_end:
-                return False
+        rec = self.sourceModel().record(source_row)
+        if self._service_filter and rec.service_name not in self._service_filter:
+            return False
+        if (
+            self._level_num is not None
+            and rec.level_num is not None
+            and rec.level_num < self._level_num
+        ):
+            return False
+        if self._ts_start is not None and rec.ts < self._ts_start:
+            return False
+        if self._ts_end is not None and rec.ts > self._ts_end:
+            return False
         # Filter message text - must go last because this can return True
         if self._filter_text:
-            col = _CONST.headers.index("message")
-            msg: str = model.data(model.index(source_row, col, source_parent)).lower()  # type: ignore
             if self._fuzzy_search:
-                return fuzz.partial_ratio(self._filter_text.lower(), msg) >= _CONST.FUZZ_THRESHOLD
-            else:
-                return self._filter_text.lower() in msg.lower()
+                return fuzz.partial_ratio(self._filter_text, rec.message_lower) >= (
+                    _CONST.FUZZ_THRESHOLD
+                )
+            return self._filter_text in rec.message_lower
         return True
+
+
+class _LogCellDelegate(QStyledItemDelegate):
+    """Paints cells directly instead of going through QStyle's CE_ItemViewItem machinery,
+    which is several times more expensive under a QSS-themed style. Log cells only need
+    selection background, level color, and elided single-line text."""
+
+    def paint(self, painter, option, index):
+        if option.state & QStyle.StateFlag.State_Selected:
+            painter.fillRect(option.rect, option.palette.highlight())
+            painter.setPen(option.palette.highlightedText().color())
+        else:
+            foreground = index.data(Qt.ItemDataRole.ForegroundRole)
+            painter.setPen(foreground if foreground is not None else option.palette.text().color())
+        text = index.data(Qt.ItemDataRole.DisplayRole)
+        if text:
+            rect = option.rect.adjusted(4, 0, -4, 0)
+            painter.drawText(
+                rect,
+                Qt.AlignmentFlag.AlignVCenter | Qt.TextFlag.TextSingleLine,
+                painter.fontMetrics().elidedText(text, Qt.TextElideMode.ElideRight, rect.width()),
+            )
 
 
 class BecLogTableView(QTableView):
     def __init__(self, *args, max_message_width: int = 1000, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        self.setItemDelegate(_LogCellDelegate(self))
         header = QHeaderView(Qt.Orientation.Horizontal, parent=self)
         header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         header.setStretchLastSection(True)
         header.setMaximumSectionSize(max_message_width)
+        header.setResizeContentsPrecision(50)
         self.setHorizontalHeader(header)
+        self.verticalHeader().hide()
+        self.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerItem)
+        self._rows_removed_above = 0
+        self._was_at_bottom = False
+        self._update_latched = False
 
     def model(self) -> LogMsgProxyModel:
         return super().model()  # type: ignore
+
+    def setModel(self, model):
+        super().setModel(model)
+        model.rowsAboutToBeInserted.connect(self._on_rows_about_to_change)
+        model.rowsAboutToBeRemoved.connect(self._on_rows_about_to_be_removed)
+        model.rowsInserted.connect(self._on_update_finished)
+        model.modelAboutToBeReset.connect(self._latch_scroll_state)
+        model.modelReset.connect(self._finish_update)
+
+    def _latch_scroll_state(self):
+        """Capture, once per update cycle, whether the view is pinned to the bottom.
+        A cycle is an optional top-trim followed by an insert (or a model reset)."""
+        if self._update_latched:
+            return
+        self._update_latched = True
+        scrollbar = self.verticalScrollBar()
+        self._was_at_bottom = scrollbar.value() >= scrollbar.maximum()
+
+    def _finish_update(self):
+        """Restore the scroll position after an update cycle: follow the tail when the
+        view was pinned to the bottom, otherwise keep the content anchored by shifting
+        the position by the number of rows trimmed above it."""
+        if not self._update_latched:
+            return
+        if self._was_at_bottom:
+            self.scrollToBottom()
+        elif self._rows_removed_above:
+            scrollbar = self.verticalScrollBar()
+            scrollbar.setValue(max(0, scrollbar.value() - self._rows_removed_above))
+        self._update_latched = False
+        self._rows_removed_above = 0
+
+    @SafeSlot(QModelIndex, int, int)
+    def _on_rows_about_to_change(self, *_):
+        self._latch_scroll_state()
+
+    @SafeSlot(QModelIndex, int, int)
+    def _on_rows_about_to_be_removed(self, _parent, first: int, last: int):
+        self._latch_scroll_state()
+        if first == 0:
+            self._rows_removed_above = last - first + 1
+
+    @SafeSlot(QModelIndex, int, int)
+    def _on_update_finished(self, *_):
+        self._finish_update()
 
 
 class LogPanel(BECWidget, QWidget):
@@ -391,7 +510,6 @@ class LogPanel(BECWidget, QWidget):
             parent=self, service_filter=service_filter, level_filter=level_filter
         )
         self._proxy.setSourceModel(self._model)
-        self._model.log_queue.new_messages.connect(self._proxy.refresh)
 
     def _setup_table_view(self, max_message_width: int) -> None:
         """Setup the table view."""
@@ -401,6 +519,7 @@ class LogPanel(BECWidget, QWidget):
         self._table.setModel(self._proxy)
         self._table.setHorizontalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
         self._table.setTextElideMode(Qt.TextElideMode.ElideRight)
+        self._table.setWordWrap(False)
         self._table.resizeColumnsToContents()
 
     def _setup_toolbar(self, client: BECClient):
@@ -430,6 +549,11 @@ class LogPanel(BECWidget, QWidget):
     def sizeHint(self) -> QSize:
         return QSize(600, 300)
 
+    def cleanup(self):
+        """Detach from the shared log queue so a closed panel stops receiving updates."""
+        self._model.log_queue.new_records.disconnect(self._model._on_new_records)
+        super().cleanup()
+
 
 class LogPanelToolbar(QWidget):
     services_selected = Signal(set)
@@ -446,7 +570,7 @@ class LogPanelToolbar(QWidget):
         self._timestamp_end: QDateTime | None = None
 
         self._unique_service_names: set[str] = set()
-        self._services_selected: set[str] = set()
+        self._services_selected: set[str] | None = None
 
         self._layout = QHBoxLayout(self)
 
@@ -455,8 +579,6 @@ class LogPanelToolbar(QWidget):
             self.service_choice_button = QPushButton("Select services", self)
             self._layout.addWidget(self.service_choice_button)
             self.service_choice_button.clicked.connect(self._open_service_filter_dialog)
-            self.service_list_update(self.client.service_status)
-            self._services_selected = self._unique_service_names
 
         self.filter_level_dropdown = self._log_level_box()
         self._layout.addWidget(self.filter_level_dropdown)
@@ -595,8 +717,10 @@ class LogPanelToolbar(QWidget):
     @SafeSlot()
     def _open_service_filter_dialog(self):
         self.service_list_update(self.client.service_status)
-        if len(self._unique_service_names) == 0 or self._services_selected is None:
+        if len(self._unique_service_names) == 0:
             return
+        if self._services_selected is None:
+            self._services_selected = set(self._unique_service_names)
         self._svc_dialog = QDialog(self)
         self._svc_dialog.setWindowTitle("Select services to show logs from")
         layout = QVBoxLayout()
@@ -636,7 +760,6 @@ if __name__ == "__main__":  # pragma: no cover
     app = QApplication(sys.argv)
     apply_theme("dark")
     panel = QWidget()
-    queue = BecLogsQueue(panel)
     layout = QVBoxLayout(panel)
     layout.addWidget(QLabel("All logs, no filters:"))
     layout.addWidget(LogPanel())
