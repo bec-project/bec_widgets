@@ -1,10 +1,12 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
+from threading import Event, get_ident
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.messages import AvailableResourceMessage, ScanHistoryMessage
+from bec_lib.scan_history import ScanHistory
 from qtpy.QtCore import QModelIndex, QPoint, Qt
 from qtpy.QtWidgets import QCheckBox, QDialog, QStyle
 
@@ -12,6 +14,7 @@ from bec_widgets.utils.forms_from_types.items import StrFormItem
 from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.control.scan_control import ScanControl
+from bec_widgets.widgets.control.scan_control import scan_control as scan_control_module
 from bec_widgets.widgets.control.scan_control.scan_control import ScanControlConfig
 from bec_widgets.widgets.control.scan_control.scan_info_adapter import ScanInfoAdapter
 from bec_widgets.widgets.control.scan_control.scan_selection_dialog import ScanSelectionDialog
@@ -1178,32 +1181,43 @@ def test_changing_scans_remember_parameters(scan_control, mocked_client):
 def test_scan_selection_does_not_fetch_last_scan_parameters(
     scan_control, mocked_client, monkeypatch
 ):
-    xread = MagicMock(wraps=mocked_client.connector.xread)
-    monkeypatch.setattr(mocked_client.connector, "xread", xread)
+    get_last = MagicMock(wraps=mocked_client.connector.get_last)
+    xrange = MagicMock(wraps=mocked_client.connector.xrange)
+    monkeypatch.setattr(mocked_client.connector, "get_last", get_last)
+    monkeypatch.setattr(mocked_client.connector, "xrange", xrange)
 
     scan_control.comboBox_scan_selection.setCurrentText("line_scan")
     assert scan_control.comboBox_scan_selection.currentText() == "line_scan"
 
     scan_control.comboBox_scan_selection.setCurrentText("grid_scan")
 
-    xread.assert_not_called()
+    get_last.assert_not_called()
+    xrange.assert_not_called()
 
 
 def test_restore_last_scan_parameters_button_fetches_on_demand(
-    scan_control, mocked_client, monkeypatch
+    scan_control, mocked_client, monkeypatch, qtbot
 ):
-    xread = MagicMock(wraps=mocked_client.connector.xread)
-    monkeypatch.setattr(mocked_client.connector, "xread", xread)
+    get_last = MagicMock(wraps=mocked_client.connector.get_last)
+    xrange = MagicMock(wraps=mocked_client.connector.xrange)
+    monkeypatch.setattr(mocked_client.connector, "get_last", get_last)
+    monkeypatch.setattr(mocked_client.connector, "xrange", xrange)
 
     scan_control.comboBox_scan_selection.setCurrentText("grid_scan")
     scan_control.comboBox_scan_selection.setCurrentText("line_scan")
-    xread.assert_not_called()
+    get_last.assert_not_called()
+    xrange.assert_not_called()
 
     scan_control.last_scan_button.click()
 
-    xread.assert_called_once_with(
-        MessageEndpoints.scan_history(), from_start=True, user_id=scan_control.object_name
-    )
+    qtbot.waitUntil(lambda: get_last.call_count == 2)
+    # a one-entry tip probe (memo validity check), then the recent window
+    assert get_last.call_args_list == [
+        call(MessageEndpoints.scan_history(), count=1),
+        call(MessageEndpoints.scan_history(), count=scan_control.RECENT_SCAN_HISTORY_COUNT),
+    ]
+    qtbot.waitUntil(scan_control.last_scan_button.isEnabled)
+    xrange.assert_not_called()
     args, kwargs = scan_control.get_scan_parameters(bec_object=False)
     assert args == ["samx", 0.0, 2.0]
     assert kwargs["steps"] == 10
@@ -1211,11 +1225,319 @@ def test_restore_last_scan_parameters_button_fetches_on_demand(
     assert kwargs["exp_time"] == 2
 
 
-def test_get_scan_parameters_from_redis(scan_control):
+def test_restore_last_scan_parameters_does_not_block_gui(
+    scan_control, mocked_client, monkeypatch, qtbot
+):
+    original_get_last = mocked_client.connector.get_last
+    fetch_started = Event()
+    allow_fetch_to_finish = Event()
+    fetch_thread_ids = []
+    apply_thread_ids = []
+
+    original_set_parameters = scan_control.arg_box.set_parameters
+
+    def tracking_set_parameters(*args, **kwargs):
+        apply_thread_ids.append(get_ident())
+        return original_set_parameters(*args, **kwargs)
+
+    def blocking_get_last(*args, **kwargs):
+        fetch_thread_ids.append(get_ident())
+        fetch_started.set()
+        allow_fetch_to_finish.wait(timeout=5)
+        return original_get_last(*args, **kwargs)
+
+    monkeypatch.setattr(mocked_client.connector, "get_last", blocking_get_last)
+    monkeypatch.setattr(scan_control.arg_box, "set_parameters", tracking_set_parameters)
+    gui_thread_id = get_ident()
+
+    scan_control.comboBox_scan_selection.setCurrentText("line_scan")
+    scan_control.last_scan_button.click()
+
+    try:
+        qtbot.waitUntil(fetch_started.is_set)
+        assert len(fetch_thread_ids) == 1
+        assert fetch_thread_ids[0] != gui_thread_id
+        assert not scan_control.last_scan_button.isEnabled()
+    finally:
+        allow_fetch_to_finish.set()
+
+    qtbot.waitUntil(scan_control.last_scan_button.isEnabled)
+    assert apply_thread_ids == [gui_thread_id]
+    args, kwargs = scan_control.get_scan_parameters(bec_object=False)
+    assert args == ["samx", 0.0, 2.0]
+    assert kwargs["steps"] == 10
+
+
+def test_restore_last_scan_parameters_reenables_button_after_fetch_failure(
+    scan_control, mocked_client, monkeypatch, qtbot
+):
+    get_last = MagicMock(side_effect=RuntimeError("history unavailable"))
+    monkeypatch.setattr(mocked_client.connector, "get_last", get_last)
+
+    scan_control.last_scan_button.click()
+
+    qtbot.waitUntil(lambda: get_last.call_count == 1)
+    qtbot.waitUntil(scan_control.last_scan_button.isEnabled)
+
+
+def test_restore_last_scan_parameters_reenables_button_when_worker_task_raises(
+    scan_control, monkeypatch, qtbot
+):
+    # bypass the fetch's own error handling: the worker emits ``failed`` instead of
+    # ``completed``, so the button must recover from that signal, not from the watchdog
+    monkeypatch.setattr(
+        scan_control._last_scan_fetch_watchdog, "start", MagicMock(name="watchdog_disabled")
+    )
+    monkeypatch.setattr(
+        scan_control,
+        "_fetch_last_executed_scan_parameters",
+        MagicMock(side_effect=RuntimeError("worker exploded")),
+    )
+
+    scan_control.last_scan_button.click()
+
+    qtbot.waitUntil(scan_control.last_scan_button.isEnabled)
+
+
+def test_restore_last_scan_parameters_escalates_to_bounded_history_window(
+    scan_control, mocked_client, monkeypatch, qtbot
+):
+    recent_scan = scan_history.model_copy(update={"scan_name": "grid_scan"})
+    # a full window means older entries may exist, so the deeper - but still capped - read runs
+    full_window = [{"data": recent_scan}] * scan_control.RECENT_SCAN_HISTORY_COUNT
+    # responses for: tip probe, recent window, deep window
+    get_last = MagicMock(
+        side_effect=[[{"data": recent_scan}], full_window, [{"data": scan_history}]]
+    )
+    xrange = MagicMock(wraps=mocked_client.connector.xrange)
+    monkeypatch.setattr(mocked_client.connector, "get_last", get_last)
+    monkeypatch.setattr(mocked_client.connector, "xrange", xrange)
+
+    scan_control.comboBox_scan_selection.setCurrentText("line_scan")
+    scan_control.last_scan_button.click()
+
+    qtbot.waitUntil(lambda: get_last.call_count == 3)
+    qtbot.waitUntil(scan_control.last_scan_button.isEnabled)
+    assert get_last.call_args_list == [
+        call(MessageEndpoints.scan_history(), count=1),
+        call(MessageEndpoints.scan_history(), count=scan_control.RECENT_SCAN_HISTORY_COUNT),
+        call(MessageEndpoints.scan_history(), count=scan_control.MAX_HISTORY_LOOKBACK),
+    ]
+    # the unbounded full-stream read is gone: it stalled the event loop from any thread
+    xrange.assert_not_called()
+    args, kwargs = scan_control.get_scan_parameters(bec_object=False)
+    assert args == ["samx", 0.0, 2.0]
+    assert kwargs["steps"] == 10
+
+
+def test_restore_last_scan_parameters_never_reads_unbounded_stream(
+    scan_control, mocked_client, monkeypatch, qtbot
+):
+    recent_scan = scan_history.model_copy(update={"scan_name": "grid_scan"})
+    # every window comes back full, so the lookup can never conclude the stream is exhausted
+    get_last = MagicMock(
+        side_effect=lambda _endpoint, count: [{"data": recent_scan}] * count  # noqa: ARG005
+    )
+    xrange = MagicMock(wraps=mocked_client.connector.xrange)
+    monkeypatch.setattr(mocked_client.connector, "get_last", get_last)
+    monkeypatch.setattr(mocked_client.connector, "xrange", xrange)
+
+    scan_control.comboBox_scan_selection.setCurrentText("line_scan")
+    scan_control.last_scan_button.click()
+
+    qtbot.waitUntil(scan_control.last_scan_button.isEnabled)
+    xrange.assert_not_called()
+    assert (
+        max(call_args.kwargs["count"] for call_args in get_last.call_args_list)
+        == scan_control.MAX_HISTORY_LOOKBACK
+    )
+
+
+def test_restore_last_scan_parameters_logs_when_lookback_exhausted(
+    scan_control, mocked_client, monkeypatch, qtbot
+):
+    recent_scan = scan_history.model_copy(update={"scan_name": "grid_scan"})
+    get_last = MagicMock(side_effect=lambda _endpoint, count: [{"data": recent_scan}] * count)
+    monkeypatch.setattr(mocked_client.connector, "get_last", get_last)
+    # bec_logger is loguru-based, so caplog does not see it
+    warning = MagicMock()
+    monkeypatch.setattr(scan_control_module.logger, "warning", warning)
+
+    scan_control.comboBox_scan_selection.setCurrentText("line_scan")
+    scan_control.last_scan_button.click()
+    qtbot.waitUntil(scan_control.last_scan_button.isEnabled)
+
+    assert any("older history is not searched" in c.args[0] for c in warning.call_args_list)
+
+
+def test_restore_last_scan_parameters_skips_deeper_read_when_stream_exhausted(
+    scan_control, mocked_client, monkeypatch, qtbot
+):
+    recent_scan = scan_history.model_copy(update={"scan_name": "grid_scan"})
+    # a partial window proves the whole stream was searched; no deeper read is allowed
+    get_last = MagicMock(return_value=[{"data": recent_scan}])
+    xrange = MagicMock(wraps=mocked_client.connector.xrange)
+    monkeypatch.setattr(mocked_client.connector, "get_last", get_last)
+    monkeypatch.setattr(mocked_client.connector, "xrange", xrange)
+
+    scan_control.comboBox_scan_selection.setCurrentText("line_scan")
+    scan_control.last_scan_button.click()
+
+    qtbot.waitUntil(lambda: get_last.call_count == 2)
+    qtbot.waitUntil(scan_control.last_scan_button.isEnabled)
+    assert get_last.call_args_list == [
+        call(MessageEndpoints.scan_history(), count=1),
+        call(MessageEndpoints.scan_history(), count=scan_control.RECENT_SCAN_HISTORY_COUNT),
+    ]
+    xrange.assert_not_called()
+
+
+def test_restore_last_scan_parameters_memoizes_missing_scan_lookups(
+    scan_control, mocked_client, monkeypatch, qtbot
+):
+    recent_scan = scan_history.model_copy(update={"scan_name": "grid_scan"})
+    get_last = MagicMock(side_effect=lambda _endpoint, count: [{"data": recent_scan}] * count)
+    monkeypatch.setattr(mocked_client.connector, "get_last", get_last)
+
+    scan_control.comboBox_scan_selection.setCurrentText("line_scan")
+    scan_control.last_scan_button.click()
+    qtbot.waitUntil(scan_control.last_scan_button.isEnabled)
+    calls_after_first = get_last.call_count  # tip probe + recent window + deep window
+
+    scan_control.last_scan_button.click()
+    qtbot.waitUntil(scan_control.last_scan_button.isEnabled)
+
+    # the repeat click for a never-measured scan costs one tip probe, no window reads
+    assert get_last.call_count == calls_after_first + 1
+    assert get_last.call_args_list[-1] == call(MessageEndpoints.scan_history(), count=1)
+
+
+def test_restore_last_scan_parameters_memo_reapplies_and_invalidates(
+    scan_control, mocked_client, monkeypatch, qtbot
+):
+    get_last = MagicMock(wraps=mocked_client.connector.get_last)
+    monkeypatch.setattr(mocked_client.connector, "get_last", get_last)
+    scan_control.comboBox_scan_selection.setCurrentText("line_scan")
+
+    scan_control.last_scan_button.click()
+    qtbot.waitUntil(scan_control.last_scan_button.isEnabled)
+    calls_after_first = get_last.call_count  # tip probe + recent window (hit)
+
+    # user edits the form; restoring again is answered from the memo with one probe read
+    scan_control.arg_box.set_parameters(["samx", 1.0, 5.0])
+    scan_control.last_scan_button.click()
+    qtbot.waitUntil(scan_control.last_scan_button.isEnabled)
+    args, _ = scan_control.get_scan_parameters(bec_object=False)
+    assert args == ["samx", 0.0, 2.0]
+    assert get_last.call_count == calls_after_first + 1
+    assert get_last.call_args_list[-1] == call(MessageEndpoints.scan_history(), count=1)
+
+    # a new history entry moves the stream tip and invalidates the memo
+    new_msg = scan_history.model_copy(update={"scan_name": "grid_scan", "scan_id": "memo_tip"})
+    mocked_client.connector.xadd(topic=MessageEndpoints.scan_history(), msg_dict={"data": new_msg})
+    scan_control.last_scan_button.click()
+    qtbot.waitUntil(scan_control.last_scan_button.isEnabled)
+    # tip probe plus a fresh recent-window read
+    assert get_last.call_count == calls_after_first + 3
+
+
+def test_restore_last_scan_parameters_handles_single_entry_window(
+    scan_control, mocked_client, monkeypatch, qtbot
+):
+    # get_last returns a bare dict (not a list) for count == 1
+    monkeypatch.setattr(scan_control, "RECENT_SCAN_HISTORY_COUNT", 1)
+
+    scan_control.comboBox_scan_selection.setCurrentText("line_scan")
+    scan_control.last_scan_button.click()
+
+    qtbot.waitUntil(scan_control.last_scan_button.isEnabled)
+    args, kwargs = scan_control.get_scan_parameters(bec_object=False)
+    assert args == ["samx", 0.0, 2.0]
+    assert kwargs["steps"] == 10
+
+
+def test_restore_last_scan_parameters_uses_history_cache(
+    scan_control, mocked_client, monkeypatch, qtbot
+):
+    history = ScanHistory(mocked_client, load_threaded=False)
+    history._scan_data[scan_history.scan_id] = scan_history
+    history._scan_ids.append(scan_history.scan_id)
+    monkeypatch.setattr(mocked_client, "history", history, raising=False)
+    get_last = MagicMock(wraps=mocked_client.connector.get_last)
+    monkeypatch.setattr(mocked_client.connector, "get_last", get_last)
+
+    scan_control.comboBox_scan_selection.setCurrentText("line_scan")
+    scan_control.last_scan_button.click()
+
+    qtbot.waitUntil(scan_control.last_scan_button.isEnabled)
+    get_last.assert_not_called()
+    args, kwargs = scan_control.get_scan_parameters(bec_object=False)
+    assert args == ["samx", 0.0, 2.0]
+    assert kwargs["steps"] == 10
+
+
+def test_restore_last_scan_parameters_discards_result_on_scan_switch(
+    scan_control, mocked_client, monkeypatch, qtbot
+):
+    original_get_last = mocked_client.connector.get_last
+    fetch_started = Event()
+    allow_fetch_to_finish = Event()
+
+    def blocking_get_last(*args, **kwargs):
+        fetch_started.set()
+        allow_fetch_to_finish.wait(timeout=5)
+        return original_get_last(*args, **kwargs)
+
+    monkeypatch.setattr(mocked_client.connector, "get_last", blocking_get_last)
+
+    scan_control.comboBox_scan_selection.setCurrentText("line_scan")
+    scan_control.last_scan_button.click()
+    qtbot.waitUntil(fetch_started.is_set)
+    scan_control.comboBox_scan_selection.setCurrentText("grid_scan")
+    allow_fetch_to_finish.set()
+
+    qtbot.waitUntil(scan_control.last_scan_button.isEnabled)
+    # the fetched line_scan parameters must not leak into the grid_scan form
+    args, _ = scan_control.get_scan_parameters(bec_object=False)
+    assert args != ["samx", 0.0, 2.0]
+
+
+def test_restore_last_scan_parameters_watchdog_recovers_from_hanging_fetch(
+    scan_control, mocked_client, monkeypatch, qtbot
+):
+    original_get_last = mocked_client.connector.get_last
+    fetch_started = Event()
+    allow_fetch_to_finish = Event()
+
+    def blocking_get_last(*args, **kwargs):
+        fetch_started.set()
+        allow_fetch_to_finish.wait(timeout=5)
+        return original_get_last(*args, **kwargs)
+
+    monkeypatch.setattr(mocked_client.connector, "get_last", blocking_get_last)
+    scan_control._last_scan_fetch_watchdog.setInterval(50)
+
+    scan_control.comboBox_scan_selection.setCurrentText("line_scan")
+    original_args, _ = scan_control.get_scan_parameters(bec_object=False)
+    scan_control.last_scan_button.click()
+    qtbot.waitUntil(fetch_started.is_set)
+
+    # the watchdog re-enables the button while the fetch is still hanging
+    qtbot.waitUntil(scan_control.last_scan_button.isEnabled)
+    allow_fetch_to_finish.set()
+
+    # the late result must be discarded once the watchdog has given up on the fetch
+    qtbot.wait(200)
+    args, _ = scan_control.get_scan_parameters(bec_object=False)
+    assert args == original_args
+
+
+def test_get_scan_parameters_from_redis(scan_control, qtbot):
     scan_name = "line_scan"
     scan_control.comboBox_scan_selection.setCurrentText(scan_name)
 
     scan_control.last_scan_button.click()
+    qtbot.waitUntil(scan_control.last_scan_button.isEnabled)
 
     args, kwargs = scan_control.get_scan_parameters(bec_object=False)
 
@@ -1295,7 +1617,7 @@ def test_scan_metadata_is_passed_to_scan_function(scan_control: ScanControl):
     scans.grid_scan.assert_called_once_with(metadata=TEST_MD)
 
 
-def test_restore_parameters_with_fewer_arg_bundles(scan_control):
+def test_restore_parameters_with_fewer_arg_bundles(scan_control, qtbot):
     """
     Ensure that when more argument bundles are present than exist in the
     stored history, restoring parameters regenerates the arg box to the
@@ -1312,6 +1634,7 @@ def test_restore_parameters_with_fewer_arg_bundles(scan_control):
 
     # Trigger restore of parameters from history
     scan_control.last_scan_button.click()
+    qtbot.waitUntil(scan_control.last_scan_button.isEnabled)
 
     # After restore, arg_box should have only one bundle (the history size)
     assert scan_control.arg_box.count_arg_rows() == 1
