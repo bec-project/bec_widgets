@@ -390,8 +390,18 @@ class BECConnector:
         # Keep a reference to the worker so it is not garbage collected.
         self._workers.append(worker)
 
-        # When the worker is done (success or failure), remove it from our list.
+        # When the worker is done (success or failure), remove it from our
+        # list. The closure must disconnect itself from both signals before
+        # returning: the Qt connection holds the closure strongly from C++,
+        # and the closure captures self and worker — without the disconnect
+        # this forms a reference cycle anchored in C++ that Python's GC
+        # cannot break, keeping the owning widget alive forever.
         def _discard_worker(*_):
+            for signal in (worker.signals.completed, worker.signals.failed):
+                try:
+                    signal.disconnect(_discard_worker)
+                except (RuntimeError, TypeError):
+                    pass
             try:
                 self._workers.remove(worker)
             except ValueError:
