@@ -277,3 +277,26 @@ def test_bec_connector_parent_id_returns_none_on_error(bec_connector):
         bec_connector, "_get_rpc_parent_ancestor", side_effect=ValueError("broken hierarchy")
     ):
         assert bec_connector.parent_id is None
+
+
+def test_bec_connector_worker_completion_does_not_retain_owner(qtbot, mocked_client):
+    """The worker-discard closure is held strongly
+    by the Qt signal connection and captures the owner; without disconnecting
+    itself it forms a C++-anchored reference cycle that keeps the owner (and
+    widget) alive forever."""
+    import gc
+    import weakref
+
+    connector = _CleanupBroadcastWidget(client=mocked_client)
+    connector.submit_task(lambda: None)
+    qtbot.waitUntil(lambda: not connector._workers, timeout=5000)
+
+    ref = weakref.ref(connector)
+    connector.close()
+    connector.deleteLater()
+    qtbot.wait(20)
+    del connector
+    for _ in range(3):
+        gc.collect()
+
+    assert ref() is None, "connector kept alive by worker completion closure"
