@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from collections import deque
 from dataclasses import dataclass
+from datetime import datetime
 from functools import partial
 from typing import Iterable, Literal, NamedTuple
 
@@ -26,20 +27,31 @@ from qtpy.QtCore import (
     Qt,
     QTimer,
 )
-from qtpy.QtGui import QPalette
+from qtpy.QtGui import (
+    QAction,
+    QFont,
+    QFontDatabase,
+    QFontMetrics,
+    QKeySequence,
+    QPalette,
+    QShortcut,
+)
 from qtpy.QtWidgets import (
     QApplication,
     QCheckBox,
     QComboBox,
     QDateTimeEdit,
     QDialog,
-    QGridLayout,
+    QDialogButtonBox,
+    QFormLayout,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit,
-    QPushButton,
+    QMenu,
+    QPlainTextEdit,
     QSizePolicy,
+    QSplitter,
     QStyle,
     QStyledItemDelegate,
     QTableView,
@@ -64,6 +76,7 @@ class _Constants:
     FUZZ_THRESHOLD = 80
     UPDATE_INTERVAL_MS = 500
     TRIM_CHUNK = 250
+    SEARCH_DEBOUNCE_MS = 200
     headers = ["level", "timestamp", "service_name", "message", "function"]
 
 
@@ -89,6 +102,7 @@ class _LogRec(NamedTuple):
     ts: float
     message_lower: str
     raw: LogMessage
+    timestamp_full: str
 
 
 def _to_record(msg: LogMessage) -> _LogRec:
@@ -107,7 +121,7 @@ def _to_record(msg: LogMessage) -> _LogRec:
         level_num = None
     log_msg = msg.log_msg
     if isinstance(log_msg, str):
-        return _LogRec(level, "", None, log_msg, None, level_num, 0.0, log_msg.lower(), msg)
+        return _LogRec(level, "", None, log_msg, None, level_num, 0.0, log_msg.lower(), msg, "")
     record = log_msg.get("record")
     if not isinstance(record, dict):
         record = {}
@@ -130,7 +144,14 @@ def _to_record(msg: LogMessage) -> _LogRec:
         ts = float(time_info.get("timestamp") or 0.0)
     except (TypeError, ValueError):
         ts = 0.0
-    return _LogRec(level, ts_repr, service, message, function, level_num, ts, message.lower(), msg)
+    if ts:
+        moment = datetime.fromtimestamp(ts)
+        ts_short = f"{moment:%H:%M:%S}.{moment.microsecond // 1000:03d}"
+    else:
+        ts_short = ts_repr
+    return _LogRec(
+        level, ts_short, service, message, function, level_num, ts, message.lower(), msg, ts_repr
+    )
 
 
 class BecLogsQueue(BECConnector, QObject):
@@ -139,6 +160,7 @@ class BecLogsQueue(BECConnector, QObject):
     RPC = False
     new_records = Signal(list)
     paused = Signal(bool)
+    buffered = Signal(int)
     _instance: BecLogsQueue | None = None
 
     @classmethod
@@ -209,7 +231,10 @@ class BecLogsQueue(BECConnector, QObject):
 
     @SafeSlot(verify_sender=True)
     def _proc_update(self):
-        if self._paused or len(self._incoming) == 0:
+        if self._paused:
+            self.buffered.emit(len(self._incoming))
+            return
+        if len(self._incoming) == 0:
             return
         batch = list(self._incoming)
         self._incoming.clear()
@@ -224,6 +249,9 @@ class BecLogsTableModel(QAbstractTableModel):
         self._headers = _CONST.headers
         self._max_length = self.log_queue.max_length
         self._rows: list[_LogRec] = self.log_queue.snapshot_records()
+        # True only while a live batch is being appended - views use this to distinguish
+        # newly arrived logs from filter-change re-insertions
+        self._live_append = False
         self.log_queue.new_records.connect(self._on_new_records)
 
     def rowCount(self, parent: QModelIndex | QPersistentModelIndex = QModelIndex()) -> int:
@@ -250,8 +278,13 @@ class BecLogsTableModel(QAbstractTableModel):
         """Return data for the given index and role."""
         if not index.isValid():
             return
-        if role in [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole]:
+        if role == Qt.ItemDataRole.DisplayRole:
             return self._rows[index.row()][index.column()]
+        if role == Qt.ItemDataRole.ToolTipRole:
+            rec = self._rows[index.row()]
+            if index.column() == self._headers.index("timestamp"):
+                return rec.timestamp_full or rec.timestamp
+            return rec[index.column()]
         if role in [Qt.ItemDataRole.ForegroundRole]:
             return self._map_log_level_color(self._rows[index.row()].level)
 
@@ -259,12 +292,23 @@ class BecLogsTableModel(QAbstractTableModel):
         """Resolve the display color for a log level from the current theme. INFO and
         unmapped levels return None so the view uses the default palette text color."""
         accent_colors = get_accent_colors()
+        placeholder = QApplication.palette().color(QPalette.ColorRole.PlaceholderText)
         return {
             LogLevel.SUCCESS.name: accent_colors.success,
             LogLevel.WARNING.name: accent_colors.warning,
             LogLevel.ERROR.name: accent_colors.emergency,
-            LogLevel.DEBUG.name: QApplication.palette().color(QPalette.ColorRole.PlaceholderText),
+            LogLevel.CRITICAL.name: accent_colors.emergency,
+            LogLevel.DEBUG.name: placeholder,
+            LogLevel.TRACE.name: placeholder,
         }.get(level)
+
+    @SafeSlot()
+    def clear(self):
+        """Clear this panel's view. The shared BecLogsQueue history is untouched, so
+        sibling panels and future snapshots are unaffected."""
+        self.beginResetModel()
+        self._rows.clear()
+        self.endResetModel()
 
     @SafeSlot(list)
     def _on_new_records(self, batch: list[_LogRec]):
@@ -272,6 +316,13 @@ class BecLogsTableModel(QAbstractTableModel):
         incrementally instead of re-evaluating the whole buffer. The buffer is trimmed
         in chunks of TRIM_CHUNK (so it may transiently exceed max_length by up to that
         amount) to keep most ticks append-only."""
+        self._live_append = True
+        try:
+            self._append_records(batch)
+        finally:
+            self._live_append = False
+
+    def _append_records(self, batch: list[_LogRec]):
         overflow = len(self._rows) + len(batch) - self._max_length
         if overflow >= len(self._rows):
             # the batch alone fills (or overfills) the buffer: replace everything
@@ -299,7 +350,8 @@ class LogMsgProxyModel(QSortFilterProxyModel):
         level_filter: LogLevel | None = None,
     ):
         super().__init__(parent)
-        self._service_filter = service_filter or set()
+        # None means "no service filter"; an explicit set (possibly empty) is an include-list
+        self._service_filter: set[str] | None = service_filter
         self._level_num: int | None = level_filter.value if level_filter is not None else None
         self._filter_text: str = ""
         self._fuzzy_search: bool = False
@@ -314,14 +366,15 @@ class LogMsgProxyModel(QSortFilterProxyModel):
 
     @SafeSlot(None)
     @SafeSlot(set)
-    def update_service_filter(self, filter: set[str]):
-        """Filter to the selected services (show any service in the provided set)
+    def update_service_filter(self, filter: set[str] | None):
+        """Filter to the selected services.
 
         Args:
-            filter (set[str] | None): set of services for which to show logs"""
+            filter (set[str] | None): include-list of services to show. None shows every
+                service; an empty set shows nothing."""
         self.beginFilterChange()
         self._service_filter = filter
-        self.show_service_column.emit(len(filter) != 1)
+        self.show_service_column.emit(filter is None or len(filter) != 1)
         self.endFilterChange(QSortFilterProxyModel.Direction.Rows)
 
     @SafeSlot(None)
@@ -367,7 +420,7 @@ class LogMsgProxyModel(QSortFilterProxyModel):
 
     def filterAcceptsRow(self, source_row: int, source_parent) -> bool:
         rec = self.sourceModel().record(source_row)
-        if self._service_filter and rec.service_name not in self._service_filter:
+        if self._service_filter is not None and rec.service_name not in self._service_filter:
             return False
         if (
             self._level_num is not None
@@ -394,7 +447,18 @@ class _LogCellDelegate(QStyledItemDelegate):
     which is several times more expensive under a QSS-themed style. Log cells only need
     selection background, level color, and elided single-line text."""
 
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._bold_font: QFont | None = None
+
     def paint(self, painter, option, index):
+        if index.column() == 0:
+            if self._bold_font is None:
+                self._bold_font = QFont(option.font)
+                self._bold_font.setBold(True)
+            painter.setFont(self._bold_font)
+        else:
+            painter.setFont(option.font)
         if option.state & QStyle.StateFlag.State_Selected:
             painter.fillRect(option.rect, option.palette.highlight())
             painter.setPen(option.palette.highlightedText().color())
@@ -417,15 +481,38 @@ class BecLogTableView(QTableView):
         self.setItemDelegate(_LogCellDelegate(self))
         header = QHeaderView(Qt.Orientation.Horizontal, parent=self)
         header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-        header.setStretchLastSection(True)
         header.setMaximumSectionSize(max_message_width)
         header.setResizeContentsPrecision(50)
+        header.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        header.customContextMenuRequested.connect(self._show_header_menu)
         self.setHorizontalHeader(header)
         self.verticalHeader().hide()
+        self.setFont(QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont))
+        self.setShowGrid(False)
+        self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
+        self.verticalHeader().setDefaultSectionSize(self.fontMetrics().height() + 4)
+        self.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+        self.setSelectionMode(QTableView.SelectionMode.ExtendedSelection)
         self.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerItem)
         self._rows_removed_above = 0
         self._was_at_bottom = False
         self._update_latched = False
+        self._new_below = 0
+        self._jump_button = QToolButton(self.viewport())
+        self._jump_button.setIcon(
+            material_icon("vertical_align_bottom", size=(16, 16), convert_to_pixmap=False)
+        )
+        self._jump_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self._jump_button.setToolTip("Jump to the newest logs and follow them")
+        # palette-driven pill so it stands out over rows in both themes
+        self._jump_button.setStyleSheet(
+            "QToolButton { background-color: palette(highlight);"
+            " color: palette(highlighted-text);"
+            " border: none; border-radius: 10px; padding: 3px 12px; }"
+        )
+        self._jump_button.hide()
+        self._jump_button.clicked.connect(self.scrollToBottom)
+        self.verticalScrollBar().valueChanged.connect(self._on_scrolled)
 
     def model(self) -> LogMsgProxyModel:
         return super().model()  # type: ignore
@@ -434,9 +521,33 @@ class BecLogTableView(QTableView):
         super().setModel(model)
         model.rowsAboutToBeInserted.connect(self._on_rows_about_to_change)
         model.rowsAboutToBeRemoved.connect(self._on_rows_about_to_be_removed)
-        model.rowsInserted.connect(self._on_update_finished)
+        model.rowsInserted.connect(self._on_rows_inserted)
+        model.rowsRemoved.connect(self._on_rows_removed)
         model.modelAboutToBeReset.connect(self._latch_scroll_state)
-        model.modelReset.connect(self._finish_update)
+        model.modelReset.connect(self._on_model_reset)
+
+    def _source_model(self) -> BecLogsTableModel:
+        model = self.model()
+        return model.sourceModel() if isinstance(model, QSortFilterProxyModel) else model
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._place_jump_button()
+
+    def _place_jump_button(self):
+        viewport = self.viewport()
+        self._jump_button.adjustSize()
+        self._jump_button.move(
+            (viewport.width() - self._jump_button.width()) // 2,
+            viewport.height() - self._jump_button.height() - 8,
+        )
+        self._jump_button.raise_()
+
+    @SafeSlot(int)
+    def _on_scrolled(self, value: int):
+        if self._new_below and value >= self.verticalScrollBar().maximum():
+            self._new_below = 0
+            self._jump_button.hide()
 
     def _latch_scroll_state(self):
         """Capture, once per update cycle, whether the view is pinned to the bottom.
@@ -447,17 +558,24 @@ class BecLogTableView(QTableView):
         scrollbar = self.verticalScrollBar()
         self._was_at_bottom = scrollbar.value() >= scrollbar.maximum()
 
-    def _finish_update(self):
+    def _finish_update(self, inserted: int = 0):
         """Restore the scroll position after an update cycle: follow the tail when the
         view was pinned to the bottom, otherwise keep the content anchored by shifting
-        the position by the number of rows trimmed above it."""
+        the position by the number of rows trimmed above it and show how many new rows
+        arrived below the current view."""
         if not self._update_latched:
             return
         if self._was_at_bottom:
             self.scrollToBottom()
-        elif self._rows_removed_above:
-            scrollbar = self.verticalScrollBar()
-            scrollbar.setValue(max(0, scrollbar.value() - self._rows_removed_above))
+        else:
+            if self._rows_removed_above:
+                scrollbar = self.verticalScrollBar()
+                scrollbar.setValue(max(0, scrollbar.value() - self._rows_removed_above))
+            if inserted:
+                self._new_below += inserted
+                self._jump_button.setText(f"{self._new_below} new")
+                self._place_jump_button()
+                self._jump_button.show()
         self._update_latched = False
         self._rows_removed_above = 0
 
@@ -472,8 +590,39 @@ class BecLogTableView(QTableView):
             self._rows_removed_above = last - first + 1
 
     @SafeSlot(QModelIndex, int, int)
-    def _on_update_finished(self, *_):
+    def _on_rows_inserted(self, _parent, first: int, last: int):
+        # only count rows arriving from a live batch - filter relaxations re-insert
+        # previously hidden rows and must not read as "new logs"
+        inserted = last - first + 1 if self._source_model()._live_append else 0
+        self._finish_update(inserted=inserted)
+
+    @SafeSlot(QModelIndex, int, int)
+    def _on_rows_removed(self, *_):
+        # close removal-only cycles (e.g. a filter tightening) so the latch cannot go
+        # stale and yank the scroll position on a later, unrelated insert
         self._finish_update()
+
+    @SafeSlot()
+    def _on_model_reset(self):
+        self._new_below = 0
+        self._jump_button.hide()
+        self._finish_update()
+
+    def _show_header_menu(self, pos):
+        menu = QMenu(self)
+        for col, name in enumerate(_CONST.headers):
+            if name == "message":
+                continue
+            action = QAction(name.replace("_", " "), menu)
+            action.setCheckable(True)
+            action.setChecked(not self.isColumnHidden(col))
+            action.toggled.connect(partial(self.set_column_shown, col))
+            menu.addAction(action)
+        menu.exec(self.horizontalHeader().mapToGlobal(pos))
+        menu.deleteLater()
+
+    def set_column_shown(self, col: int, shown: bool):
+        self.setColumnHidden(col, not shown)
 
 
 class LogPanel(BECWidget, QWidget):
@@ -498,10 +647,16 @@ class LogPanel(BECWidget, QWidget):
         if show_toolbar:
             self._setup_toolbar(client=self.client)
         self._setup_table_view(max_message_width=max_message_width)
-        self._update_service_filter(service_filter or set())
+        self._setup_detail_pane()
+        self._update_service_filter(service_filter)
         if show_toolbar:
             self._connect_toolbar()
+            if level_filter is not None:
+                self._toolbar.set_level(level_filter)
+            if service_filter is not None:
+                self._toolbar.set_service_selection(service_filter)
         self._proxy.show_service_column.connect(self._show_service_column)
+        self._setup_shortcuts(show_toolbar)
         self._table.scrollToBottom()
 
     def _setup_models(self, service_filter: set[str] | None, level_filter: LogLevel | None):
@@ -515,31 +670,255 @@ class LogPanel(BECWidget, QWidget):
         """Setup the table view."""
         self._table = BecLogTableView(self, max_message_width=max_message_width)
         self._table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self._layout.addWidget(self._table)
         self._table.setModel(self._proxy)
         self._table.setHorizontalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
         self._table.setTextElideMode(Qt.TextElideMode.ElideRight)
         self._table.setWordWrap(False)
-        self._table.resizeColumnsToContents()
+        bold_font = QFont(self._table.font())
+        bold_font.setBold(True)
+        bold_metrics = QFontMetrics(bold_font)
+        metrics = self._table.fontMetrics()
+        self._table.setColumnWidth(0, bold_metrics.horizontalAdvance("CRITICAL") + 14)
+        self._table.setColumnWidth(1, metrics.horizontalAdvance("00:00:00.000") + 12)
+        self._table.setColumnWidth(2, metrics.horizontalAdvance("DeviceServerXX") + 12)
+        self._table.horizontalHeader().setSectionResizeMode(
+            _CONST.headers.index("message"), QHeaderView.ResizeMode.Stretch
+        )
+        self._table.setColumnHidden(_CONST.headers.index("function"), True)
+        self._table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._table.customContextMenuRequested.connect(self._show_table_context_menu)
+        self._table.doubleClicked.connect(self._show_details)
+
+    def _setup_detail_pane(self) -> None:
+        """A collapsible pane under the table showing the full text of the selected record."""
+        self._detail = QWidget(self)
+        detail_layout = QVBoxLayout(self._detail)
+        detail_layout.setContentsMargins(4, 2, 4, 2)
+        header_layout = QHBoxLayout()
+        self._detail_header = QLabel(self._detail)
+        header_layout.addWidget(self._detail_header)
+        header_layout.addStretch()
+        copy_button = QToolButton(self._detail)
+        copy_button.setIcon(material_icon("content_copy", size=(16, 16), convert_to_pixmap=False))
+        copy_button.setToolTip("Copy the full message")
+        copy_button.clicked.connect(
+            lambda: QApplication.clipboard().setText(self._detail_text.toPlainText())
+        )
+        header_layout.addWidget(copy_button)
+        close_button = QToolButton(self._detail)
+        close_button.setIcon(material_icon("close", size=(16, 16), convert_to_pixmap=False))
+        close_button.setToolTip("Close details (Esc)")
+        close_button.clicked.connect(self._hide_details)
+        header_layout.addWidget(close_button)
+        detail_layout.addLayout(header_layout)
+        self._detail_text = QPlainTextEdit(self._detail)
+        self._detail_text.setReadOnly(True)
+        self._detail_text.setFont(QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont))
+        detail_layout.addWidget(self._detail_text)
+        self._detail.hide()
+        self._detail_record: _LogRec | None = None
+        # set when the shown record was trimmed out of the buffer: the pane keeps its
+        # content instead of silently swapping to a neighboring row
+        self._detail_frozen = False
+
+        self._splitter = QSplitter(Qt.Orientation.Vertical, self)
+        self._splitter.addWidget(self._table)
+        self._splitter.addWidget(self._detail)
+        self._splitter.setStretchFactor(0, 3)
+        self._splitter.setStretchFactor(1, 1)
+        self._layout.addWidget(self._splitter)
+        self._table.selectionModel().currentRowChanged.connect(self._on_current_row_changed)
+        self._table.clicked.connect(self._on_row_clicked)
 
     def _setup_toolbar(self, client: BECClient):
         self._toolbar = LogPanelToolbar(self, client)
         self._layout.addWidget(self._toolbar)
 
     def _connect_toolbar(self):
-        self._toolbar.services_selected.connect(self._proxy.update_service_filter)
-        self._toolbar.search_textbox.textChanged.connect(self._proxy.update_filter_text)
-        self._toolbar.level_changed.connect(self._proxy.update_level_filter)
+        self._toolbar.services_selected.connect(self._on_services_selected)
+        self._toolbar.text_filter_changed.connect(self._proxy.update_filter_text)
+        self._toolbar.level_changed.connect(self._on_level_changed)
         self._toolbar.fuzzy_changed.connect(self._proxy.update_fuzzy)
         self._toolbar.timestamp_update.connect(self._proxy.update_timestamp)
         self._toolbar.pause_button.clicked.connect(self._model.log_queue.toggle_pause)
-        self._model.log_queue.paused.connect(self._toolbar._update_pause_button_icon)
+        self._toolbar.clear_button.clicked.connect(self._clear_view)
+        self._model.log_queue.paused.connect(self._toolbar.set_paused)
+        self._model.log_queue.buffered.connect(self._toolbar.set_buffered)
+        # model signals too: source inserts that are entirely filtered out emit nothing
+        # on the proxy, and the "/ total" side must not go stale
+        for signal_model in (self._proxy, self._model):
+            signal_model.rowsInserted.connect(self._refresh_match_label)
+            signal_model.rowsRemoved.connect(self._refresh_match_label)
+            signal_model.modelReset.connect(self._refresh_match_label)
+        self._proxy.layoutChanged.connect(self._refresh_match_label)
+        self._refresh_match_label()
 
-    def _update_service_filter(self, filter: set[str]):
+    def _setup_shortcuts(self, has_toolbar: bool):
+        copy_shortcut = QShortcut(QKeySequence.StandardKey.Copy, self._table)
+        copy_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        copy_shortcut.activated.connect(self._copy_selection)
+        for key in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            details_shortcut = QShortcut(QKeySequence(key), self._table)
+            details_shortcut.setContext(Qt.ShortcutContext.WidgetShortcut)
+            details_shortcut.activated.connect(self._show_details)
+        escape_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Escape), self)
+        escape_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        escape_shortcut.activated.connect(self._hide_details)
+        if has_toolbar:
+            find_shortcut = QShortcut(QKeySequence.StandardKey.Find, self)
+            find_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+            find_shortcut.activated.connect(self._focus_search)
+
+    @SafeSlot()
+    def _focus_search(self):
+        self._toolbar.search_textbox.setFocus()
+        self._toolbar.search_textbox.selectAll()
+
+    @SafeSlot(object)
+    def _on_services_selected(self, services: set[str] | None):
+        self._proxy.update_service_filter(services)
+
+    @SafeSlot(object)
+    def _on_level_changed(self, level: LogLevel | None):
+        self._proxy.update_level_filter(level)
+
+    @SafeSlot()
+    def _refresh_match_label(self, *_):
+        self._toolbar.set_match_counts(self._proxy.rowCount(), self._model.rowCount())
+
+    @SafeSlot()
+    def _clear_view(self):
+        self._model.clear()
+        self._hide_details()
+
+    def _current_record(self) -> _LogRec | None:
+        index = self._table.currentIndex()
+        if not index.isValid():
+            return None
+        return self._model.record(self._proxy.mapToSource(index).row())
+
+    @SafeSlot()
+    @SafeSlot(QModelIndex)
+    def _show_details(self, *_):
+        rec = self._current_record()
+        if rec is None:
+            return
+        self._populate_detail(rec)
+        if self._detail.isHidden():
+            self._detail.show()
+            total = self._splitter.height()
+            self._splitter.setSizes([(total * 3) // 4, total // 4])
+
+    @SafeSlot()
+    def _hide_details(self):
+        self._detail.hide()
+        self._detail_record = None
+        self._detail_frozen = False
+
+    @SafeSlot(QModelIndex)
+    def _on_row_clicked(self, *_):
+        """A click is definitively user-driven: follow the selection, even out of a freeze."""
+        if self._detail.isHidden():
+            return
+        rec = self._current_record()
+        if rec is not None:
+            self._populate_detail(rec)
+
+    @SafeSlot(QModelIndex, QModelIndex)
+    def _on_current_row_changed(self, *_):
+        if self._detail.isHidden():
+            return
+        # defer: when the current row moves because of a buffer trim, this signal fires
+        # while the trimmed rows are still present - only after the update settles can we
+        # tell a user-driven move from the selection model relocating a removed row
+        QTimer.singleShot(0, self._sync_detail_to_selection)
+
+    @SafeSlot()
+    def _sync_detail_to_selection(self):
+        if self._detail.isHidden() or self._detail_frozen:
+            return
+        rec = self._current_record()
+        if rec is None or rec is self._detail_record:
+            return
+        shown = self._detail_record
+        if shown is not None and not any(r is shown for r in self._model._rows):
+            # the shown record was trimmed out of the buffer: keep the content visible
+            # instead of silently swapping to a neighboring row
+            self._detail_frozen = True
+            self._detail_header.setText(self._detail_header.text() + "  (no longer in buffer)")
+            return
+        self._populate_detail(rec)
+
+    def _populate_detail(self, rec: _LogRec):
+        self._detail_record = rec
+        self._detail_frozen = False
+        parts = [rec.level, rec.service_name, rec.timestamp_full or rec.timestamp, rec.function]
+        self._detail_header.setText("  |  ".join(p for p in parts if p))
+        self._detail_text.setPlainText(rec.message)
+
+    @SafeSlot()
+    def _copy_selection(self):
+        rows = sorted(self._table.selectionModel().selectedRows(), key=lambda i: i.row())
+        records = [self._model.record(self._proxy.mapToSource(index).row()) for index in rows]
+        if not records:
+            return
+        QApplication.clipboard().setText(
+            "\n".join(
+                f"{r.timestamp} [{r.level}] {r.service_name or ''} {r.message}" for r in records
+            )
+        )
+
+    def _show_table_context_menu(self, pos):
+        index = self._table.indexAt(pos)
+        menu = QMenu(self._table)
+        if index.isValid():
+            self._table.setCurrentIndex(index)
+            rec = self._current_record()
+            menu.addAction("Copy message", lambda: QApplication.clipboard().setText(rec.message))
+            menu.addAction("Copy selected rows", self._copy_selection)
+            menu.addAction("Show details", self._show_details)
+            if rec.service_name:
+                menu.addSeparator()
+                menu.addAction(
+                    f"Only logs from {rec.service_name}",
+                    partial(self._filter_service_only, rec.service_name),
+                )
+                menu.addAction(
+                    f"Hide {rec.service_name}", partial(self._filter_service_hide, rec.service_name)
+                )
+        menu.addSeparator()
+        menu.addAction("Jump to bottom", self._table.scrollToBottom)
+        menu.addAction("Clear view", self._clear_view)
+        menu.exec(self._table.viewport().mapToGlobal(pos))
+        menu.deleteLater()
+
+    def _buffered_services(self) -> set[str]:
+        return {r.service_name for r in self._model._rows if r.service_name}
+
+    def _filter_service_only(self, service: str):
+        if hasattr(self, "_toolbar"):
+            self._toolbar.add_known_services(self._buffered_services())
+            self._toolbar.set_service_selection({service})
+        else:
+            self._proxy.update_service_filter({service})
+
+    def _filter_service_hide(self, service: str):
+        if hasattr(self, "_toolbar"):
+            # seed the toolbar with the services actually present in the buffer so hiding
+            # one service cannot collaterally hide services unknown to service_status
+            self._toolbar.add_known_services(self._buffered_services())
+            self._toolbar.hide_service(service)
+        else:
+            known = self._buffered_services()
+            current = self._proxy._service_filter
+            base = known if current is None else set(current)
+            self._proxy.update_service_filter(base - {service})
+
+    def _update_service_filter(self, filter: set[str] | None):
         self._service_filter = filter
         self._proxy.update_service_filter(filter)
         self._table.setColumnHidden(
-            _CONST.headers.index("service_name"), len(self._service_filter) == 1
+            _CONST.headers.index("service_name"), filter is not None and len(filter) == 1
         )
 
     @SafeSlot(bool)
@@ -552,204 +931,328 @@ class LogPanel(BECWidget, QWidget):
     def cleanup(self):
         """Detach from the shared log queue so a closed panel stops receiving updates."""
         self._model.log_queue.new_records.disconnect(self._model._on_new_records)
+        if hasattr(self, "_toolbar"):
+            self._model.log_queue.paused.disconnect(self._toolbar.set_paused)
+            self._model.log_queue.buffered.disconnect(self._toolbar.set_buffered)
         super().cleanup()
 
 
+class _StayOpenMenu(QMenu):
+    """A menu whose checkable actions toggle without closing it, for multi-select filters.
+    Plain checkable QActions only - layouted QWidgetAction containers paint shifted or
+    clipped inside menus on macOS Qt 6.9+."""
+
+    def mouseReleaseEvent(self, event):
+        action = self.actionAt(event.pos())
+        if action is not None and action.isCheckable():
+            action.trigger()
+            return
+        super().mouseReleaseEvent(event)
+
+    def keyPressEvent(self, event):
+        action = self.activeAction()
+        if (
+            event.key() in (Qt.Key.Key_Space, Qt.Key.Key_Return, Qt.Key.Key_Enter)
+            and action is not None
+            and action.isCheckable()
+        ):
+            action.trigger()
+            return
+        super().keyPressEvent(event)
+
+
 class LogPanelToolbar(QWidget):
-    services_selected = Signal(set)
-    level_changed = Signal(LogLevel)
+    services_selected = Signal(object)  # set[str] | None (None = all services)
+    level_changed = Signal(object)  # LogLevel | None (None = all levels)
     fuzzy_changed = Signal(bool)
     timestamp_update = Signal(TimestampUpdate)
+    text_filter_changed = Signal(str)
+
+    _TIME_PRESETS = [
+        ("Last 1 min", 60),
+        ("Last 5 min", 300),
+        ("Last 15 min", 900),
+        ("Last 1 h", 3600),
+    ]
 
     def __init__(self, parent: QWidget | None = None, client: BECClient | None = None) -> None:
-        """A toolbar for the logpanel, mainly used for managing the states of filters"""
+        """A toolbar for the logpanel, managing the states of all log filters."""
         super().__init__(parent)
-
-        # in unix time
-        self._timestamp_start: QDateTime | None = None
-        self._timestamp_end: QDateTime | None = None
-
-        self._unique_service_names: set[str] = set()
-        self._services_selected: set[str] | None = None
+        self.client = client
+        self._known_services: set[str] = set()
+        # None means "all services" - the include-list has not been narrowed
+        self._checked_services: set[str] | None = None
 
         self._layout = QHBoxLayout(self)
+        self._layout.setContentsMargins(0, 0, 0, 0)
 
         if client is not None:
-            self.client = client
-            self.service_choice_button = QPushButton("Select services", self)
-            self._layout.addWidget(self.service_choice_button)
-            self.service_choice_button.clicked.connect(self._open_service_filter_dialog)
+            self.service_button = QToolButton(self)
+            self.service_button.setText("All services")
+            self.service_button.setIcon(
+                material_icon("dns", size=(20, 20), convert_to_pixmap=False)
+            )
+            self.service_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+            self.service_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+            self.service_button.setToolTip("Choose which services' logs to show")
+            self._service_menu = _StayOpenMenu(self.service_button)
+            self._service_menu.aboutToShow.connect(self._rebuild_service_menu)
+            self.service_button.setMenu(self._service_menu)
+            self._layout.addWidget(self.service_button)
 
         self.filter_level_dropdown = self._log_level_box()
         self._layout.addWidget(self.filter_level_dropdown)
-        self.filter_level_dropdown.currentTextChanged.connect(self._emit_level)
+        self.filter_level_dropdown.currentIndexChanged.connect(self._emit_level)
 
-        self._string_search_box()
-
-        self.timerange_button = QPushButton("Set time range", self)
+        self.timerange_button = QToolButton(self)
+        self.timerange_button.setText("All time")
+        self.timerange_button.setIcon(
+            material_icon("schedule", size=(20, 20), convert_to_pixmap=False)
+        )
+        self.timerange_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.timerange_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.timerange_button.setToolTip("Show only logs from a time range")
+        self._time_menu = QMenu(self.timerange_button)
+        for label, seconds in self._TIME_PRESETS:
+            self._time_menu.addAction(label, partial(self._apply_time_preset, label, seconds))
+        self._time_menu.addAction("All time", partial(self._apply_time_preset, "All time", None))
+        self._time_menu.addSeparator()
+        self._time_menu.addAction("Custom range...", self._open_custom_range_dialog)
+        self.timerange_button.setMenu(self._time_menu)
         self._layout.addWidget(self.timerange_button)
-        self.timerange_button.clicked.connect(self._open_datetime_dialog)
 
-        self.pause_button = QToolButton()
+        self.search_textbox = QLineEdit(self)
+        self.search_textbox.setPlaceholderText("Filter messages...")
+        self.search_textbox.setClearButtonEnabled(True)
+        self.search_textbox.addAction(
+            material_icon("search", size=(16, 16), convert_to_pixmap=False),
+            QLineEdit.ActionPosition.LeadingPosition,
+        )
+        self.search_textbox.setMinimumWidth(120)
+        self._search_debounce = QTimer(self, singleShot=True, interval=_CONST.SEARCH_DEBOUNCE_MS)
+        self._search_debounce.timeout.connect(self._emit_search_text)
+        self.search_textbox.textChanged.connect(self._on_search_edited)
+        self._layout.addWidget(self.search_textbox, 1)
+
+        self.fuzzy_button = QToolButton(self)
+        self.fuzzy_button.setText("Fuzzy")
+        self.fuzzy_button.setCheckable(True)
+        self.fuzzy_button.setToolTip("Approximate (fuzzy) message matching")
+        self.fuzzy_button.toggled.connect(self.fuzzy_changed)
+        self._layout.addWidget(self.fuzzy_button)
+
+        self.match_label = QLabel(self)
+        self._layout.addWidget(self.match_label)
+
+        self.pause_button = QToolButton(self)
+        self.pause_button.setCheckable(True)
         self.pause_button.setIcon(material_icon("pause", size=(20, 20), convert_to_pixmap=False))
+        self.pause_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self._PLAYING_TOOLTIP = "Pause live log updates."
         self._PAUSED_TOOLTIP = "Continue live log updates."
         self.pause_button.setToolTip(self._PLAYING_TOOLTIP)
         self._layout.addWidget(self.pause_button)
 
+        self.clear_button = QToolButton(self)
+        self.clear_button.setIcon(
+            material_icon("delete_sweep", size=(20, 20), convert_to_pixmap=False)
+        )
+        self.clear_button.setToolTip("Clear the view (log history is kept)")
+        self._layout.addWidget(self.clear_button)
+
+    # ---------------------------------------------------------------- level filter
+
+    def _log_level_box(self) -> QComboBox:
+        box = QComboBox(self)
+        box.setToolTip("Show logs at or above the selected level.")
+        box.addItem("All levels", None)
+        for level in [
+            LogLevel.TRACE,
+            LogLevel.DEBUG,
+            LogLevel.INFO,
+            LogLevel.SUCCESS,
+            LogLevel.WARNING,
+            LogLevel.ERROR,
+            LogLevel.CRITICAL,
+        ]:
+            box.addItem(level.name, level)
+        return box
+
+    @SafeSlot(int)
+    def _emit_level(self, index: int):
+        self.level_changed.emit(self.filter_level_dropdown.itemData(index))
+
+    def set_level(self, level: LogLevel | None):
+        """Set the level dropdown to the given threshold (None = all levels). Levels not
+        listed in the dropdown (CONSOLE_LOG*) leave the dropdown untouched so a
+        preapplied proxy filter is not wiped."""
+        index = self.filter_level_dropdown.findData(level)
+        if index != -1:
+            self.filter_level_dropdown.setCurrentIndex(index)
+
+    # ---------------------------------------------------------------- service filter
+
+    def service_list_update(self, services_info: dict[str, StatusMessage]):
+        """Extend the list of known services (dead services stay filterable)."""
+        self._known_services |= {s.split("/")[0] for s in services_info.keys()}
+
+    def _rebuild_service_menu(self):
+        self._service_menu.clear()
+        if self.client is not None:
+            self.service_list_update(self.client.service_status)
+        self._service_menu.addAction("All services", self._select_all_services)
+        self._service_menu.addSeparator()
+        checked = self._known_services if self._checked_services is None else self._checked_services
+        for service in sorted(self._known_services):
+            action = QAction(service, self._service_menu)
+            action.setCheckable(True)
+            action.setChecked(service in checked)
+            action.toggled.connect(partial(self._on_service_toggled, service))
+            self._service_menu.addAction(action)
+
+    def add_known_services(self, services: set[str]):
+        """Extend the known-service list with names observed outside service_status
+        (e.g. services present in buffered log records)."""
+        self._known_services |= services
+
+    def _on_service_toggled(self, service: str, checked: bool):
+        current = (
+            set(self._known_services) if self._checked_services is None else self._checked_services
+        )
+        if checked:
+            current.add(service)
+        else:
+            current.discard(service)
+        # everything re-checked = no filter, robust to new services appearing later; only
+        # meaningful here, where the open menu has just populated _known_services
+        if self._known_services and current >= self._known_services:
+            current = None
+        self._set_checked_services(current)
+
+    def _select_all_services(self):
+        self._set_checked_services(None)
+
+    def set_service_selection(self, services: set[str] | None):
+        """Select exactly the given services (None = all). Used by the panel context menu."""
+        if services:
+            self._known_services |= services
+        self._set_checked_services(None if services is None else set(services))
+
+    def hide_service(self, service: str):
+        """Remove one service from the current selection. Callers should first extend the
+        known services via add_known_services with what is actually visible."""
+        self._known_services.add(service)
+        base = (
+            set(self._known_services)
+            if self._checked_services is None
+            else set(self._checked_services)
+        )
+        base.discard(service)
+        self._set_checked_services(base)
+
+    def _set_checked_services(self, services: set[str] | None):
+        self._checked_services = services
+        if services is None:
+            self.service_button.setText("All services")
+        elif len(services) == 0:
+            self.service_button.setText("No services")
+        elif len(services) == 1:
+            self.service_button.setText(next(iter(services)))
+        else:
+            self.service_button.setText(f"{len(services)} services")
+        self.services_selected.emit(services)
+
+    # ---------------------------------------------------------------- time filter
+
+    def _apply_time_preset(self, label: str, seconds: int | None):
+        if seconds is None:
+            self.timestamp_update.emit(TimestampUpdate(value=None, update_type="start"))
+            self.timestamp_update.emit(TimestampUpdate(value=None, update_type="end"))
+            self.timerange_button.setText("All time")
+            return
+        start = QDateTime.currentDateTime().addSecs(-seconds)
+        self.timestamp_update.emit(TimestampUpdate(value=start, update_type="start"))
+        self.timestamp_update.emit(TimestampUpdate(value=None, update_type="end"))
+        self.timerange_button.setText(f">= {start.toString('HH:mm:ss')}")
+
+    @SafeSlot()
+    def _open_custom_range_dialog(self):
+        """One dialog with both bounds - replaces the former nested calendar dialogs."""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Time range")
+        form = QFormLayout(dialog)
+        bounds: dict[str, tuple[QCheckBox, QDateTimeEdit]] = {}
+        for bound, default in [
+            ("start", QDateTime.currentDateTime().addSecs(-3600)),
+            ("end", QDateTime.currentDateTime()),
+        ]:
+            enable = QCheckBox("From" if bound == "start" else "Until", dialog)
+            edit = QDateTimeEdit(default, dialog)
+            edit.setCalendarPopup(True)
+            edit.setDisplayFormat("yyyy-MM-dd HH:mm:ss")
+            edit.setEnabled(False)
+            enable.toggled.connect(edit.setEnabled)
+            form.addRow(enable, edit)
+            bounds[bound] = (enable, edit)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, dialog
+        )
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        form.addRow(buttons)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            values = {}
+            for bound, (enable, edit) in bounds.items():
+                values[bound] = edit.dateTime() if enable.isChecked() else None
+                self.timestamp_update.emit(TimestampUpdate(values[bound], bound))
+            start, end = values["start"], values["end"]
+            if start and end:
+                text = f"{start.toString('HH:mm')} - {end.toString('HH:mm')}"
+            elif start:
+                text = f">= {start.toString('HH:mm:ss')}"
+            elif end:
+                text = f"<= {end.toString('HH:mm:ss')}"
+            else:
+                text = "All time"
+            self.timerange_button.setText(text)
+        dialog.deleteLater()
+
+    # ---------------------------------------------------------------- search
+
+    @SafeSlot(str)
+    def _on_search_edited(self, text: str):
+        if not text:
+            self._search_debounce.stop()
+            self.text_filter_changed.emit("")
+            return
+        self._search_debounce.start()
+
+    @SafeSlot()
+    def _emit_search_text(self):
+        self.text_filter_changed.emit(self.search_textbox.text())
+
+    # ---------------------------------------------------------------- status
+
+    def set_match_counts(self, shown: int, total: int):
+        self.match_label.setText(f"{shown} / {total}" if shown != total else str(total))
+
     @SafeSlot(bool)
-    def _update_pause_button_icon(self, paused):
+    def set_paused(self, paused: bool):
+        self.pause_button.setChecked(paused)
         if paused:
             icon = "play_arrow"
             tooltip = self._PAUSED_TOOLTIP
         else:
             icon = "pause"
             tooltip = self._PLAYING_TOOLTIP
+            self.pause_button.setText("")
         self.pause_button.setIcon(material_icon(icon, size=(20, 20), convert_to_pixmap=False))
         self.pause_button.setToolTip(tooltip)
 
-    def _string_search_box(self):
-        self._layout.addWidget(QLabel("Search: "))
-        self.search_textbox = QLineEdit()
-        self._layout.addWidget(self.search_textbox)
-        self._layout.addWidget(QLabel("Fuzzy: "))
-        self.fuzzy = QCheckBox()
-        self._layout.addWidget(self.fuzzy)
-        self.fuzzy.checkStateChanged.connect(self._emit_fuzzy)
-
-    def _log_level_box(self):
-        box = QComboBox()
-        box.setToolTip("Display logs with equal or greater significance to the selected level.")
-        [box.addItem(level.name) for level in LogLevel]
-        return box
-
-    @SafeSlot(str)
-    def _emit_level(self, level: str):
-        self.level_changed.emit(LogLevel[level])
-
-    @SafeSlot(Qt.CheckState)
-    def _emit_fuzzy(self, state: Qt.CheckState):
-        self.fuzzy_changed.emit(state == Qt.CheckState.Checked)
-
-    def _current_ts(self, selection_type: Literal["start", "end"]):
-        if selection_type == "start":
-            return self._timestamp_start
-        elif selection_type == "end":
-            return self._timestamp_end
-        else:
-            raise ValueError(f"timestamps can only be for the start or end, not {selection_type}")
-
-    @SafeSlot()
-    def _open_datetime_dialog(self):
-        """Open dialog window for timestamp filter selection"""
-        self._dt_dialog = QDialog(self)
-        self._dt_dialog.setWindowTitle("Time range selection")
-        layout = QVBoxLayout()
-        self._dt_dialog.setLayout(layout)
-
-        label_start = QLabel(parent=self._dt_dialog)
-        label_end = QLabel(parent=self._dt_dialog)
-
-        def date_button_set(selection_type: Literal["start", "end"], label: QLabel):
-            dt = self._current_ts(selection_type)
-            _layout = QHBoxLayout()
-            layout.addLayout(_layout)
-            date_button = QPushButton(f"Time {selection_type}", parent=self._dt_dialog)
-            _layout.addWidget(date_button)
-            label.setText(dt.toString() if dt else "not selected")
-            _layout.addWidget(label)
-            date_button.clicked.connect(partial(self._open_cal_dialog, selection_type, label))
-            date_clear_button = QPushButton("clear", parent=self._dt_dialog)
-            date_clear_button.clicked.connect(
-                lambda: (
-                    partial(self._update_time, selection_type)(None),
-                    label.setText("not selected"),
-                )
-            )
-            _layout.addWidget(date_clear_button)
-
-        date_button_set("start", label_start)
-        date_button_set("end", label_end)
-
-        close_button = QPushButton("Close", parent=self._dt_dialog)
-        close_button.clicked.connect(self._dt_dialog.accept)
-        layout.addWidget(close_button)
-
-        self._dt_dialog.exec()
-        self._dt_dialog.deleteLater()
-
-    def _open_cal_dialog(self, selection_type: Literal["start", "end"], label: QLabel):
-        """Open dialog window for timestamp filter selection"""
-        dt = self._current_ts(selection_type) or QDateTime.currentDateTime()
-        label.setText(dt.toString() if dt else "not selected")
-        if selection_type == "start":
-            self._timestamp_start = dt
-        else:
-            self._timestamp_end = dt
-        self._cal_dialog = QDialog(self)
-        self._cal_dialog.setWindowTitle(f"Select time range {selection_type}")
-        layout = QVBoxLayout()
-        self._cal_dialog.setLayout(layout)
-        cal = QDateTimeEdit(parent=self._cal_dialog)
-        cal.setCalendarPopup(True)
-        cal.setDateTime(dt)
-        cal.setDisplayFormat("yyyy-MM-dd HH:mm:ss.zzz")
-        cal.dateTimeChanged.connect(partial(self._update_time, selection_type))
-        layout.addWidget(cal)
-        close_button = QPushButton("Close", parent=self._cal_dialog)
-        close_button.clicked.connect(self._cal_dialog.accept)
-        layout.addWidget(close_button)
-
-        self._cal_dialog.exec()
-        self._cal_dialog.deleteLater()
-
-    def _update_time(self, selection_type: Literal["start", "end"], dt: QDateTime | None):
-        if selection_type == "start":
-            self._timestamp_start = dt
-        else:
-            self._timestamp_end = dt
-        self.timestamp_update.emit(TimestampUpdate(value=dt, update_type=selection_type))
-
-    def service_list_update(self, services_info: dict[str, StatusMessage]):
-        """Change the list of services which can be selected"""
-        self._unique_service_names = set([s.split("/")[0] for s in services_info.keys()])
-
-    @SafeSlot()
-    def _open_service_filter_dialog(self):
-        self.service_list_update(self.client.service_status)
-        if len(self._unique_service_names) == 0:
-            return
-        if self._services_selected is None:
-            self._services_selected = set(self._unique_service_names)
-        self._svc_dialog = QDialog(self)
-        self._svc_dialog.setWindowTitle("Select services to show logs from")
-        layout = QVBoxLayout()
-        self._svc_dialog.setLayout(layout)
-
-        service_cb_grid = QGridLayout()
-        layout.addLayout(service_cb_grid)
-
-        def check_box(name: str, checked: Qt.CheckState):
-            if checked == Qt.CheckState.Checked:
-                self._services_selected.add(name)
-            else:
-                if name in self._services_selected:
-                    self._services_selected.remove(name)
-            self.services_selected.emit(self._services_selected)
-
-        for i, svc in enumerate(self._unique_service_names):
-            service_cb_grid.addWidget(QLabel(svc, parent=self._svc_dialog), i, 0)
-            cb = QCheckBox(parent=self._svc_dialog)
-            cb.setChecked(svc in self._services_selected)
-            cb.checkStateChanged.connect(partial(check_box, svc))
-            service_cb_grid.addWidget(cb, i, 1)
-
-        close_button = QPushButton("Close", parent=self._svc_dialog)
-        close_button.clicked.connect(self._svc_dialog.accept)
-        layout.addWidget(close_button)
-
-        self._svc_dialog.exec()
-        self._svc_dialog.deleteLater()
+    @SafeSlot(int)
+    def set_buffered(self, count: int):
+        if self.pause_button.isChecked():
+            self.pause_button.setText(str(count))
 
 
 if __name__ == "__main__":  # pragma: no cover
