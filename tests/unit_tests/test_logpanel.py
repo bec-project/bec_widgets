@@ -462,6 +462,25 @@ def test_log_panel_set_level_with_unlisted_level_keeps_filter(qtbot, log_panel: 
     assert log_panel._toolbar.filter_level_dropdown.currentIndex() == 0
 
 
+def test_log_panel_font_size_property(qtbot, log_panel: LogPanel):
+    from qtpy.QtGui import QFontMetrics
+
+    assert log_panel.font_size == 0  # default: system font size
+    default_point_size = log_panel._table.font().pointSize()
+    default_level_width = log_panel._table.columnWidth(0)
+
+    log_panel.font_size = 16
+    assert log_panel.font_size == 16
+    assert log_panel._table.font().pointSize() == 16
+    assert log_panel._detail_text.font().pointSize() == 16
+    metrics = QFontMetrics(log_panel._table.font())
+    assert log_panel._table.verticalHeader().defaultSectionSize() == metrics.height() + 4
+    assert log_panel._table.columnWidth(0) > default_level_width  # widths recomputed
+
+    log_panel.font_size = 0  # back to system default
+    assert log_panel._table.font().pointSize() == default_point_size
+    assert log_panel._table.columnWidth(0) == default_level_width
+
 
 def test_log_panel_custom_range_dialog_prefills_active_bounds(qtbot, log_panel: LogPanel):
     toolbar = log_panel._toolbar

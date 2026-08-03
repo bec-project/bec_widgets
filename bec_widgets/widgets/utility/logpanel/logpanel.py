@@ -64,7 +64,7 @@ from thefuzz import fuzz
 from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme, get_accent_colors
-from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 
 logger = bec_logger.logger
 
@@ -451,6 +451,9 @@ class _LogCellDelegate(QStyledItemDelegate):
         super().__init__(parent)
         self._bold_font: QFont | None = None
 
+    def reset_font_cache(self):
+        self._bold_font = None
+
     def paint(self, painter, option, index):
         if index.column() == 0:
             if self._bold_font is None:
@@ -487,10 +490,9 @@ class BecLogTableView(QTableView):
         header.customContextMenuRequested.connect(self._show_header_menu)
         self.setHorizontalHeader(header)
         self.verticalHeader().hide()
-        self.setFont(QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont))
         self.setShowGrid(False)
         self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
-        self.verticalHeader().setDefaultSectionSize(self.fontMetrics().height() + 4)
+        self.apply_font(QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont))
         self.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         self.setSelectionMode(QTableView.SelectionMode.ExtendedSelection)
         self.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerItem)
@@ -513,6 +515,14 @@ class BecLogTableView(QTableView):
         self._jump_button.hide()
         self._jump_button.clicked.connect(self.scrollToBottom)
         self.verticalScrollBar().valueChanged.connect(self._on_scrolled)
+
+    def apply_font(self, font: QFont):
+        """Apply a new base font and recompute the row metrics that depend on it."""
+        self.setFont(font)
+        self.verticalHeader().setDefaultSectionSize(self.fontMetrics().height() + 4)
+        delegate = self.itemDelegate()
+        if isinstance(delegate, _LogCellDelegate):
+            delegate.reset_font_cache()
 
     def model(self) -> LogMsgProxyModel:
         return super().model()  # type: ignore
@@ -641,6 +651,7 @@ class LogPanel(BECWidget, QWidget):
         **kwargs,
     ) -> None:
         super().__init__(parent=parent, **kwargs)
+        self._font_size = 0
         self._setup_models(service_filter=service_filter, level_filter=level_filter)
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
@@ -674,13 +685,7 @@ class LogPanel(BECWidget, QWidget):
         self._table.setHorizontalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
         self._table.setTextElideMode(Qt.TextElideMode.ElideRight)
         self._table.setWordWrap(False)
-        bold_font = QFont(self._table.font())
-        bold_font.setBold(True)
-        bold_metrics = QFontMetrics(bold_font)
-        metrics = self._table.fontMetrics()
-        self._table.setColumnWidth(0, bold_metrics.horizontalAdvance("CRITICAL") + 14)
-        self._table.setColumnWidth(1, metrics.horizontalAdvance("00:00:00.000") + 12)
-        self._table.setColumnWidth(2, metrics.horizontalAdvance("DeviceServerXX") + 12)
+        self._apply_table_widths()
         self._table.horizontalHeader().setSectionResizeMode(
             _CONST.headers.index("message"), QHeaderView.ResizeMode.Stretch
         )
@@ -924,6 +929,31 @@ class LogPanel(BECWidget, QWidget):
     @SafeSlot(bool)
     def _show_service_column(self, show: bool):
         self._table.setColumnHidden(_CONST.headers.index("service_name"), not show)
+
+    def _apply_table_widths(self):
+        bold_font = QFont(self._table.font())
+        bold_font.setBold(True)
+        bold_metrics = QFontMetrics(bold_font)
+        metrics = self._table.fontMetrics()
+        self._table.setColumnWidth(0, bold_metrics.horizontalAdvance("CRITICAL") + 14)
+        self._table.setColumnWidth(1, metrics.horizontalAdvance("00:00:00.000") + 12)
+        self._table.setColumnWidth(2, metrics.horizontalAdvance("DeviceServerXX") + 12)
+
+    @SafeProperty(int, default=0)
+    def font_size(self) -> int:
+        """Point size of the log table and detail pane text. 0 uses the system default,
+        so profiles that never touched the property restore unchanged."""
+        return self._font_size
+
+    @font_size.setter
+    def font_size(self, size: int):
+        self._font_size = max(0, int(size))
+        font = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
+        if self._font_size > 0:
+            font.setPointSize(self._font_size)
+        self._table.apply_font(font)
+        self._apply_table_widths()
+        self._detail_text.setFont(font)
 
     def sizeHint(self) -> QSize:
         return QSize(600, 300)
