@@ -132,7 +132,8 @@ class ScanControl(BECWidget, QWidget):
         self._last_scan_fetch_watchdog.setSingleShot(True)
         self._last_scan_fetch_watchdog.setInterval(self.LAST_SCAN_FETCH_TIMEOUT_MS)
         self._last_scan_fetch_watchdog.timeout.connect(self._on_last_scan_parameters_timeout)
-        self._selected_scan: str | None = None
+        self._selected_scan: str = ""
+        self._scan_name_typed = False
 
         # Create and set main layout
         self._init_UI()
@@ -197,7 +198,9 @@ class ScanControl(BECWidget, QWidget):
         self.layout.addWidget(self.scan_control_group)
 
         # Connect signals
-        self.comboBox_scan_selection.currentTextChanged.connect(self.on_scan_selection_changed)
+        self.comboBox_scan_selection.currentIndexChanged.connect(self._on_scan_index_changed)
+        self.comboBox_scan_selection.currentTextChanged.connect(self._on_scan_text_changed)
+        self.comboBox_scan_selection.lineEdit().textEdited.connect(self._on_scan_name_typed)
         self.comboBox_scan_selection.lineEdit().editingFinished.connect(
             self.validate_scan_selection
         )
@@ -267,9 +270,13 @@ class ScanControl(BECWidget, QWidget):
         ]
 
     def _update_scan_selector(self) -> None:
-        """Apply the configured scan filter while preserving the current selection."""
-        current_scan = self.comboBox_scan_selection.currentText()
-        if current_scan:
+        """Apply the configured scan filter while preserving the confirmed selection.
+
+        The combo box text may hold a half-typed, unconfirmed name, so preservation and
+        change detection are keyed on the confirmed selection, never on the raw text.
+        """
+        confirmed_scan = self._selected_scan
+        if confirmed_scan:
             self.save_current_scan_parameters()
         # Read the raw filter: ``None`` means "unset", which the property never reports.
         allowed_scans = self.config.allowed_scans
@@ -289,14 +296,25 @@ class ScanControl(BECWidget, QWidget):
                     render_scan_tooltip_html(scan_name, self._scan_docstring(scan_name)),
                     Qt.ItemDataRole.ToolTipRole,
                 )
-            if current_scan in visible_scans:
-                self.comboBox_scan_selection.setCurrentText(current_scan)
+            if confirmed_scan in visible_scans:
+                self.comboBox_scan_selection.setCurrentText(confirmed_scan)
 
         self.scan_info_button.setEnabled(bool(visible_scans))
         self._update_run_button_state()
         self._update_selected_scan_tooltip()
-        if self.comboBox_scan_selection.currentText() != current_scan:
+        # Repopulation under QSignalBlocker suppressed any style updates.
+        self._update_validity_style(self.is_valid_scan(self.comboBox_scan_selection.currentText()))
+        if not visible_scans:
+            self._clear_scan_selection()
+        elif self.comboBox_scan_selection.currentText() != confirmed_scan:
             self.on_scan_selection_changed(self.comboBox_scan_selection.currentText())
+
+    def _clear_scan_selection(self) -> None:
+        """Drop the confirmed selection after the filter left the selector empty."""
+        if not self._selected_scan:
+            return
+        self._selected_scan = ""
+        self.reset_layout()
 
     def _update_run_button_state(self) -> None:
         """Start requires a selected scan and valid metadata."""
@@ -380,31 +398,44 @@ class ScanControl(BECWidget, QWidget):
         self._hide_scan_selector_settings_button = bool(hide)
         self.scan_selector_settings_button.setVisible(not self._hide_scan_selector_settings_button)
 
-    def on_scan_selection_changed(self, scan_name: str):
-        """Callback for the scan selection combo box.
+    def _on_scan_index_changed(self, index: int):
+        """The scan was selected from the dropdown, with the arrow keys or from code."""
+        self.on_scan_selection_changed(self.comboBox_scan_selection.itemText(index))
 
-        The combo box is editable, so the text changes with every keystroke. Only a name
-        that matches one of the listed scans switches the widget to that scan; any other
-        text is flagged as invalid input and reverted once editing is finished.
+    def _on_scan_name_typed(self, _scan_name: str):
+        """The scan name is being typed by the user and is not confirmed yet."""
+        self._scan_name_typed = True
+
+    def _on_scan_text_changed(self, scan_name: str):
+        """Callback for any text change of the editable scan selection combo box."""
+        self._update_validity_style(self.is_valid_scan(scan_name))
+        if self._scan_name_typed:
+            # A typed name only switches the scan once it is confirmed, so that the scan
+            # parameters are not rebuilt on every keystroke.
+            self._scan_name_typed = False
+            return
+        self.on_scan_selection_changed(scan_name)
+
+    def on_scan_selection_changed(self, scan_name: str):
+        """Switches the widget to the given scan and ignores names that are not listed.
 
         Args:
-            scan_name(str): Current text of the scan selection combo box.
+            scan_name(str): Name of the scan to switch to. Resolved case-insensitively to
+                the listed scan name.
         """
-        if not self.is_valid_scan(scan_name):
-            self._update_validity_style(False)
+        index = self.comboBox_scan_selection.findText(scan_name, Qt.MatchFixedString)
+        if index < 0:
             return
-        self._update_validity_style(True)
+        scan_name = self.comboBox_scan_selection.itemText(index)
         if scan_name == self._selected_scan:
             return
 
-        if self._selected_scan is not None:
+        if self._selected_scan:
             # Store the parameters of the scan we are leaving before its boxes are removed.
             self._save_scan_parameters(self._selected_scan)
         self._selected_scan = scan_name
         # Selecting by typing only changes the text; keep the current index in sync.
-        self.comboBox_scan_selection.setCurrentIndex(
-            self.comboBox_scan_selection.findText(scan_name)
-        )
+        self.comboBox_scan_selection.setCurrentIndex(index)
         self._update_selected_scan_tooltip()
         self.scan_selected.emit(scan_name)
         self.restore_scan_parameters(scan_name)
@@ -412,34 +443,44 @@ class ScanControl(BECWidget, QWidget):
     @SafeSlot()
     def validate_scan_selection(self):
         """
-        Resolve the typed text to a valid scan once the user finished editing.
+        Confirms or discards the typed scan name once the user finished editing.
 
-        A name that differs only in case is completed to the listed scan, anything else
+        A listed scan is selected, also if the typed name differs in case, anything else
         falls back to the last valid selection.
         """
-        scan_name = self.comboBox_scan_selection.currentText()
-        if self.is_valid_scan(scan_name):
+        index = self.comboBox_scan_selection.findText(
+            self.comboBox_scan_selection.currentText(), Qt.MatchFixedString
+        )
+        if index < 0:
+            # Fall back to the confirmed selection - unless the filter removed it from the
+            # selector meanwhile, in which case a hidden name must not be re-displayed.
+            self.comboBox_scan_selection.setCurrentText(
+                self._selected_scan if self.is_valid_scan(self._selected_scan) else ""
+            )
             return
-        index = self.comboBox_scan_selection.findText(scan_name, Qt.MatchFixedString)
-        if index >= 0:
-            self.comboBox_scan_selection.setCurrentIndex(index)
-            return
-        self.comboBox_scan_selection.setCurrentText(self._selected_scan or "")
+        self.comboBox_scan_selection.setCurrentIndex(index)
+        self.on_scan_selection_changed(self.comboBox_scan_selection.itemText(index))
 
     def is_valid_scan(self, scan_name: str) -> bool:
         """Returns True if the given name is one of the scans listed in the combo box.
 
+        Case-insensitive, matching the completer and the confirmation rule: a name that
+        will be accepted on confirm must not be styled as invalid while it is typed.
+
         Args:
             scan_name(str): Name of the scan to check.
         """
-        return bool(scan_name) and self.comboBox_scan_selection.findText(scan_name) >= 0
+        return (
+            bool(scan_name)
+            and self.comboBox_scan_selection.findText(scan_name, Qt.MatchFixedString) >= 0
+        )
 
     def _update_validity_style(self, is_valid: bool):
         """Highlights the scan selection combo box while it holds an unknown scan name."""
-        if is_valid:
-            self.comboBox_scan_selection.setStyleSheet("")
-            return
-        self.comboBox_scan_selection.setStyleSheet("QComboBox { border: 1px solid red; }")
+        style = "" if is_valid else "QComboBox { border: 1px solid red; }"
+        # Setting a style sheet repolishes the widget, so only do it on an actual change.
+        if self.comboBox_scan_selection.styleSheet() != style:
+            self.comboBox_scan_selection.setStyleSheet(style)
 
     @SafeSlot()
     @SafeSlot(bool)
@@ -449,7 +490,8 @@ class ScanControl(BECWidget, QWidget):
         """
         if not self.last_scan_button.isEnabled():
             return
-        current_scan = self.comboBox_scan_selection.currentText()
+        # A scan name that is typed but not confirmed yet must not be fetched.
+        current_scan = self.current_scan
         if not current_scan:
             # e.g. an empty selector after a filter change - nothing to restore
             return
@@ -605,7 +647,9 @@ class ScanControl(BECWidget, QWidget):
         if generation != self._last_scan_fetch_generation:
             # result of a timed-out or superseded fetch
             return
-        if self.comboBox_scan_selection.currentText() != scan_name:
+        # Compare against the confirmed selection: the combo box text may hold a scan name
+        # that is still being typed while the fetch completes.
+        if self.current_scan != scan_name:
             logger.debug(f"Discarding fetched parameters for {scan_name}: scan selection changed")
             return
 
@@ -636,8 +680,11 @@ class ScanControl(BECWidget, QWidget):
 
     @SafeProperty(str)
     def current_scan(self):
-        """Returns the scan name for the currently selected scan."""
-        return self.comboBox_scan_selection.currentText()
+        """Returns the scan name for the currently selected scan.
+
+        A scan name that is typed but not confirmed yet is not reported here.
+        """
+        return self._selected_scan
 
     @current_scan.setter
     def current_scan(self, scan_name: str):
@@ -646,9 +693,10 @@ class ScanControl(BECWidget, QWidget):
         Args:
             scan_name(str): Name of the scan to set as current.
         """
-        if not self.is_valid_scan(scan_name):
-            return
-        self.comboBox_scan_selection.setCurrentText(scan_name)
+        # Switch directly instead of relying on setCurrentText signal side effects: when
+        # the user has typed the exact target name without confirming it, the text does
+        # not change and no signal would fire, silently swallowing the request.
+        self.on_scan_selection_changed(scan_name)
 
     @SafeSlot(str)
     def set_current_scan(self, scan_name: str):
@@ -922,7 +970,7 @@ class ScanControl(BECWidget, QWidget):
 
     def save_current_scan_parameters(self):
         """Saves the current scan parameters to the scan control config for further use."""
-        self._save_scan_parameters(self.comboBox_scan_selection.currentText())
+        self._save_scan_parameters(self.current_scan)
 
     def _save_scan_parameters(self, scan_name: str):
         """Saves the parameters currently shown in the group boxes under the given scan name.
@@ -944,9 +992,9 @@ class ScanControl(BECWidget, QWidget):
     @SafeSlot(popup_error=True)
     def run_scan(self):
         """Starts the selected scan with the given parameters."""
-        # The scan name may still be edited when the run button is clicked.
+        # The scan name may be typed but not confirmed when the run button is clicked.
         self.validate_scan_selection()
-        scan_name = self.comboBox_scan_selection.currentText()
+        scan_name = self.current_scan
         if not scan_name:
             return
         args, kwargs = self.get_scan_parameters()
