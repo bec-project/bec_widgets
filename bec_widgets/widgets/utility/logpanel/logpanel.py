@@ -43,7 +43,7 @@ from qtpy.QtWidgets import (
     QDateTimeEdit,
     QDialog,
     QDialogButtonBox,
-    QFormLayout,
+    QGridLayout,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -982,6 +982,8 @@ class LogPanelToolbar(QWidget):
         self._known_services: set[str] = set()
         # None means "all services" - the include-list has not been narrowed
         self._checked_services: set[str] | None = None
+        self._active_start: QDateTime | None = None
+        self._active_end: QDateTime | None = None
 
         self._layout = QHBoxLayout(self)
         self._layout.setContentsMargins(0, 0, 0, 0)
@@ -1166,56 +1168,76 @@ class LogPanelToolbar(QWidget):
 
     def _apply_time_preset(self, label: str, seconds: int | None):
         if seconds is None:
-            self.timestamp_update.emit(TimestampUpdate(value=None, update_type="start"))
-            self.timestamp_update.emit(TimestampUpdate(value=None, update_type="end"))
-            self.timerange_button.setText("All time")
+            self._set_time_range(None, None)
             return
-        start = QDateTime.currentDateTime().addSecs(-seconds)
-        self.timestamp_update.emit(TimestampUpdate(value=start, update_type="start"))
-        self.timestamp_update.emit(TimestampUpdate(value=None, update_type="end"))
-        self.timerange_button.setText(f">= {start.toString('HH:mm:ss')}")
+        self._set_time_range(QDateTime.currentDateTime().addSecs(-seconds), None)
 
-    @SafeSlot()
-    def _open_custom_range_dialog(self):
-        """One dialog with both bounds - replaces the former nested calendar dialogs."""
+    def _set_time_range(self, start: QDateTime | None, end: QDateTime | None):
+        """Apply both bounds, remember them for the custom dialog, and label the button."""
+        self._active_start = start
+        self._active_end = end
+        self.timestamp_update.emit(TimestampUpdate(value=start, update_type="start"))
+        self.timestamp_update.emit(TimestampUpdate(value=end, update_type="end"))
+        if start and end:
+            text = f"{start.toString('HH:mm')} - {end.toString('HH:mm')}"
+        elif start:
+            text = f">= {start.toString('HH:mm:ss')}"
+        elif end:
+            text = f"<= {end.toString('HH:mm:ss')}"
+        else:
+            text = "All time"
+        self.timerange_button.setText(text)
+
+    def _build_custom_range_dialog(
+        self,
+    ) -> tuple[QDialog, dict[str, tuple[QCheckBox, QDateTimeEdit]]]:
+        """Build the custom range dialog, prefilled with the currently active bounds."""
         dialog = QDialog(self)
         dialog.setWindowTitle("Time range")
-        form = QFormLayout(dialog)
+        layout = QGridLayout(dialog)
+        layout.setContentsMargins(16, 16, 16, 12)
+        layout.setHorizontalSpacing(12)
+        layout.setVerticalSpacing(10)
         bounds: dict[str, tuple[QCheckBox, QDateTimeEdit]] = {}
-        for bound, default in [
-            ("start", QDateTime.currentDateTime().addSecs(-3600)),
-            ("end", QDateTime.currentDateTime()),
-        ]:
-            enable = QCheckBox("From" if bound == "start" else "Until", dialog)
-            edit = QDateTimeEdit(default, dialog)
+        rows = [
+            ("start", "From", self._active_start, QDateTime.currentDateTime().addSecs(-3600)),
+            ("end", "Until", self._active_end, QDateTime.currentDateTime()),
+        ]
+        for row, (bound, label, active, default) in enumerate(rows):
+            enable = QCheckBox(label, dialog)
+            edit = QDateTimeEdit(active or default, dialog)
             edit.setCalendarPopup(True)
             edit.setDisplayFormat("yyyy-MM-dd HH:mm:ss")
-            edit.setEnabled(False)
+            edit.setMinimumWidth(220)
+            edit.setEnabled(active is not None)
+            enable.setChecked(active is not None)
             enable.toggled.connect(edit.setEnabled)
-            form.addRow(enable, edit)
+            layout.addWidget(enable, row, 0)
+            layout.addWidget(edit, row, 1)
             bounds[bound] = (enable, edit)
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, dialog
         )
         buttons.accepted.connect(dialog.accept)
         buttons.rejected.connect(dialog.reject)
-        form.addRow(buttons)
+        layout.addWidget(buttons, len(rows), 0, 1, 2)
+        return dialog, bounds
+
+    @SafeSlot()
+    def _open_custom_range_dialog(self):
+        """One dialog with both bounds - replaces the former nested calendar dialogs."""
+        dialog, bounds = self._build_custom_range_dialog()
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            values = {}
-            for bound, (enable, edit) in bounds.items():
-                values[bound] = edit.dateTime() if enable.isChecked() else None
-                self.timestamp_update.emit(TimestampUpdate(values[bound], bound))
-            start, end = values["start"], values["end"]
-            if start and end:
-                text = f"{start.toString('HH:mm')} - {end.toString('HH:mm')}"
-            elif start:
-                text = f">= {start.toString('HH:mm:ss')}"
-            elif end:
-                text = f"<= {end.toString('HH:mm:ss')}"
-            else:
-                text = "All time"
-            self.timerange_button.setText(text)
+            self._apply_custom_range(bounds)
         dialog.deleteLater()
+
+    def _apply_custom_range(self, bounds: dict[str, tuple[QCheckBox, QDateTimeEdit]]):
+        start_enable, start_edit = bounds["start"]
+        end_enable, end_edit = bounds["end"]
+        self._set_time_range(
+            start_edit.dateTime() if start_enable.isChecked() else None,
+            end_edit.dateTime() if end_enable.isChecked() else None,
+        )
 
     # ---------------------------------------------------------------- search
 
