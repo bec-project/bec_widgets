@@ -462,6 +462,34 @@ def test_log_panel_set_level_with_unlisted_level_keeps_filter(qtbot, log_panel: 
     assert log_panel._toolbar.filter_level_dropdown.currentIndex() == 0
 
 
+
+def test_log_panel_custom_range_dialog_prefills_active_bounds(qtbot, log_panel: LogPanel):
+    toolbar = log_panel._toolbar
+    toolbar._apply_time_preset("Last 5 min", 300)
+    qtbot.waitUntil(lambda: log_panel._proxy._ts_start is not None, timeout=200)
+    dialog, bounds = toolbar._build_custom_range_dialog()
+    try:
+        start_enable, start_edit = bounds["start"]
+        end_enable, end_edit = bounds["end"]
+        # prefilled from the active preset instead of stale defaults
+        assert start_enable.isChecked()
+        assert start_edit.dateTime() == toolbar._active_start
+        assert not end_enable.isChecked()
+        # applying with an added end bound routes both bounds to the proxy
+        end_enable.setChecked(True)
+        end_edit.setDateTime(toolbar._active_start.addSecs(60))
+        toolbar._apply_custom_range(bounds)
+        qtbot.waitUntil(lambda: log_panel._proxy._ts_end is not None, timeout=200)
+        assert "-" in toolbar.timerange_button.text()
+        # and 'All time' clears everything again
+        toolbar._apply_time_preset("All time", None)
+        qtbot.waitUntil(lambda: log_panel._proxy._ts_start is None, timeout=200)
+        assert log_panel._proxy._ts_end is None
+        assert toolbar.timerange_button.text() == "All time"
+    finally:
+        dialog.deleteLater()
+
+
 def test_log_panel_colors_follow_theme(qtbot, log_panel: LogPanel):
     info_index = log_panel._model.index(1, 0)
     success_index = log_panel._model.index(2, 0)
