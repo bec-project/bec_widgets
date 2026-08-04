@@ -19,6 +19,7 @@ from qtpy.QtCore import (
     QAbstractTableModel,
     QCoreApplication,
     QDateTime,
+    QEvent,
     QModelIndex,
     QObject,
     QPersistentModelIndex,
@@ -503,9 +504,7 @@ class BecLogTableView(QTableView):
         self._update_latched = False
         self._new_below = 0
         self._jump_button = QToolButton(self.viewport())
-        self._jump_button.setIcon(
-            material_icon("vertical_align_bottom", size=(16, 16), convert_to_pixmap=False)
-        )
+        self._tint_jump_button_icon()
         self._jump_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self._jump_button.setToolTip("Jump to the newest logs and follow them")
         # palette-driven pill so it stands out over rows in both themes
@@ -541,6 +540,21 @@ class BecLogTableView(QTableView):
     def _source_model(self) -> BecLogsTableModel:
         model = self.model()
         return model.sourceModel() if isinstance(model, QSortFilterProxyModel) else model
+
+    def _tint_jump_button_icon(self):
+        """Tint the icon with the pill's text color (palette highlighted-text): the
+        default icon tint is the theme text color, which is dark-on-accent in light mode."""
+        color = self.palette().color(QPalette.ColorRole.HighlightedText)
+        self._jump_button.setIcon(
+            material_icon(
+                "vertical_align_bottom", size=(16, 16), color=color, convert_to_pixmap=False
+            )
+        )
+
+    def changeEvent(self, event):
+        super().changeEvent(event)
+        if event.type() == QEvent.Type.PaletteChange:
+            self._tint_jump_button_icon()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
