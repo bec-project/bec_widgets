@@ -170,9 +170,13 @@ class BecLogsQueue(BECConnector, QObject):
     def __init__(self, parent: QObject | None, maxlen: int = 2500, **kwargs) -> None:
         if BecLogsQueue._instance:
             raise RuntimeError("Create no more than one BecLogsQueue - use BecLogsQueue.instance()")
-        super().__init__(parent=parent, **kwargs)
+        # rpc_exposed=False: a background data pump with no RPC surface must not enter
+        # the RPC registry, where it would linger as a windowless connection
+        super().__init__(parent=parent, rpc_exposed=False, **kwargs)
         self._max_length = maxlen
         self._paused = False
+        self._attached_panels = 0
+        self._cleaned = False
         self._data = deque(
             (
                 item["data"]
@@ -209,13 +213,30 @@ class BecLogsQueue(BECConnector, QObject):
         self._paused = not self._paused
         self.paused.emit(self._paused)
 
+    def attach(self):
+        """Register a consumer panel; the queue stays alive while any panel is open."""
+        self._attached_panels += 1
+
+    def detach(self):
+        """Unregister a consumer panel. The last one tears the queue down - log history
+        survives in Redis and is re-read when the next panel opens."""
+        self._attached_panels -= 1
+        if self._attached_panels <= 0:
+            self.cleanup()
+
     def cleanup(self, *_):
-        """Stop listening to the Redis log stream"""
+        """Stop listening to the Redis log stream and release the singleton. Idempotent:
+        reachable from the last panel's detach, from tests, and from app quit."""
+        if self._cleaned:
+            return
+        self._cleaned = True
+        QCoreApplication.instance().aboutToQuit.disconnect(self.cleanup)
         self.bec_dispatcher.disconnect_slot(
             self._process_incoming_log_msg, [MessageEndpoints.log()]
         )
         self._update_timer.stop()
         BecLogsQueue._instance = None
+        self.deleteLater()
 
     @SafeSlot(verify_sender=True)
     def _process_incoming_log_msg(self, msg: dict, _metadata: dict):
@@ -244,6 +265,7 @@ class BecLogsTableModel(QAbstractTableModel):
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
         self.log_queue = BecLogsQueue.instance()
+        self.log_queue.attach()
         self._headers = _CONST.headers
         self._max_length = self.log_queue.max_length
         self._rows: list[_LogRec] = self.log_queue.snapshot_records()
@@ -975,11 +997,13 @@ class LogPanel(BECWidget, QWidget):
         return QSize(600, 300)
 
     def cleanup(self):
-        """Detach from the shared log queue so a closed panel stops receiving updates."""
+        """Detach from the shared log queue so a closed panel stops receiving updates.
+        The last panel's detach tears the queue down entirely."""
         self._model.log_queue.new_records.disconnect(self._model._on_new_records)
         if hasattr(self, "_toolbar"):
             self._model.log_queue.paused.disconnect(self._toolbar.set_paused)
             self._model.log_queue.buffered.disconnect(self._toolbar.set_buffered)
+        self._model.log_queue.detach()
         super().cleanup()
 
 
