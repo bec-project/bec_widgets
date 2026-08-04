@@ -39,7 +39,6 @@ from qtpy.QtGui import (
 from qtpy.QtWidgets import (
     QApplication,
     QCheckBox,
-    QComboBox,
     QDateTimeEdit,
     QDialog,
     QDialogButtonBox,
@@ -98,11 +97,15 @@ class _LogRec(NamedTuple):
     service_name: str | None
     message: str
     function: str | None
-    level_num: int | None
     ts: float
     message_lower: str
     raw: LogMessage
     timestamp_full: str
+
+
+def _levels_at_or_above(level: LogLevel) -> set[str]:
+    """Expand a threshold level into the include-set of level names at or above it."""
+    return {l.name for l in LogLevel if l.value >= level.value}
 
 
 def _to_record(msg: LogMessage) -> _LogRec:
@@ -115,13 +118,9 @@ def _to_record(msg: LogMessage) -> _LogRec:
     override (filterAcceptsRow, paint) is crash-class on PySide 6.10+.
     """
     level = msg.log_type.upper()
-    try:
-        level_num = LogLevel[level].value
-    except KeyError:
-        level_num = None
     log_msg = msg.log_msg
     if isinstance(log_msg, str):
-        return _LogRec(level, "", None, log_msg, None, level_num, 0.0, log_msg.lower(), msg, "")
+        return _LogRec(level, "", None, log_msg, None, 0.0, log_msg.lower(), msg, "")
     record = log_msg.get("record")
     if not isinstance(record, dict):
         record = {}
@@ -149,9 +148,7 @@ def _to_record(msg: LogMessage) -> _LogRec:
         ts_short = f"{moment:%H:%M:%S}.{moment.microsecond // 1000:03d}"
     else:
         ts_short = ts_repr
-    return _LogRec(
-        level, ts_short, service, message, function, level_num, ts, message.lower(), msg, ts_repr
-    )
+    return _LogRec(level, ts_short, service, message, function, ts, message.lower(), msg, ts_repr)
 
 
 class BecLogsQueue(BECConnector, QObject):
@@ -350,9 +347,13 @@ class LogMsgProxyModel(QSortFilterProxyModel):
         level_filter: LogLevel | None = None,
     ):
         super().__init__(parent)
-        # None means "no service filter"; an explicit set (possibly empty) is an include-list
+        # None means "no filter"; an explicit set (possibly empty) is an include-list.
+        # The constructor's level_filter is a threshold for backward compatibility and
+        # expands to "that level and above".
         self._service_filter: set[str] | None = service_filter
-        self._level_num: int | None = level_filter.value if level_filter is not None else None
+        self._level_filter: set[str] | None = (
+            _levels_at_or_above(level_filter) if level_filter is not None else None
+        )
         self._filter_text: str = ""
         self._fuzzy_search: bool = False
         self._ts_start: float | None = None
@@ -380,14 +381,16 @@ class LogMsgProxyModel(QSortFilterProxyModel):
         self.show_service_column.emit(filter is None or len(filter) != 1)
 
     @SafeSlot(None)
-    @SafeSlot(LogLevel)
-    def update_level_filter(self, filter: LogLevel | None):
-        """Filter to the selected log level.
+    @SafeSlot(None)
+    @SafeSlot(set)
+    def update_level_filter(self, filter: set[str] | None):
+        """Filter to the selected log levels.
 
         Args:
-            filter (LogLevel | None): lowest log level to show. None shows all levels."""
+            filter (set[str] | None): include-list of level names to show. None shows
+                every level; an empty set shows nothing."""
         self.beginFilterChange()
-        self._level_num = filter.value if filter is not None else None
+        self._level_filter = filter
         self.endFilterChange(QSortFilterProxyModel.Direction.Rows)
 
     @SafeSlot(str)
@@ -425,11 +428,7 @@ class LogMsgProxyModel(QSortFilterProxyModel):
         rec = self.sourceModel().record(source_row)
         if self._service_filter is not None and rec.service_name not in self._service_filter:
             return False
-        if (
-            self._level_num is not None
-            and rec.level_num is not None
-            and rec.level_num < self._level_num
-        ):
+        if self._level_filter is not None and rec.level not in self._level_filter:
             return False
         if self._ts_start is not None and rec.ts < self._ts_start:
             return False
@@ -666,7 +665,7 @@ class LogPanel(BECWidget, QWidget):
         if show_toolbar:
             self._connect_toolbar()
             if level_filter is not None:
-                self._toolbar.set_level(level_filter)
+                self._toolbar.set_level_selection(_levels_at_or_above(level_filter))
             if service_filter is not None:
                 self._toolbar.set_service_selection(service_filter)
         self._proxy.show_service_column.connect(self._show_service_column)
@@ -745,7 +744,7 @@ class LogPanel(BECWidget, QWidget):
     def _connect_toolbar(self):
         self._toolbar.services_selected.connect(self._on_services_selected)
         self._toolbar.text_filter_changed.connect(self._proxy.update_filter_text)
-        self._toolbar.level_changed.connect(self._on_level_changed)
+        self._toolbar.levels_selected.connect(self._on_levels_selected)
         self._toolbar.fuzzy_changed.connect(self._proxy.update_fuzzy)
         self._toolbar.timestamp_update.connect(self._proxy.update_timestamp)
         self._toolbar.pause_button.clicked.connect(self._model.log_queue.toggle_pause)
@@ -787,8 +786,8 @@ class LogPanel(BECWidget, QWidget):
         self._proxy.update_service_filter(services)
 
     @SafeSlot(object)
-    def _on_level_changed(self, level: LogLevel | None):
-        self._proxy.update_level_filter(level)
+    def _on_levels_selected(self, levels: set[str] | None):
+        self._proxy.update_level_filter(levels)
 
     @SafeSlot()
     def _refresh_match_label(self, *_):
@@ -996,7 +995,7 @@ class _StayOpenMenu(QMenu):
 
 class LogPanelToolbar(QWidget):
     services_selected = Signal(object)  # set[str] | None (None = all services)
-    level_changed = Signal(object)  # LogLevel | None (None = all levels)
+    levels_selected = Signal(object)  # set[str] | None (None = all levels)
     fuzzy_changed = Signal(bool)
     timestamp_update = Signal(TimestampUpdate)
     text_filter_changed = Signal(str)
@@ -1006,6 +1005,17 @@ class LogPanelToolbar(QWidget):
         ("Last 5 min", 300),
         ("Last 15 min", 900),
         ("Last 1 h", 3600),
+    ]
+    # the levels offered in the filter menu; CONSOLE_LOG* are internal plumbing levels
+    # and stay unlisted (visible while unfiltered, hidden by any narrowed selection)
+    _FILTER_LEVELS = [
+        LogLevel.TRACE,
+        LogLevel.DEBUG,
+        LogLevel.INFO,
+        LogLevel.SUCCESS,
+        LogLevel.WARNING,
+        LogLevel.ERROR,
+        LogLevel.CRITICAL,
     ]
 
     def __init__(self, parent: QWidget | None = None, client: BECClient | None = None) -> None:
@@ -1035,9 +1045,30 @@ class LogPanelToolbar(QWidget):
             self.service_button.setMenu(self._service_menu)
             self._layout.addWidget(self.service_button)
 
-        self.filter_level_dropdown = self._log_level_box()
-        self._layout.addWidget(self.filter_level_dropdown)
-        self.filter_level_dropdown.currentIndexChanged.connect(self._emit_level)
+        self.level_button = QToolButton(self)
+        self.level_button.setText("All levels")
+        self.level_button.setIcon(
+            material_icon("filter_alt", size=(20, 20), convert_to_pixmap=False)
+        )
+        self.level_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.level_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.level_button.setToolTip("Choose which log levels to show")
+        self._level_menu = _StayOpenMenu(self.level_button)
+        self._level_menu.aboutToShow.connect(self._sync_level_menu)
+        self.level_button.setMenu(self._level_menu)
+        self._level_actions: dict[str, QAction] = {}
+        self._level_menu.addAction("All levels", self._select_all_levels)
+        self._level_menu.addSeparator()
+        for level in self._FILTER_LEVELS:
+            action = QAction(level.name, self._level_menu)
+            action.setCheckable(True)
+            action.setChecked(True)
+            action.toggled.connect(partial(self._on_level_toggled, level.name))
+            self._level_menu.addAction(action)
+            self._level_actions[level.name] = action
+        # None means "all levels" - the include-list has not been narrowed
+        self._checked_levels: set[str] | None = None
+        self._layout.addWidget(self.level_button)
 
         self.timerange_button = QToolButton(self)
         self.timerange_button.setText("All time")
@@ -1097,33 +1128,51 @@ class LogPanelToolbar(QWidget):
 
     # ---------------------------------------------------------------- level filter
 
-    def _log_level_box(self) -> QComboBox:
-        box = QComboBox(self)
-        box.setToolTip("Show logs at or above the selected level.")
-        box.addItem("All levels", None)
-        for level in [
-            LogLevel.TRACE,
-            LogLevel.DEBUG,
-            LogLevel.INFO,
-            LogLevel.SUCCESS,
-            LogLevel.WARNING,
-            LogLevel.ERROR,
-            LogLevel.CRITICAL,
-        ]:
-            box.addItem(level.name, level)
-        return box
+    def _sync_level_menu(self):
+        """Reflect the current selection on the static menu without re-emitting."""
+        checked = (
+            {l.name for l in self._FILTER_LEVELS}
+            if self._checked_levels is None
+            else self._checked_levels
+        )
+        for name, action in self._level_actions.items():
+            blocked = action.blockSignals(True)
+            action.setChecked(name in checked)
+            action.blockSignals(blocked)
 
-    @SafeSlot(int)
-    def _emit_level(self, index: int):
-        self.level_changed.emit(self.filter_level_dropdown.itemData(index))
+    def _on_level_toggled(self, level: str, checked: bool):
+        current = (
+            {l.name for l in self._FILTER_LEVELS}
+            if self._checked_levels is None
+            else set(self._checked_levels)
+        )
+        if checked:
+            current.add(level)
+        else:
+            current.discard(level)
+        # everything re-checked = no filter (unlisted CONSOLE_LOG* levels stay visible)
+        if current >= {l.name for l in self._FILTER_LEVELS}:
+            current = None
+        self._set_checked_levels(current)
 
-    def set_level(self, level: LogLevel | None):
-        """Set the level dropdown to the given threshold (None = all levels). Levels not
-        listed in the dropdown (CONSOLE_LOG*) leave the dropdown untouched so a
-        preapplied proxy filter is not wiped."""
-        index = self.filter_level_dropdown.findData(level)
-        if index != -1:
-            self.filter_level_dropdown.setCurrentIndex(index)
+    def _select_all_levels(self):
+        self._set_checked_levels(None)
+
+    def set_level_selection(self, levels: set[str] | None):
+        """Select exactly the given level names (None = all levels)."""
+        self._set_checked_levels(None if levels is None else set(levels))
+
+    def _set_checked_levels(self, levels: set[str] | None):
+        self._checked_levels = levels
+        if levels is None:
+            self.level_button.setText("All levels")
+        elif len(levels) == 0:
+            self.level_button.setText("No levels")
+        elif len(levels) == 1:
+            self.level_button.setText(next(iter(levels)))
+        else:
+            self.level_button.setText(f"{len(levels)} levels")
+        self.levels_selected.emit(levels)
 
     # ---------------------------------------------------------------- service filter
 
