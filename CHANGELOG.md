@@ -1,6 +1,53 @@
 # CHANGELOG
 
 
+## v3.31.0 (2026-08-04)
+
+### Bug Fixes
+
+- **log_panel**: 'qsortfilterproxymodel.invalidaterowsfilter()' deprication replaced with new
+  reccomended qt pattern
+  ([`b12fa6d`](https://github.com/bec-project/bec_widgets/commit/b12fa6d71559d9a3614acc280bc0a46afb4b6a3b))
+
+- **logpanel**: Correct filter slot docstrings and emit outside the filter-change bracket
+  ([`c7269f5`](https://github.com/bec-project/bec_widgets/commit/c7269f5dbaefe42830c4db69dbb1112b4b76531c))
+
+- **logpanel**: Keep the log queue out of the RPC registry and tear it down with the last panel
+  ([`2c74371`](https://github.com/bec-project/bec_widgets/commit/2c7437142c2e35586aeb56478e1d19f2769a397c))
+
+- **logpanel**: Lay out the time range dialog properly and prefill the active range
+  ([`270b482`](https://github.com/bec-project/bec_widgets/commit/270b4829bc568dc57d7072e9fc28060aecb5230f))
+
+- **logpanel**: Tint the jump-to-bottom icon with the pill text color in both themes
+  ([`0c1651f`](https://github.com/bec-project/bec_widgets/commit/0c1651f62e638f8f633c5300f825e1fed58a3d05))
+
+### Continuous Integration
+
+- Replace pytest-cov with coverage CLI
+  ([`d57bf84`](https://github.com/bec-project/bec_widgets/commit/d57bf84d9e66424d5d46f1d976c6e2b553069e60))
+
+### Features
+
+- **logpanel**: Add a font_size property for scaling the log table text
+  ([`16a178f`](https://github.com/bec-project/bec_widgets/commit/16a178f53922564e6364b9b3ccdc8837db35a875))
+
+- **logpanel**: Redesign toolbar, filtering, detail pane, and tailing affordances
+  ([`327b2fd`](https://github.com/bec-project/bec_widgets/commit/327b2fdd850d2ff021a05a652ed8535bab0c477e))
+
+- **logpanel**: Replace the level threshold dropdown with a checkable include-list
+  ([`532a885`](https://github.com/bec-project/bec_widgets/commit/532a8858cd4b741df5ecf2edb8acfca403ab89a8))
+
+### Performance Improvements
+
+- **logpanel**: Rework pipeline with incremental model updates and ingest-time record flattening
+  ([`b895050`](https://github.com/bec-project/bec_widgets/commit/b8950509435e564e3260c620b93659315e254913))
+
+### Testing
+
+- **e2e**: Drop cont_line_scan from expected scan selection
+  ([`3d451f2`](https://github.com/bec-project/bec_widgets/commit/3d451f20cd23249c5e561b0fbfea69e847f5c536))
+
+
 ## v3.30.2 (2026-07-29)
 
 ### Bug Fixes
