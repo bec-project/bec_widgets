@@ -106,9 +106,13 @@ def test_log_panel_filters(qtbot, log_panel: LogPanel):
     log_panel._proxy.update_timestamp(TimestampUpdate(value=None, update_type="start"))
     log_panel._proxy.update_timestamp(TimestampUpdate(value=None, update_type="end"))
     qtbot.waitUntil(lambda: log_panel._proxy.rowCount() == 3, timeout=200)
-    # Level filter
-    log_panel._proxy.update_level_filter(LogLevel.SUCCESS)
+    # Level filter (include-list of level names)
+    log_panel._proxy.update_level_filter({"SUCCESS"})
     qtbot.waitUntil(lambda: log_panel._proxy.rowCount() == 1, timeout=200)
+    log_panel._proxy.update_level_filter({"SUCCESS", "DEBUG"})
+    qtbot.waitUntil(lambda: log_panel._proxy.rowCount() == 2, timeout=200)
+    log_panel._proxy.update_level_filter(set())  # empty include-list shows nothing
+    qtbot.waitUntil(lambda: log_panel._proxy.rowCount() == 0, timeout=200)
     log_panel._proxy.update_level_filter(None)
     qtbot.waitUntil(lambda: log_panel._proxy.rowCount() == 3, timeout=200)
 
@@ -172,7 +176,7 @@ def _patched_const(monkeypatch, **overrides):
 
 
 def test_log_panel_appends_incrementally_and_filters_new_rows(qtbot, log_panel: LogPanel):
-    log_panel._proxy.update_level_filter(LogLevel.WARNING)
+    log_panel._proxy.update_level_filter({"WARNING"})
     qtbot.waitUntil(lambda: log_panel._proxy.rowCount() == 0, timeout=200)
     with qtbot.waitSignal(log_panel._model.rowsInserted, timeout=500) as blocker:
         _feed(log_panel, [make_log_msg(0, "warning"), make_log_msg(1, "debug")])
@@ -344,16 +348,38 @@ def test_log_panel_toolbar_service_selection(qtbot, log_panel: LogPanel):
     assert toolbar._checked_services is None
 
 
-def test_log_panel_toolbar_level_default_and_preset(qtbot, log_panel: LogPanel):
-    box = log_panel._toolbar.filter_level_dropdown
-    assert box.currentIndex() == 0
-    assert box.currentText() == "All levels"
-    assert box.itemData(0) is None
-    assert "CONSOLE_LOG" not in [box.itemText(i) for i in range(box.count())]
-    log_panel._toolbar.set_level(LogLevel.SUCCESS)
+def test_log_panel_toolbar_level_selection(qtbot, log_panel: LogPanel):
+    toolbar = log_panel._toolbar
+    assert toolbar._checked_levels is None
+    assert toolbar.level_button.text() == "All levels"
+    assert "CONSOLE_LOG" not in toolbar._level_actions  # internal levels stay unlisted
+    toolbar.set_level_selection({"SUCCESS"})
     qtbot.waitUntil(lambda: log_panel._proxy.rowCount() == 1, timeout=200)
-    log_panel._toolbar.set_level(None)
+    assert toolbar.level_button.text() == "SUCCESS"
+    # unchecking a level through the menu removes it from the include-list
+    toolbar._sync_level_menu()
+    toolbar._level_actions["SUCCESS"].setChecked(False)
+    qtbot.waitUntil(lambda: log_panel._proxy.rowCount() == 0, timeout=200)
+    assert toolbar.level_button.text() == "No levels"
+    # re-checking every listed level collapses to the unfiltered state
+    for action in toolbar._level_actions.values():
+        action.setChecked(True)
     qtbot.waitUntil(lambda: log_panel._proxy.rowCount() == 3, timeout=200)
+    assert toolbar._checked_levels is None
+    assert toolbar.level_button.text() == "All levels"
+
+
+def test_log_panel_constructor_level_filter_expands_to_threshold(qtbot, mocked_client, monkeypatch):
+    monkeypatch.setattr(mocked_client.connector, "xread", lambda *_, **__: TEST_LOG_MESSAGES)
+    widget = LogPanel(level_filter=LogLevel.SUCCESS)
+    qtbot.addWidget(widget)
+    try:
+        # threshold semantics preserved: SUCCESS and above (the debug/info rows hide)
+        assert widget._proxy.rowCount() == 1
+        assert widget._toolbar._checked_levels == {"SUCCESS", "WARNING", "ERROR", "CRITICAL"}
+        assert widget._toolbar.level_button.text() == "4 levels"
+    finally:
+        widget._model.log_queue.cleanup()
 
 
 def test_log_panel_search_debounce_and_match_count(qtbot, log_panel: LogPanel):
@@ -455,11 +481,15 @@ def test_log_panel_detail_pane_freezes_when_record_trimmed(qtbot, log_panel, mon
     assert "(no longer in buffer)" not in log_panel._detail_header.text()
 
 
-def test_log_panel_set_level_with_unlisted_level_keeps_filter(qtbot, log_panel: LogPanel):
-    log_panel._proxy.update_level_filter(LogLevel.CONSOLE_LOG)
-    log_panel._toolbar.set_level(LogLevel.CONSOLE_LOG)  # not in the dropdown
-    assert log_panel._proxy._level_num == LogLevel.CONSOLE_LOG.value  # filter not wiped
-    assert log_panel._toolbar.filter_level_dropdown.currentIndex() == 0
+def test_log_panel_unlisted_levels_follow_selection(qtbot, log_panel: LogPanel):
+    # CONSOLE_LOG rows are visible while unfiltered, hidden by any narrowed selection,
+    # and still selectable explicitly through the proxy API
+    _feed(log_panel, [make_log_msg(0, "console_log")])
+    assert log_panel._proxy.rowCount() == 4
+    log_panel._toolbar.set_level_selection({"DEBUG", "INFO", "SUCCESS"})
+    qtbot.waitUntil(lambda: log_panel._proxy.rowCount() == 3, timeout=200)
+    log_panel._proxy.update_level_filter({"CONSOLE_LOG"})
+    qtbot.waitUntil(lambda: log_panel._proxy.rowCount() == 1, timeout=200)
 
 
 def test_log_panel_font_size_property(qtbot, log_panel: LogPanel):
