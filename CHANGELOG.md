@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.32.1 (2026-08-04)
+
+### Bug Fixes
+
+- **scan_control**: Report the visible scans in the allowed_scans property
+  ([`8ea811e`](https://github.com/bec-project/bec_widgets/commit/8ea811ebb23a8ff540d5468e47f6ce63426fa93a))
+
+
 ## v3.32.0 (2026-08-04)
 
 ### Bug Fixes
