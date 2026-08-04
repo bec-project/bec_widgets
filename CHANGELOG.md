@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v3.32.0 (2026-08-04)
+
+### Bug Fixes
+
+- **scan_control**: Preserve configured default scan and label filter button
+  ([`f30ab7b`](https://github.com/bec-project/bec_widgets/commit/f30ab7b164213170591c00ddcae33a54befe8bd5))
+
+### Features
+
+- **scan_control**: Add scan filter and docstring info dialogs
+  ([`e06232e`](https://github.com/bec-project/bec_widgets/commit/e06232ee2103af04c322a13ff35b69b4602dcf26))
+
+- **scan_control**: Add select all and clear buttons to scan filter dialog
+  ([`afd8c9c`](https://github.com/bec-project/bec_widgets/commit/afd8c9c07cc57c3539c078588858c0f51ba7e621))
+
+
 ## v3.31.0 (2026-08-04)
 
 ### Bug Fixes
