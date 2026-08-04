@@ -122,3 +122,60 @@ def test_bec_signal_proxy_timeout(qtbot, dap_combo_box):
 
     # The second value "samz" should have been forwarded after auto-unblocking
     assert proxy_container == [(("samx",),), (("samz",),)]
+
+
+def test_bec_signal_proxy_replays_argless_emissions_on_unblock(qtbot):
+    """Emissions of an argument-less signal that arrive while the proxy is blocked must be
+    replayed on unblock: their args tuple is identical to the forwarded one, so an
+    args-comparison alone would silently drop them (the DAP-fit-never-arrives e2e flake:
+    one missed dap_response blocked the proxy, and every update emitted during the scan
+    coalesced into nothing)."""
+    from qtpy.QtCore import QObject, Signal
+
+    class _Src(QObject):
+        sig = Signal()
+
+    src = _Src()
+    calls = []
+    proxy = BECSignalProxy(src.sig, rateLimit=25, slot=lambda *_: calls.append(1), timeout=10.0)
+
+    src.sig.emit()  # forwarded; proxy blocks awaiting unblock_proxy
+    qtbot.waitUntil(lambda: len(calls) == 1)
+    assert proxy.blocked is True
+
+    src.sig.emit()  # coalesces while blocked - identical (empty) args
+    proxy.unblock_proxy()
+
+    # the coalesced emission is replayed instead of being dropped
+    qtbot.waitUntil(lambda: len(calls) == 2)
+    assert proxy.blocked is True  # blocked again by the replayed emission
+
+    # no pending emission this time: unblocking must not replay anything
+    proxy.unblock_proxy()
+    qtbot.wait(150)
+    assert len(calls) == 2
+    assert proxy.blocked is False
+    proxy.cleanup()
+
+
+def test_bec_signal_proxy_still_drops_identical_args_on_unblock(qtbot):
+    """Emissions whose arguments equal the already-forwarded ones stay coalesced on
+    unblock - only argument-less signals are replayed unconditionally."""
+    from qtpy.QtCore import QObject, Signal
+
+    class _Src(QObject):
+        sig = Signal(str)
+
+    src = _Src()
+    calls = []
+    proxy = BECSignalProxy(src.sig, rateLimit=25, slot=lambda *a: calls.append(a), timeout=10.0)
+
+    src.sig.emit("samx")  # forwarded; proxy blocks
+    qtbot.waitUntil(lambda: len(calls) == 1)
+    src.sig.emit("samx")  # identical args while blocked
+
+    proxy.unblock_proxy()
+    qtbot.wait(150)
+    assert len(calls) == 1  # unchanged args are not replayed
+    assert proxy.blocked is False
+    proxy.cleanup()

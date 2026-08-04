@@ -31,6 +31,7 @@ class BECSignalProxy(SignalProxy):
     def __init__(self, *args, rateLimit=25, timeout=10.0, **kwargs):
         super().__init__(*args, rateLimit=rateLimit, **kwargs)
         self._blocking = False
+        self._pending = False
         self.old_args = None
         self.new_args = None
 
@@ -56,6 +57,7 @@ class BECSignalProxy(SignalProxy):
         """Receive signal, store the args and call signalReceived from the parent class if not blocked"""
         self.new_args = args
         if self.blocked is True:
+            self._pending = True
             return
         self.blocked = True
         self.old_args = args
@@ -65,12 +67,16 @@ class BECSignalProxy(SignalProxy):
 
     @SafeSlot()
     def unblock_proxy(self):
-        """Unblock the proxy, and call the signalReceived method in case there was an update of the args."""
+        """
+        Unblock the proxy and replay emissions that arrived while it was blocked.
+        """
         if self.blocked:
             self._timer.stop()
             self.blocked = False
-            if self.new_args != self.old_args:
-                self.signalReceived(*self.new_args)
+            if self._pending:
+                self._pending = False
+                if self.new_args == () or self.new_args != self.old_args:
+                    self.signalReceived(*self.new_args)
 
     @SafeSlot()
     def _timeout_unblock(self):
