@@ -361,8 +361,9 @@ def test_allowed_scans_none_clears_filter(scan_control):
 
     scan_control.allowed_scans = None
 
-    assert scan_control.allowed_scans is None
+    # the filter is unset internally, while the property reports what the selector shows
     assert scan_control.config.allowed_scans is None
+    assert scan_control.allowed_scans == ["line_scan", "grid_scan"]
     assert scan_control.comboBox_scan_selection.count() == 2
 
 
@@ -386,8 +387,9 @@ def test_filter_change_saves_current_scan_parameters(scan_control):
     assert "line_scan" in scan_control.config.scans
 
 
-def test_empty_allowed_scans_disable_scan_info_and_run(scan_control):
-    scan_control.allowed_scans = []
+def test_allowed_scans_matching_nothing_disable_scan_info_and_run(scan_control):
+    # a filter whose entries are all unavailable leaves the selector empty
+    scan_control.allowed_scans = ["only_scan_that_is_not_available"]
 
     assert scan_control.comboBox_scan_selection.count() == 0
     assert scan_control.comboBox_scan_selection.toolTip() == ""
@@ -457,7 +459,7 @@ def test_scan_selector_settings_dialog_all_checked_clears_filter(scan_control, m
 
     qtbot.mouseClick(scan_control.scan_selector_settings_button, Qt.MouseButton.LeftButton)
 
-    assert scan_control.allowed_scans is None
+    assert scan_control.config.allowed_scans is None
     assert scan_control.comboBox_scan_selection.count() == 2
 
 
@@ -494,7 +496,7 @@ def test_scan_selector_dialog_select_all_clears_the_filter(scan_control, monkeyp
 
     qtbot.mouseClick(scan_control.scan_selector_settings_button, Qt.MouseButton.LeftButton)
 
-    assert scan_control.allowed_scans is None
+    assert scan_control.config.allowed_scans is None
     assert scan_control.comboBox_scan_selection.count() == 2
 
 
@@ -549,9 +551,13 @@ def test_scan_selector_dialog_info_button_opens_docs_without_toggling(qtbot):
 def test_scan_selector_settings_properties_are_profile_safe(scan_control):
     exported = scan_control.export_settings()
 
-    # "No filter" survives the round trip as None so that future scans keep appearing.
-    assert exported["allowed_scans"] is None
+    # "No filter" is exported as the full scan list, which the setter maps back onto an
+    # unset filter, so future scans keep appearing after a profile round trip.
+    assert exported["allowed_scans"] == ["line_scan", "grid_scan"]
     assert exported["hide_scan_selector_settings_button"] is False
+
+    scan_control.load_settings(exported)
+    assert scan_control.config.allowed_scans is None
 
     scan_control.load_settings(
         {"allowed_scans": ["grid_scan"], "hide_scan_selector_settings_button": True}
@@ -564,7 +570,7 @@ def test_scan_selector_settings_properties_are_profile_safe(scan_control):
 
     scan_control.load_settings({"allowed_scans": None})
 
-    assert scan_control.allowed_scans is None
+    assert scan_control.config.allowed_scans is None
     assert scan_control.comboBox_scan_selection.count() == 2
 
 
@@ -1320,3 +1326,97 @@ def test_restore_parameters_with_fewer_arg_bundles(scan_control):
     args, kwargs = scan_control.get_scan_parameters(bec_object=False)
     assert args == ["samx", 0.0, 2.0]
     assert kwargs["steps"] == 10
+
+
+def test_allowed_scans_property_reports_selector_contents_on_init(scan_control):
+    """A freshly added widget must report the scans it shows, not an empty list.
+
+    ``allowed_scans`` is a list-typed Qt property, and Qt cannot convert ``None`` to a
+    list: reporting the unset filter as ``None`` surfaced as ``[]`` through the property
+    system, which a profile then stored and restored as "allow nothing".
+    """
+    visible_scans = [
+        scan_control.comboBox_scan_selection.itemText(index)
+        for index in range(scan_control.comboBox_scan_selection.count())
+    ]
+
+    assert scan_control.config.allowed_scans is None
+    assert scan_control.allowed_scans == visible_scans
+    assert scan_control.property("allowed_scans") == visible_scans
+
+
+def test_allowed_scans_property_round_trip_keeps_filter_unset(scan_control):
+    """Restoring the property in the same session must not turn it into a filter."""
+    scan_control.load_settings({"allowed_scans": scan_control.property("allowed_scans")})
+
+    assert scan_control.config.allowed_scans is None
+    assert scan_control.comboBox_scan_selection.count() == 2
+
+    # a scan published later still shows up, i.e. the filter really is unset
+    scan_control.available_scans["extra_scan"] = scan_control.available_scans["line_scan"]
+    scan_control._update_scan_selector()
+
+    assert scan_control.comboBox_scan_selection.count() == 3
+
+
+def test_allowed_scans_empty_list_restores_unfiltered_selector(scan_control):
+    """Profiles written before the fix hold an empty list; it must not blank the selector."""
+    scan_control.allowed_scans = []
+
+    assert scan_control.config.allowed_scans is None
+    assert scan_control.comboBox_scan_selection.count() == 2
+    assert scan_control.comboBox_scan_selection.currentText() == "line_scan"
+    assert scan_control.button_run_scan.isEnabled()
+
+
+def test_allowed_scans_restored_after_new_scan_keeps_stored_selection(scan_control):
+    """A profile stored before a new scan appeared is restored as an explicit filter.
+
+    "No filter" and "every scan selected" serialize to the same plain list, so the stored
+    selection wins and the newer scan stays hidden until the filter is cleared again. This
+    pins the documented limitation of the property rather than an intended feature.
+    """
+    saved = scan_control.property("allowed_scans")
+    scan_control.available_scans["extra_scan"] = scan_control.available_scans["line_scan"]
+
+    scan_control.load_settings({"allowed_scans": saved})
+
+    assert scan_control.config.allowed_scans == saved
+    assert scan_control.comboBox_scan_selection.count() == 2
+
+    # clearing the filter picks the newer scan up again
+    scan_control.allowed_scans = None
+
+    assert scan_control.comboBox_scan_selection.count() == 3
+
+
+def test_allowed_scans_empty_at_construction_shows_all_scans(qtbot, mocked_client):
+    mocked_client.connector.set_and_publish(
+        MessageEndpoints.available_scans(), available_scans_message
+    )
+    widget = ScanControl(client=mocked_client, allowed_scans=[])
+    qtbot.addWidget(widget)
+    qtbot.waitExposed(widget)
+
+    assert widget.config.allowed_scans is None
+    assert widget.comboBox_scan_selection.count() == 2
+    assert widget.button_run_scan.isEnabled() or widget._scan_metadata is None
+
+
+def test_allowed_scans_reordered_full_list_keeps_order(scan_control):
+    supported = scan_control._supported_scan_names()
+    reordered = list(reversed(supported))
+
+    scan_control.allowed_scans = reordered
+
+    # a reordered full list is an explicit filter that preserves the caller's order
+    assert scan_control.config.allowed_scans == reordered
+    items = [
+        scan_control.comboBox_scan_selection.itemText(i)
+        for i in range(scan_control.comboBox_scan_selection.count())
+    ]
+    assert items == reordered
+
+    # the same list in the supported order clears the filter
+    scan_control.allowed_scans = supported
+    assert scan_control.config.allowed_scans is None
