@@ -1,6 +1,23 @@
 # CHANGELOG
 
 
+## v3.33.0 (2026-08-04)
+
+### Bug Fixes
+
+- **scan_control**: Switch the scan only once the typed name is confirmed
+  ([`c07cd7c`](https://github.com/bec-project/bec_widgets/commit/c07cd7c47039ef1f5b32ac9d8ab3eb113a8d2675))
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+### Features
+
+- **scan_control**: Make the scan selection combobox editable
+  ([`33ea484`](https://github.com/bec-project/bec_widgets/commit/33ea484da615b7aed33dd3b63cb67cbf3c841e0f))
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+
 ## v3.32.2 (2026-08-04)
 
 ### Bug Fixes
