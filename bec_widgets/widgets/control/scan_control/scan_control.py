@@ -96,7 +96,9 @@ class ScanControl(BECWidget, QWidget):
         if default_scan is not None:
             self.config.default_scan = default_scan
         if allowed_scans is not None:
-            self.config.allowed_scans = allowed_scans
+            # Same normalization as the property setter: an empty filter means "no filter",
+            # so no construction argument can produce a selector without a runnable scan.
+            self.config.allowed_scans = list(dict.fromkeys(allowed_scans)) or None
 
         self._scan_metadata: dict | None = None
         self._metadata_form = ScanMetadata(parent=self)
@@ -234,7 +236,7 @@ class ScanControl(BECWidget, QWidget):
         """Return available scans that can be rendered by this widget."""
         return [
             scan_name
-            for scan_name, scan_info in self.available_scans.items()
+            for scan_name, scan_info in getattr(self, "available_scans", {}).items()
             if scan_info.get("base_class") in self.SUPPORTED_SCAN_BASE_CLASSES
             and self._scan_info_adapter.has_scan_ui_config(scan_info)
             and not scan_name.startswith("_")
@@ -245,7 +247,8 @@ class ScanControl(BECWidget, QWidget):
         current_scan = self.comboBox_scan_selection.currentText()
         if current_scan:
             self.save_current_scan_parameters()
-        allowed_scans = self.allowed_scans
+        # Read the raw filter: ``None`` means "unset", which the property never reports.
+        allowed_scans = self.config.allowed_scans
         if allowed_scans is None:
             visible_scans = self._supported_scan_names()
         else:
@@ -287,7 +290,7 @@ class ScanControl(BECWidget, QWidget):
     def show_scan_selector_settings(self, *_):
         """Open the scan filter dialog and apply accepted changes."""
         scan_names = self._supported_scan_names()
-        allowed_scans = self.allowed_scans
+        allowed_scans = self.config.allowed_scans
         if allowed_scans is not None:
             # Keep configured entries visible in the dialog even when currently unsupported.
             scan_names += [scan for scan in allowed_scans if scan not in scan_names]
@@ -307,19 +310,39 @@ class ScanControl(BECWidget, QWidget):
             # Everything checked means "no filter", so scans added later show up as well.
             self.allowed_scans = None if selected_scans == scan_names else selected_scans
 
-    @SafeProperty(list)
-    def allowed_scans(self) -> list[str] | None:
-        """Scan filter for the selector; None shows every supported scan, including future ones."""
+    @SafeProperty("QStringList")
+    def allowed_scans(self) -> list[str]:
+        """Scans configured for the selector.
+
+        Reports the configured filter when one is set - entries that are not currently
+        available are kept, so a filter survives a scan disappearing and reappearing -
+        and every supported scan when no filter is set. It never reports ``None``: Qt
+        cannot convert that to a list property, so an unset filter would surface as
+        ``[]`` and, once stored in a profile and restored, would filter every scan away.
+        """
         allowed_scans = getattr(self.config, "allowed_scans", None)
-        return None if allowed_scans is None else list(allowed_scans)
+        return self._supported_scan_names() if allowed_scans is None else list(allowed_scans)
 
     @allowed_scans.setter
     def allowed_scans(self, scan_names: list[str] | str | None):
-        """Set the scans displayed in the selector; None clears the filter."""
+        """Set the scans displayed in the selector.
+
+        ``None``, an empty list, or a list holding exactly the currently supported scans
+        in their listed order all clear the filter, so no configuration can leave the
+        selector without a single runnable scan. A reordered full list is kept as an
+        explicit filter, preserving the caller's ordering in the selector.
+
+        Note that "no filter" and "every scan selected" are the same plain list once
+        stored: a profile saved before further scans became available is restored as an
+        explicit filter and does not pick those scans up until the selection is cleared
+        again (for example by checking everything in the scan filter dialog).
+        """
         if isinstance(scan_names, str):
             scan_names = [scan_names]
         if scan_names is not None:
             scan_names = list(dict.fromkeys(scan_names))
+            if not scan_names or scan_names == self._supported_scan_names():
+                scan_names = None
         self.config.allowed_scans = scan_names
         self._update_scan_selector()
 
