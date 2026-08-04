@@ -1,6 +1,23 @@
 # CHANGELOG
 
 
+## v3.32.2 (2026-08-04)
+
+### Bug Fixes
+
+- **connector**: Break C++-anchored reference cycle retaining task owners
+  ([`115b0cf`](https://github.com/bec-project/bec_widgets/commit/115b0cf07ae1c28f143171e610785da1421fc37f))
+
+- **connector**: Connect on_failed callbacks before the worker starts
+  ([`1ac2987`](https://github.com/bec-project/bec_widgets/commit/1ac298736f2a92aad16ebad326f0d477342eb714))
+
+- **connector**: Isolate worker task exceptions and remove bare excepts
+  ([`a55c543`](https://github.com/bec-project/bec_widgets/commit/a55c543e16e88fce9fc3800349fa84048ab99e3f))
+
+- **scan_control**: Restore last scan parameters without blocking the GUI
+  ([`ec64ed9`](https://github.com/bec-project/bec_widgets/commit/ec64ed9a44693ada9d3356e95a09eaf7852f424f))
+
+
 ## v3.32.1 (2026-08-04)
 
 ### Bug Fixes
