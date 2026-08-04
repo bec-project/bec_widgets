@@ -273,12 +273,41 @@ def test_log_panel_survives_malformed_messages(qtbot, log_panel: LogPanel):
     second_panel.close()
 
 
-def test_log_panel_close_detaches_from_queue(qtbot, log_panel: LogPanel):
+def test_log_panel_close_tears_down_queue(qtbot, log_panel: LogPanel):
+    from bec_widgets.widgets.utility.logpanel.logpanel import BecLogsQueue
+
     queue = log_panel._model.log_queue
+    assert not queue.rpc_register.object_is_registered(queue)  # never an RPC connection
     log_panel.close()
+    # the last panel's close fully tears the queue down - nothing lingers after it
+    assert BecLogsQueue._instance is None
+    assert not queue._update_timer.isActive()
     _feed(log_panel, [make_log_msg(0)])
     assert log_panel._model.rowCount() == 3  # closed panel no longer receives updates
-    assert len(queue) == 4  # the shared history still ingests
+
+
+def test_log_panel_queue_survives_until_last_panel_closes(qtbot, mocked_client, monkeypatch):
+    from bec_widgets.widgets.utility.logpanel.logpanel import BecLogsQueue
+
+    monkeypatch.setattr(mocked_client.connector, "xread", lambda *_, **__: TEST_LOG_MESSAGES)
+    first = LogPanel()
+    qtbot.addWidget(first)
+    second = LogPanel()
+    qtbot.addWidget(second)
+    queue = first._model.log_queue
+    assert second._model.log_queue is queue
+    second.close()
+    assert BecLogsQueue._instance is queue  # one panel still open
+    assert queue._update_timer.isActive()
+    first.close()
+    assert BecLogsQueue._instance is None
+    assert not queue._update_timer.isActive()
+    # a new panel re-creates the queue and backfills its history from Redis
+    reopened = LogPanel()
+    qtbot.addWidget(reopened)
+    assert reopened._model.log_queue is not queue
+    assert reopened._model.rowCount() == 3
+    reopened.close()
 
 
 def test_direct_queue_construction_registers_singleton(qtbot, mocked_client, monkeypatch):
