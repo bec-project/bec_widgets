@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.33.1 (2026-08-05)
+
+### Bug Fixes
+
+- **bec_signal_proxy**: Ensure argless emissions are replayed on unblock
+  ([`0da3907`](https://github.com/bec-project/bec_widgets/commit/0da3907b1a15964353f67ca367bc4eafb9384c6e))
+
+
 ## v3.33.0 (2026-08-04)
 
 ### Bug Fixes
