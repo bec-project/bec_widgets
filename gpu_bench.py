@@ -20,7 +20,14 @@ FRAMES = 60
 N_PRESET = 10
 
 
-def _bench(use_opengl: bool, label: str, datasets, x) -> float:
+def _bench(use_opengl: bool, label: str, datasets, x) -> float | None:
+    """Time FRAMES repaints, returning fps -- or None if the frames never rendered.
+
+    An unexposed or occluded window turns `repaint()` into a no-op for the raster
+    viewport while the OpenGL viewport still renders into its own framebuffer.
+    That yields wildly optimistic raster numbers, so every curve paint is counted
+    and the result is discarded unless each curve painted once per frame.
+    """
     pg.setConfigOption("useOpenGL", use_opengl)
     pg.setConfigOption("enableExperimental", use_opengl)
 
@@ -36,21 +43,43 @@ def _bench(use_opengl: bool, label: str, datasets, x) -> float:
     plot.setXRange(0, N_POINTS)
     plot.setYRange(-2, 2)
     win.show()
+    win.raise_()
+    win.activateWindow()
 
     deadline = time.perf_counter() + 1.0
     while time.perf_counter() < deadline:
         QtWidgets.QApplication.processEvents()
 
-    viewport = win.viewport().__class__.__name__
-    start = time.perf_counter()
-    for i in range(FRAMES):
-        for c, curve in enumerate(curves):
-            curve.setData(x, datasets[(i + c) % N_PRESET])
-        win.viewport().repaint()
-        QtWidgets.QApplication.processEvents()
-    elapsed = time.perf_counter() - start
+    paints = 0
+    original_paint = pg.PlotCurveItem.paint
 
-    win.close()
+    def counting_paint(self, *args, **kwargs):
+        nonlocal paints
+        paints += 1
+        return original_paint(self, *args, **kwargs)
+
+    pg.PlotCurveItem.paint = counting_paint
+    viewport = win.viewport().__class__.__name__
+    try:
+        start = time.perf_counter()
+        for i in range(FRAMES):
+            for c, curve in enumerate(curves):
+                curve.setData(x, datasets[(i + c) % N_PRESET])
+            win.viewport().repaint()
+            QtWidgets.QApplication.processEvents()
+        elapsed = time.perf_counter() - start
+    finally:
+        pg.PlotCurveItem.paint = original_paint
+        win.close()
+
+    expected = FRAMES * N_CURVES
+    if paints < expected:
+        print(
+            f"  {label:<26} viewport={viewport:<22} INVALID "
+            f"({paints}/{expected} curve paints -- window not rendering)"
+        )
+        return None
+
     fps = FRAMES / elapsed
     print(f"  {label:<26} viewport={viewport:<22} {fps:7.1f} fps  ({1000 / fps:6.1f} ms/frame)")
     return fps
@@ -72,4 +101,7 @@ if __name__ == "__main__":
 
     raster = _bench(False, "raster (QPainter)", datasets, x)
     opengl = _bench(True, "opengl (QOpenGLWidget)", datasets, x)
+    if raster is None or opengl is None:
+        print("  -> no speedup reported: at least one run did not actually render")
+        sys.exit(1)
     print(f"  -> speedup {opengl / raster:.2f}x")
