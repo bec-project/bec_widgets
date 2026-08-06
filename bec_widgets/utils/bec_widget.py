@@ -16,6 +16,7 @@ import bec_widgets.widgets.containers.qt_ads as QtAds
 from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
 from bec_widgets.utils.busy_loader import install_busy_loader
 from bec_widgets.utils.error_popups import SafeConnect, SafeSlot
+from bec_widgets.utils.gpu_acceleration import grab_widget
 from bec_widgets.utils.rpc_decorator import rpc_timeout
 from bec_widgets.utils.rpc_register import RPCRegister
 from bec_widgets.utils.widget_io import WidgetHierarchy
@@ -280,7 +281,7 @@ class BECWidget(BECConnector):
             logger.error("Cannot take screenshot of non-QWidget instance")
             return
 
-        screenshot = self.grab()
+        screenshot = grab_widget(self)
         if file_name is None:
             file_name, _ = QFileDialog.getSaveFileName(
                 self,
@@ -321,7 +322,7 @@ class BECWidget(BECConnector):
         if not hasattr(self, "grab"):
             raise RuntimeError(f"Cannot take screenshot of non-QWidget instance: {repr(self)}")
 
-        pixmap: QPixmap = self.grab()
+        pixmap: QPixmap = grab_widget(self)
         if pixmap.isNull():
             return QByteArray()
         if max_width is not None or max_height is not None:
@@ -359,7 +360,7 @@ class BECWidget(BECConnector):
                 "SciLog is not enabled for the current client, cannot send screenshot."
             )
 
-        pixmap: QPixmap = self.grab()
+        pixmap: QPixmap = grab_widget(self)
         if pixmap.isNull():
             raise RuntimeError("Failed to capture screenshot.")
 
