@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 import numpy as np
 import pyqtgraph as pg
 import pytest
+from bec_lib.endpoints import MessageEndpoints
 from pyqtgraph.graphicsItems.DateAxisItem import DateAxisItem
 from qtpy.QtCore import QTimer
 from qtpy.QtWidgets import QApplication, QCheckBox, QDialog, QDialogButtonBox, QDoubleSpinBox
@@ -911,6 +912,55 @@ def test_setup_async_curve(qtbot, mocked_client, monkeypatch):
     # instead of subscribing again.
     wf._setup_async_curve(c)
     connect_spy.assert_called_once()
+
+
+def test_setup_async_curve_uses_device_async_signal_for_bec_signals(
+    qtbot, mocked_client, monkeypatch
+):
+    """
+    A curve backed by a declared BEC async signal (e.g. a DynamicSignal group
+    sub-signal) must subscribe to the per-signal device_async_signal endpoint,
+    not the legacy per-device device_async_readback stream.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.old_scan_id = "111"
+    wf.scan_id = "222"
+
+    c = wf.plot(arg1="async_device", label="async_device-async_device")
+    wf._async_curves = [c]
+    c.config.signal.signal = "async_device_mean_ai0"
+
+    monkeypatch.setattr(
+        wf.client.device_manager,
+        "get_bec_signals",
+        lambda classes: [
+            (
+                "async_device",
+                "mean.ai0",
+                {
+                    "obj_name": "async_device_mean_ai0",
+                    "storage_name": "async_device_mean",
+                    "signal_class": "DynamicSignal",
+                },
+            )
+        ],
+    )
+    connect_spy = MagicMock()
+    monkeypatch.setattr(wf.bec_dispatcher, "connect_slot", connect_spy)
+
+    wf._async_streams_setup = {}
+    wf._setup_async_curve(c)
+    connect_spy.assert_called_once()
+    endpoint_called = connect_spy.call_args[0][1].endpoint
+    expected = MessageEndpoints.device_async_signal("222", "async_device", "async_device_mean")
+    assert endpoint_called == expected.endpoint
+
+    # cleanup drops the same endpoint once the last subscriber is removed
+    disconnect_spy = MagicMock()
+    monkeypatch.setattr(wf.bec_dispatcher, "disconnect_slot", disconnect_spy)
+    wf._curve_clean_up(c)
+    assert disconnect_spy.call_args[0][1].endpoint == expected.endpoint
+    assert (("async_device", "async_device_mean")) not in wf._async_streams_setup
 
 
 def test_on_async_readback_add_update(qtbot, mocked_client):

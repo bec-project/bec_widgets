@@ -259,7 +259,13 @@ class DMMock:
         API shape used by Waveform._check_async_signal_found.
         """
         signals: list[tuple[str, str, dict]] = []
-        if signal_class_name != "AsyncSignal":
+        # The real API accepts a single class name or a list of class names
+        # (e.g. Waveform passes sorted(ASYNC_SIGNAL_CLASSES)).
+        if isinstance(signal_class_name, str):
+            signal_class_names = [signal_class_name]
+        else:
+            signal_class_names = list(signal_class_name)
+        if "AsyncSignal" not in signal_class_names:
             return signals
 
         for device in self.devices.values():

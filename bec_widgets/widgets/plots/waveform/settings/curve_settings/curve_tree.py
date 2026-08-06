@@ -449,7 +449,7 @@ class CurveRow(QTreeWidgetItem):
                         device_entry = device_entry_info.get("obj_name", device_entry)
                 else:
                     device_entry = self.entry_validator.validate_signal(
-                        device=device_name, signal=device_entry
+                        name=device_name, entry=device_entry
                     )
 
             self.config.signal = DeviceSignal(device=device_name, signal=device_entry)

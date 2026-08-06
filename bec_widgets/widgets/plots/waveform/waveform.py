@@ -1510,13 +1510,30 @@ class Waveform(PlotBase):
         """
         Clean up the curve by disconnecting the async update signal (even for sync curves).
 
+        The endpoint is resolved the same way _setup_async_curve resolved it
+        (device_async_signal for BEC async signals, legacy device_async_readback
+        otherwise) and the subscription is only dropped once no other curve
+        shares the stream.
+
         Args:
             curve(Curve): The curve to clean up.
         """
-        self.bec_dispatcher.disconnect_slot(
-            self.on_async_readback,
-            MessageEndpoints.device_async_readback(self.scan_id, curve.name()),
-        )
+        name = getattr(curve.config.signal, "device", None) if curve.config.signal else None
+        signal = getattr(curve.config.signal, "signal", None) if curve.config.signal else None
+        if name is not None:
+            async_signal_found, stream = self._check_async_signal_found(name, signal)
+            if async_signal_found:
+                stream_key = (name, stream)
+                endpoint = MessageEndpoints.device_async_signal(self.scan_id, name, stream)
+            else:
+                stream_key = (name, None)
+                endpoint = MessageEndpoints.device_async_readback(self.scan_id, name)
+            subscribers = self._async_streams_setup.get(stream_key)
+            if subscribers is not None and signal in subscribers:
+                subscribers.remove(signal)
+            if not subscribers:
+                self._async_streams_setup.pop(stream_key, None)
+                self.bec_dispatcher.disconnect_slot(self.on_async_readback, endpoint)
         curve.rpc_register.remove_rpc(curve)
 
         # Remove itself from the DAP summary only for side panels
@@ -1700,6 +1717,15 @@ class Waveform(PlotBase):
             device_entry = curve.config.signal.signal
             if access_key == "val":  # live access
                 device_data = data.get(device_name, {}).get(device_entry, {}).get(access_key, None)
+                if device_data is None:
+                    # Live async data never passes through scan_item.live_data; it
+                    # arrives via the Redis stream subscription (on_async_readback).
+                    # Nothing to redraw here — and nothing to warn about.
+                    logger.debug(
+                        f"No live_data entry for async curve {curve.name()}; "
+                        "updates come from the async stream subscription."
+                    )
+                    continue
             else:  # history access
                 dataset_obj = data.get(device_name, {})
                 if self._skip_large_dataset_check is False:
@@ -1844,6 +1870,7 @@ class Waveform(PlotBase):
         scan_id = sender.cb_info.get("scan_id", None)
         if scan_id != self.scan_id:
             logger.info("Scan ID mismatch, ignoring async readback.")
+            return
 
         instruction = metadata.get("async_update", {}).get("type")
         if instruction not in ["add", "add_slice", "replace"]:
