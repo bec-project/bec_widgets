@@ -89,17 +89,32 @@ renderer not being software.
 - **`bec_widgets/utils/gpu_acceleration.py`** (new) — caches an offscreen-context probe of the GL
   renderer, refuses software rasterisers, honours `BEC_WIDGETS_OPENGL=auto|1|0`, and provides
   `grab_widget()` for OpenGL-safe screenshots.
-- **`plot_base.py`** — `PlotBase.USE_OPENGL` class flag (default `False`); the viewport is swapped
-  after construction because `GraphicsLayoutWidget.__init__` forwards no viewport argument to
-  `GraphicsView`.
-- **`waveform.py`, `multi_waveform.py`** — `USE_OPENGL = True`.
+- **`plot_base.py`** — `use_opengl` `SafeProperty(bool)`, default `True` via `PlotBase.USE_OPENGL`,
+  switchable at runtime and exposed over RPC. The viewport is swapped after construction because
+  `GraphicsLayoutWidget.__init__` forwards no viewport argument to `GraphicsView`.
 - **`bec_widget.py`** — the three `self.grab()` screenshot sites now call `grab_widget(self)`.
-- **`tests/unit_tests/test_gpu_acceleration.py`** — 10 tests covering the renderer gate, the env
-  var, and that a capture over an OpenGL viewport is non-blank.
+- **`tests/unit_tests/`** — 13 tests in `test_gpu_acceleration.py` plus 3 in
+  `test_plot_base_next_gen.py`, covering the renderer gate, the env var, non-blank captures over an
+  OpenGL viewport, and the runtime toggle.
 
-Opt-in per widget rather than a global `pg.setConfigOption("useOpenGL", True)`, because a global
-switch would put Image and Heatmap on a GL viewport for zero gain while still paying the blank-grab
-and software-renderer costs.
+Set per widget rather than via a global `pg.setConfigOption("useOpenGL", True)`, so a single plot can
+be dropped back to raster without disturbing the rest of the application.
+
+## Runtime switching
+
+The viewport *can* be swapped after construction, but not naively. pyqtgraph parents each item's
+`OpenGLState` to the **viewport widget**, so `useOpenGL()` deletes it on the C++ side while the item
+keeps a stale Python reference. The next `paintGL` then raises
+`RuntimeError: Signal source has been deleted` — and because `PlotCurveItem.paint` is wrapped in
+`@debug.warnOnException`, the exception is swallowed: **the curve silently stops rendering instead of
+crashing.**
+
+Measured over 4 toggle cycles: **29 swallowed GL paint exceptions** without a reset, **0** when the
+stale state is released first. `set_view_opengl()` therefore disconnects `sigPlotChanged` and clears
+`glstate` on every affected item before swapping, so the item rebuilds against the new context.
+
+`use_opengl` reflects the *live* viewport rather than the requested value — setting it `True` on a
+software renderer leaves it `False`.
 
 ## Test status
 
@@ -112,10 +127,14 @@ the failures are attributable to this change:
 - 7 × `test_plugin_creator.py::TestAddWidgetVariants` — environmental. The copier template task
   runs `pyside6-uic`, which exits 127 (not found) in the cloned `bec_312_pg-gpu` env.
 
-Targeted runs: 10/10 new tests, 167 passed across waveform/multi-waveform/plot_base/lifecycle/
-scatter, 322 passed in a plot/image/heatmap/crosshair/roi/export sweep. An `AttributeError`
-traceback logged during `test_waveform.py` is pre-existing — it also appears with
-`BEC_WIDGETS_OPENGL=0`.
+Targeted runs after adding the property: 16/16 new tests, 183 passed across
+waveform/multi-waveform/plot_base/lifecycle/scatter, and 402 passed in a
+plot/image/heatmap/crosshair/roi/export/rpc/client sweep (same single pre-existing failure). An
+`AttributeError` traceback logged during `test_waveform.py` is also pre-existing — it appears with
+`BEC_WIDGETS_OPENGL=0` too.
+
+`bw-generate-cli --target bec_widgets` was re-run; the only change to the generated
+`bec_widgets/cli/client.py` is the new `use_opengl` accessor on the plot classes.
 
 ## Not addressed
 
