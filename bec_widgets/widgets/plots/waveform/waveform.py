@@ -136,6 +136,8 @@ class Waveform(PlotBase):
     PLUGIN = True
     RPC = True
     ICON_NAME = "show_chart"
+    # Curves are drawn by PlotCurveItem, which has a shader path in pyqtgraph 0.14.
+    USE_OPENGL = True
     USER_ACCESS = [
         *PlotBase.USER_ACCESS,
         "_config_dict",

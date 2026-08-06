@@ -14,6 +14,7 @@ from bec_widgets.utils.crosshair import Crosshair
 from bec_widgets.utils.entry_validator import EntryValidator
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.fps_counter import FPSCounter
+from bec_widgets.utils.gpu_acceleration import opengl_available
 from bec_widgets.utils.plot_indicator_items import BECArrowItem, BECTickItem
 from bec_widgets.utils.qt_data_subscription import QtDataSubscription
 from bec_widgets.utils.round_frame import RoundedFrame
@@ -116,6 +117,13 @@ class PlotBase(BECWidget, QWidget):
     ]
     USER_ACCESS = [*BECWidget.USER_ACCESS, *BASE_USER_ACCESS]
 
+    # Whether this plot benefits from the OpenGL viewport. Only PlotCurveItem and
+    # PColorMeshItem have a shader path in pyqtgraph 0.14; image- and scatter-based
+    # plots gain nothing, so they stay on the raster viewport. Subclasses that draw
+    # curves set this to True. The final say belongs to `opengl_available`, which
+    # also honours the BEC_WIDGETS_OPENGL environment variable.
+    USE_OPENGL = False
+
     # Custom Signals
     property_changed = Signal(str, object)
     crosshair_position_changed = Signal(tuple)
@@ -160,6 +168,11 @@ class PlotBase(BECWidget, QWidget):
         self._ui_mode = UIMode.POPUP if popups else UIMode.SIDE
         self.axis_settings_dialog = None
         self.plot_widget = pg.GraphicsLayoutWidget(parent=self)
+        # GraphicsLayoutWidget forwards no viewport argument to GraphicsView, so the
+        # viewport is swapped after construction instead.
+        self._opengl_enabled = opengl_available(self.USE_OPENGL)
+        if self._opengl_enabled:
+            self.plot_widget.useOpenGL(True)
         self.plot_widget.ci.setContentsMargins(0, 0, 0, 0)
         self.plot_item = pg.PlotItem(viewBox=BECViewBox(enableMenu=True))
         self.plot_widget.addItem(self.plot_item)

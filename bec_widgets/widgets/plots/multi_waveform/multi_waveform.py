@@ -70,6 +70,8 @@ class MultiWaveform(PlotBase):
     PLUGIN = True
     RPC = True
     ICON_NAME = "ssid_chart"
+    # Many simultaneous curves; the biggest beneficiary of the shader path.
+    USE_OPENGL = True
     USER_ACCESS = [
         *PlotBase.USER_ACCESS,
         # MultiWaveform Specific RPC Access
