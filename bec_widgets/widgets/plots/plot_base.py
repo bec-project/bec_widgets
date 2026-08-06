@@ -6,6 +6,7 @@ import numpy as np
 import pyqtgraph as pg
 from bec_lib import bec_logger
 from qtpy.QtCore import QPoint, QPointF, Qt, Signal
+from qtpy.QtOpenGLWidgets import QOpenGLWidget
 from qtpy.QtWidgets import QHBoxLayout, QLabel, QMainWindow, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
@@ -14,7 +15,7 @@ from bec_widgets.utils.crosshair import Crosshair
 from bec_widgets.utils.entry_validator import EntryValidator
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.fps_counter import FPSCounter
-from bec_widgets.utils.gpu_acceleration import opengl_available
+from bec_widgets.utils.gpu_acceleration import opengl_available, set_view_opengl
 from bec_widgets.utils.plot_indicator_items import BECArrowItem, BECTickItem
 from bec_widgets.utils.qt_data_subscription import QtDataSubscription
 from bec_widgets.utils.round_frame import RoundedFrame
@@ -113,16 +114,17 @@ class PlotBase(BECWidget, QWidget):
         "minimal_crosshair_precision.setter",
         "update_rate",
         "update_rate.setter",
+        "use_opengl",
+        "use_opengl.setter",
         "screenshot",
     ]
     USER_ACCESS = [*BECWidget.USER_ACCESS, *BASE_USER_ACCESS]
 
-    # Whether this plot benefits from the OpenGL viewport. Only PlotCurveItem and
-    # PColorMeshItem have a shader path in pyqtgraph 0.14; image- and scatter-based
-    # plots gain nothing, so they stay on the raster viewport. Subclasses that draw
-    # curves set this to True. The final say belongs to `opengl_available`, which
-    # also honours the BEC_WIDGETS_OPENGL environment variable.
-    USE_OPENGL = False
+    # Default for the `use_opengl` property. Curve-heavy plots gain the most, but
+    # the OpenGL viewport is no slower for the others, so it is on by default and
+    # can be toggled per widget at runtime. `opengl_available` still has the final
+    # say: it declines on a software renderer and honours BEC_WIDGETS_OPENGL.
+    USE_OPENGL = True
 
     # Custom Signals
     property_changed = Signal(str, object)
@@ -170,9 +172,7 @@ class PlotBase(BECWidget, QWidget):
         self.plot_widget = pg.GraphicsLayoutWidget(parent=self)
         # GraphicsLayoutWidget forwards no viewport argument to GraphicsView, so the
         # viewport is swapped after construction instead.
-        self._opengl_enabled = opengl_available(self.USE_OPENGL)
-        if self._opengl_enabled:
-            self.plot_widget.useOpenGL(True)
+        self.use_opengl = self.USE_OPENGL
         self.plot_widget.ci.setContentsMargins(0, 0, 0, 0)
         self.plot_item = pg.PlotItem(viewBox=BECViewBox(enableMenu=True))
         self.plot_widget.addItem(self.plot_item)
@@ -322,6 +322,31 @@ class PlotBase(BECWidget, QWidget):
                 pb_connection.axis_settings_dialog = None
             self.add_side_menus()
             self.side_panel.show()
+
+    @SafeProperty(bool, doc="Render the plot through an OpenGL viewport.")
+    def use_opengl(self) -> bool:
+        """
+        Whether the plot currently renders through an OpenGL viewport.
+
+        Reflects the live viewport rather than the requested value: setting this to
+        True is best effort, and stays False when no hardware-accelerated context is
+        available (see `bec_widgets.utils.gpu_acceleration.opengl_available`).
+        """
+        return isinstance(self.plot_widget.viewport(), QOpenGLWidget)
+
+    @use_opengl.setter
+    def use_opengl(self, value: bool) -> None:
+        """
+        Switch the plot between the OpenGL and raster viewport.
+
+        Args:
+            value(bool): Whether the OpenGL viewport is wanted.
+        """
+        if value and not opengl_available(True):
+            if self.use_opengl:
+                set_view_opengl(self.plot_widget, False)
+            return
+        set_view_opengl(self.plot_widget, value)
 
     @SafeProperty(bool, doc="Enable popups setting dialogs for the plot widget.")
     def enable_popups(self):
