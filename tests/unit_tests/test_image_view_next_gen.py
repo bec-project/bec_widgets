@@ -741,6 +741,69 @@ def test_scan_rollover_same_scan_noop(qtbot, mocked_client, monkeypatch):
     assert view.main_image.raw_data.shape == (2, 3)
 
 
+def test_build_1d_buffer_incremental_matches_full_rebuild(qtbot, mocked_client, monkeypatch):
+    """
+    The incremental waterfall buffer must equal the from-scratch construction
+    across live appends (contiguous and gapped), an unchanged reused
+    snapshot, an out-of-order hole-fill, a wider new row, a non-live reason
+    and a scan change — and must only fall back to the full rebuild for the
+    emissions that cannot be pure appends.
+    """
+    _fake_bridge_factory(monkeypatch)
+    view = create_widget(qtbot, Image, client=mocked_client)
+    _set_signal_config(
+        mocked_client, "eiger", "img", signal_class="AsyncSignal", ndim=1, obj_name="async_obj"
+    )
+    view.image(device="eiger", signal="img")
+
+    from_scratch = Image._rebuild_1d_buffer
+    rebuilds = []
+
+    def counting(self, source):
+        rebuilds.append(source)
+        return from_scratch(self, source)
+
+    monkeypatch.setattr(Image, "_rebuild_1d_buffer", counting)
+
+    def reference(values):
+        rows = [np.atleast_1d(np.asarray(value)) for value in values]
+        width = max(row.shape[0] for row in rows)
+        return np.vstack([np.pad(row, (0, width - row.shape[0])) for row in rows])
+
+    steps = [
+        # (scan_id, reason, values, ordinals, expected rebuild count so far)
+        ("scan_1", "live", [[1.0, 2.0]], (0,), 1),  # first emission seeds the cache
+        ("scan_1", "live", [[1.0, 2.0], [3.0, 4.0]], (0, 1), 1),  # append
+        ("scan_1", "live", [[1.0, 2.0], [3.0, 4.0]], (0, 1), 1),  # unchanged reused snapshot
+        ("scan_1", "live", [[1.0, 2.0], [3.0, 4.0], [5.0]], (0, 1, 3), 1),  # gapped short append
+        # late hole-fill below the frontier -> full rebuild
+        ("scan_1", "live", [[1.0, 2.0], [3.0, 4.0], [4.5], [5.0]], (0, 1, 2, 3), 2),
+        # new row wider than the cached buffer -> full rebuild
+        ("scan_1", "live", [[1.0, 2.0], [3.0, 4.0], [4.5], [5.0], [6.0] * 4], (0, 1, 2, 3, 4), 3),
+        # non-live reason -> full rebuild
+        (
+            "scan_1",
+            "backfill",
+            [[1.0, 2.0], [3.0, 4.0], [4.5], [5.0], [6.0] * 4],
+            (0, 1, 2, 3, 4),
+            4,
+        ),
+        ("scan_2", "live", [[9.0, 9.0]], (0,), 5),  # scan change -> full rebuild
+        ("scan_2", "live", [[9.0, 9.0], [10.0, 11.0]], (0, 1), 5),  # incremental resumes
+    ]
+    for scan_id, reason, values, ordinals, expected_rebuilds in steps:
+        source = _make_source(
+            "eiger",
+            "async_obj",
+            values,
+            ordinals=ordinals,
+            metadata={"async_update_type": "add", "max_shape": [None]},
+        )
+        view._on_data_update(_make_update(source, scan_id=scan_id, reason=reason))
+        np.testing.assert_array_equal(view.main_image.raw_data, reference(values))
+        assert len(rebuilds) == expected_rebuilds
+
+
 def test_image_data_update_2d(qtbot, mocked_client, monkeypatch):
     _fake_bridge_factory(monkeypatch)
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)

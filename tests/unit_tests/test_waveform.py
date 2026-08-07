@@ -113,20 +113,21 @@ def _fake_bridge_factory(monkeypatch, gated_bytes: int | None = None):
     return created
 
 
-def _monitored_source(device, values, entry=None, timestamps=None, ordinals=None):
+def _monitored_source(device, values, entry=None, timestamps=None, ordinals=None, as_numpy=False):
     from bec_lib.data_api.models import SourceData
 
     entry = entry or device
     ordinals = tuple(range(len(values))) if ordinals is None else tuple(ordinals)
     if timestamps is None:
         timestamps = tuple(float(i) for i in ordinals)
+    wrap = (lambda seq: np.asarray(seq)) if as_numpy else tuple
     return SourceData(
         device=device,
         entry=entry,
         kind="monitored",
-        ordinals=ordinals,
-        values=tuple(values),
-        timestamps=tuple(timestamps),
+        ordinals=wrap(ordinals),
+        values=wrap(values),
+        timestamps=wrap(timestamps),
         complete=True,
     )
 
@@ -140,6 +141,7 @@ def _async_source(
     max_shape=(None,),
     kind="async",
     ordinals=None,
+    as_numpy=False,
 ):
     from bec_lib.data_api.models import SourceData
 
@@ -147,13 +149,14 @@ def _async_source(
     ordinals = tuple(range(len(values))) if ordinals is None else tuple(ordinals)
     if timestamps is None:
         timestamps = tuple(float(i) for i in ordinals)
+    wrap = (lambda seq: np.asarray(seq)) if as_numpy else tuple
     return SourceData(
         device=device,
         entry=entry,
         kind=kind,
-        ordinals=ordinals,
-        values=tuple(values),
-        timestamps=tuple(timestamps),
+        ordinals=wrap(ordinals),
+        values=wrap(values),
+        timestamps=wrap(timestamps),
         complete=True,
         metadata={
             "async_update_type": update_type,
@@ -1324,6 +1327,55 @@ def test_on_data_update_async_history_rows(qtbot, mocked_client, monkeypatch):
     np.testing.assert_array_equal(y_data, [4, 5, 6])
 
 
+def test_on_data_update_async_add_incremental_matches_full_rebuild(
+    qtbot, mocked_client, monkeypatch
+):
+    """
+    The incremental 1-D 'add' render path must yield exactly the series the
+    from-scratch concatenation yields, across live appends (contiguous and
+    gapped), an unchanged reused snapshot, an out-of-order hole-fill, a
+    non-live reason and a scan change — and must only fall back to the full
+    rebuild for the emissions that cannot be pure appends.
+    """
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    c = wf.plot(arg1="async_device", label="async_device-async_device")
+    wf.scan_id = None  # render updates of any scan
+    wf.x_axis_mode["name"] = "index"
+
+    from_scratch = Waveform._async_display_values
+    rebuilds = []
+
+    def counting(source):
+        rebuilds.append(source)
+        return from_scratch(source)
+
+    monkeypatch.setattr(Waveform, "_async_display_values", staticmethod(counting))
+
+    steps = [
+        # (scan_id, reason, values, ordinals, expected rebuild count so far)
+        ("scan_1", "live", ([0.0, 1.0],), (0,), 1),  # first emission seeds the cache
+        ("scan_1", "live", ([0.0, 1.0], [2.0]), (0, 1), 1),  # append
+        ("scan_1", "live", ([0.0, 1.0], [2.0]), (0, 1), 1),  # unchanged reused snapshot
+        ("scan_1", "live", ([0.0, 1.0], [2.0], [4.0, 5.0]), (0, 1, 3), 1),  # gapped append
+        # late hole-fill below the frontier -> full rebuild
+        ("scan_1", "live", ([0.0, 1.0], [2.0], [3.0], [4.0, 5.0]), (0, 1, 2, 3), 2),
+        ("scan_1", "live", ([0.0, 1.0], [2.0], [3.0], [4.0, 5.0], [6.0]), (0, 1, 2, 3, 4), 2),
+        # non-live reason -> full rebuild
+        ("scan_1", "backfill", ([0.0, 1.0], [2.0], [3.0], [4.0, 5.0], [6.0]), tuple(range(5)), 3),
+        ("scan_2", "live", ([7.0],), (0,), 4),  # scan change -> full rebuild
+        ("scan_2", "live", ([7.0], [8.0, 9.0]), (0, 1), 4),  # incremental resumes
+    ]
+    for scan_id, reason, values, ordinals, expected_rebuilds in steps:
+        source = _async_source("async_device", values=values, ordinals=ordinals, update_type="add")
+        wf._on_data_update(_make_update([source], scan_id=scan_id, reason=reason))
+        x_data, y_data = c.get_data()
+        expected = from_scratch(source)
+        np.testing.assert_array_equal(y_data, expected)
+        np.testing.assert_array_equal(x_data, np.arange(len(expected)))
+        assert len(rebuilds) == expected_rebuilds
+
+
 ##################################################
 # The following tests are for the Curve class
 ##################################################
@@ -2125,3 +2177,44 @@ def test_detector_shaped_history_curve_is_not_hidden(qtbot, mocked_client, monke
     scan_item._msg.num_monitored_readouts = 37
     scan_item._msg.num_points = 37
     assert wf._history_curve_compatible(curve_for("bpm4i", "bpm4i")) is False
+
+
+def test_history_source_with_numpy_columns_renders(qtbot, mocked_client, monkeypatch):
+    """Regression: the history plugin delivers numpy-array columns (bulk
+    ingest keeps the file arrays intact). The render must accept them; a
+    ``if not source.values`` truth-test raised ValueError on multi-element
+    arrays and SafeSlot swallowed it, so the curve showed no data."""
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_axis_mode["name"] = "index"
+
+    # monitored history column, numpy-valued (what bec_lib now emits)
+    c = wf.plot(arg1="bpm4i", label="bpm4i-bpm4i")
+    wf.scan_id = "dummy"
+    src = _monitored_source("bpm4i", values=[5.0, 6.0, 7.0, 8.0], as_numpy=True)
+    wf._on_data_update(_make_update([src], reason="history"))
+    x_data, y_data = c.get_data()
+    np.testing.assert_array_equal(y_data, [5.0, 6.0, 7.0, 8.0])
+
+    # async history waveform, flat numpy value column, no async_update_type
+    ca = wf.plot(arg1="async_device", label="async_device-async_device")
+    src_a = _async_source(
+        "async_device", values=[1.0, 2.0, 3.0, 4.0, 5.0], update_type=None, as_numpy=True
+    )
+    # history reads carry no async_update_type
+    src_a.metadata.pop("async_update_type", None)
+    wf._on_data_update(_make_update([src_a], reason="history"))
+    x_data, y_data = ca.get_data()
+    assert y_data is not None and len(y_data) == 5
+
+
+def test_async_display_values_accepts_numpy(qtbot, mocked_client):
+    """Both display helpers must handle numpy-valued sources (bulk history)."""
+    from types import SimpleNamespace
+
+    src = _async_source("async_device", values=[1, 2, 3], update_type="add", as_numpy=True)
+    assert list(Waveform._async_display_values(src)) == [1, 2, 3]
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    carrier = SimpleNamespace(_data_api_async_cache=None)
+    cached = wf._async_display_values_cached(carrier, _make_update([src]), src)
+    assert list(cached) == [1, 2, 3]

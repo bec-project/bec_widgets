@@ -616,7 +616,7 @@ class MultiWaveform(PlotBase):
         if self._source_key is None:
             return
         source = update.get(*self._source_key)
-        if source is None or not source.values:
+        if source is None or source.values is None or len(source.values) == 0:
             return
 
         current_scan_id = self._effective_scan_id(update, source)
@@ -835,7 +835,7 @@ class MultiWaveform(PlotBase):
                 sources=[(device, entry)],
                 scan=scan,
                 parent=self,
-                min_emit_interval=0.1,
+                min_emit_interval=0.04,
                 max_points=max_points,
             )
             self._data_bridge.updated.connect(self._on_data_update)

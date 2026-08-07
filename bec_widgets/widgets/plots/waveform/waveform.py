@@ -1748,8 +1748,10 @@ class Waveform(PlotBase):
         if not sources:
             return
         try:
+            # 15 Hz render coalescing: above typical device message rates while
+            # leaving paint headroom for multi-million-point curves.
             self._data_bridge = QtDataSubscription(
-                self.client, sources=sources, scan=scan, parent=self, min_emit_interval=0.1
+                self.client, sources=sources, scan=scan, parent=self, min_emit_interval=0.0667
             )
             self._data_bridge.updated.connect(self._on_data_update)
         except Exception as exc:
@@ -1793,7 +1795,7 @@ class Waveform(PlotBase):
                     sources=list(dict.fromkeys(sources)),
                     scan=scan_id,
                     parent=self,
-                    min_emit_interval=0.1,
+                    min_emit_interval=0.0667,
                 )
                 bridge.updated.connect(self._on_data_update)
                 self._history_bridges[scan_id] = bridge
@@ -2040,7 +2042,7 @@ class Waveform(PlotBase):
         lengths only) or a same-length x device column, with an index
         fallback on any length mismatch.
         """
-        y_data = self._async_display_values(source)
+        y_data = self._async_display_values_cached(curve, update, source)
         if y_data is None or len(y_data) == 0:
             return False
         mode = self.x_axis_mode["name"] or "auto"
@@ -2093,7 +2095,7 @@ class Waveform(PlotBase):
             np.ndarray | None: The displayed y data.
         """
         values = source.values
-        if not values:
+        if values is None or len(values) == 0:
             return None
         update_type = source.metadata.get("async_update_type")
         max_shape = source.metadata.get("max_shape") or []
@@ -2112,6 +2114,75 @@ class Waveform(PlotBase):
         if first.ndim == 0:
             return np.asarray(values)
         return np.atleast_1d(np.asarray(values[-1]))
+
+    def _async_display_values_cached(self, curve: Curve, update, source) -> np.ndarray | None:
+        """
+        Incremental variant of :meth:`_async_display_values` for the one
+        display mode whose from-scratch cost grows with the scan — 1-D 'add'
+        concatenation. The concatenated buffer and the consumed ordinal
+        frontier are cached on the curve; per emission only the fragments
+        beyond the frontier are appended, keeping the per-message cost
+        O(new data) instead of O(total).
+
+        The cache is dropped and the series rebuilt from all fragments when
+        the emission cannot be a pure append: a non-live reason (backfill,
+        history, rebind), a scan change, a source-key change, or new data at
+        or below the frontier (late hole-fills, retention drops). Every full
+        rebuild reseeds the cache, so a live stream resumes incrementally
+        after it. All other display modes are already O(new data) and are
+        delegated unchanged.
+
+        Args:
+            curve(Curve): The rendered curve (cache carrier).
+            update(SubscriptionUpdate): The update snapshot.
+            source(SourceData): The async source snapshot.
+
+        Returns:
+            np.ndarray | None: The displayed y data (identical to
+                :meth:`_async_display_values`).
+        """
+        values = source.values
+        if values is None or len(values) == 0:
+            return None
+        update_type = source.metadata.get("async_update_type")
+        max_shape = source.metadata.get("max_shape") or []
+        if update_type != "add" or len(max_shape) > 1:
+            # Last-fragment / last-row display modes: O(new data) already.
+            curve._data_api_async_cache = None
+            return self._async_display_values(source)
+        ordinals = source.ordinals
+        if ordinals is None or len(ordinals) == 0:
+            return self._async_display_values(source)
+        cache = getattr(curve, "_data_api_async_cache", None)
+        if (
+            cache is not None
+            and update.reason == "live"
+            and cache["scan_id"] == update.scan_id
+            and cache["source_key"] == source.key
+        ):
+            n_seen = cache["n_seen"]
+            frontier_intact = (
+                len(ordinals) >= n_seen and ordinals[n_seen - 1] == cache["last_ordinal"]
+            )
+            if frontier_intact and len(ordinals) == n_seen:
+                # Unchanged snapshot (the backend reuses source snapshots).
+                return cache["buffer"]
+            if frontier_intact and ordinals[n_seen] > cache["last_ordinal"]:
+                new_fragments = [np.atleast_1d(np.asarray(value)) for value in values[n_seen:]]
+                buffer = np.concatenate([cache["buffer"], *new_fragments])
+                cache["buffer"] = buffer
+                cache["n_seen"] = len(ordinals)
+                cache["last_ordinal"] = ordinals[-1]
+                return buffer
+        buffer = self._async_display_values(source)
+        curve._data_api_async_cache = {
+            "scan_id": update.scan_id,
+            "source_key": source.key,
+            "n_seen": len(ordinals),
+            "last_ordinal": ordinals[-1],
+            "buffer": buffer,
+        }
+        return buffer
 
     def _auto_adjust_async_curve_settings(
         self,

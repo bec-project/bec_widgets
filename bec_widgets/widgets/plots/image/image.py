@@ -130,6 +130,7 @@ class Image(ImageBase):
         self._data_bridge: QtDataSubscription | None = None
         self._source_key: tuple[str, str] | None = None
         self._min_display_ordinal: int | None = None
+        self._waterfall_cache: dict | None = None
         self.old_scan_id = None
         self.scan_id = None
         self.async_update = False
@@ -451,7 +452,7 @@ class Image(ImageBase):
                 sources=[(self._config.device, entry)],
                 scan=scan,
                 parent=self,
-                min_emit_interval=0.1,
+                min_emit_interval=0.04,
                 max_points=max_points,
             )
             self._data_bridge.updated.connect(self._on_data_update)
@@ -466,6 +467,7 @@ class Image(ImageBase):
 
         self._source_key = (self._config.device, entry)
         self._min_display_ordinal = None
+        self._waterfall_cache = None
         self._set_connection_status("connected")
         logger.info(
             f"Connected to {self._config.device}.{self._config.signal} with type {config.monitor_type}"
@@ -476,6 +478,7 @@ class Image(ImageBase):
         """Close the active DataAPI bridge, if any."""
         self._source_key = None
         self._min_display_ordinal = None
+        self._waterfall_cache = None
         if self._data_bridge is None:
             return
         try:
@@ -752,7 +755,7 @@ class Image(ImageBase):
         if self.subscriptions["main"].monitor_type == "2d":
             data = np.asarray(source.values[-1])
         else:
-            data = self._build_1d_buffer(source)
+            data = self._build_1d_buffer(source, reason=update.reason)
         if data is None:
             return
         self._render_image_data(data)
@@ -801,13 +804,84 @@ class Image(ImageBase):
         if self.crosshair is not None:
             self.crosshair.reset()
 
-    def _build_1d_buffer(self, source) -> np.ndarray | None:
+    def _build_1d_buffer(self, source, reason: str = "live") -> np.ndarray | None:
         """
-        Rebuild the 2-D waterfall buffer from the 1-D columnar fragments of a
+        Build the 2-D waterfall buffer from the 1-D columnar fragments of a
         source: one row per ordinal, rows zero-padded to the longest row,
         newest row last. Covers async 'add' (one fragment per ordinal),
         'add_slice' (accumulated row per ordinal), 'replace' (single current
         state) and preview streams (one waveform per arrival) alike.
+
+        The padded buffer and the consumed ordinal frontier are cached, so a
+        live append-only emission stacks only the new rows (padded to the
+        cached width) — O(new data) per emission instead of O(total). The
+        buffer is rebuilt from all fragments when the emission cannot be a
+        pure append: a non-live reason, a scan or display-window change, new
+        data at or below the frontier (late hole-fills, retention drops) or a
+        new row wider than the cached buffer. Every full rebuild reseeds the
+        cache.
+
+        Args:
+            source (SourceData): The 1-D source snapshot.
+            reason (str): The update reason ("live", "backfill", ...).
+
+        Returns:
+            np.ndarray | None: The (n_rows, max_len) buffer, or None if no
+                displayable rows remain.
+        """
+        ordinals = source.ordinals
+        cache = self._waterfall_cache
+        if (
+            cache is not None
+            and reason == "live"
+            and ordinals
+            and cache["scan_id"] == self.scan_id
+            and cache["min_display_ordinal"] == self._min_display_ordinal
+        ):
+            n_seen = cache["n_seen"]
+            frontier_intact = (
+                len(ordinals) >= n_seen and ordinals[n_seen - 1] == cache["last_ordinal"]
+            )
+            if frontier_intact and len(ordinals) == n_seen:
+                # Unchanged snapshot (the backend reuses source snapshots).
+                return cache["buffer"]
+            if frontier_intact and ordinals[n_seen] > cache["last_ordinal"]:
+                new_rows = [np.atleast_1d(np.asarray(value)) for value in source.values[n_seen:]]
+                new_rows = [row for row in new_rows if row.ndim == 1]
+                width = cache["width"]
+                if all(row.shape[0] <= width for row in new_rows):
+                    buffer = cache["buffer"]
+                    if new_rows:
+                        padded = [
+                            np.pad(
+                                row, (0, width - row.shape[0]), mode="constant", constant_values=0
+                            )
+                            for row in new_rows
+                        ]
+                        buffer = np.vstack([buffer, *padded])
+                        cache["buffer"] = buffer
+                    cache["n_seen"] = len(ordinals)
+                    cache["last_ordinal"] = ordinals[-1]
+                    return buffer
+        buffer = self._rebuild_1d_buffer(source)
+        if ordinals:
+            self._waterfall_cache = {
+                "scan_id": self.scan_id,
+                "min_display_ordinal": self._min_display_ordinal,
+                "n_seen": len(ordinals),
+                "last_ordinal": ordinals[-1],
+                "buffer": buffer,
+                "width": 0 if buffer is None else buffer.shape[1],
+            }
+        else:
+            self._waterfall_cache = None
+        return buffer
+
+    def _rebuild_1d_buffer(self, source) -> np.ndarray | None:
+        """
+        From-scratch reference construction of the waterfall buffer (see
+        :meth:`_build_1d_buffer`): all fragments, zero-padded to the longest
+        row, restricted to the current display window.
 
         Args:
             source (SourceData): The 1-D source snapshot.
