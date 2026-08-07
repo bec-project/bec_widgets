@@ -40,6 +40,13 @@ class CurveConfig(ConnectionConfig):
         None, description="The color of the symbol of the curve."
     )
     symbol_size: int | None = Field(7, description="The size of the symbol of the curve.")
+    symbol_point_limit: int | None = Field(
+        1000,
+        description=(
+            "Hide the symbol once the curve holds more than this many points. "
+            "None keeps the symbol at every data size."
+        ),
+    )
     pen_width: int | None = Field(4, description="The width of the pen of the curve.")
     pen_style: Literal["solid", "dash", "dot", "dashdot"] | None = Field(
         "solid", description="The style of the pen of the curve."
@@ -61,6 +68,45 @@ class CurveConfig(ConnectionConfig):
 
     _validate_color = field_validator("color")(Colors.validate_color)
     _validate_symbol_color = field_validator("symbol_color")(Colors.validate_color)
+
+
+def _incoming_length(args: tuple, kwargs: dict) -> int | None:
+    """
+    Number of points a ``PlotDataItem.setData`` call is about to plot.
+
+    ``setData`` accepts several shapes -- ``(y)``, ``(x, y)``, keyword ``x``/``y``,
+    a dict, a record array or a list of dicts. Only the plain sequence forms are
+    resolved here; anything else returns None so the caller leaves the symbol as
+    it is rather than guessing.
+
+    Args:
+        args(tuple): Positional arguments passed to ``setData``.
+        kwargs(dict): Keyword arguments passed to ``setData``.
+
+    Returns:
+        int | None: The point count, or None if it cannot be determined cheaply.
+    """
+    candidate = None
+    if len(args) >= 2:
+        candidate = args[1]
+    elif len(args) == 1:
+        candidate = args[0]
+    elif "y" in kwargs:
+        candidate = kwargs["y"]
+    elif "x" in kwargs:
+        candidate = kwargs["x"]
+    elif not args and not kwargs:
+        # setData() with no arguments clears the curve
+        return 0
+
+    if isinstance(candidate, np.ndarray):
+        return candidate.shape[0] if candidate.ndim else None
+    if isinstance(candidate, (list, tuple)):
+        # a list of dicts is a spot-style record list, not a value column
+        if candidate and isinstance(candidate[0], dict):
+            return None
+        return len(candidate)
+    return None
 
 
 class Curve(BECConnector, pg.PlotDataItem):
@@ -93,6 +139,8 @@ class Curve(BECConnector, pg.PlotDataItem):
         parent_item: Waveform | None = None,
         **kwargs,
     ):
+        # Set before apply_config(), which consults it to honour the symbol limit.
+        self._symbols_suppressed = False
         if config is None:
             config = CurveConfig(label=name, widget_class=self.__class__.__name__)
             self.config = config
@@ -144,6 +192,41 @@ class Curve(BECConnector, pg.PlotDataItem):
 
             self.setSymbolBrush(brush)
             self.setSymbolSize(self.config.symbol_size)
+            # A dense curve keeps its symbol hidden; the config still records what
+            # to restore once the data drops back below the limit.
+            self.setSymbol(None if self._symbols_suppressed else self.config.symbol)
+
+    def setData(self, *args, **kwargs):
+        """
+        Set the curve data, hiding the symbol for datasets above the configured limit.
+
+        pyqtgraph draws symbols through ``ScatterPlotItem``, which builds a style
+        tuple per point in Python (``SymbolAtlas._keys``). That is linear in the
+        number of points and dominates everything else: at 50k points a ``setData``
+        costs ~90 ms with a symbol and ~0.5 ms without. Scans routinely exceed the
+        limit, so the symbol is dropped there and restored when the data shrinks.
+        """
+        self._apply_symbol_limit(_incoming_length(args, kwargs))
+        super().setData(*args, **kwargs)
+
+    def _apply_symbol_limit(self, data_length: int | None) -> None:
+        """
+        Hide or restore the symbol for the given incoming data length.
+
+        Args:
+            data_length(int | None): Length of the data about to be set, or None
+                when it could not be determined (the limit is then left alone).
+        """
+        limit = self.config.symbol_point_limit
+        if data_length is None or limit is None:
+            return
+        suppressed = data_length > limit
+        if suppressed == self._symbols_suppressed:
+            return
+        self._symbols_suppressed = suppressed
+        if suppressed:
+            self.setSymbol(None)
+        elif self.config.symbol:
             self.setSymbol(self.config.symbol)
 
     @property
@@ -264,8 +347,11 @@ class Curve(BECConnector, pg.PlotDataItem):
             symbol(str): Symbol of the curve.
         """
         self.config.symbol = symbol
-        self.setSymbol(symbol)
-        self.updateItems()
+        # While the curve is dense the symbol stays hidden; the config keeps the
+        # request so it takes effect once the data drops below the limit.
+        if not self._symbols_suppressed:
+            self.setSymbol(symbol)
+            self.updateItems()
 
     def set_symbol_color(self, symbol_color: str):
         """
