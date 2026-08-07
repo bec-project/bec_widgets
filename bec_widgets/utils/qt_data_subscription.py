@@ -36,6 +36,7 @@ class QtDataSubscription(QObject):
         parent: QObject | None = None,
         min_emit_interval: float = 0.1,
         max_points: int | None = None,
+        size_limit_bytes: int | None = None,
     ):
         """
         Subscribe to data for the given sources.
@@ -54,6 +55,11 @@ class QtDataSubscription(QObject):
             max_points (int | None): Per-source retention cap; oldest points
                 are dropped beyond it. Recommended for endless device-stream
                 subscriptions (``scan=None``).
+            size_limit_bytes (int | None): Withhold the load when the backend
+                can estimate the payload up front (history scans) and the
+                estimate exceeds this limit. Nothing is read; the bridge
+                reports :attr:`size_gated` with :attr:`estimated_bytes` and
+                waits for :meth:`confirm_size`.
 
         Raises:
             ValueError: If a concrete scan id cannot be served.
@@ -74,6 +80,7 @@ class QtDataSubscription(QObject):
             callback=self._deliver,
             min_emit_interval=min_emit_interval,
             max_points=max_points,
+            size_limit_bytes=size_limit_bytes,
         )
         self.destroyed.connect(lambda: self.close())
 
@@ -111,6 +118,25 @@ class QtDataSubscription(QObject):
     def healthy(self) -> bool:
         """Whether every declared source is currently delivering."""
         return not self._subscription.unbound_sources
+
+    @property
+    def size_gated(self) -> bool:
+        """Whether delivery is withheld pending :meth:`confirm_size`."""
+        return bool(self._subscription.size_gated)
+
+    @property
+    def estimated_bytes(self) -> int | None:
+        """Estimated payload size of the bound scan, if the backend knows it."""
+        return self._subscription.estimated_bytes
+
+    def confirm_size(self) -> None:
+        """
+        Release a load withheld by ``size_limit_bytes``.
+
+        Returns immediately: the file read runs on the backend's worker
+        thread and the data arrives later through :attr:`updated`.
+        """
+        self._subscription.confirm_size()
 
     def set_sources(self, sources: list[SourceKey]) -> None:
         """Atomically replace the source set."""

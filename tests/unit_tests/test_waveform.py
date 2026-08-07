@@ -19,7 +19,6 @@ from bec_widgets.widgets.services.scan_history_browser.scan_history_browser impo
     ScanHistoryBrowser,
 )
 from tests.unit_tests.client_mocks import (
-    DummyData,
     create_dummy_scan_item,
     dap_plugin_message,
     inject_scan_history,
@@ -50,6 +49,134 @@ def make_alignment_fit_summary(center: float | None = None) -> dict:
         "message": "Fit succeeded.",
         "params": params,
     }
+
+
+##################################################
+# DataAPI test helpers
+##################################################
+
+
+def _fake_bridge_factory(monkeypatch, gated_bytes: int | None = None):
+    """
+    Patch QtDataSubscription in the waveform module with a lightweight
+    stand-in. Returns the list of created bridges (newest last).
+
+    Args:
+        gated_bytes(int | None): When given, every bridge created with a
+            ``size_limit_bytes`` smaller than this value reports itself as
+            size-gated with ``estimated_bytes = gated_bytes`` (mirrors the
+            backend gate without any file I/O).
+    """
+    created = []
+
+    class _FakeBridge:
+        def __init__(
+            self,
+            client,
+            sources,
+            scan="live",
+            parent=None,
+            min_emit_interval=0.1,
+            size_limit_bytes=None,
+        ):
+            self.client = client
+            self.sources = list(sources)
+            self.scan = scan
+            self.scan_id = None if scan == "live" else scan
+            self.healthy = True
+            self.closed = False
+            self.updated = MagicMock()
+            self.size_limit_bytes = size_limit_bytes
+            self.estimated_bytes = gated_bytes
+            self.size_gated = (
+                gated_bytes is not None
+                and size_limit_bytes is not None
+                and gated_bytes > size_limit_bytes
+            )
+            self.confirmed = False
+
+        def confirm_size(self):
+            self.confirmed = True
+            self.size_gated = False
+
+        def close(self):
+            self.closed = True
+
+    def factory(
+        client, sources, scan="live", parent=None, min_emit_interval=0.1, size_limit_bytes=None
+    ):
+        bridge = _FakeBridge(client, sources, scan=scan, size_limit_bytes=size_limit_bytes)
+        created.append(bridge)
+        return bridge
+
+    monkeypatch.setattr("bec_widgets.widgets.plots.waveform.waveform.QtDataSubscription", factory)
+    return created
+
+
+def _monitored_source(device, values, entry=None, timestamps=None, ordinals=None):
+    from bec_lib.data_api.models import SourceData
+
+    entry = entry or device
+    ordinals = tuple(range(len(values))) if ordinals is None else tuple(ordinals)
+    if timestamps is None:
+        timestamps = tuple(float(i) for i in ordinals)
+    return SourceData(
+        device=device,
+        entry=entry,
+        kind="monitored",
+        ordinals=ordinals,
+        values=tuple(values),
+        timestamps=tuple(timestamps),
+        complete=True,
+    )
+
+
+def _async_source(
+    device,
+    values,
+    entry=None,
+    timestamps=None,
+    update_type="add",
+    max_shape=(None,),
+    kind="async",
+    ordinals=None,
+):
+    from bec_lib.data_api.models import SourceData
+
+    entry = entry or device
+    ordinals = tuple(range(len(values))) if ordinals is None else tuple(ordinals)
+    if timestamps is None:
+        timestamps = tuple(float(i) for i in ordinals)
+    return SourceData(
+        device=device,
+        entry=entry,
+        kind=kind,
+        ordinals=ordinals,
+        values=tuple(values),
+        timestamps=tuple(timestamps),
+        complete=True,
+        metadata={
+            "async_update_type": update_type,
+            "max_shape": list(max_shape),
+            "acquisition_group": None,
+        },
+    )
+
+
+def _make_update(sources, scan_id="dummy", reason="live", group="scan"):
+    from bec_lib.data_api.models import SubscriptionUpdate
+
+    source_map = {source.key: source for source in sources}
+    ordinal_sets = [set(source.ordinals) for source in source_map.values()]
+    aligned = tuple(sorted(set.intersection(*ordinal_sets))) if ordinal_sets else ()
+    return SubscriptionUpdate(
+        scan_id=scan_id,
+        reason=reason,
+        sources=source_map,
+        aligned_ordinals=aligned,
+        complete=True,
+        metadata={"group": group},
+    )
 
 
 def test_waveform_initialization(qtbot, mocked_client):
@@ -344,80 +471,105 @@ def test_curve_json_setter_ignores_custom(qtbot, mocked_client):
 ##################################################
 
 
-def test_update_sync_curves(monkeypatch, qtbot, mocked_client):
+def test_on_data_update_sync_timestamp_mode(monkeypatch, qtbot, mocked_client):
     """
-    Test that update_sync_curves retrieves live data correctly and calls setData on sync curves.
+    A monitored curve in timestamp mode is rendered from the aligned columns
+    against the source timestamps.
     """
+    _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     c = wf.plot(arg1="bpm4i")
-    wf._sync_curves = [c]
     wf.x_mode = "timestamp"
-    dummy_scan = create_dummy_scan_item()
-    wf.scan_item = dummy_scan
+    wf.scan_id = "dummy"
 
-    recorded = {}
+    update = _make_update(
+        [_monitored_source("bpm4i", values=(5, 6, 7), timestamps=(101, 201, 301))]
+    )
+    wf._on_data_update(update)
 
-    def fake_setData(x, y):
-        recorded["x"] = x
-        recorded["y"] = y
-
-    monkeypatch.setattr(c, "setData", fake_setData)
-
-    wf.update_sync_curves()
-    np.testing.assert_array_equal(recorded.get("x"), [101, 201, 301])
-    np.testing.assert_array_equal(recorded.get("y"), [5, 6, 7])
+    x_data, y_data = c.get_data()
+    np.testing.assert_array_equal(x_data, [101, 201, 301])
+    np.testing.assert_array_equal(y_data, [5, 6, 7])
 
 
-def test_update_async_curves(monkeypatch, qtbot, mocked_client):
+def test_on_data_update_sync_index_mode(monkeypatch, qtbot, mocked_client):
     """
-    Test that update_async_curves retrieves live data correctly and calls setData on async curves.
+    A monitored curve in index mode is rendered against the aligned ordinals.
     """
+    _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
-    c = wf.plot(arg1="async_device", label="async_device-async_device")
-    wf._async_curves = [c]
-    wf.x_mode = "timestamp"  # Timestamp is not supported, fallback to index.
-    dummy_scan = create_dummy_scan_item()
-    wf.scan_item = dummy_scan
+    c = wf.plot(arg1="bpm4i")
+    wf.x_mode = "index"
+    wf.scan_id = "dummy"
 
-    recorded = {}
+    wf._on_data_update(_make_update([_monitored_source("bpm4i", values=(5, 6, 7))]))
 
-    def fake_setData(x, y):
-        recorded["x"] = x
-        recorded["y"] = y
-
-    monkeypatch.setattr(c, "setData", fake_setData)
-
-    wf.update_async_curves()
-    np.testing.assert_array_equal(recorded.get("x"), [0, 1, 2])
-    np.testing.assert_array_equal(recorded.get("y"), [1, 2, 3])
+    x_data, y_data = c.get_data()
+    np.testing.assert_array_equal(x_data, [0, 1, 2])
+    np.testing.assert_array_equal(y_data, [5, 6, 7])
 
 
-def test_get_x_data_custom(monkeypatch, qtbot, mocked_client):
+def test_on_data_update_sync_custom_x_device(monkeypatch, qtbot, mocked_client):
     """
-    Test that _get_x_data returns the correct custom signal data.
+    A monitored curve in custom device mode uses the aligned values of the x
+    device delivered in the same update; a missing x source falls back to
+    the index.
     """
+    _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
-    # Set x_mode to a custom mode.
-    wf.x_axis_mode["name"] = "custom_signal"
-    wf.x_axis_mode["entry"] = "custom_entry"
-    dummy_data = DummyData(val=[50, 60, 70], timestamps=[150, 160, 170])
-    dummy_live = {"custom_signal": {"custom_entry": dummy_data}}
-    monkeypatch.setattr(wf, "_fetch_scan_data_and_access", lambda: (dummy_live, "val"))
-    x_data = wf._get_x_data("irrelevant", "irrelevant")
+    c = wf.plot(arg1="bpm4i")
+    wf.x_mode = "samx"
+    wf.scan_id = "dummy"
+
+    update = _make_update(
+        [
+            _monitored_source("bpm4i", values=(5, 6, 7)),
+            _monitored_source("samx", values=(50, 60, 70)),
+        ]
+    )
+    wf._on_data_update(update)
+
+    x_data, y_data = c.get_data()
     np.testing.assert_array_equal(x_data, [50, 60, 70])
+    np.testing.assert_array_equal(y_data, [5, 6, 7])
+    assert wf._current_x_device == ("samx", "samx")
+
+    # X source missing from the update -> index fallback
+    wf._on_data_update(_make_update([_monitored_source("bpm4i", values=(5, 6, 7))]))
+    x_data, _ = c.get_data()
+    np.testing.assert_array_equal(x_data, [0, 1, 2])
 
 
-def test_get_x_data_timestamp(monkeypatch, qtbot, mocked_client):
+def test_on_data_update_sync_auto_mode(monkeypatch, qtbot, mocked_client):
     """
-    Test that _get_x_data returns the correct timestamp data.
+    Auto mode resolves the x device from the scan report devices when no
+    async curves are present, and falls back to the index otherwise.
     """
+    _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
-    wf.x_axis_mode["name"] = "timestamp"
-    dummy_data = DummyData(val=[50, 60, 70], timestamps=[101, 202, 303])
-    dummy_live = {"deviceX": {"entryX": dummy_data}}
-    monkeypatch.setattr(wf, "_fetch_scan_data_and_access", lambda: (dummy_live, "val"))
-    x_data = wf._get_x_data("deviceX", "entryX")
-    np.testing.assert_array_equal(x_data, [101, 202, 303])
+    c = wf.plot(arg1="bpm4i")
+    wf.scan_id = "dummy"
+    wf.scan_item = create_dummy_scan_item()  # scan_report_devices == ["samx"]
+
+    update = _make_update(
+        [
+            _monitored_source("bpm4i", values=(5, 6, 7)),
+            _monitored_source("samx", values=(10, 20, 30)),
+        ]
+    )
+    wf._on_data_update(update)
+
+    x_data, y_data = c.get_data()
+    np.testing.assert_array_equal(x_data, [10, 20, 30])
+    np.testing.assert_array_equal(y_data, [5, 6, 7])
+    assert wf._current_x_device == ("samx", "samx")
+
+    # With an async curve present, auto mode falls back to index.
+    wf._async_curves = [MagicMock()]
+    wf._on_data_update(update)
+    x_data, _ = c.get_data()
+    np.testing.assert_array_equal(x_data, [0, 1, 2])
+    assert wf._current_x_device is None
 
 
 def test_categorise_device_curves(monkeypatch, qtbot, mocked_client):
@@ -438,14 +590,13 @@ def test_categorise_device_curves(monkeypatch, qtbot, mocked_client):
     assert c_async in wf._async_curves
 
 
-@pytest.mark.parametrize(
-    ["mode", "calls"], [("sync", (1, 0)), ("async", (0, 1)), ("mixed", (1, 1))]
-)
-def test_on_scan_status(qtbot, mocked_client, monkeypatch, mode, calls):
+@pytest.mark.parametrize("mode", ["sync", "async", "mixed"])
+def test_on_scan_status(qtbot, mocked_client, monkeypatch, mode):
     """
-    Test that on_scan_status sets up a new scan correctly,
-    categorizes curves, and triggers sync/async updates as needed.
+    Test that on_scan_status performs the per-scan bookkeeping (scan id,
+    categorisation) and rebuilds the DataAPI subscription for the new scan.
     """
+    bridges = _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     # Force creation of a couple of device curves
     if mode == "sync":
@@ -461,23 +612,26 @@ def test_on_scan_status(qtbot, mocked_client, monkeypatch, mode, calls):
     dummy_scan.metadata["bec"]["scan_id"] = "1234"
     monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: dummy_scan)
 
-    # We'll track calls to sync_signal_update and async_signal_update
-    sync_spy = MagicMock()
-    async_spy = MagicMock()
-    wf.sync_signal_update.connect(sync_spy)
-    wf.async_signal_update.connect(async_spy)
-
-    # Prepare fake message data
-    msg = {"scan_id": "1234"}
-    meta = {}
-    wf.on_scan_status(msg, meta)
+    n_bridges = len(bridges)
+    wf.on_scan_status({"scan_id": "1234"}, {})
 
     assert wf.scan_id == "1234"
     assert wf.scan_item == dummy_scan
     assert wf._mode == mode
 
-    assert sync_spy.call_count == calls[0], "sync_signal_update should be called exactly once"
-    assert async_spy.call_count == calls[1], "async_signal_update should be called exactly once"
+    # The DataAPI subscription is rebuilt for the new scan and follows it live.
+    assert len(bridges) > n_bridges
+    assert bridges[-1].scan == "live"
+    expected_sources = []
+    if mode in ("sync", "mixed"):
+        expected_sources.append(("bpm4i", "bpm4i"))
+    if mode in ("async", "mixed"):
+        expected_sources.append(("async_device", "async_device"))
+    for key in expected_sources:
+        assert key in bridges[-1].sources
+    if mode == "sync":
+        # Auto mode resolves the x device from the scan report devices.
+        assert ("samx", "samx") in bridges[-1].sources
 
 
 def test_on_scan_status_ignored_without_device_curves(qtbot, mocked_client_with_dap, monkeypatch):
@@ -705,15 +859,14 @@ def test_alignment_panel_updates_when_auto_x_motor_changes(
     wf._current_x_device = ("samx", "samx")
     wf._alignment_panel.set_positioner_device("samx")
     wf.scan_item = create_dummy_scan_item()
+    # A real scan carries the report devices on its (in-memory) status
+    # message; the data file is only the last-resort source.
+    wf.scan_item.status_message.info["scan_report_devices"] = ["samy"]
     wf.scan_item.metadata["bec"]["scan_report_devices"] = ["samy"]
 
-    data = {
-        "samy": {"samy": {"val": np.array([1.0, 2.0, 3.0])}},
-        "bpm4i": {"bpm4i": {"val": np.array([10.0, 20.0, 30.0])}},
-    }
-    monkeypatch.setattr(wf, "_fetch_scan_data_and_access", lambda: (data, "val"))
-
-    wf._get_x_data("bpm4i", "bpm4i")
+    # Rendering a DataAPI update re-resolves the auto x device from the scan
+    # report devices and refreshes the alignment state.
+    wf._resolve_x_axis()
 
     assert wf._current_x_device == ("samy", "samy")
     assert wf._alignment_positioner_name == "samy"
@@ -996,217 +1149,179 @@ def test_request_dap_includes_composite_parameters_list(qtbot, mocked_client_wit
     assert msg.content["config"]["class_kwargs"]["model"] == ["GaussianModel", "GaussianModel"]
 
 
-def test_fetch_scan_data_and_access(qtbot, mocked_client, monkeypatch):
+# NOTE: the legacy pull path (_fetch_scan_data_and_access, update_sync_curves,
+# update_async_curves, _setup_async_curve, on_async_readback, _get_x_data) was
+# replaced by the DataAPI subscription; its behaviour is asserted through the
+# _on_data_update tests below.
+
+
+def test_async_curve_sources_in_subscription(qtbot, mocked_client, monkeypatch):
     """
-    Test the _fetch_scan_data_and_access method returns live_data/val if in a live scan,
-    or device dict/value if in a historical scan. Also test fallback if no scan_item.
+    Async curves are served by the DataAPI subscription (the backend resolves
+    the async endpoints); their (device, entry) pairs are part of the bridge
+    sources and are not duplicated.
     """
+    bridges = _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
 
-    wf.scan_item = None
+    wf.plot(arg1="async_device", label="async_device-async_device")
+    first_bridge = bridges[-1]
+    assert ("async_device", "async_device") in first_bridge.sources
 
-    hist_mock = MagicMock()
-    monkeypatch.setattr(wf, "update_with_scan_history", hist_mock)
-
-    wf._fetch_scan_data_and_access()
-    hist_mock.assert_called_once_with(-1)
-
-    # Check live mode
-    dummy_scan = create_dummy_scan_item()
-    wf.scan_item = dummy_scan
-    data_dict, access_key = wf._fetch_scan_data_and_access()
-    assert data_dict == dummy_scan.live_data
-    assert access_key == "val"
-
-    # Check history mode
-    del dummy_scan.live_data
-    dummy_scan.devices = {"some_device": {"some_entry": "some_value"}}
-    data_dict, access_key = wf._fetch_scan_data_and_access()
-    assert "some_device" in data_dict  # from dummy_scan.devices
-    assert access_key == "value"
+    # A second curve on the same signal replaces the subscription without
+    # duplicating the source.
+    wf.plot(arg1="async_device", label="second-curve")
+    assert first_bridge.closed is True
+    assert bridges[-1].sources.count(("async_device", "async_device")) == 1
 
 
-def test_setup_async_curve(qtbot, mocked_client, monkeypatch):
+def test_on_data_update_async_add(qtbot, mocked_client, monkeypatch):
     """
-    Test that _setup_async_curve properly disconnects old signals
-    and re-connects the async readback for a new scan ID.
+    An async 'add' source concatenates its fragments (1-D max_shape); a
+    'replace' source displays only the current full state.
     """
+    _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
-    wf.old_scan_id = "111"
-    wf.scan_id = "222"
-
     c = wf.plot(arg1="async_device", label="async_device-async_device")
-    # check that it was placed in _async_curves or so
-    wf._async_curves = [c]
-
-    # We'll spy on connect_slot
-    connect_spy = MagicMock()
-    monkeypatch.setattr(wf.bec_dispatcher, "connect_slot", connect_spy)
-
-    # _setup_async_curve dedupes subscriptions per scan; reset the tracking so this
-    # isolated call performs the (single) subscription.
-    wf._async_streams_setup = {}
-    wf._setup_async_curve(c)
-    connect_spy.assert_called_once()
-    endpoint_called = connect_spy.call_args[0][1].endpoint
-    # We expect MessageEndpoints.device_async_readback('222', 'async_device')
-    assert "222" in endpoint_called
-    assert "async_device" in endpoint_called
-
-    # A second curve that resolves to the same stream reuses the one subscription
-    # instead of subscribing again.
-    wf._setup_async_curve(c)
-    connect_spy.assert_called_once()
-
-
-def test_on_async_readback_add_update(qtbot, mocked_client):
-    """
-    Test that on_async_readback extends or replaces async data depending on metadata instruction.
-    'Index' mode
-    """
-    wf = create_widget(qtbot, Waveform, client=mocked_client)
-    wf.scan_item = create_dummy_scan_item()
-    wf._scan_done = False  # simulate a live scan
-    c = wf.plot(arg1="async_device", label="async_device-async_device")
-    wf._async_curves = [c]
-    # Suppose existing data
-    c.setData([0, 1, 2], [10, 11, 12])
-
-    # Set the x_axis_mode
+    wf.scan_id = "dummy"
     wf.x_axis_mode["name"] = "index"
 
-    ############# Test add ################
-
-    msg = {"signals": {"async_device": {"value": [100, 200], "timestamp": [1001, 1002]}}}
-    metadata = {"async_update": {"max_shape": [None], "type": "add"}}
-
-    cb_info_ret = {"scan_id": wf.scan_id}
-
-    def ret_sender():
-        return SimpleNamespace(cb_info={"scan_id": wf.scan_id})
-
-    with mock.patch.object(wf, "sender", side_effect=ret_sender):
-        wf.on_async_readback(msg, metadata, _override_slot_params={"verify_sender": False})
+    # 'add': fragments accumulate into one displayed series
+    source = _async_source(
+        "async_device", values=([10, 11, 12], [100, 200]), update_type="add", max_shape=(None,)
+    )
+    wf._on_data_update(_make_update([source]))
 
     x_data, y_data = c.get_data()
-    assert len(x_data) == 5
-    # Check x_data based on x_mode
     np.testing.assert_array_equal(x_data, [0, 1, 2, 3, 4])
-
     np.testing.assert_array_equal(y_data, [10, 11, 12, 100, 200])
 
-    # instruction='replace'
-    msg2 = {"signals": {"async_device": {"value": [999], "timestamp": [555]}}}
-    metadata2 = {"async_update": {"max_shape": [None], "type": "replace"}}
-    with mock.patch.object(wf, "sender", side_effect=ret_sender):
-        wf.on_async_readback(msg2, metadata2, _override_slot_params={"verify_sender": False})
-    x_data2, y_data2 = c.get_data()
-    np.testing.assert_array_equal(x_data2, [0])
+    # 'replace': only the last full state is shown
+    source = _async_source("async_device", values=([999],), update_type="replace")
+    wf._on_data_update(_make_update([source]))
+    x_data, y_data = c.get_data()
+    np.testing.assert_array_equal(x_data, [0])
+    np.testing.assert_array_equal(y_data, [999])
 
-    np.testing.assert_array_equal(y_data2, [999])
 
-    ############# Test add_slice ################
+def test_on_data_update_async_add_2d(qtbot, mocked_client, monkeypatch):
+    """
+    An async 'add' source with a 2-D max_shape displays the latest waveform.
+    """
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    c = wf.plot(arg1="async_device", label="async_device-async_device")
+    wf.scan_id = "dummy"
+    wf.x_axis_mode["name"] = "index"
 
-    # Few updates, no downsampling, no symbol removed
-    waveform_shape = 10
-    for ii in range(10):
-        msg = {"signals": {"async_device": {"value": [100], "timestamp": [1001]}}}
-        metadata = {
-            "async_update": {"max_shape": [None, waveform_shape], "index": 0, "type": "add_slice"}
-        }
-        with mock.patch.object(wf, "sender", side_effect=ret_sender):
-            wf.on_async_readback(msg, metadata, _override_slot_params={"verify_sender": False})
+    source = _async_source(
+        "async_device", values=([1, 2, 3], [4, 5, 6]), update_type="add", max_shape=(None, 3)
+    )
+    wf._on_data_update(_make_update([source]))
 
-    # Old data should be deleted since the slice_index did not match
+    x_data, y_data = c.get_data()
+    np.testing.assert_array_equal(x_data, [0, 1, 2])
+    np.testing.assert_array_equal(y_data, [4, 5, 6])
+
+
+def test_on_data_update_async_add_slice(qtbot, mocked_client, monkeypatch):
+    """
+    An async 'add_slice' source displays the last accumulated row. Small rows
+    keep the symbol, large rows activate the downsampling settings.
+    """
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    c = wf.plot(arg1="async_device", label="async_device-async_device")
+    wf.scan_id = "dummy"
+    wf.x_axis_mode["name"] = "index"
+
+    # Small accumulated row: symbol stays, no downsampling
+    source = _async_source(
+        "async_device",
+        values=([100] * 10,),
+        ordinals=(0,),
+        update_type="add_slice",
+        max_shape=(None, 10),
+    )
+    wf._on_data_update(_make_update([source]))
     x_data, y_data = c.get_data()
     assert len(y_data) == 10
     assert len(x_data) == 10
     assert c.opts["symbol"] == "o"
 
-    # Clear data from curve
-    c.setData([], [])
-
-    # Test large updates, limit 1000 to deactivate symbols, downsampling for 8000 should be factor 2.
+    # Large accumulated row: symbol removed, downsampling active
     waveform_shape = 100000
-    n_cycles = 10
-    for ii in range(n_cycles):
-        msg = {
-            "signals": {
-                "async_device": {
-                    "value": np.array(range(waveform_shape // n_cycles)),
-                    "timestamp": (ii + 1)
-                    * np.linspace(0, waveform_shape // n_cycles - 1, waveform_shape // n_cycles),
-                }
-            }
-        }
-        metadata = {
-            "async_update": {"max_shape": [None, waveform_shape], "index": 0, "type": "add_slice"}
-        }
-        with mock.patch.object(wf, "sender", side_effect=ret_sender):
-            wf.on_async_readback(msg, metadata, _override_slot_params={"verify_sender": False})
+    source = _async_source(
+        "async_device",
+        values=(np.arange(waveform_shape),),
+        ordinals=(0,),
+        update_type="add_slice",
+        max_shape=(None, waveform_shape),
+    )
+    wf._on_data_update(_make_update([source]))
     x_data, y_data = c.get_data()
     assert len(y_data) == waveform_shape
     assert len(x_data) == waveform_shape
-    assert c.opts["symbol"] == None
-    # Get displayed data
+    assert c.opts["symbol"] is None
     displayed_x, displayed_y = c.getData()
     assert len(displayed_y) == len(displayed_x)
 
-    ############# Test replace ################
-    waveform_shape = 10
-    for ii in range(10):
-        msg = {
-            "signals": {
-                "async_device": {
-                    "value": np.array(range(waveform_shape)),
-                    "timestamp": np.array(range(waveform_shape)),
-                }
-            }
-        }
-        metadata = {"async_update": {"type": "replace"}}
-        with mock.patch.object(wf, "sender", side_effect=ret_sender):
-            wf.on_async_readback(msg, metadata, _override_slot_params={"verify_sender": False})
 
-    x_data, y_data = c.get_data()
-    assert np.array_equal(y_data, np.array(range(waveform_shape)))
-    assert len(x_data) == waveform_shape
-    assert c.opts["symbol"] == "o"
-    y_displayed, x_displayed = c.getData()
-    assert len(y_displayed) == waveform_shape
-
-
-def test_get_x_data(qtbot, mocked_client, monkeypatch):
+def test_on_data_update_async_timestamp_mode(qtbot, mocked_client, monkeypatch):
     """
-    Test _get_x_data logic for multiple modes: 'timestamp', 'index', 'custom', 'auto'.
-    Use a dummy scan_item that returns specific data for the requested signal.
+    Async curves in timestamp mode use the source timestamps when they match
+    the displayed length and fall back to index otherwise.
     """
+    _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
-    dummy_scan = create_dummy_scan_item()
-    wf.scan_item = dummy_scan
-
-    # 1) x_mode == 'timestamp'
+    c = wf.plot(arg1="async_device", label="async_device-async_device")
+    wf.scan_id = "dummy"
     wf.x_axis_mode["name"] = "timestamp"
-    x_data = wf._get_x_data("bpm4i", "bpm4i")
-    np.testing.assert_array_equal(x_data, [101, 201, 301])
 
-    # 2) x_mode == 'index' => returns None => means use Y data indexing
+    # One timestamp per single-sample fragment: lengths match -> timestamps
+    source = _async_source(
+        "async_device", values=([1], [2], [3]), timestamps=(11, 21, 31), update_type="add"
+    )
+    wf._on_data_update(_make_update([source]))
+    x_data, y_data = c.get_data()
+    np.testing.assert_array_equal(x_data, [11, 21, 31])
+    np.testing.assert_array_equal(y_data, [1, 2, 3])
+
+    # One timestamp for a multi-sample fragment: length mismatch -> index
+    source = _async_source("async_device", values=([1, 2, 3],), timestamps=(11,), update_type="add")
+    wf._on_data_update(_make_update([source]))
+    x_data, y_data = c.get_data()
+    np.testing.assert_array_equal(x_data, [0, 1, 2])
+    np.testing.assert_array_equal(y_data, [1, 2, 3])
+
+
+def test_on_data_update_async_history_rows(qtbot, mocked_client, monkeypatch):
+    """
+    History emissions carry no async-update metadata: scalar rows form the
+    full series, array rows display the last row (mirrors the legacy 2-D
+    behaviour).
+    """
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    c = wf.plot(arg1="async_device", label="async_device-async_device")
+    wf.scan_id = "dummy"
     wf.x_axis_mode["name"] = "index"
-    x_data2 = wf._get_x_data("bpm4i", "bpm4i")
-    assert x_data2 is None
 
-    # 3) custom x => e.g. "samx"
-    wf.x_axis_mode["name"] = "samx"
-    x_custom = wf._get_x_data("bpm4i", "bpm4i")
-    # because dummy_scan.live_data["samx"]["samx"].val => [10,20,30]
-    np.testing.assert_array_equal(x_custom, [10, 20, 30])
+    # Scalar rows (1-D dataset)
+    source = _async_source("async_device", values=(1, 2, 3), update_type=None, max_shape=())
+    wf._on_data_update(_make_update([source], reason="history"))
+    x_data, y_data = c.get_data()
+    np.testing.assert_array_equal(x_data, [0, 1, 2])
+    np.testing.assert_array_equal(y_data, [1, 2, 3])
 
-    # 4) auto
-    wf._async_curves.clear()
-    wf._sync_curves = [MagicMock()]  # pretend we have a sync device
-    wf.x_axis_mode["name"] = "auto"
-    x_auto = wf._get_x_data("bpm4i", "bpm4i")
-    # By default it tries the "scan_report_devices" => "samx" => same as custom above
-    np.testing.assert_array_equal(x_auto, [10, 20, 30])
+    # Array rows (2-D dataset): last row is displayed
+    source = _async_source(
+        "async_device", values=([1, 2, 3], [4, 5, 6]), update_type=None, max_shape=()
+    )
+    wf._on_data_update(_make_update([source], reason="history"))
+    x_data, y_data = c.get_data()
+    np.testing.assert_array_equal(x_data, [0, 1, 2])
+    np.testing.assert_array_equal(y_data, [4, 5, 6])
 
 
 ##################################################
@@ -1391,14 +1506,15 @@ def test_show_scan_history_popup(qtbot, mocked_client):
 
 
 #####################################################
-# The following tests are for the async dataset guard
+# The following tests are for the dataset-size guard
 #####################################################
 
 
-def test_skip_large_dataset_warning_property(qtbot, mocked_client):
+def test_skip_large_dataset_warning_property(qtbot, mocked_client, monkeypatch):
     """
     Verify the getter and setter of skip_large_dataset_warning work correctly.
     """
+    _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
 
     # Default should be False
@@ -1413,13 +1529,26 @@ def test_skip_large_dataset_warning_property(qtbot, mocked_client):
     assert wf.skip_large_dataset_warning is False
 
 
-def test_max_dataset_size_mb_property(qtbot, mocked_client):
+def test_skip_large_dataset_check_property(qtbot, mocked_client, monkeypatch):
+    """
+    Verify the getter and setter of the per-plot skip_large_dataset_check flag.
+    """
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+
+    assert wf.skip_large_dataset_check is False
+    wf.skip_large_dataset_check = True
+    assert wf.skip_large_dataset_check is True
+
+
+def test_max_dataset_size_mb_property(qtbot, mocked_client, monkeypatch):
     """
     Verify getter, setter, and validation of max_dataset_size_mb.
     """
+    _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
 
-    # Default from WaveformConfig is 1 MB
+    # Default from WaveformConfig is 10 MB
     assert wf.max_dataset_size_mb == 10
 
     # Set to a valid new value
@@ -1428,116 +1557,118 @@ def test_max_dataset_size_mb_property(qtbot, mocked_client):
     # Ensure the config is updated too
     assert wf.config.max_dataset_size_mb == 5.5
 
-
-def _dummy_dataset(mem_bytes: int, entry: str = "waveform_waveform"):
-    """
-    Return an object that mimics the BEC dataset structure:
-    it has exactly one attribute `_info` with the expected layout.
-    """
-    return SimpleNamespace(_info={entry: {"value": {"mem_size": mem_bytes}}})
+    # The config survives a round-trip through the widget config dict
+    assert wf._config_dict["max_dataset_size_mb"] == 5.5
 
 
-def test_dataset_guard_under_limit(qtbot, mocked_client, monkeypatch):
-    """
-    Dataset below the limit should load without triggering the dialog.
-    """
-    wf = create_widget(qtbot, Waveform, client=mocked_client)
-    wf.max_dataset_size_mb = 1  # 1 MiB
-
-    # If the dialog is called, we flip this flag – it must stay False.
-    called = {"dlg": False}
+def _oversized(monkeypatch, wf, size_mb=50.0, shape=(100, 1000)):
+    """Make every source of the widget look oversized, with a known shape."""
     monkeypatch.setattr(
-        Waveform, "_confirm_large_dataset", lambda self, size_mb: called.__setitem__("dlg", True)
+        Waveform, "_estimate_source_bytes", lambda self, scan, source: int(size_mb * 1024 * 1024)
     )
-
-    dataset = _dummy_dataset(mem_bytes=512_000)  # ≈0.49 MiB
-    assert wf._check_dataset_size_and_confirm(dataset, "waveform_waveform") is True
-    assert called["dlg"] is False
+    monkeypatch.setattr(Waveform, "_stored_shape", lambda self, scan, device, entry: shape)
+    return wf
 
 
-def test_dataset_guard_over_limit_accept(qtbot, mocked_client, monkeypatch):
-    """
-    Dataset above the limit where user presses *Yes*.
-    """
+def test_small_dataset_loads_without_prompt(qtbot, mocked_client, monkeypatch):
     wf = create_widget(qtbot, Waveform, client=mocked_client)
-    wf.max_dataset_size_mb = 1  # 1 MiB
-
-    # Pretend the user clicked “Yes”
-    monkeypatch.setattr(Waveform, "_confirm_large_dataset", lambda *_: True)
-
-    dataset = _dummy_dataset(mem_bytes=2_000_000)  # ≈1.9 MiB
-    assert wf._check_dataset_size_and_confirm(dataset, "waveform_waveform") is True
+    monkeypatch.setattr(Waveform, "_estimate_source_bytes", lambda self, scan, source: 1024)
+    with mock.patch.object(wf, "_confirm_large_dataset") as dialog:
+        kept = wf._filter_oversized_sources([("bpm4i", "bpm4i")], "scan-1")
+    dialog.assert_not_called()
+    assert kept == [("bpm4i", "bpm4i")]
 
 
-def test_dataset_guard_over_limit_reject(qtbot, mocked_client, monkeypatch):
-    """
-    Dataset above the limit where user presses *No*.
-    """
+def test_live_and_skip_check_bypass_the_gate(qtbot, mocked_client, monkeypatch):
     wf = create_widget(qtbot, Waveform, client=mocked_client)
-    wf.max_dataset_size_mb = 1  # 1 MiB
-
-    # Pretend the user clicked “No”
-    monkeypatch.setattr(Waveform, "_confirm_large_dataset", lambda *_: False)
-
-    dataset = _dummy_dataset(mem_bytes=2_000_000)  # ≈1.9 MiB
-    assert wf._check_dataset_size_and_confirm(dataset, "waveform_waveform") is False
-
-
-##################################################
-# Dialog propagation behaviour
-##################################################
+    _oversized(monkeypatch, wf)
+    sources = [("waveform", "waveform_waveform")]
+    with mock.patch.object(wf, "_confirm_large_dataset") as dialog:
+        assert wf._filter_oversized_sources(sources, "live") == sources
+        assert wf._filter_oversized_sources(sources, None) == sources
+        wf.skip_large_dataset_check = True
+        assert wf._filter_oversized_sources(sources, "scan-1") == sources
+    dialog.assert_not_called()
 
 
-def test_dialog_accept_updates_limit(monkeypatch, qtbot, mocked_client):
-    """
-    Simulate clicking 'Yes' in the dialog *after* changing the spinner value.
-    Verify max_dataset_size_mb is updated and dataset loads.
-    """
+def test_oversized_dataset_prompts_per_dataset_and_loads_on_accept(
+    qtbot, mocked_client, monkeypatch
+):
+    """The user decides per dataset; an accepted dataset is loaded and is not
+    re-prompted when the subscription is rebuilt."""
     wf = create_widget(qtbot, Waveform, client=mocked_client)
-    wf.max_dataset_size_mb = 1  # start small
+    _oversized(monkeypatch, wf, size_mb=50.0, shape=(100, 1000))
+    sources = [("waveform", "waveform_waveform"), ("bpm4i", "bpm4i")]
 
-    def fake_confirm(self, size_mb):
-        # Simulate user typing '5' in the spinbox then pressing Yes
-        self.config.max_dataset_size_mb = 5
-        return True  # Yes pressed
+    with mock.patch.object(wf, "_confirm_large_dataset", return_value=True) as dialog:
+        kept = wf._filter_oversized_sources(sources, "scan-1")
+    assert kept == sources
+    # One prompt per dataset, carrying the dataset identity and its shape.
+    assert dialog.call_count == 2
+    first = dialog.call_args_list[0]
+    assert first.kwargs["source"] == ("waveform", "waveform_waveform")
+    assert first.kwargs["shape"] == (100, 1000)
+    assert first.args[0] == pytest.approx(50.0)
 
-    monkeypatch.setattr(Waveform, "_confirm_large_dataset", fake_confirm)
-
-    big_dataset = _dummy_dataset(mem_bytes=4_800_000)  # ≈4.6 MiB
-    accepted = wf._check_dataset_size_and_confirm(big_dataset, "waveform_waveform")
-
-    # The load should be accepted and the limit must reflect the new value
-    assert accepted is True
-    assert wf.max_dataset_size_mb == 5
-    assert wf.config.max_dataset_size_mb == 5
+    with mock.patch.object(wf, "_confirm_large_dataset") as dialog2:
+        assert wf._filter_oversized_sources(sources, "scan-1") == sources
+    dialog2.assert_not_called()
 
 
-def test_dialog_cancel_sets_skip(monkeypatch, qtbot, mocked_client):
-    """
-    Simulate clicking 'No' but ticking 'Don't show again'.
-    Verify skip_large_dataset_warning becomes True and dataset is skipped.
-    """
+def test_declined_dataset_is_not_loaded_but_others_are(qtbot, mocked_client, monkeypatch):
+    """Declining drops only that dataset — the curve stays (empty), it is not
+    hidden, and the remaining datasets still load."""
     wf = create_widget(qtbot, Waveform, client=mocked_client)
-    assert wf.skip_large_dataset_warning is False
 
-    def fake_confirm(self, size_mb):
-        # Mimic ticking the checkbox then pressing No
-        self._skip_large_dataset_warning = True
-        return False  # No pressed
+    def estimate(self, scan, source):
+        return 50 * 1024 * 1024 if source[0] == "waveform" else 1024
 
-    monkeypatch.setattr(Waveform, "_confirm_large_dataset", fake_confirm)
+    monkeypatch.setattr(Waveform, "_estimate_source_bytes", estimate)
+    monkeypatch.setattr(Waveform, "_stored_shape", lambda self, scan, device, entry: (100, 1000))
+    sources = [("waveform", "waveform_waveform"), ("bpm4i", "bpm4i")]
 
-    big_dataset = _dummy_dataset(mem_bytes=11_000_000)
-    accepted = wf._check_dataset_size_and_confirm(big_dataset, "waveform_waveform")
-
-    # Dataset must not load, but future warnings are suppressed
-    assert accepted is False
-    assert wf.skip_large_dataset_warning is True
+    with mock.patch.object(wf, "_confirm_large_dataset", return_value=False) as dialog:
+        kept = wf._filter_oversized_sources(sources, "scan-1")
+    dialog.assert_called_once()
+    assert kept == [("bpm4i", "bpm4i")]
 
 
-##################################################
-# Live dialog interaction (no monkey‑patching)
-##################################################
+def test_skip_large_dataset_warning_suppresses_dialog(qtbot, mocked_client, monkeypatch):
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    _oversized(monkeypatch, wf)
+    wf.skip_large_dataset_warning = True
+    with mock.patch.object(wf, "_confirm_large_dataset") as dialog:
+        kept = wf._filter_oversized_sources([("waveform", "waveform_waveform")], "scan-1")
+    dialog.assert_not_called()
+    assert kept == []
+
+
+def test_history_subscription_gates_before_reading(qtbot, mocked_client, monkeypatch):
+    """No bridge (and therefore no file read) is created for a declined
+    dataset."""
+    bridges = _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.plot("bpm4i")  # a configured curve, so the widget has sources to bind
+    _oversized(monkeypatch, wf)
+    bridges.clear()
+
+    with mock.patch.object(wf, "_confirm_large_dataset", return_value=False):
+        wf._setup_data_api_subscription(scan="scan-1")
+    assert not bridges
+    assert wf._data_bridge is None
+
+    with mock.patch.object(wf, "_confirm_large_dataset", return_value=True):
+        wf._setup_data_api_subscription(scan="scan-1")
+    assert bridges and bridges[-1].scan == "scan-1"
+    # The gate is decided up front, so the bridge itself is never size-gated.
+    assert getattr(bridges[-1], "size_limit_bytes", None) is None
+
+
+def test_describe_dataset_reports_point_counts():
+    assert "1,000 points" in Waveform._describe_dataset(("det", "sig"), (1000,))
+    text = Waveform._describe_dataset(("det", "sig"), (100, 1000))
+    assert "100 points x 1,000 samples" in text
+    assert "'det-sig'" in text
 
 
 def _open_dialog_and_click(handler):
@@ -1555,47 +1686,42 @@ def _open_dialog_and_click(handler):
     return _cb
 
 
-def test_dialog_accept_real_interaction(qtbot, mocked_client):
+def test_dialog_accept_real_interaction(qtbot, mocked_client, monkeypatch):
     """
-    End‑to‑end: user changes the limit spinner to 5 MiB, ticks
+    End-to-end: user changes the limit spinner to 5 MiB, ticks
     'don't show again', then presses YES.
     """
+    _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     wf.max_dataset_size_mb = 1
-
-    # Prepare a large dataset (≈4.6 MiB)
-    big_dataset = _dummy_dataset(mem_bytes=4_800_000)
 
     def handler(dlg):
         spin: QDoubleSpinBox = dlg.findChild(QDoubleSpinBox)
         chk: QCheckBox = dlg.findChild(QCheckBox)
         btns: QDialogButtonBox = dlg.findChild(QDialogButtonBox)
 
-        # # Interact with widgets
         spin.setValue(5)
         chk.setChecked(True)
 
         yes_btn = btns.button(QDialogButtonBox.Yes)
         yes_btn.click()
 
-    # Schedule the handler right before invoking the check
     QTimer.singleShot(0, _open_dialog_and_click(handler))
 
-    accepted = wf._check_dataset_size_and_confirm(big_dataset, "waveform_waveform")
+    accepted = wf._confirm_large_dataset(4.6)
     assert accepted is True
     assert wf.max_dataset_size_mb == 5
     assert wf.skip_large_dataset_warning is True
 
 
-def test_dialog_reject_real_interaction(qtbot, mocked_client):
+def test_dialog_reject_real_interaction(qtbot, mocked_client, monkeypatch):
     """
-    End‑to‑end: user leaves spinner unchanged, ticks 'don't show again',
+    End-to-end: user leaves spinner unchanged, ticks 'don't show again',
     and presses NO.
     """
+    _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     wf.max_dataset_size_mb = 1
-
-    big_dataset = _dummy_dataset(mem_bytes=4_800_000)
 
     def handler(dlg):
         chk: QCheckBox = dlg.findChild(QCheckBox)
@@ -1607,17 +1733,18 @@ def test_dialog_reject_real_interaction(qtbot, mocked_client):
 
     QTimer.singleShot(0, _open_dialog_and_click(handler))
 
-    accepted = wf._check_dataset_size_and_confirm(big_dataset, "waveform_waveform")
+    accepted = wf._confirm_large_dataset(4.6)
     assert accepted is False
     assert wf.skip_large_dataset_warning is True
     # Limit remains unchanged
     assert wf.max_dataset_size_mb == 1
 
 
-def test_update_with_scan_history_by_index(qtbot, mocked_client, scan_history_factory):
+def test_update_with_scan_history_by_index(qtbot, mocked_client, scan_history_factory, monkeypatch):
     """
     Test that update_with_scan_history by index loads the correct historical scan.
     """
+    bridges = _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     hist1, hist2 = inject_scan_history(wf, scan_history_factory, ("hist1", 1), ("hist2", 2))
 
@@ -1642,12 +1769,60 @@ def test_update_with_scan_history_by_index(qtbot, mocked_client, scan_history_fa
     assert c2.config.scan_number == 2
     assert c2.name() == "bpm4i-bpm4i-scan-2"
 
+    # One scan-bound subscription per pinned history scan.
+    history_scans = {bridge.scan for bridge in bridges if not bridge.closed}
+    assert history_scans == {"hist1", "hist2"}
+
+
+def test_history_curve_receives_data_from_scan_bound_subscription(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    """
+    History curve data flows through a DataAPI subscription bound to the
+    pinned scan id; updates are routed by scan id and rendered against the
+    auto-resolved x device.
+    """
+    bridges = _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    inject_scan_history(wf, scan_history_factory, ("hist1", 1))
+
+    c = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist1")
+    history_bridge = wf._history_bridges["hist1"]
+    assert history_bridge in bridges
+    assert history_bridge.scan == "hist1"
+    assert ("bpm4i", "bpm4i") in history_bridge.sources
+    # Auto mode pulls in the scan's first report device as x source.
+    assert ("samx", "samx") in history_bridge.sources
+
+    update = _make_update(
+        [
+            _monitored_source("bpm4i", values=(5, 6, 7)),
+            _monitored_source("samx", values=(10, 20, 30)),
+        ],
+        scan_id="hist1",
+        reason="history",
+    )
+    wf._on_data_update(update)
+
+    x_data, y_data = c.get_data()
+    np.testing.assert_array_equal(x_data, [10, 20, 30])
+    np.testing.assert_array_equal(y_data, [5, 6, 7])
+
+    # Updates for other scans do not touch the pinned curve.
+    other = _make_update([_monitored_source("bpm4i", values=(1, 1, 1))], scan_id="other-scan")
+    wf._on_data_update(other)
+    _, y_data = c.get_data()
+    np.testing.assert_array_equal(y_data, [5, 6, 7])
+
 
 @pytest.mark.parametrize("mode", ["auto", "timestamp", "index", "samx"])
-def test_history_curve_x_modes_pre_plot(qtbot, mocked_client, scan_history_factory, mode):
+def test_history_curve_x_modes_pre_plot(
+    qtbot, mocked_client, scan_history_factory, mode, monkeypatch
+):
     """
     Test that history curves respect x_mode when set before plotting.
     """
+    _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     hist1, hist2 = inject_scan_history(wf, scan_history_factory, ("hist1", 1), ("hist2", 2))
     wf.x_mode = mode
@@ -1656,10 +1831,13 @@ def test_history_curve_x_modes_pre_plot(qtbot, mocked_client, scan_history_facto
 
 
 @pytest.mark.parametrize("mode", ["auto", "timestamp", "index", "samx"])
-def test_history_curve_x_modes_post_plot(qtbot, mocked_client, scan_history_factory, mode):
+def test_history_curve_x_modes_post_plot(
+    qtbot, mocked_client, scan_history_factory, mode, monkeypatch
+):
     """
     Test that changing x_mode after plotting history curves updates the curve on refresh.
     """
+    _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     hist1, hist2 = inject_scan_history(wf, scan_history_factory, ("hist1", 1), ("hist2", 2))
     c = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist1")
@@ -1670,10 +1848,13 @@ def test_history_curve_x_modes_post_plot(qtbot, mocked_client, scan_history_fact
     assert c.config.current_x_mode == mode
 
 
-def test_history_curve_incompatible_x_mode_hides_curve(qtbot, mocked_client, scan_history_factory):
+def test_history_curve_incompatible_x_mode_hides_curve(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
     """
     Test that setting an x_mode not present in stored data hides the history curve.
     """
+    _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     wf.x_mode = "nonexistent_device"
     # Inject history scan for this test
@@ -1684,11 +1865,12 @@ def test_history_curve_incompatible_x_mode_hides_curve(qtbot, mocked_client, sca
     assert not c.isVisible()
 
 
-def test_fetch_history_data_no_stored_data_raises(
+def test_history_curve_no_stored_data_raises(
     qtbot, mocked_client, monkeypatch, suppress_message_box
 ):
     """
-    Test that fetching history data when stored_data_info is missing raises ValueError.
+    Test that plotting a history curve when stored_data_info is missing
+    raises ValueError (metadata-level validation kept from the legacy fetch).
     """
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     # Create a dummy scan_item lacking stored_data_info
@@ -1717,11 +1899,12 @@ def test_history_curve_device_missing_returns_none(qtbot, mocked_client, scan_hi
 
 
 def test_history_curve_custom_shape_mismatch_hides_curve(
-    qtbot, mocked_client, scan_history_factory
+    qtbot, mocked_client, scan_history_factory, monkeypatch
 ):
     """
     For custom x-mode, if x and y shapes mismatch, curve should be hidden.
     """
+    _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     wf.x_mode = "async_device"
     [history_msg] = inject_scan_history(wf, scan_history_factory, ("hist_custom_shape", 1))
@@ -1731,10 +1914,13 @@ def test_history_curve_custom_shape_mismatch_hides_curve(
     assert not c.isVisible()
 
 
-def test_history_curve_index_mode_plots_curve(qtbot, mocked_client, scan_history_factory):
+def test_history_curve_index_mode_plots_curve(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
     """
     Test that setting x_mode to 'index' plots and shows the history curve correctly.
     """
+    _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     wf.x_mode = "index"
     [history_msg] = inject_scan_history(wf, scan_history_factory, ("hist_index", 1))
@@ -1744,10 +1930,13 @@ def test_history_curve_index_mode_plots_curve(qtbot, mocked_client, scan_history
     assert c.config.current_x_mode == "index"
 
 
-def test_history_curve_timestamp_mode_plots_curve(qtbot, mocked_client, scan_history_factory):
+def test_history_curve_timestamp_mode_plots_curve(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
     """
     Test that setting x_mode to 'timestamp' plots and shows the history curve correctly.
     """
+    _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     wf.x_mode = "timestamp"
     [history_msg] = inject_scan_history(wf, scan_history_factory, ("hist_time", 1))
@@ -1758,11 +1947,12 @@ def test_history_curve_timestamp_mode_plots_curve(qtbot, mocked_client, scan_his
 
 
 def test_history_curve_auto_valid_uses_first_report_device(
-    qtbot, mocked_client, scan_history_factory
+    qtbot, mocked_client, scan_history_factory, monkeypatch
 ):
     """
     Test that 'auto' x_mode uses the first available report device and shows the curve.
     """
+    _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     wf.x_mode = "auto"
     [history_msg] = inject_scan_history(wf, scan_history_factory, ("hist_auto_valid", 1))
@@ -1841,3 +2031,97 @@ def test_categorise_device_curves_falls_back_to_readout_priority(qtbot, mocked_c
     wf._categorise_device_curves()
 
     assert c_async in wf._async_curves
+
+
+def test_x_source_resolution_does_not_open_the_data_file(qtbot, mocked_client, monkeypatch):
+    """Auto x-mode must resolve the report device from in-memory metadata:
+    ScanDataContainer.metadata lazily opens the HDF5 file, which would block
+    the GUI thread (and would even precede the large-dataset gate)."""
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+
+    class _ExplodingMetadata:
+        def __getitem__(self, key):
+            raise AssertionError("data file was opened on the GUI thread")
+
+        def get(self, *args, **kwargs):
+            raise AssertionError("data file was opened on the GUI thread")
+
+    # History container: report device comes from the scan history message.
+    history_item = SimpleNamespace(
+        metadata=_ExplodingMetadata(),
+        _msg=SimpleNamespace(request_inputs={"arg_bundle": ["samx", -5, 5, 10], "kwargs": {}}),
+        status_message=None,
+    )
+    assert wf._report_devices_no_file_io(history_item) == ["samx"]
+    assert wf._history_x_source_key(history_item) == ("samx", "samx")
+
+    # Live scan item: report devices come from the status message.
+    live_item = SimpleNamespace(
+        metadata=_ExplodingMetadata(),
+        status_message=SimpleNamespace(scan_report_devices=["samy"], info={}),
+        _msg=None,
+    )
+    assert wf._report_devices_no_file_io(live_item) == ["samy"]
+
+
+def test_x_source_falls_back_to_file_metadata_when_unavailable(qtbot, mocked_client):
+    """When neither the status message nor the history message names the
+    report devices, the file metadata is still consulted (last resort)."""
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    scan_item = SimpleNamespace(
+        metadata={"bec": {"scan_report_devices": ["samx"]}}, status_message=None, _msg=None
+    )
+    assert wf._report_devices_no_file_io(scan_item) == []
+    assert wf._history_x_source_key(scan_item) == ("samx", "samx")
+
+
+def test_detector_shaped_history_curve_is_not_hidden(qtbot, mocked_client, monkeypatch):
+    """A large detector dataset has more rows than the scan has points; it is
+    plotted against the sample index, so the x/y row-count difference must not
+    hide the curve (regression: large history datasets disappeared)."""
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_mode = "samx"  # custom device x-axis: the strictest visibility path
+
+    stored = {
+        "samx": {"samx": SimpleNamespace(shape=(100,))},
+        # Flat async concatenation: 100 acquisitions x 1000 samples appended
+        # along one axis — the shape a large "add" async signal really has.
+        "waveform": {"waveform_waveform": SimpleNamespace(shape=(100_000,))},
+        # 2-D detector data (one row per acquisition).
+        "eiger": {"eiger_data": SimpleNamespace(shape=(100, 1000))},
+        "bpm4i": {"bpm4i": SimpleNamespace(shape=(100,))},
+    }
+    scan_item = SimpleNamespace(
+        _msg=SimpleNamespace(
+            stored_data_info=stored,
+            num_points=100,
+            num_monitored_readouts=100,
+            request_inputs={"arg_bundle": ["samx", -5, 5, 100], "kwargs": {}},
+        ),
+        status_message=None,
+    )
+    monkeypatch.setattr(Waveform, "get_history_scan_item", lambda self, **kwargs: scan_item)
+
+    def curve_for(device, signal):
+        return SimpleNamespace(
+            config=SimpleNamespace(
+                scan_id="scan-1",
+                scan_number=None,
+                signal=SimpleNamespace(device=device, signal=signal),
+            ),
+            name=lambda: f"{device}-{signal}",
+        )
+
+    # Flat async data (100 000 samples vs a 100-point motor): visible.
+    assert wf._history_curve_compatible(curve_for("waveform", "waveform_waveform")) is True
+    # 2-D detector data: visible.
+    assert wf._history_curve_compatible(curve_for("eiger", "eiger_data")) is True
+    # A monitored signal with the same length as x: visible.
+    assert wf._history_curve_compatible(curve_for("bpm4i", "bpm4i")) is True
+    # A monitored signal whose length disagrees with x is still hidden
+    # (unchanged behaviour for point-per-scan-point data).
+    stored["bpm4i"]["bpm4i"] = SimpleNamespace(shape=(37,))
+    scan_item._msg.num_monitored_readouts = 37
+    scan_item._msg.num_points = 37
+    assert wf._history_curve_compatible(curve_for("bpm4i", "bpm4i")) is False

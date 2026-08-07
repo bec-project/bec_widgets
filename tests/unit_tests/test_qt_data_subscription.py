@@ -73,6 +73,41 @@ def test_health_and_source_delegation(fake_api):
     assert subscription.close.call_count == 1
 
 
+def test_size_limit_is_forwarded_to_the_backend(fake_api):
+    api, subscription = fake_api
+    bridge = QtDataSubscription(
+        mock.MagicMock(), sources=[("samx", "samx")], scan="scan_1", size_limit_bytes=1024
+    )
+    assert api.subscribe.call_args.kwargs["size_limit_bytes"] == 1024
+    bridge.close()
+
+
+def test_size_limit_defaults_to_none(fake_api):
+    api, _ = fake_api
+    bridge = QtDataSubscription(mock.MagicMock(), sources=[("samx", "samx")])
+    assert api.subscribe.call_args.kwargs["size_limit_bytes"] is None
+    bridge.close()
+
+
+def test_size_gate_properties_and_confirm(fake_api):
+    _, subscription = fake_api
+    subscription.size_gated = True
+    subscription.estimated_bytes = 4096
+    bridge = QtDataSubscription(
+        mock.MagicMock(), sources=[("samx", "samx")], scan="scan_1", size_limit_bytes=1024
+    )
+
+    assert bridge.size_gated is True
+    assert bridge.estimated_bytes == 4096
+
+    bridge.confirm_size()
+    subscription.confirm_size.assert_called_once_with()
+
+    subscription.size_gated = False
+    assert bridge.size_gated is False
+    bridge.close()
+
+
 def test_synchronous_initial_delivery_is_queued(qtbot, monkeypatch):
     """The backend delivers the initial backfill synchronously inside
     subscribe() on the Qt thread; the bridge must neither crash on its
