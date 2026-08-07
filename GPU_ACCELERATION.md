@@ -54,6 +54,36 @@ pays off for long line scans and for `MultiWaveform`.
 For comparison, a 2048×2048 `ImageItem` measured 39.0 fps raster vs. 42.6 fps OpenGL — 1.09×,
 i.e. noise. That is the expected result given there is no GL path for images.
 
+## Symbols dominate everything above (fixed)
+
+Profiling the Waveform update path turned up a cost far larger than anything the viewport choice
+buys. Curves default to `symbol="o"`, and pyqtgraph draws symbols through `ScatterPlotItem`, whose
+`SymbolAtlas._keys` builds a style tuple **per point in Python** — 2 `getId` calls per point, linear
+in sample count.
+
+At 50,000 points, `curve.setData()` measured **92.1 ms with a symbol and 0.49 ms without**; the full
+`_on_data_update()` went from 108.7 ms to 7.2 ms. The scaling makes the mechanism plain — the symbol
+cost is per point, the rest is flat:
+
+| points | symbols on | symbols off |
+|---:|---:|---:|
+| 1,000 | 1.16 ms | 0.05 ms |
+| 10,000 | 18.36 ms | 0.06 ms |
+| 50,000 | 89.56 ms | 0.09 ms |
+
+`Curve.setData` now hides the symbol above `CurveConfig.symbol_point_limit` (default 1000) and
+restores it when the data shrinks. The suppression is a display-level `setSymbol(None)`; `config.symbol`
+keeps the user's choice, so a custom symbol comes back rather than being reset to `"o"`. Setting
+`symbol_point_limit = None` opts out.
+
+This lives in `Curve.setData` rather than in the Waveform update slots so every data path is covered
+— sync, async, history, DAP, and the `data_api` branch's `_render_*` helpers. `_auto_adjust_async_curve_settings`
+previously did this for async curves only, and reset the symbol to a hardcoded `"o"`; its symbol
+handling was removed in favour of the shared path (it still manages pen width and downsampling).
+
+Note this was never a `data_api` regression: the default is identical on `main`. Pen width is left
+alone — thick pens are also costly, but width 1 is a visual regression nobody asked for.
+
 ## The two real hazards
 
 ### 1. Screenshots come back blank (fixed here)
