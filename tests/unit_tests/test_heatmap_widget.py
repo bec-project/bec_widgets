@@ -1369,7 +1369,7 @@ def test_heatmap_switches_history_bound_bridge_to_live_on_new_scan(heatmap_widge
 
 def test_heatmap_restored_from_config_starts_data_feed(qtbot, mocked_client, fake_bridges):
     """A heatmap recreated from a saved configuration (no plot() call) must
-    start its DataAPI feed just like a freshly plotted one."""
+    start its DataAPI feed just like a freshly plotted one (audit F49)."""
     config = HeatmapConfig(
         parent_id="parent_id",
         device_x=HeatmapDeviceSignal(device="samx", signal="samx"),
