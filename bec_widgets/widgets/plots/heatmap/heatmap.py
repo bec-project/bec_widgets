@@ -2,17 +2,16 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pyqtgraph as pg
 from bec_lib import bec_logger, messages
-from bec_lib.data_api import DataAPI, DataSubscription
 from bec_lib.endpoints import MessageEndpoints
-from bec_lib.utils.import_utils import lazy_import, lazy_import_from
+from bec_lib.utils.import_utils import lazy_import_from
 from bec_qthemes import material_icon
 from pydantic import BaseModel, Field, field_validator
-from qtpy.QtCore import QObject, QRectF, Qt, QThread, QTimer, Signal
+from qtpy.QtCore import QObject, QRectF, Qt, QThread, Signal
 from qtpy.QtGui import QTransform
 from qtpy.QtWidgets import QDialog, QPushButton, QVBoxLayout
 from toolz import partition
@@ -20,6 +19,7 @@ from toolz import partition
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.colors import Colors, get_accent_colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.qt_data_subscription import QtDataSubscription
 from bec_widgets.utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.toolbars.actions import MaterialIconAction
 from bec_widgets.widgets.plots.heatmap.settings.heatmap_setting import HeatmapSettings
@@ -264,10 +264,8 @@ class Heatmap(ImageBase):
 
     new_scan = Signal()
     new_scan_id = Signal(str)
-    sync_signal_update = Signal()
     heatmap_property_changed = Signal()
     interpolation_requested = Signal(object, int)
-    data_api_update = Signal(object, object)
 
     def __init__(self, parent=None, config: HeatmapConfig | None = None, **kwargs):
         if config is None:
@@ -296,8 +294,9 @@ class Heatmap(ImageBase):
         self._interpolation_thread: QThread | None = None
         self._interpolation_worker: _StepInterpolationWorker | None = None
         self._pending_interpolation_request: _InterpolationRequest | None = None
-        self._data_api: DataAPI | None = None
-        self._data_subscription: DataSubscription | None = None
+        self._data_bridge: QtDataSubscription | None = None
+        self._data_bridge_scope: str | None = "live"
+        self._last_columns = None
         self.heatmap_dialog = None
         self.scan_history_dialog = None
         self.scan_history_widget = None
@@ -312,13 +311,16 @@ class Heatmap(ImageBase):
         self.config_label.setVisible(False)
         self.reload = False
         self.bec_dispatcher.connect_slot(self.on_scan_status, MessageEndpoints.scan_status())
-        self.bec_dispatcher.connect_slot(self.on_scan_progress, MessageEndpoints.scan_progress())
-        self.heatmap_property_changed.connect(lambda: self.sync_signal_update.emit())
-        self.data_api_update.connect(self.update_plot)
-
-        self.proxy_update_sync = pg.SignalProxy(
-            self.sync_signal_update, rateLimit=5, slot=self.update_plot
-        )
+        # Display-property changes re-render the cached columns; all data
+        # flows through the DataAPI subscription. Queued: the interpolation
+        # worker expects requests from event-loop ticks, and back-to-back
+        # property changes coalesce per tick instead of re-entering
+        # update_plot inside a property setter.
+        self.heatmap_property_changed.connect(self.update_plot, Qt.QueuedConnection)
+        if self._config_sources() is not None:
+            # Restored from a saved configuration: start the data feed without
+            # requiring a plot() call.
+            self._start_data_feed()
         self._init_toolbar_heatmap()
         self.toolbar.show_bundles(
             [
@@ -463,10 +465,21 @@ class Heatmap(ImageBase):
             return
 
         self._history_scan_id = None
-        self._fetch_running_scan()
-        self._setup_data_api_subscription()
-        # Also notifies settings widgets and triggers a plot update via sync_signal_update
+        self._start_data_feed()
+        # Also notifies settings widgets, which re-render via update_plot
         self.heatmap_property_changed.emit()
+
+    def _start_data_feed(self):
+        """
+        Bind the widget to the running scan or, while idle, to the latest
+        finished scan (served by the history plugin); a live-follow bridge
+        replaces the idle binding when the next scan starts.
+        """
+        self._fetch_running_scan()
+        if self.scan_item is not None and not hasattr(self.scan_item, "live_data"):
+            self._setup_data_api_subscription(scan=self.scan_id)
+        else:
+            self._setup_data_api_subscription()
 
     def _fetch_running_scan(self):
         scan = self.client.queue.scan_storage.current_scan
@@ -526,7 +539,14 @@ class Heatmap(ImageBase):
         # plot() is called again without a scan_id.
         self._history_scan_id = self.scan_id
 
-        # Also notifies settings widgets and triggers a plot update via sync_signal_update
+        # Fetch the history data through the DataAPI (file-backed, worker
+        # thread).
+        try:
+            self._setup_data_api_subscription(scan=self.scan_id)
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.warning(f"History data-api subscription failed: {exc}")
+
+        # Also notifies settings widgets, which re-render via update_plot
         self.heatmap_property_changed.emit()
 
     def update_labels(self):
@@ -713,89 +733,44 @@ class Heatmap(ImageBase):
         self.toolbar.components.get_action("heatmap_settings").action.setChecked(False)
 
     def _cleanup_data_api_subscription(self):
-        if self._data_subscription is None:
+        if self._data_bridge is None:
             return
         try:
-            self._data_subscription.close()
+            self._data_bridge.close()
         finally:
-            self._data_subscription = None
+            self._data_bridge = None
 
-    def _setup_data_api_subscription(self):
-        self._cleanup_data_api_subscription()
-
-        if self._history_scan_id is not None or self._image_config is None:
-            return
-
-        if not all(
-            [
-                self._image_config.device_x,
-                self._image_config.device_y,
-                self._image_config.device_z,
+    def _config_sources(self):
+        if self._image_config is None:
+            return None
+        try:
+            return [
+                (self._image_config.device_x.device, self._image_config.device_x.signal),
+                (self._image_config.device_y.device, self._image_config.device_y.signal),
+                (self._image_config.device_z.device, self._image_config.device_z.signal),
             ]
-        ):
+        except AttributeError:
+            return None
+
+    def _setup_data_api_subscription(self, scan: str = "live"):
+        self._cleanup_data_api_subscription()
+        self._data_bridge_scope = scan
+
+        if scan == "live" and self._history_scan_id is not None:
+            return
+        sources = self._config_sources()
+        if sources is None or not all(dev for dev, _ in sources):
             return
 
         try:
-            if self._data_api is None:
-                self._data_api = DataAPI(self.client)
-            subscription = self._data_api.create_subscription(live=True, buffered=True)
-            subscription.set_callback(self.data_api_update.emit)
-            subscription.add_device(
-                self._image_config.device_x.device, self._image_config.device_x.signal
+            self._data_bridge = QtDataSubscription(
+                self.client, sources=sources, scan=scan, parent=self, min_emit_interval=0.2
             )
-            subscription.add_device(
-                self._image_config.device_y.device, self._image_config.device_y.signal
-            )
-            subscription.add_device(
-                self._image_config.device_z.device, self._image_config.device_z.signal
-            )
+            self._data_bridge.updated.connect(self._on_data_update)
         except Exception as exc:
             logger.warning(f"Failed to configure heatmap data-api subscription: {exc}")
             self._cleanup_data_api_subscription()
             return
-
-        self._data_subscription = subscription
-
-    @staticmethod
-    def _normalize_series_values(values):
-        if values is None:
-            return None
-        if isinstance(values, np.ndarray):
-            return values.tolist()
-        if isinstance(values, list):
-            return values
-        if isinstance(values, tuple):
-            return list(values)
-        return [values]
-
-    def _extract_buffered_series(
-        self, data: dict, device: str, signal: str
-    ) -> list[Any] | None:
-        signal_buffer = data.get(device, {}).get(signal)
-        if signal_buffer is None:
-            return None
-        if isinstance(signal_buffer, dict):
-            return self._normalize_series_values(signal_buffer.get("value"))
-        if not isinstance(signal_buffer, list):
-            return None
-
-        values = []
-        for item in signal_buffer:
-            if not isinstance(item, dict) or "value" not in item:
-                return None
-            values.append(item["value"])
-        return values
-
-    def _extract_scan_series(self, data, access_key: str, device: str, signal: str) -> list[Any] | None:
-        if access_key == "val":
-            values = data.get(device, {}).get(signal, {}).get(access_key, None)
-            return self._normalize_series_values(values)
-
-        readback = data.get(device, {}).get(signal, None)
-        if readback is None:
-            return None
-        values = readback.read().get("value", None)
-        return self._normalize_series_values(values)
 
     @SafeSlot(dict, dict)
     def on_scan_status(self, msg: dict, meta: dict):
@@ -819,57 +794,55 @@ class Heatmap(ImageBase):
             self.old_scan_id = self.scan_id
             self.scan_id = current_scan_id
             self.scan_item = self.queue.scan_storage.find_scan_by_ID(self.scan_id)  # type: ignore
+            if self._data_bridge is None or self._data_bridge_scope != "live":
+                # The widget started idle and bound to the latest finished
+                # scan (or has no bridge yet); a scan is running now, so
+                # switch to a live-follow subscription.
+                self._setup_data_api_subscription()
 
-            if self._data_subscription is None:
-                # First trigger to update the scan curves
-                self.sync_signal_update.emit()
-
-    @SafeSlot(dict, dict)
-    def on_scan_progress(self, msg: dict, meta: dict):
-        if self._history_scan_id is not None:
-            return
-        if self._data_subscription is not None:
-            return
-        self.sync_signal_update.emit()
-        status = msg.get("done")
-        if status:
-            QTimer.singleShot(100, self.update_plot)
-            QTimer.singleShot(300, self.update_plot)
-
-    @SafeSlot(verify_sender=True)
-    def update_plot(self, data: dict | None = None, metadata: dict | None = None) -> None:
+    @SafeSlot(object)
+    def _on_data_update(self, update) -> None:
         """
-        Update the plot with the current data.
-        """
-        if self.scan_item is None:
-            logger.info("No scan executed so far; skipping update.")
-            return
+        Render one columnar DataAPI update (live or history).
 
-        if self._image_config is None:
+        Args:
+            update (SubscriptionUpdate): Aligned full-state snapshot.
+        """
+        sources = self._config_sources()
+        if sources is None or self._data_bridge is None:
             return
+        if self._history_scan_id is not None and update.scan_id != self._history_scan_id:
+            return
+        columns = update.aligned()
         try:
-            device_x = self._image_config.device_x.device
-            signal_x = self._image_config.device_x.signal
-            device_y = self._image_config.device_y.device
-            signal_y = self._image_config.device_y.signal
-            device_z = self._image_config.device_z.device
-            signal_z = self._image_config.device_z.signal
-        except AttributeError:
+            x_data = list(columns[tuple(sources[0])])
+            y_data = list(columns[tuple(sources[1])])
+            z_data = list(columns[tuple(sources[2])])
+        except KeyError:
             return
+        if not x_data:
+            return
+        self._render_columns(x_data, y_data, z_data)
 
-        if isinstance(data, dict):
-            x_data = self._extract_buffered_series(data, device_x, signal_x)
-            y_data = self._extract_buffered_series(data, device_y, signal_y)
-            z_data = self._extract_buffered_series(data, device_z, signal_z)
-        else:
-            data, access_key = self._fetch_scan_data_and_access()
-            if data == "none":
-                logger.info("No scan executed so far; skipping update.")
-                return
-            x_data = self._extract_scan_series(data, access_key, device_x, signal_x)
-            y_data = self._extract_scan_series(data, access_key, device_y, signal_y)
-            z_data = self._extract_scan_series(data, access_key, device_z, signal_z)
+    @SafeSlot()
+    def update_plot(self, _=None) -> None:
+        """
+        Re-render the last received data columns.
 
+        All data flows through the DataAPI subscription; this slot only
+        re-applies the most recent columns after a display-property change
+        (color map, interpolation, labels).
+        """
+        if self._last_columns is None:
+            return
+        x_data, y_data, z_data = self._last_columns
+        self._render_columns(x_data, y_data, z_data)
+
+    def _render_columns(self, x_data, y_data, z_data) -> None:
+        """
+        Render one aligned x/y/z column set into the heatmap image.
+        """
+        self._last_columns = (x_data, y_data, z_data)
         if x_data is None or y_data is None or z_data is None:
             logger.warning("x, y, or z data is None; skipping update.")
             return
@@ -883,17 +856,17 @@ class Heatmap(ImageBase):
         if hasattr(self.scan_item, "status_message"):
             scan_msg = self.scan_item.status_message
         elif hasattr(self.scan_item, "metadata"):
-            metadata = self.scan_item.metadata["bec"]
-            status = metadata["status"]
-            scan_id = metadata["scan_id"]
-            scan_name = metadata["scan_name"]
-            scan_type = metadata["scan_type"]
-            scan_number = metadata["scan_number"]
-            request_inputs = metadata["request_inputs"]
+            bec_metadata = self.scan_item.metadata["bec"]
+            status = bec_metadata["status"]
+            scan_id = bec_metadata["scan_id"]
+            scan_name = bec_metadata["scan_name"]
+            scan_type = bec_metadata["scan_type"]
+            scan_number = bec_metadata["scan_number"]
+            request_inputs = bec_metadata["request_inputs"]
             if "arg_bundle" in request_inputs and isinstance(request_inputs["arg_bundle"], str):
                 # Convert the arg_bundle from a JSON string to a dictionary
                 request_inputs["arg_bundle"] = json.loads(request_inputs["arg_bundle"])
-            positions = metadata.get("positions", [])
+            positions = bec_metadata.get("positions", [])
             positions = positions.tolist() if isinstance(positions, np.ndarray) else positions
 
             scan_msg = messages.ScanStatusMessage(
@@ -1393,30 +1366,6 @@ class Heatmap(ImageBase):
         for cmds in partition(bundle_size, args):
             params[cmds[0]] = list(cmds[1:])
         return params
-
-    def _fetch_scan_data_and_access(self):
-        """
-        Decide whether the widget is in live or historical mode
-        and return the appropriate data dict and access key.
-
-        Returns:
-            data_dict (dict): The data structure for the current scan.
-            access_key (str): Either 'val' (live) or 'value' (history).
-        """
-        if self.scan_item is None:
-            # Optionally fetch the latest from history if nothing is set
-            # self.update_with_scan_history(-1)
-            if self.scan_item is None:
-                logger.info("No scan executed so far; skipping update.")
-                return "none", "none"
-
-        if hasattr(self.scan_item, "live_data"):
-            # Live scan
-            return self.scan_item.live_data, "val"
-
-        # Historical
-        scan_devices = self.scan_item.devices
-        return scan_devices, "value"
 
     def reset(self):
         self._cancel_interpolation()

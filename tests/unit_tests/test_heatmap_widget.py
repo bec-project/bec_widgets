@@ -30,33 +30,33 @@ def heatmap_widget(qtbot, mocked_client):
     yield widget
 
 
-class _FakeDataSubscription:
-    def __init__(self):
-        self.callback = None
-        self.devices = []
+class _FakeBridge:
+    """Stand-in for QtDataSubscription."""
+
+    def __init__(self, client, sources, scan="live", parent=None, min_emit_interval=0.1):
+        self.client = client
+        self.sources = list(sources)
+        self.scan = scan
+        self.min_emit_interval = min_emit_interval
+        self.healthy = True
         self.closed = False
-
-    def set_callback(self, callback):
-        self.callback = callback
-        return self
-
-    def add_device(self, device, signal):
-        self.devices.append((device, signal))
-        return self
+        self.updated = mock.MagicMock()
 
     def close(self):
         self.closed = True
 
 
-class _FakeDataAPI:
-    def __init__(self, client):
-        self.client = client
-        self.create_subscription_calls = []
-        self.subscription = _FakeDataSubscription()
+@pytest.fixture
+def fake_bridges(monkeypatch):
+    created = []
 
-    def create_subscription(self, **kwargs):
-        self.create_subscription_calls.append(kwargs)
-        return self.subscription
+    def factory(client, sources, scan="live", parent=None, min_emit_interval=0.1):
+        bridge = _FakeBridge(client, sources, scan=scan, min_emit_interval=min_emit_interval)
+        created.append(bridge)
+        return bridge
+
+    monkeypatch.setattr("bec_widgets.widgets.plots.heatmap.heatmap.QtDataSubscription", factory)
+    return created
 
 
 def test_heatmap_plot(heatmap_widget):
@@ -67,12 +67,7 @@ def test_heatmap_plot(heatmap_widget):
     assert heatmap_widget._image_config.device_z.device == "bpm4i"
 
 
-def test_heatmap_plot_sets_up_live_data_api_subscription(heatmap_widget, monkeypatch):
-    fake_data_api = _FakeDataAPI(heatmap_widget.client)
-    monkeypatch.setattr(
-        "bec_widgets.widgets.plots.heatmap.heatmap.DataAPI", lambda client: fake_data_api
-    )
-
+def test_heatmap_plot_sets_up_live_data_api_subscription(heatmap_widget, fake_bridges):
     heatmap_widget.plot(
         device_x="samx",
         device_y="samy",
@@ -82,14 +77,12 @@ def test_heatmap_plot_sets_up_live_data_api_subscription(heatmap_widget, monkeyp
         signal_z="bpm4i",
     )
 
-    assert fake_data_api.create_subscription_calls == [{"live": True, "buffered": True}]
-    assert fake_data_api.subscription.callback == heatmap_widget.data_api_update.emit
-    assert fake_data_api.subscription.devices == [
-        ("samx", "samx"),
-        ("samy", "samy"),
-        ("bpm4i", "bpm4i"),
-    ]
-    assert heatmap_widget._data_subscription is fake_data_api.subscription
+    assert len(fake_bridges) == 1
+    bridge = fake_bridges[0]
+    assert bridge.scan == "live"
+    assert bridge.sources == [("samx", "samx"), ("samy", "samy"), ("bpm4i", "bpm4i")]
+    assert bridge.updated.connect.called
+    assert heatmap_widget._data_bridge is bridge
 
 
 def test_heatmap_plot_with_scan_id_uses_history(heatmap_widget):
@@ -140,15 +133,39 @@ def test_heatmap_update_with_scan_history_resets_cached_image_state(heatmap_widg
     assert heatmap_widget.scan_id == "scan-456"
 
 
-def test_heatmap_update_with_scan_history_closes_live_data_api_subscription(heatmap_widget):
+def test_heatmap_update_with_scan_history_closes_live_data_api_subscription(
+    heatmap_widget, fake_bridges
+):
     history_scan = mock.MagicMock()
     history_scan.scan_id = "scan-456"
-    heatmap_widget._data_subscription = _FakeDataSubscription()
+    live_bridge = _FakeBridge(heatmap_widget.client, [("samx", "samx")])
+    heatmap_widget._data_bridge = live_bridge
 
     with mock.patch.object(heatmap_widget, "get_history_scan_item", return_value=history_scan):
         heatmap_widget.update_with_scan_history(scan_id="scan-456")
 
-    assert heatmap_widget._data_subscription is None
+    assert live_bridge.closed is True
+    # Without an image config no history subscription is created.
+    assert heatmap_widget._data_bridge is None
+
+
+def test_heatmap_update_with_scan_history_subscribes_to_history_scan(heatmap_widget, fake_bridges):
+    history_scan = mock.MagicMock()
+    history_scan.scan_id = "scan-456"
+    heatmap_widget.plot(
+        device_x="samx",
+        device_y="samy",
+        device_z="bpm4i",
+        signal_x="samx",
+        signal_y="samy",
+        signal_z="bpm4i",
+    )
+    with mock.patch.object(heatmap_widget, "get_history_scan_item", return_value=history_scan):
+        heatmap_widget.update_with_scan_history(scan_id="scan-456")
+
+    assert fake_bridges[-1].scan == "scan-456"
+    assert heatmap_widget._data_bridge is fake_bridges[-1]
+    assert heatmap_widget._history_scan_id == "scan-456"
 
 
 def test_heatmap_on_scan_status_resets_after_history_scan_selection(heatmap_widget):
@@ -427,6 +444,8 @@ def test_heatmap_update_plot_no_scan_item(heatmap_widget):
 
 
 def test_heatmap_update_plot(heatmap_widget):
+    """update_plot re-renders the most recent data columns (display-property
+    changes); it performs no data fetching of its own."""
     heatmap_widget._image_config = HeatmapConfig(
         parent_id="parent_id",
         device_x=HeatmapDeviceSignal(device="samx", signal="samx"),
@@ -447,13 +466,23 @@ def test_heatmap_update_plot(heatmap_widget):
         },
         request_inputs={"arg_bundle": ["samx", -5, 5, 10, "samy", -5, 5, 10], "kwargs": {}},
     )
+    heatmap_widget.status_message = heatmap_widget.scan_item.status_message
+
+    # Nothing cached yet: a re-render request is a no-op.
     with mock.patch.object(heatmap_widget.main_image, "setImage") as mock_set_image:
-        heatmap_widget.update_plot(_override_slot_params={"verify_sender": False})
+        heatmap_widget.update_plot()
+    mock_set_image.assert_not_called()
+
+    heatmap_widget._last_columns = (list(x_levels), list(y_levels), [float(i) for i in range(10)])
+    with mock.patch.object(heatmap_widget.main_image, "setImage") as mock_set_image:
+        heatmap_widget.update_plot()
         img = mock_set_image.mock_calls[0].args[0]
         assert img.shape == (10, 10)
 
 
-def test_heatmap_update_plot_from_buffered_data_api_payload(heatmap_widget):
+def test_heatmap_renders_columns_from_data_api_update(heatmap_widget):
+    from bec_lib.data_api.models import SourceData, SubscriptionUpdate
+
     heatmap_widget._image_config = HeatmapConfig(
         parent_id="parent_id",
         device_x=HeatmapDeviceSignal(device="samx", signal="samx"),
@@ -461,6 +490,7 @@ def test_heatmap_update_plot_from_buffered_data_api_payload(heatmap_widget):
         device_z=HeatmapDeviceSignal(device="bpm4i", signal="bpm4i"),
         color_map="viridis",
     )
+    heatmap_widget._data_bridge = _FakeBridge(heatmap_widget.client, [("samx", "samx")])
     heatmap_widget.scan_item = create_dummy_scan_item()
     x_levels = np.linspace(-5, 5, 10).tolist()
     y_levels = np.linspace(-5, 5, 10).tolist()
@@ -474,20 +504,38 @@ def test_heatmap_update_plot_from_buffered_data_api_payload(heatmap_widget):
         },
         request_inputs={"arg_bundle": ["samx", -5, 5, 10, "samy", -5, 5, 10], "kwargs": {}},
     )
-    payload = {
-        "samx": {"samx": [{"value": value, "timestamp": idx} for idx, value in enumerate(x_levels)]},
-        "samy": {"samy": [{"value": value, "timestamp": idx} for idx, value in enumerate(y_levels)]},
-        "bpm4i": {
-            "bpm4i": [{"value": idx, "timestamp": idx} for idx in range(len(x_levels))]
+    heatmap_widget.status_message = heatmap_widget.scan_item.status_message
+
+    n = 10
+    xs = tuple(x_levels)
+    ys = tuple(y_levels)
+    zs = tuple(float(i) for i in range(n))
+
+    def source(dev, values):
+        return SourceData(
+            device=dev,
+            entry=dev,
+            kind="monitored",
+            ordinals=tuple(range(n)),
+            values=values,
+            timestamps=tuple(float(i) for i in range(n)),
+            complete=True,
+        )
+
+    update = SubscriptionUpdate(
+        scan_id="123",
+        reason="live",
+        sources={
+            ("samx", "samx"): source("samx", xs),
+            ("samy", "samy"): source("samy", ys),
+            ("bpm4i", "bpm4i"): source("bpm4i", zs),
         },
-    }
+        aligned_ordinals=tuple(range(n)),
+        complete=True,
+    )
 
     with mock.patch.object(heatmap_widget.main_image, "setImage") as mock_set_image:
-        heatmap_widget.update_plot(
-            data=payload,
-            metadata={"scan_id": "123"},
-            _override_slot_params={"verify_sender": False},
-        )
+        heatmap_widget._on_data_update(update)
         img = mock_set_image.mock_calls[0].args[0]
         assert img.shape == (10, 10)
 
@@ -1057,8 +1105,8 @@ def test_device_properties_with_none_values(heatmap_widget):
 
 def test_heatmap_history_mode_ignores_live_scan_updates(heatmap_widget):
     """
-    Once pinned to a history scan, the heatmap ignores live scan status/progress updates
-    until plot() is called again without a scan_id.
+    Once pinned to a history scan, live scan-status updates neither reset the
+    widget nor steal the pin until plot() is called again without a scan_id.
     """
     history_scan = mock.MagicMock()
     history_scan.scan_id = "scan-456"
@@ -1073,10 +1121,6 @@ def test_heatmap_history_mode_ignores_live_scan_updates(heatmap_widget):
         heatmap_widget.on_scan_status(scan_msg.content, scan_msg.metadata)
     reset_mock.assert_not_called()
     assert heatmap_widget.scan_id == "scan-456"
-
-    with mock.patch.object(heatmap_widget, "sync_signal_update") as sync_mock:
-        heatmap_widget.on_scan_progress({"done": False}, {})
-    sync_mock.emit.assert_not_called()
 
     # Plotting without a scan_id returns to live mode
     heatmap_widget.plot(device_x="samx", device_y="samy", device_z="bpm4i")
@@ -1220,3 +1264,120 @@ def test_heatmap_settings_scan_index_syncs_with_widget(heatmap_widget, qtbot, sc
 
     heatmap_widget.heatmap_dialog.reject()
     qtbot.waitUntil(lambda: heatmap_widget.heatmap_dialog is None)
+
+
+def test_heatmap_has_no_legacy_data_path(heatmap_widget):
+    """All data flows through the DataAPI: the legacy fetch machinery and its
+    scan-progress trigger no longer exist on the widget."""
+    for legacy in (
+        "sync_signal_update",
+        "on_scan_progress",
+        "_fetch_scan_data_and_access",
+        "_extract_scan_series",
+        "_data_api_feed_healthy",
+        "proxy_update_sync",
+    ):
+        assert not hasattr(heatmap_widget, legacy)
+
+
+def test_heatmap_on_data_update_respects_history_pin(heatmap_widget):
+    """While pinned to a history scan, only that scan's updates render."""
+    from bec_lib.data_api.models import SourceData, SubscriptionUpdate
+
+    heatmap_widget.plot(
+        device_x="samx",
+        device_y="samy",
+        device_z="bpm4i",
+        signal_x="samx",
+        signal_y="samy",
+        signal_z="bpm4i",
+    )
+    heatmap_widget._data_bridge = _FakeBridge(heatmap_widget.client, [("samx", "samx")])
+    heatmap_widget._history_scan_id = "scan-hist"
+
+    def update_for(scan_id):
+        sources = {}
+        for dev in ("samx", "samy", "bpm4i"):
+            sources[(dev, dev)] = SourceData(
+                device=dev,
+                entry=dev,
+                kind="monitored",
+                ordinals=(0,),
+                values=(1.0,),
+                timestamps=(1.0,),
+                complete=True,
+            )
+        return SubscriptionUpdate(
+            scan_id=scan_id, reason="history", sources=sources, aligned_ordinals=(0,), complete=True
+        )
+
+    with mock.patch.object(heatmap_widget, "_render_columns") as render:
+        heatmap_widget._on_data_update(update_for("scan-live"))
+    render.assert_not_called()
+
+    with mock.patch.object(heatmap_widget, "_render_columns") as render:
+        heatmap_widget._on_data_update(update_for("scan-hist"))
+    render.assert_called_once_with([1.0], [1.0], [1.0])
+
+
+def test_heatmap_failed_subscription_setup_leaves_no_bridge(heatmap_widget, monkeypatch):
+    """A failing subscription constructor must leave no half-configured feed."""
+
+    def raising_factory(*args, **kwargs):
+        raise ValueError("not bundle compatible")
+
+    monkeypatch.setattr(
+        "bec_widgets.widgets.plots.heatmap.heatmap.QtDataSubscription", raising_factory
+    )
+    heatmap_widget.plot(
+        device_x="samx",
+        device_y="samy",
+        device_z="bpm4i",
+        signal_x="samx",
+        signal_y="samy",
+        signal_z="bpm4i",
+    )
+    assert heatmap_widget._data_bridge is None
+
+
+def test_heatmap_switches_history_bound_bridge_to_live_on_new_scan(heatmap_widget, fake_bridges):
+    """A widget configured while idle binds to the latest finished scan; when
+    a new scan starts it must switch to a live-follow subscription (live
+    regression: the history-bound bridge froze the plot for the whole scan)."""
+    heatmap_widget.plot(
+        device_x="samx",
+        device_y="samy",
+        device_z="bpm4i",
+        signal_x="samx",
+        signal_y="samy",
+        signal_z="bpm4i",
+    )
+    # Simulate the idle-startup state: bridge bound to a finished scan.
+    heatmap_widget._setup_data_api_subscription(scan="old-finished-scan")
+    assert fake_bridges[-1].scan == "old-finished-scan"
+
+    heatmap_widget.on_scan_status({"scan_id": "new-live-scan"}, {})
+
+    assert fake_bridges[-1].scan == "live"
+    assert heatmap_widget._data_bridge is fake_bridges[-1]
+
+    # A further scan status for the live-follow bridge must NOT rebuild it.
+    bridge_count = len(fake_bridges)
+    heatmap_widget.on_scan_status({"scan_id": "another-scan"}, {})
+    assert len(fake_bridges) == bridge_count
+
+
+def test_heatmap_restored_from_config_starts_data_feed(qtbot, mocked_client, fake_bridges):
+    """A heatmap recreated from a saved configuration (no plot() call) must
+    start its DataAPI feed just like a freshly plotted one."""
+    config = HeatmapConfig(
+        parent_id="parent_id",
+        device_x=HeatmapDeviceSignal(device="samx", signal="samx"),
+        device_y=HeatmapDeviceSignal(device="samy", signal="samy"),
+        device_z=HeatmapDeviceSignal(device="bpm4i", signal="bpm4i"),
+        color_map="plasma",
+    )
+    widget = Heatmap(client=mocked_client, config=config)
+    qtbot.addWidget(widget)
+    assert widget._data_bridge is not None
+    assert fake_bridges[-1].sources == [("samx", "samx"), ("samy", "samy"), ("bpm4i", "bpm4i")]
