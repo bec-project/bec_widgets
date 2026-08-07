@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-import numpy as np
-import pyqtgraph as pg
 from bec_lib import bec_logger
 from bec_lib.endpoints import MessageEndpoints
 from pydantic import Field, ValidationError, field_validator
-from qtpy.QtCore import QTimer, Signal
+from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QHBoxLayout, QMainWindow, QWidget
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.colors import Colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.qt_data_subscription import QtDataSubscription
 from bec_widgets.utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.toolbars.toolbar import MaterialIconAction
 from bec_widgets.widgets.plots.plot_base import PlotBase, UIMode
@@ -65,7 +64,6 @@ class ScatterWaveform(PlotBase):
         "signal_z.setter",
     ]
 
-    sync_signal_update = Signal()
     new_scan = Signal()
     new_scan_id = Signal(str)
     scatter_waveform_property_changed = Signal()
@@ -95,14 +93,11 @@ class ScatterWaveform(PlotBase):
         self.scan_id = None
         self.scan_item = None
 
-        # Scan status update loop
+        # Data delivery through the DataAPI; scan_status is only used for
+        # per-scan bookkeeping (reset, auto range, new_scan signals).
+        self._data_bridge: QtDataSubscription | None = None
+        self._data_bridge_scope: str | None = "live"
         self.bec_dispatcher.connect_slot(self.on_scan_status, MessageEndpoints.scan_status())
-        self.bec_dispatcher.connect_slot(self.on_scan_progress, MessageEndpoints.scan_progress())
-
-        # Curve update loop
-        self.proxy_update_sync = pg.SignalProxy(
-            self.sync_signal_update, rateLimit=25, slot=self.update_sync_curves
-        )
 
         self._init_scatter_curve_settings()
 
@@ -291,7 +286,7 @@ class ScatterWaveform(PlotBase):
         self.update_labels()
         self.plot_item.addItem(self._main_curve)
 
-        self.sync_signal_update.emit()
+        self._setup_data_api_subscription()
 
     ################################################################################
     # BEC Update Methods
@@ -318,90 +313,76 @@ class ScatterWaveform(PlotBase):
             self.old_scan_id = self.scan_id
             self.scan_id = current_scan_id
             self.scan_item = self.queue.scan_storage.find_scan_by_ID(self.scan_id)
+            if self._data_bridge is None or self._data_bridge_scope != "live":
+                # The widget started idle and bound to the latest finished
+                # scan (or has no bridge yet); a scan is running now, so
+                # switch to a live-follow subscription.
+                self._setup_data_api_subscription()
 
-            # First trigger to update the scan curves
-            self.sync_signal_update.emit()
+    def _config_sources(self):
+        """Return the deduplicated (device, signal) sources of the curve config."""
+        curve = self._main_curve
+        if curve is None or curve.config is None:
+            return None
+        try:
+            sources = [
+                (curve.config.device_x.device, curve.config.device_x.signal),
+                (curve.config.device_y.device, curve.config.device_y.signal),
+                (curve.config.device_z.device, curve.config.device_z.signal),
+            ]
+        except AttributeError:
+            return None
+        if not all(dev for dev, _ in sources):
+            return None
+        return list(dict.fromkeys(sources))
 
-    @SafeSlot(dict, dict)
-    def on_scan_progress(self, msg: dict, meta: dict):
+    def _setup_data_api_subscription(self, scan: str = "live"):
+        """(Re)create the DataAPI subscription for the configured sources."""
+        self._cleanup_data_api_subscription()
+        self._data_bridge_scope = scan
+        sources = self._config_sources()
+        if sources is None:
+            return
+        try:
+            self._data_bridge = QtDataSubscription(
+                self.client, sources=sources, scan=scan, parent=self, min_emit_interval=0.1
+            )
+            self._data_bridge.updated.connect(self._on_data_update)
+        except Exception as exc:
+            logger.warning(f"Failed to configure scatter waveform data subscription: {exc}")
+            self._cleanup_data_api_subscription()
+
+    def _cleanup_data_api_subscription(self):
+        if self._data_bridge is None:
+            return
+        try:
+            self._data_bridge.close()
+        finally:
+            self._data_bridge = None
+
+    @SafeSlot(object)
+    def _on_data_update(self, update) -> None:
         """
-        Slot for handling scan progress messages. Used for triggering the update of the sync curves.
+        Render one columnar DataAPI update (live or history).
 
         Args:
-            msg(dict): The message content.
-            meta(dict): The message metadata.
+            update (SubscriptionUpdate): Aligned full-state snapshot.
         """
-        self.sync_signal_update.emit()
-        status = msg.get("done")
-        if status:
-            QTimer.singleShot(100, self.update_sync_curves)
-            QTimer.singleShot(300, self.update_sync_curves)
-
-    @SafeSlot()
-    def update_sync_curves(self, _=None):
-        """
-        Update the scan curves with the data from the scan segment.
-        """
-        if self.scan_item is None:
-            logger.info("No scan executed so far; skipping device curves categorisation.")
-            return "none"
-        data, access_key = self._fetch_scan_data_and_access()
-
-        if data == "none":
-            logger.info("No scan executed so far; skipping device curves categorisation.")
-            return "none"
-
+        curve = self._main_curve
+        sources = self._config_sources()
+        if curve is None or sources is None:
+            return
+        columns = update.aligned()
         try:
-            device_x = self._main_curve.config.device_x.device
-            signal_x = self._main_curve.config.device_x.signal
-            device_y = self._main_curve.config.device_y.device
-            signal_y = self._main_curve.config.device_y.signal
-            device_z = self._main_curve.config.device_z.device
-            signal_z = self._main_curve.config.device_z.signal
-        except AttributeError:
+            config = curve.config
+            x_data = list(columns[(config.device_x.device, config.device_x.signal)])
+            y_data = list(columns[(config.device_y.device, config.device_y.signal)])
+            z_data = list(columns[(config.device_z.device, config.device_z.signal)])
+        except (KeyError, AttributeError):
             return
-
-        if access_key == "val":
-            x_data = data.get(device_x, {}).get(signal_x, {}).get(access_key, None)
-            y_data = data.get(device_y, {}).get(signal_y, {}).get(access_key, None)
-            z_data = data.get(device_z, {}).get(signal_z, {}).get(access_key, None)
-        else:
-            x_data = data.get(device_x, {}).get(signal_x, {}).read().get("value", None)
-            y_data = data.get(device_y, {}).get(signal_y, {}).read().get("value", None)
-            z_data = data.get(device_z, {}).get(signal_z, {}).read().get("value", None)
-
-        if x_data is None or y_data is None or z_data is None:
+        if not x_data:
             return
-
-        x_data, y_data, z_data = (np.atleast_1d(arr) for arr in (x_data, y_data, z_data))
-        min_len = min(len(x_data), len(y_data), len(z_data))
-        if min_len == 0:
-            return
-        self._main_curve.set_data(x=x_data[:min_len], y=y_data[:min_len], z=z_data[:min_len])
-
-    def _fetch_scan_data_and_access(self):
-        """
-        Decide whether the widget is in live or historical mode
-        and return the appropriate data dict and access key.
-
-        Returns:
-            data_dict (dict): The data structure for the current scan.
-            access_key (str): Either 'val' (live) or 'value' (history).
-        """
-        if self.scan_item is None:
-            # Optionally fetch the latest from history if nothing is set
-            self.update_with_scan_history(-1)
-            if self.scan_item is None:
-                logger.info("No scan executed so far; skipping device curves categorisation.")
-                return "none", "none"
-
-        if hasattr(self.scan_item, "live_data"):
-            # Live scan
-            return self.scan_item.live_data, "val"
-        else:
-            # Historical
-            scan_devices = self.scan_item.devices
-            return scan_devices, "value"
+        curve.set_data(x=x_data, y=y_data, z=z_data)
 
     ################################################################################
     # Widget Specific Properties
@@ -703,7 +684,7 @@ class ScatterWaveform(PlotBase):
         if scan_index is None:
             self.scan_id = scan_id
             self.scan_item = self.client.history.get_by_scan_id(scan_id)
-            self.sync_signal_update.emit()
+            self._setup_data_api_subscription(scan=scan_id)
             return
 
         if scan_index == -1:
@@ -714,7 +695,7 @@ class ScatterWaveform(PlotBase):
                     return
                 self.scan_item = scan_item
                 self.scan_id = scan_item.scan_id
-                self.sync_signal_update.emit()
+                self._setup_data_api_subscription(scan="live")
                 return
 
         if len(self.client.history) == 0:
@@ -725,7 +706,7 @@ class ScatterWaveform(PlotBase):
         metadata = self.scan_item.metadata
         self.scan_id = metadata["bec"]["scan_id"]
 
-        self.sync_signal_update.emit()
+        self._setup_data_api_subscription(scan=self.scan_id)
 
     ################################################################################
     # Cleanup
@@ -743,6 +724,7 @@ class ScatterWaveform(PlotBase):
         """
         Cleanup the widget and disconnect all signals.
         """
+        self._cleanup_data_api_subscription()
         if self.scatter_dialog is not None:
             self.scatter_dialog.close()
             self.scatter_dialog.deleteLater()
