@@ -13,6 +13,7 @@ from qtpy.QtWidgets import QHBoxLayout, QMainWindow, QWidget
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.colors import Colors, apply_theme
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.qt_data_subscription import QtDataSubscription
 from bec_widgets.utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.toolbars.toolbar import MaterialIconAction
 from bec_widgets.widgets.plots.motor_map.settings.motor_map_settings import MotorMapSettings
@@ -145,6 +146,11 @@ class MotorMap(PlotBase):
         self.h_line = None
         self.coord_label = None
         self.motor_map_settings = None
+
+        # Data delivery through the DataAPI device streams (readback).
+        self._data_bridge: QtDataSubscription | None = None
+        self._connected_limit_endpoints: list = []
+        self._last_ordinals: dict[str, int | None] = {"x": None, "y": None}
 
         # Connect slots
         self.proxy_update_plot = pg.SignalProxy(
@@ -565,62 +571,123 @@ class MotorMap(PlotBase):
         # Update the crosshair
         self._set_motor_indicator_position(current_x, current_y)
 
-    @SafeSlot(dict, dict)
-    def on_device_readback(self, msg: dict, metadata: dict) -> None:
+    @SafeSlot(object)
+    def _on_data_update(self, update) -> None:
         """
-        Update the motor map plot with the new motor position.
+        Update the motor map trail from one columnar DataAPI update.
+
+        Each motor readback is a standalone device-stream source, so every
+        update carries exactly one motor's series. Ordinals are arrival
+        counters; positions newer than the last consumed ordinal are appended
+        with the other axis forward-filled from its last known position —
+        the same trail the legacy per-message handler produced.
 
         Args:
-            msg(dict): Message from the device readback.
-            metadata(dict): Metadata of the message.
+            update (SubscriptionUpdate): Full-state snapshot of one motor's
+                readback stream (standalone group).
         """
         device_x = self.config.device_x.device
         device_y = self.config.device_y.device
 
         if device_x is None or device_y is None:
             return
+        if not self._buffer["x"] or not self._buffer["y"]:
+            # Not seeded yet (map() seeds via dev[name].read(cached=True)).
+            return
 
-        if device_x in msg["signals"]:
-            x = msg["signals"][device_x]["value"]
-            self._buffer["x"].append(x)
-            self._buffer["y"].append(self._buffer["y"][-1])
+        source_x = update.get(device_x, device_x)
+        if source_x is not None:
+            appended = self._append_new_positions(source_x, axis="x")
+        else:
+            source_y = update.get(device_y, device_y)
+            if source_y is None:
+                return
+            appended = self._append_new_positions(source_y, axis="y")
 
-        elif device_y in msg["signals"]:
-            y = msg["signals"][device_y]["value"]
-            self._buffer["y"].append(y)
-            self._buffer["x"].append(self._buffer["x"][-1])
+        if appended:
+            self.update_signal.emit()
 
-        self.update_signal.emit()
+    def _append_new_positions(self, source, axis: str) -> bool:
+        """
+        Append the not-yet-consumed positions of one motor to the trail buffer.
+
+        Args:
+            source (SourceData): Columnar snapshot of the motor readback.
+            axis (str): "x" or "y" — the buffer axis fed by this source.
+
+        Returns:
+            bool: True if at least one position was appended.
+        """
+        other = "y" if axis == "x" else "x"
+        last_ordinal = self._last_ordinals[axis]
+        appended = False
+        for ordinal, value in zip(source.ordinals, source.values):
+            if last_ordinal is not None and ordinal <= last_ordinal:
+                continue
+            self._buffer[axis].append(value)
+            self._buffer[other].append(self._buffer[other][-1])
+            last_ordinal = ordinal
+            appended = True
+        self._last_ordinals[axis] = last_ordinal
+        return appended
 
     def _connect_motor_to_slots(self):
-        """Connect motors to slots."""
+        """Connect the motors to the DataAPI stream and the limits dispatcher."""
         self._disconnect_current_motors()
 
-        endpoints_readback = [
-            MessageEndpoints.device_readback(self.config.device_x.device),
-            MessageEndpoints.device_readback(self.config.device_y.device),
-        ]
+        # device_limits is config metadata (not a data series) and stays on
+        # the dispatcher.
         endpoints_limits = [
             MessageEndpoints.device_limits(self.config.device_x.device),
             MessageEndpoints.device_limits(self.config.device_y.device),
         ]
-
-        self.bec_dispatcher.connect_slot(self.on_device_readback, endpoints_readback)
         self.bec_dispatcher.connect_slot(self.on_device_limits, endpoints_limits)
+        self._connected_limit_endpoints = endpoints_limits
+
+        self._setup_data_api_subscription()
 
     def _disconnect_current_motors(self):
-        """Disconnect the current motors from the slots."""
-        if self.config.device_x.device is not None and self.config.device_y.device is not None:
-            endpoints_readback = [
-                MessageEndpoints.device_readback(self.config.device_x.device),
-                MessageEndpoints.device_readback(self.config.device_y.device),
-            ]
-            endpoints_limits = [
-                MessageEndpoints.device_limits(self.config.device_x.device),
-                MessageEndpoints.device_limits(self.config.device_y.device),
-            ]
-            self.bec_dispatcher.disconnect_slot(self.on_device_readback, endpoints_readback)
-            self.bec_dispatcher.disconnect_slot(self.on_device_limits, endpoints_limits)
+        """Disconnect the current motors from the data stream and the limits slot.
+
+        Disconnects the endpoints that were actually connected: at this point
+        the config may already carry the new motor names.
+        """
+        self._cleanup_data_api_subscription()
+        if self._connected_limit_endpoints:
+            self.bec_dispatcher.disconnect_slot(
+                self.on_device_limits, self._connected_limit_endpoints
+            )
+            self._connected_limit_endpoints = []
+
+    def _setup_data_api_subscription(self):
+        """(Re)create the scan-less DataAPI subscription for the configured motors."""
+        self._cleanup_data_api_subscription()
+        device_x = self.config.device_x.device
+        device_y = self.config.device_y.device
+        if not device_x or not device_y:
+            return
+        try:
+            self._data_bridge = QtDataSubscription(
+                self.client,
+                sources=[(device_x, device_x), (device_y, device_y)],
+                scan=None,
+                parent=self,
+                min_emit_interval=0.1,
+                max_points=self.config.max_points,
+            )
+            self._data_bridge.updated.connect(self._on_data_update)
+        except Exception as exc:
+            logger.warning(f"Failed to configure motor map data subscription: {exc}")
+            self._cleanup_data_api_subscription()
+
+    def _cleanup_data_api_subscription(self):
+        self._last_ordinals = {"x": None, "y": None}
+        if self._data_bridge is None:
+            return
+        try:
+            self._data_bridge.close()
+        finally:
+            self._data_bridge = None
 
     ################################################################################
     # Utility Methods
@@ -852,6 +919,19 @@ class MotorMap(PlotBase):
         """
         data = {"x": self._buffer["x"], "y": self._buffer["y"]}
         return data
+
+    ################################################################################
+    # Cleanup
+    ################################################################################
+
+    def cleanup(self):
+        """
+        Cleanup the widget: close the DataAPI bridge. The limits dispatcher
+        slot is released by BECWidget.cleanup via disconnect_owner (the legacy
+        readback slot relied on the same owner cleanup).
+        """
+        self._cleanup_data_api_subscription()
+        super().cleanup()
 
 
 class DemoApp(QMainWindow):  # pragma: no cover

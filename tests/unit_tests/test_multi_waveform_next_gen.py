@@ -1,9 +1,69 @@
+from unittest.mock import MagicMock
+
 import numpy as np
+from bec_lib.data_api.models import SourceData, SubscriptionUpdate
 
 from bec_widgets.widgets.plots.multi_waveform.multi_waveform import MultiWaveform
 from tests.unit_tests.client_mocks import mocked_client
 
 from .conftest import create_widget
+
+##################################################
+# Test helpers (DataAPI fake bridge + updates)
+##################################################
+
+
+def _fake_bridge_factory(monkeypatch):
+    created = []
+
+    class _FakeBridge:
+        def __init__(
+            self, client, sources, scan="live", parent=None, min_emit_interval=0.1, max_points=None
+        ):
+            self.client = client
+            self.sources = list(sources)
+            self.scan = scan
+            self.max_points = max_points
+            self.healthy = True
+            self.closed = False
+            self.updated = MagicMock()
+
+        def close(self):
+            self.closed = True
+
+    def factory(client, sources, scan="live", parent=None, min_emit_interval=0.1, max_points=None):
+        bridge = _FakeBridge(client, sources, scan=scan, max_points=max_points)
+        created.append(bridge)
+        return bridge
+
+    monkeypatch.setattr(
+        "bec_widgets.widgets.plots.multi_waveform.multi_waveform.QtDataSubscription", factory
+    )
+    return created
+
+
+def _monitor_update(traces, scan_id="scan_1", monitor="waveform1d", start=0):
+    """Build a full-state monitor_1d snapshot: one 1-D trace per value, newest last."""
+    ordinals = tuple(range(start, start + len(traces)))
+    source = SourceData(
+        device=monitor,
+        entry="monitor_1d",
+        kind="unindexed",
+        ordinals=ordinals,
+        values=tuple(traces),
+        timestamps=tuple(float(ordinal) for ordinal in ordinals),
+        complete=True,
+        metadata={"stream": "monitor_1d", "scan_id": scan_id},
+    )
+    return SubscriptionUpdate(
+        scan_id="",
+        reason="live",
+        sources={(monitor, "monitor_1d"): source},
+        aligned_ordinals=ordinals,
+        complete=True,
+        metadata={"group": f"standalone:{monitor}/monitor_1d"},
+    )
+
 
 ##################################################
 # MultiWaveform widget base functionality tests
@@ -32,17 +92,44 @@ def test_multiwaveform_initialization(qtbot, mocked_client):
     assert mw.opacity == 50
     assert mw.scan_id is None
     assert mw.highlighted_index == 0
+    assert mw._data_bridge is None
 
 
 def test_multiwaveform_set_monitor(qtbot, mocked_client):
     mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
     assert mw.monitor is None
 
-    # Set a monitor
+    # Set a monitor; data flows through a scan-less DataAPI subscription.
     mw.plot("waveform1d")
     assert mw.monitor == "waveform1d"
     assert mw.config.monitor == "waveform1d"
     assert mw.connected is True
+    assert mw._data_bridge is not None
+    assert mw._data_bridge.sources == [("waveform1d", "monitor_1d")]
+    assert mw._data_bridge.scan_id == ""  # device scope
+
+
+def test_multiwaveform_bridge_lifecycle(qtbot, mocked_client, monkeypatch):
+    """plot() creates a scan-less bridge bounded by the curve limit; re-plot replaces it."""
+    bridges = _fake_bridge_factory(monkeypatch)
+    mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+
+    mw.plot("waveform1d")
+    assert len(bridges) == 1
+    assert bridges[-1].sources == [("waveform1d", "monitor_1d")]
+    assert bridges[-1].scan is None
+    assert bridges[-1].max_points == mw.config.curve_limit
+    assert mw.connected is True
+
+    first = bridges[-1]
+    mw.plot("bpm4i")
+    assert first.closed is True
+    assert bridges[-1].sources == [("bpm4i", "monitor_1d")]
+
+    mw._cleanup_data_api_subscription()
+    assert bridges[-1].closed is True
+    assert mw.connected is False
+    assert mw._data_bridge is None
 
 
 def test_multiwaveform_set_properties(qtbot, mocked_client):
@@ -71,16 +158,19 @@ def test_multiwaveform_set_properties(qtbot, mocked_client):
     assert mw.opacity == 75
 
 
-def test_multiwaveform_curve_limit_no_flush(qtbot, mocked_client):
+def test_multiwaveform_curve_limit_no_flush(qtbot, mocked_client, monkeypatch):
     """Check that limiting the number of curves without flush simply hides older ones."""
+    _fake_bridge_factory(monkeypatch)
     mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    mw.plot("waveform1d")
     mw.max_trace = 3
     mw.flush_buffer = False
 
-    # Simulate updates that create multiple curves
+    # Simulate updates that create multiple curves (snapshots grow, newest last)
+    traces = []
     for i in range(5):
-        msg_data = {"data": np.array([i, i + 0.5, i + 1])}
-        mw.on_monitor_1d_update(msg_data, metadata={"scan_id": "scan_1"})
+        traces.append(np.array([i, i + 0.5, i + 1]))
+        mw._on_data_update(_monitor_update(list(traces)))
 
     # There should be 5 curves in total, but only the last 3 are visible
     assert len(mw.curves) == 5
@@ -88,16 +178,19 @@ def test_multiwaveform_curve_limit_no_flush(qtbot, mocked_client):
     assert len(visible_curves) == 3
 
 
-def test_multiwaveform_curve_limit_flush(qtbot, mocked_client):
+def test_multiwaveform_curve_limit_flush(qtbot, mocked_client, monkeypatch):
     """Check that limiting the number of curves with flush removes older ones."""
+    _fake_bridge_factory(monkeypatch)
     mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    mw.plot("waveform1d")
     mw.max_trace = 3
     mw.flush_buffer = True
 
     # Simulate adding multiple curves
+    traces = []
     for i in range(5):
-        msg_data = {"data": np.array([i, i + 0.5, i + 1])}
-        mw.on_monitor_1d_update(msg_data, metadata={"scan_id": "scan_1"})
+        traces.append(np.array([i, i + 0.5, i + 1]))
+        mw._on_data_update(_monitor_update(list(traces)))
 
     # Only 3 curves remain after flush
     assert len(mw.curves) == 3
@@ -110,16 +203,69 @@ def test_multiwaveform_curve_limit_flush(qtbot, mocked_client):
     assert np.array_equal(y_data, [4, 4.5, 5])
 
 
-def test_multiwaveform_highlight_last_curve(qtbot, mocked_client):
-    """Check highlight_last_curve behavior."""
+def test_multiwaveform_snapshot_ordinal_filtering(qtbot, mocked_client, monkeypatch):
+    """Full-state snapshots must not duplicate already-rendered traces."""
+    _fake_bridge_factory(monkeypatch)
     mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    mw.plot("waveform1d")
+
+    first = np.array([1, 2, 3])
+    second = np.array([4, 5, 6])
+    mw._on_data_update(_monitor_update([first]))
+    assert len(mw.curves) == 1
+
+    # Same snapshot delivered again (e.g. trailing coalesced emission): no new curves.
+    mw._on_data_update(_monitor_update([first]))
+    assert len(mw.curves) == 1
+
+    # Snapshot grows by one trace: exactly one curve appended.
+    mw._on_data_update(_monitor_update([first, second]))
+    assert len(mw.curves) == 2
+    _, y_data = mw.curves[-1].getData()
+    assert np.array_equal(y_data, second)
+
+    # Retention window slid (oldest dropped): only newer ordinals are added.
+    third = np.array([7, 8, 9])
+    mw._on_data_update(_monitor_update([second, third], start=1))
+    assert len(mw.curves) == 3
+    _, y_data = mw.curves[-1].getData()
+    assert np.array_equal(y_data, third)
+
+
+def test_multiwaveform_scan_change_clears_curves(qtbot, mocked_client, monkeypatch):
+    """A new scan_id in the source metadata clears the previous scan's curves."""
+    _fake_bridge_factory(monkeypatch)
+    mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    mw.plot("waveform1d")
+
+    old_trace = np.array([1, 2, 3])
+    new_trace = np.array([4, 5, 6])
+    mw._on_data_update(_monitor_update([old_trace], scan_id="scan_1"))
+    assert len(mw.curves) == 1
+    assert mw.scan_id == "scan_1"
+
+    # New scan: the retained window still contains the old-scan trace, but
+    # only the not-yet-consumed ordinal is rendered after the clear.
+    mw._on_data_update(_monitor_update([old_trace, new_trace], scan_id="scan_2"))
+    assert mw.scan_id == "scan_2"
+    assert len(mw.curves) == 1
+    _, y_data = mw.curves[-1].getData()
+    assert np.array_equal(y_data, new_trace)
+
+
+def test_multiwaveform_highlight_last_curve(qtbot, mocked_client, monkeypatch):
+    """Check highlight_last_curve behavior."""
+    _fake_bridge_factory(monkeypatch)
+    mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    mw.plot("waveform1d")
     mw.max_trace = 5
     mw.flush_buffer = False
 
     # Simulate adding multiple curves
+    traces = []
     for i in range(3):
-        msg_data = {"data": np.array([i, i + 1, i + 2])}
-        mw.on_monitor_1d_update(msg_data, metadata={"scan_id": "scan_1"})
+        traces.append(np.array([i, i + 1, i + 2]))
+        mw._on_data_update(_monitor_update(list(traces)))
 
     # Initially highlight_last_curve is True, so the last visible curve is highlighted
     # The highlight index should be -1 in the code's logic
@@ -133,14 +279,14 @@ def test_multiwaveform_highlight_last_curve(qtbot, mocked_client):
     assert mw.highlighted_index == 0
 
 
-def test_multiwaveform_opacity_changes(qtbot, mocked_client):
+def test_multiwaveform_opacity_changes(qtbot, mocked_client, monkeypatch):
     """Check changing opacity affects existing curves."""
+    _fake_bridge_factory(monkeypatch)
     mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
     mw.plot("waveform1d")
 
     # Add one curve
-    msg_data = {"data": np.array([10, 20, 30])}
-    mw.on_monitor_1d_update(msg_data, metadata={"scan_id": "scan_1"})
+    mw._on_data_update(_monitor_update([np.array([10, 20, 30])]))
     assert len(mw.curves) == 1
 
     # Default opacity is 50
@@ -151,15 +297,17 @@ def test_multiwaveform_opacity_changes(qtbot, mocked_client):
     assert mw.opacity == 80
 
 
-def test_multiwaveform_set_colormap(qtbot, mocked_client):
+def test_multiwaveform_set_colormap(qtbot, mocked_client, monkeypatch):
     """Check that setting a new colormap updates curve colors."""
+    _fake_bridge_factory(monkeypatch)
     mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
     mw.plot("waveform1d")
 
     # Simulate multiple curve updates
+    traces = []
     for i in range(3):
-        msg_data = {"data": np.array([i, i + 1, i + 2])}
-        mw.on_monitor_1d_update(msg_data, metadata={"scan_id": "scan_1"})
+        traces.append(np.array([i, i + 1, i + 2]))
+        mw._on_data_update(_monitor_update(list(traces)))
 
     # Default color_palette is "magma"
     assert mw.color_palette == "plasma"
@@ -168,15 +316,17 @@ def test_multiwaveform_set_colormap(qtbot, mocked_client):
     assert mw.color_palette == "viridis"
 
 
-def test_multiwaveform_simulate_updates(qtbot, mocked_client):
+def test_multiwaveform_simulate_updates(qtbot, mocked_client, monkeypatch):
     """Simulate a series of 1D updates to ensure the data is appended and the correct number of curves appear."""
+    _fake_bridge_factory(monkeypatch)
     mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
     mw.plot("waveform1d")
 
     data_series = [np.random.rand(5), np.random.rand(5), np.random.rand(5)]
+    traces = []
     for idx, arr in enumerate(data_series):
-        msg_data = {"data": arr}
-        mw.on_monitor_1d_update(msg_data, metadata={"scan_id": "scan_99"})
+        traces.append(arr)
+        mw._on_data_update(_monitor_update(list(traces), scan_id="scan_99"))
         # Each update should add a new curve
         assert len(mw.curves) == idx + 1
         x_data, y_data = mw.curves[-1].getData()
@@ -286,13 +436,15 @@ def test_control_panel_opacity_slider_spinbox(qtbot, mocked_client):
     assert spinbox_opacity.value() == 95
 
 
-def test_control_panel_highlight_slider_spinbox(qtbot, mocked_client):
+def test_control_panel_highlight_slider_spinbox(qtbot, mocked_client, monkeypatch):
     """
     Test that the slider and spinbox for curve highlighting update
     the widget's highlighted_index property, and are disabled if
     highlight_last_curve is True.
     """
+    _fake_bridge_factory(monkeypatch)
     mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    mw.plot("waveform1d")
     slider_index = mw.controls.ui.highlighted_index
     spinbox_index = mw.controls.ui.spinbox_index
     checkbox_highlight_last = mw.controls.ui.highlight_last_curve
@@ -310,8 +462,10 @@ def test_control_panel_highlight_slider_spinbox(qtbot, mocked_client):
 
     # Simulate a few curves so there's something to highlight
     data_arrays = [np.array([0, 1, 2]), np.array([3, 4, 5]), np.array([6, 7, 8])]
+    traces = []
     for arr in data_arrays:
-        mw.on_monitor_1d_update({"data": arr}, {"scan_id": "scan_123"})
+        traces.append(arr)
+        mw._on_data_update(_monitor_update(list(traces), scan_id="scan_123"))
 
     # The number_of_visible_curves == 3 now
     max_index = mw.number_of_visible_curves - 1

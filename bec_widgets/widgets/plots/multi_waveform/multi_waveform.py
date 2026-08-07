@@ -4,7 +4,6 @@ from collections import deque
 from typing import TYPE_CHECKING, cast
 
 import pyqtgraph as pg
-from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from pydantic import Field, ValidationError, field_validator
 from qtpy.QtCore import Signal
@@ -13,6 +12,7 @@ from qtpy.QtWidgets import QWidget
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.colors import Colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.qt_data_subscription import QtDataSubscription
 from bec_widgets.utils.side_panel import SidePanel
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.plots.multi_waveform.settings.control_panel import (
@@ -105,6 +105,10 @@ class MultiWaveform(PlotBase):
         self._curves = deque()
         self.visible_curves = []
         self.number_of_visible_curves = 0
+
+        # Data delivery through the DataAPI device stream (monitor_1d).
+        self._data_bridge: QtDataSubscription | None = None
+        self._last_ordinal: int | None = None
 
         self._init_multiwaveform_toolbar()
 
@@ -304,9 +308,8 @@ class MultiWaveform(PlotBase):
             color_palette (str|None): The color palette to use for the plot.
         """
         self.entry_validator.validate_monitor(monitor)
-        self._disconnect_monitor()
         self.config.monitor = monitor
-        self._connect_monitor()
+        self._setup_data_api_subscription()
         if color_palette is not None:
             self.color_palette = color_palette
         self._sync_monitor_selection_toolbar()
@@ -348,18 +351,27 @@ class MultiWaveform(PlotBase):
     ################################################################################
     # BEC Update Methods
     ################################################################################
-    @SafeSlot(dict, dict)
-    def on_monitor_1d_update(self, msg: dict, metadata: dict):
+    @SafeSlot(object)
+    def _on_data_update(self, update) -> None:
         """
-        Update the plot widget with the monitor data.
+        Render one columnar DataAPI update of the monitor_1d device stream.
+
+        Each value of the source is one 1-D trace (newest last); ordinals are
+        arrival counters, so only traces newer than the last rendered ordinal
+        are appended to the curve deque.
 
         Args:
-            msg(dict): The message data.
-            metadata(dict): The metadata of the message.
+            update (SubscriptionUpdate): Full-state snapshot of the monitor
+                stream (standalone group).
         """
-        data = msg.get("data", None)
-        current_scan_id = metadata.get("scan_id", None)
+        monitor = self.config.monitor
+        if not monitor:
+            return
+        source = update.get(monitor, "monitor_1d")
+        if source is None or not source.values:
+            return
 
+        current_scan_id = source.metadata.get("scan_id", None)
         if current_scan_id != self.scan_id:
             self.scan_id = current_scan_id
             self.clear_curves()
@@ -367,11 +379,21 @@ class MultiWaveform(PlotBase):
             if self.crosshair:
                 self.crosshair.clear_markers()
 
-        # Always create a new curve and add it
-        curve = pg.PlotDataItem()
-        curve.setData(data)
-        self.plot_item.addItem(curve)
-        self.curves.append(curve)
+        last_ordinal = self._last_ordinal
+        new_traces = [
+            (ordinal, data)
+            for ordinal, data in zip(source.ordinals, source.values)
+            if last_ordinal is None or ordinal > last_ordinal
+        ]
+        if not new_traces:
+            return
+
+        for _, data in new_traces:
+            curve = pg.PlotDataItem()
+            curve.setData(data)
+            self.plot_item.addItem(curve)
+            self.curves.append(curve)
+        self._last_ordinal = new_traces[-1][0]
 
         # Max Trace and scale colors
         self.set_curve_limit(self.config.curve_limit, self.config.flush_buffer)
@@ -413,28 +435,36 @@ class MultiWaveform(PlotBase):
 
         self.highlighted_curve_index_changed.emit(self._current_highlight_index)
 
-    def _disconnect_monitor(self):
+    def _setup_data_api_subscription(self):
+        """(Re)create the scan-less DataAPI subscription for the configured monitor."""
+        self._cleanup_data_api_subscription()
+        monitor = self.config.monitor
+        if not monitor:
+            return
         try:
-            previous_monitor = self.config.monitor
-        except AttributeError:
-            previous_monitor = None
-
-        if previous_monitor and self.connected is True:
-            self.bec_dispatcher.disconnect_slot(
-                self.on_monitor_1d_update, MessageEndpoints.device_monitor_1d(previous_monitor)
+            self._data_bridge = QtDataSubscription(
+                self.client,
+                sources=[(monitor, "monitor_1d")],
+                scan=None,
+                parent=self,
+                min_emit_interval=0.1,
+                max_points=self.config.curve_limit,
             )
-            self.connected = False
-
-    def _connect_monitor(self):
-        """
-        Connect the monitor to the plot widget.
-        """
-
-        if self.config.monitor and self.connected is False:
-            self.bec_dispatcher.connect_slot(
-                self.on_monitor_1d_update, MessageEndpoints.device_monitor_1d(self.config.monitor)
-            )
+            self._data_bridge.updated.connect(self._on_data_update)
             self.connected = True
+        except Exception as exc:
+            logger.warning(f"Failed to configure multi waveform data subscription: {exc}")
+            self._cleanup_data_api_subscription()
+
+    def _cleanup_data_api_subscription(self):
+        self._last_ordinal = None
+        self.connected = False
+        if self._data_bridge is None:
+            return
+        try:
+            self._data_bridge.close()
+        finally:
+            self._data_bridge = None
 
     ################################################################################
     # Utility Methods
@@ -498,6 +528,6 @@ class MultiWaveform(PlotBase):
             cmap_widget.blockSignals(False)
 
     def cleanup(self):
-        self._disconnect_monitor()
+        self._cleanup_data_api_subscription()
         self.clear_curves()
         super().cleanup()

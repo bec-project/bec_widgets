@@ -32,9 +32,10 @@ class QtDataSubscription(QObject):
         self,
         client: BECClient,
         sources: list[SourceKey],
-        scan: str = "live",
+        scan: str | None = "live",
         parent: QObject | None = None,
         min_emit_interval: float = 0.1,
+        max_points: int | None = None,
     ):
         """
         Subscribe to data for the given sources.
@@ -43,11 +44,16 @@ class QtDataSubscription(QObject):
             client (BECClient): The widget's BEC client.
             sources (list[SourceKey]): (device, entry) pairs forming one
                 correlation group.
-            scan (str): ``"live"`` to follow the active scan, or a concrete
-                (possibly finished) scan id.
+            scan (str | None): ``"live"`` to follow the active scan, a
+                concrete (possibly finished) scan id, or ``None`` for
+                scan-less device streams (readback, ``"monitor_1d"``,
+                preview signals).
             parent (QObject | None): Qt parent; closing follows the parent's
                 destruction.
             min_emit_interval (float): Backend emission coalescing interval.
+            max_points (int | None): Per-source retention cap; oldest points
+                are dropped beyond it. Recommended for endless device-stream
+                subscriptions (``scan=None``).
 
         Raises:
             ValueError: If a concrete scan id cannot be served.
@@ -63,7 +69,11 @@ class QtDataSubscription(QObject):
         self._raw.connect(self._filter, Qt.QueuedConnection)
         self._api = DataAPI(client)
         self._subscription = self._api.subscribe(
-            sources=sources, scan=scan, callback=self._deliver, min_emit_interval=min_emit_interval
+            sources=sources,
+            scan=scan,
+            callback=self._deliver,
+            min_emit_interval=min_emit_interval,
+            max_points=max_points,
         )
         self.destroyed.connect(lambda: self.close())
 

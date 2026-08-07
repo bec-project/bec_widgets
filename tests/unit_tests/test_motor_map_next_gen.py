@@ -1,9 +1,66 @@
+from unittest.mock import MagicMock
+
+from bec_lib.data_api.models import SourceData, SubscriptionUpdate
 from qtpy.QtTest import QSignalSpy
 
 from bec_widgets.widgets.plots.motor_map.motor_map import MotorMap
 from tests.unit_tests.client_mocks import mocked_client
 
 from .conftest import create_widget
+
+##################################################
+# Test helpers (DataAPI fake bridge + updates)
+##################################################
+
+
+def _fake_bridge_factory(monkeypatch):
+    created = []
+
+    class _FakeBridge:
+        def __init__(
+            self, client, sources, scan="live", parent=None, min_emit_interval=0.1, max_points=None
+        ):
+            self.client = client
+            self.sources = list(sources)
+            self.scan = scan
+            self.max_points = max_points
+            self.healthy = True
+            self.closed = False
+            self.updated = MagicMock()
+
+        def close(self):
+            self.closed = True
+
+    def factory(client, sources, scan="live", parent=None, min_emit_interval=0.1, max_points=None):
+        bridge = _FakeBridge(client, sources, scan=scan, max_points=max_points)
+        created.append(bridge)
+        return bridge
+
+    monkeypatch.setattr("bec_widgets.widgets.plots.motor_map.motor_map.QtDataSubscription", factory)
+    return created
+
+
+def _readback_update(motor, values, start=0):
+    """Build a full-state readback snapshot for one motor (standalone group)."""
+    ordinals = tuple(range(start, start + len(values)))
+    source = SourceData(
+        device=motor,
+        entry=motor,
+        kind="unindexed",
+        ordinals=ordinals,
+        values=tuple(values),
+        timestamps=tuple(float(ordinal) for ordinal in ordinals),
+        complete=True,
+        metadata={"stream": "readback"},
+    )
+    return SubscriptionUpdate(
+        scan_id="",
+        reason="live",
+        sources={(motor, motor): source},
+        aligned_ordinals=ordinals,
+        complete=True,
+        metadata={"group": f"standalone:{motor}/{motor}"},
+    )
 
 
 def test_motor_map_initialization(qtbot, mocked_client):
@@ -130,32 +187,81 @@ def test_motor_map_reset_history(qtbot, mocked_client):
     assert mm._buffer["y"][0] == 8.0
 
 
-def test_motor_map_on_device_readback(qtbot, mocked_client):
-    """Test the motor map updates when receiving device readback."""
+def test_motor_map_on_data_update(qtbot, mocked_client):
+    """Test the motor map updates when receiving one motor's readback stream update."""
     mm = create_widget(qtbot, MotorMap, client=mocked_client)
     mm.map(device_x="samx", device_y="samy")
 
     # Clear the buffer and add initial position
     mm._buffer = {"x": [1.0], "y": [2.0]}
+    mm._last_ordinals = {"x": None, "y": None}
 
-    # Simulate device readback for x motor
-    msg_x = {"signals": {"samx": {"value": 3.0}}}
-    mm.on_device_readback(msg_x, {})
+    # Simulate a readback stream update for the x motor (standalone group ->
+    # each update carries exactly one motor's series)
+    mm._on_data_update(_readback_update("samx", [3.0]))
     qtbot.wait(200)  # Allow time for the update to process
 
     assert len(mm._buffer["x"]) == 2
     assert len(mm._buffer["y"]) == 2
     assert mm._buffer["x"][1] == 3.0
-    assert mm._buffer["y"][1] == 2.0  # Y should remain the same
+    assert mm._buffer["y"][1] == 2.0  # Y should remain the same (forward fill)
 
-    # Simulate device readback for y motor
-    msg_y = {"signals": {"samy": {"value": 4.0}}}
-    mm.on_device_readback(msg_y, {})
+    # Simulate a readback stream update for the y motor
+    mm._on_data_update(_readback_update("samy", [4.0]))
 
     assert len(mm._buffer["x"]) == 3
     assert len(mm._buffer["y"]) == 3
-    assert mm._buffer["x"][2] == 3.0  # X should remain the same
+    assert mm._buffer["x"][2] == 3.0  # X should remain the same (forward fill)
     assert mm._buffer["y"][2] == 4.0
+
+
+def test_motor_map_snapshot_ordinal_filtering(qtbot, mocked_client):
+    """Full-state snapshots must not duplicate already-consumed positions."""
+    mm = create_widget(qtbot, MotorMap, client=mocked_client)
+    mm.map(device_x="samx", device_y="samy")
+
+    mm._buffer = {"x": [1.0], "y": [2.0]}
+    mm._last_ordinals = {"x": None, "y": None}
+
+    mm._on_data_update(_readback_update("samx", [3.0]))
+    assert mm._buffer["x"] == [1.0, 3.0]
+
+    # Same snapshot delivered again (trailing coalesced emission): no change.
+    mm._on_data_update(_readback_update("samx", [3.0]))
+    assert mm._buffer["x"] == [1.0, 3.0]
+    assert mm._buffer["y"] == [2.0, 2.0]
+
+    # Snapshot grows: only the new position is appended.
+    mm._on_data_update(_readback_update("samx", [3.0, 3.5]))
+    assert mm._buffer["x"] == [1.0, 3.0, 3.5]
+    assert mm._buffer["y"] == [2.0, 2.0, 2.0]
+
+    # Retention window slid (oldest dropped): still only newer ordinals count.
+    mm._on_data_update(_readback_update("samx", [3.5, 4.0], start=1))
+    assert mm._buffer["x"] == [1.0, 3.0, 3.5, 4.0]
+    assert mm._buffer["y"] == [2.0, 2.0, 2.0, 2.0]
+
+
+def test_motor_map_bridge_lifecycle(qtbot, mocked_client, monkeypatch):
+    """map() creates one scan-less readback bridge; re-map replaces it."""
+    bridges = _fake_bridge_factory(monkeypatch)
+    mm = create_widget(qtbot, MotorMap, client=mocked_client)
+
+    mm.map(device_x="samx", device_y="samy")
+    assert len(bridges) == 1
+    assert bridges[-1].sources == [("samx", "samx"), ("samy", "samy")]
+    assert bridges[-1].scan is None
+    assert bridges[-1].max_points == mm.config.max_points
+
+    first = bridges[-1]
+    mm.map(device_x="samx", device_y="samz")
+    assert first.closed is True
+    assert bridges[-1].sources == [("samx", "samx"), ("samz", "samz")]
+
+    mm._cleanup_data_api_subscription()
+    assert bridges[-1].closed is True
+    assert mm._data_bridge is None
+    assert mm._last_ordinals == {"x": None, "y": None}
 
 
 def test_motor_map_max_points_limit(qtbot, mocked_client):
@@ -380,3 +486,18 @@ def test_motor_map_settings_dialog(qtbot, mocked_client):
     mm.motor_map_settings.close()
     qtbot.wait(200)
     assert mm.motor_map_settings is None
+
+
+def test_motor_switch_disconnects_old_limit_endpoints(qtbot, mocked_client):
+    """Switching motors must disconnect the previously connected limits
+    endpoints, not the ones derived from the already-updated config."""
+    from unittest import mock
+
+    mm = create_widget(qtbot, MotorMap, client=mocked_client)
+    mm.map("samx", "samy")
+    first_endpoints = list(mm._connected_limit_endpoints)
+    assert first_endpoints
+
+    with mock.patch.object(mm.bec_dispatcher, "disconnect_slot") as disc:
+        mm.map("samx", "samz")
+    disc.assert_called_once_with(mm.on_device_limits, first_endpoints)
