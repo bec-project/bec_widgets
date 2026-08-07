@@ -4536,14 +4536,28 @@ class MultiWaveform(RPCBase):
     @rpc_call
     def monitor(self) -> "str":
         """
-        The monitor of the figure widget.
+        The monitored device of the figure widget (alias of ``device``).
         """
 
     @monitor.setter
     @rpc_call
     def monitor(self) -> "str":
         """
-        The monitor of the figure widget.
+        The monitored device of the figure widget (alias of ``device``).
+        """
+
+    @property
+    @rpc_call
+    def monitor_signal(self) -> "str":
+        """
+        The monitored signal/entry on the device (alias of ``signal``).
+        """
+
+    @monitor_signal.setter
+    @rpc_call
+    def monitor_signal(self) -> "str":
+        """
+        The monitored signal/entry on the device (alias of ``signal``).
         """
 
     @rpc_call
@@ -4557,11 +4571,18 @@ class MultiWaveform(RPCBase):
         """
 
     @rpc_call
-    def plot(self, monitor: "str", color_palette: "str | None" = "plasma"):
+    def plot(
+        self, monitor: "str", signal: "str | None" = None, color_palette: "str | None" = "plasma"
+    ):
         """
-        Create a plot for the given monitor.
+        Create a plot for the given monitor device and signal.
+
         Args:
-            monitor (str): The monitor to set.
+            monitor (str): The device to monitor.
+            signal (str|None): The signal/entry to monitor on the device. The reserved
+                entry ``"monitor_1d"`` selects the scan-less device_monitor_1d stream.
+                If None, the signal is auto-selected: the device's only 1D-capable
+                preview/async signal if unambiguous, the monitor_1d stream otherwise.
             color_palette (str|None): The color palette to use for the plot.
         """
 

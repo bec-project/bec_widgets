@@ -66,6 +66,8 @@ class SignalComboBox(BECWidget, QComboBox):
         require_device: If True, class-based signal filtering requires a valid selected device.
         autocomplete: If True, use the explicit line-edit style completer. If False, keep
             Qt's default editable-combobox completion behavior.
+        extra_class_signals: Static ``(display_name, signal_config)`` entries prepended to
+            class-based signal lists, e.g. reserved stream names such as ``"monitor_1d"``.
         **kwargs: Additional keyword arguments passed to ``BECWidget``.
     """
 
@@ -93,6 +95,7 @@ class SignalComboBox(BECWidget, QComboBox):
         store_signal_config: bool = True,
         require_device: bool = False,
         autocomplete: bool | None = None,
+        extra_class_signals: list[tuple[str, dict]] | None = None,
         **kwargs,
     ):
         self.config = self._process_config(config)
@@ -109,6 +112,7 @@ class SignalComboBox(BECWidget, QComboBox):
         self._signal_class_filter = signal_class_filter or []
         self._store_signal_config = store_signal_config
         self._require_device = require_device
+        self._extra_class_signals = list(extra_class_signals or [])
         self._is_valid_input = False
         self._completer_model = QStringListModel(self)
 
@@ -500,7 +504,12 @@ class SignalComboBox(BECWidget, QComboBox):
         """
         if not self._store_signal_config:
             return None
-        signal_info = self.itemData(self.currentIndex())
+        # Resolve by the displayed text first: on editable comboboxes the current
+        # index does not follow programmatic text changes.
+        index = self._find_signal_index(self.currentText())
+        if index < 0:
+            index = self.currentIndex()
+        signal_info = self.itemData(index)
         return signal_info if isinstance(signal_info, dict) else None
 
     def update_signals_from_signal_classes(self, ndim_filter: int | list[int] | None = None):
@@ -528,6 +537,11 @@ class SignalComboBox(BECWidget, QComboBox):
 
         combo_items: list[str | tuple[str, dict]] = []
         item_tooltips: dict[int, str] = {}
+        for entry_name, entry_config in self._extra_class_signals:
+            if self._store_signal_config:
+                combo_items.append((entry_name, dict(entry_config)))
+            else:
+                combo_items.append(entry_name)
         for device_name, signal_name, signal_config in signals:
             if self._device and device_name != self._device:
                 continue

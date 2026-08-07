@@ -13,6 +13,22 @@ from .conftest import create_widget
 ##################################################
 
 
+def _set_signal_config(
+    client, device: str, signal_name: str, signal_class: str, ndim: int, obj_name: str | None = None
+):
+    device = client.device_manager.devices[device]
+    device._info["signals"][signal_name] = {
+        "obj_name": obj_name or signal_name,
+        "signal_class": signal_class,
+        "component_name": signal_name,
+        "describe": {"signal_info": {"ndim": ndim}},
+    }
+
+
+def _clear_signal_config(client, device: str, signal_name: str):
+    client.device_manager.devices[device]._info["signals"].pop(signal_name, None)
+
+
 def _fake_bridge_factory(monkeypatch):
     created = []
 
@@ -65,6 +81,31 @@ def _monitor_update(traces, scan_id="scan_1", monitor="waveform1d", start=0):
     )
 
 
+def _async_update(
+    traces, scan_id="scan_1", device="eiger", entry="eiger_data", start=0, update_type="add"
+):
+    """Build a full-state scan-scoped async snapshot: one trace per ordinal."""
+    ordinals = tuple(range(start, start + len(traces)))
+    source = SourceData(
+        device=device,
+        entry=entry,
+        kind="async",
+        ordinals=ordinals,
+        values=tuple(traces),
+        timestamps=tuple(float(ordinal) for ordinal in ordinals),
+        complete=True,
+        metadata={"async_update_type": update_type},
+    )
+    return SubscriptionUpdate(
+        scan_id=scan_id,
+        reason="live",
+        sources={(device, entry): source},
+        aligned_ordinals=ordinals,
+        complete=True,
+        metadata={"group": "standalone"},
+    )
+
+
 ##################################################
 # MultiWaveform widget base functionality tests
 ##################################################
@@ -85,6 +126,7 @@ def test_multiwaveform_initialization(qtbot, mocked_client):
     assert len(mw.plot_item.curves) == 0
     # Multiwaveform specific
     assert mw.monitor is None
+    assert mw.monitor_signal is None
     assert mw.color_palette == "plasma"
     assert mw.max_trace == 200
     assert mw.flush_buffer is False
@@ -93,17 +135,22 @@ def test_multiwaveform_initialization(qtbot, mocked_client):
     assert mw.scan_id is None
     assert mw.highlighted_index == 0
     assert mw._data_bridge is None
+    assert mw.config.connection_status == "disconnected"
 
 
 def test_multiwaveform_set_monitor(qtbot, mocked_client):
     mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
     assert mw.monitor is None
 
-    # Set a monitor; data flows through a scan-less DataAPI subscription.
+    # Set a monitor without a signal; the device has no 1D-capable class signals,
+    # so the selection falls back to the scan-less monitor_1d stream.
     mw.plot("waveform1d")
     assert mw.monitor == "waveform1d"
+    assert mw.monitor_signal == "monitor_1d"
     assert mw.config.monitor == "waveform1d"
+    assert mw.config.monitor_signal == "monitor_1d"
     assert mw.connected is True
+    assert mw.config.connection_status == "connected"
     assert mw._data_bridge is not None
     assert mw._data_bridge.sources == [("waveform1d", "monitor_1d")]
     assert mw._data_bridge.scan_id == ""  # device scope
@@ -130,6 +177,172 @@ def test_multiwaveform_bridge_lifecycle(qtbot, mocked_client, monkeypatch):
     assert bridges[-1].closed is True
     assert mw.connected is False
     assert mw._data_bridge is None
+
+
+##################################################
+# Signal classification and routing
+##################################################
+
+
+def test_multiwaveform_async_signal_routes_live(qtbot, mocked_client, monkeypatch):
+    """Selecting an AsyncSignal creates a scan="live" bridge with the obj_name entry.
+
+    This is the simulated-waveform case: the device publishes via
+    device_async_signal (scan-scoped), not via the device_monitor_1d stream.
+    """
+    bridges = _fake_bridge_factory(monkeypatch)
+    mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    _set_signal_config(
+        mocked_client, "eiger", "data", signal_class="AsyncSignal", ndim=1, obj_name="eiger_data"
+    )
+
+    mw.plot("eiger", "data")
+    assert mw.monitor == "eiger"
+    assert mw.monitor_signal == "data"
+    assert mw.connected is True
+    assert bridges[-1].scan == "live"
+    assert bridges[-1].sources == [("eiger", "eiger_data")]
+    assert bridges[-1].max_points is None
+    _clear_signal_config(mocked_client, "eiger", "data")
+
+
+def test_multiwaveform_device_only_picks_unambiguous_async_signal(
+    qtbot, mocked_client, monkeypatch
+):
+    """A device-only plot() picks the device's only 1D-capable class signal."""
+    bridges = _fake_bridge_factory(monkeypatch)
+    mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    _set_signal_config(
+        mocked_client, "eiger", "data", signal_class="AsyncSignal", ndim=1, obj_name="eiger_data"
+    )
+
+    mw.plot("eiger")
+    assert mw.monitor_signal == "data"
+    assert bridges[-1].scan == "live"
+    assert bridges[-1].sources == [("eiger", "eiger_data")]
+    _clear_signal_config(mocked_client, "eiger", "data")
+
+
+def test_multiwaveform_device_only_ambiguous_falls_back_to_monitor(
+    qtbot, mocked_client, monkeypatch
+):
+    """A device with several 1D-capable signals falls back to the monitor_1d stream."""
+    bridges = _fake_bridge_factory(monkeypatch)
+    mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    _set_signal_config(
+        mocked_client, "eiger", "data", signal_class="AsyncSignal", ndim=1, obj_name="eiger_data"
+    )
+    _set_signal_config(
+        mocked_client, "eiger", "img", signal_class="PreviewSignal", ndim=1, obj_name="eiger_img"
+    )
+
+    mw.plot("eiger")
+    assert mw.monitor_signal == "monitor_1d"
+    assert bridges[-1].scan is None
+    assert bridges[-1].sources == [("eiger", "monitor_1d")]
+    _clear_signal_config(mocked_client, "eiger", "data")
+    _clear_signal_config(mocked_client, "eiger", "img")
+
+
+def test_multiwaveform_preview_signal_routes_scanless(qtbot, mocked_client, monkeypatch):
+    """Selecting a PreviewSignal creates a scan-less bridge with the signal entry."""
+    bridges = _fake_bridge_factory(monkeypatch)
+    mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    _set_signal_config(
+        mocked_client,
+        "waveform1d",
+        "wave_prev",
+        signal_class="PreviewSignal",
+        ndim=1,
+        obj_name="waveform1d_wave_prev",
+    )
+
+    mw.plot("waveform1d", "wave_prev")
+    assert mw.monitor_signal == "wave_prev"
+    assert bridges[-1].scan is None
+    assert bridges[-1].sources == [("waveform1d", "wave_prev")]
+    assert bridges[-1].max_points == mw.config.curve_limit
+    _clear_signal_config(mocked_client, "waveform1d", "wave_prev")
+
+
+def test_multiwaveform_rejects_unsupported_signal(qtbot, mocked_client, monkeypatch):
+    """A signal with an unsupported class does not create a bridge and flags an error."""
+    bridges = _fake_bridge_factory(monkeypatch)
+    mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    _set_signal_config(mocked_client, "eiger", "plain", signal_class="Signal", ndim=1)
+
+    mw.plot("eiger", "plain")
+    assert bridges == []
+    assert mw.connected is False
+    assert mw.config.connection_status == "error"
+    _clear_signal_config(mocked_client, "eiger", "plain")
+
+
+def test_multiwaveform_rejects_2d_signal(qtbot, mocked_client, monkeypatch):
+    """A 2D async signal is rejected for the 1D multi waveform plot."""
+    bridges = _fake_bridge_factory(monkeypatch)
+    mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    _set_signal_config(mocked_client, "eiger", "img2d", signal_class="AsyncSignal", ndim=2)
+
+    mw.plot("eiger", "img2d")
+    assert bridges == []
+    assert mw.config.connection_status == "error"
+    _clear_signal_config(mocked_client, "eiger", "img2d")
+
+
+def test_multiwaveform_switching_device_replaces_async_bridge(qtbot, mocked_client, monkeypatch):
+    bridges = _fake_bridge_factory(monkeypatch)
+    mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    _set_signal_config(
+        mocked_client, "eiger", "data", signal_class="AsyncSignal", ndim=1, obj_name="async_obj"
+    )
+    _set_signal_config(
+        mocked_client,
+        "async_device",
+        "data",
+        signal_class="AsyncSignal",
+        ndim=1,
+        obj_name="async_obj",
+    )
+
+    def fake_get(signal_class_filter):
+        # Production-like discovery so the signal combobox lists the async entry
+        # for both devices when the toolbar re-populates on device change.
+        return [
+            (device, "data", mocked_client.device_manager.devices[device]._info["signals"]["data"])
+            for device in ("eiger", "async_device")
+        ]
+
+    monkeypatch.setattr(mocked_client.device_manager, "get_bec_signals", fake_get)
+
+    mw.plot("eiger", "data")
+    first = bridges[-1]
+    assert first.sources == [("eiger", "async_obj")]
+
+    mw.device = "async_device"
+    assert first.closed is True
+    assert bridges[-1].sources == [("async_device", "async_obj")]
+    _clear_signal_config(mocked_client, "eiger", "data")
+    _clear_signal_config(mocked_client, "async_device", "data")
+
+
+def test_multiwaveform_disconnect_via_empty_device(qtbot, mocked_client, monkeypatch):
+    bridges = _fake_bridge_factory(monkeypatch)
+    mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    mw.plot("waveform1d")
+    assert mw.connected is True
+
+    mw.device = ""
+    assert bridges[-1].closed is True
+    assert mw.connected is False
+    assert mw.monitor is None
+    assert mw.monitor_signal is None
+    assert mw.config.connection_status == "disconnected"
+
+
+##################################################
+# Rendering
+##################################################
 
 
 def test_multiwaveform_set_properties(qtbot, mocked_client):
@@ -253,6 +466,58 @@ def test_multiwaveform_scan_change_clears_curves(qtbot, mocked_client, monkeypat
     assert np.array_equal(y_data, new_trace)
 
 
+def test_multiwaveform_async_scan_rollover_clears_curves(qtbot, mocked_client, monkeypatch):
+    """For scan-scoped async sources the update.scan_id drives the rollover and
+    resets the ordinal delta-append (async ordinals restart per scan)."""
+    _fake_bridge_factory(monkeypatch)
+    mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    _set_signal_config(
+        mocked_client, "eiger", "data", signal_class="AsyncSignal", ndim=1, obj_name="eiger_data"
+    )
+    mw.plot("eiger", "data")
+
+    first = np.array([1, 2, 3])
+    second = np.array([4, 5, 6])
+    mw._on_data_update(_async_update([first, second], scan_id="scan_1"))
+    assert mw.scan_id == "scan_1"
+    assert len(mw.curves) == 2
+    assert mw._last_ordinal == 1
+
+    # New scan: ordinals restart at 0; curves are cleared and the delta-append reset.
+    rollover = np.array([7, 8, 9])
+    mw._on_data_update(_async_update([rollover], scan_id="scan_2"))
+    assert mw.scan_id == "scan_2"
+    assert len(mw.curves) == 1
+    assert mw._last_ordinal == 0
+    _, y_data = mw.curves[-1].getData()
+    assert np.array_equal(y_data, rollover)
+    _clear_signal_config(mocked_client, "eiger", "data")
+
+
+def test_multiwaveform_async_replace_updates_single_trace(qtbot, mocked_client, monkeypatch):
+    """A "replace" async source exposes one current state that replaces the trace set."""
+    _fake_bridge_factory(monkeypatch)
+    mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    _set_signal_config(
+        mocked_client, "eiger", "data", signal_class="AsyncSignal", ndim=1, obj_name="eiger_data"
+    )
+    mw.plot("eiger", "data")
+
+    first = np.array([1, 2, 3])
+    second = np.array([4, 5, 6])
+    mw._on_data_update(_async_update([first], scan_id="scan_1", update_type="replace"))
+    assert len(mw.curves) == 1
+    _, y_data = mw.curves[-1].getData()
+    assert np.array_equal(y_data, first)
+
+    # The replace source keeps ordinal 0; the new state still replaces the trace.
+    mw._on_data_update(_async_update([second], scan_id="scan_1", update_type="replace"))
+    assert len(mw.curves) == 1
+    _, y_data = mw.curves[-1].getData()
+    assert np.array_equal(y_data, second)
+    _clear_signal_config(mocked_client, "eiger", "data")
+
+
 def test_multiwaveform_highlight_last_curve(qtbot, mocked_client, monkeypatch):
     """Check highlight_last_curve behavior."""
     _fake_bridge_factory(monkeypatch)
@@ -309,7 +574,7 @@ def test_multiwaveform_set_colormap(qtbot, mocked_client, monkeypatch):
         traces.append(np.array([i, i + 1, i + 2]))
         mw._on_data_update(_monitor_update(list(traces)))
 
-    # Default color_palette is "magma"
+    # Default color_palette is "plasma"
     assert mw.color_palette == "plasma"
     # Now change to a new colormap
     mw.color_palette = "viridis"
@@ -388,21 +653,106 @@ def test_widget_updates_control_panel(qtbot, mocked_client):
     assert mw.controls.ui.highlight_last_curve.isChecked() is False
 
 
-def test_selection_toolbar_updates_widget(qtbot, mocked_client):
-    """
-    Confirm that selecting a monitor and a colormap from the selection toolbar
-    updates the widget properties.
-    """
+def test_selection_toolbar_builds_device_and_signal_comboboxes(qtbot, mocked_client):
+    """The toolbar carries the shared device+signal selection with the width splitter."""
     mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
-    monitor_selection_action = mw.toolbar.components.get_action("monitor_selection")
-    cmap_action = mw.toolbar.components.get_action("color_map")
 
-    monitor_selection_action.combobox.addItem("waveform1d")
-    monitor_selection_action.combobox.setCurrentText("waveform1d")
+    device_selection = mw.toolbar.components.get_action("device_selection").widget
+    assert device_selection.device_combo_box is not None
+    assert device_selection.signal_combo_box is not None
+    # The section-width splitter of the shared component is registered as well
+    assert mw.toolbar.components.exists("device_selection_splitter")
+    # The color map widget remains available
+    assert mw.toolbar.components.get_action("color_map").widget is not None
+
+
+def test_selection_toolbar_updates_widget(qtbot, mocked_client, monkeypatch):
+    """
+    Selecting a device and signal from the toolbar comboboxes connects the widget,
+    and selecting a colormap updates the color palette.
+    """
+    bridges = _fake_bridge_factory(monkeypatch)
+    mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+
+    def fake_get(signal_class_filter):
+        signal_classes = (
+            signal_class_filter
+            if isinstance(signal_class_filter, (list, tuple, set))
+            else [signal_class_filter]
+        )
+        if "PreviewSignal" in signal_classes:
+            return [
+                (
+                    "waveform1d",
+                    "wave",
+                    {
+                        "obj_name": "waveform1d_wave",
+                        "component_name": "wave",
+                        "signal_class": "PreviewSignal",
+                        "describe": {"signal_info": {"ndim": 1}},
+                    },
+                )
+            ]
+        return []
+
+    monkeypatch.setattr(mw.client.device_manager, "get_bec_signals", fake_get)
+    device_selection = mw.toolbar.components.get_action("device_selection").widget
+    device_selection.device_combo_box.update_devices_from_filters()
+
+    device_selection.device_combo_box.setCurrentText("waveform1d")
     assert mw.monitor == "waveform1d"
 
+    # The signal combobox offers the monitor_1d sentinel and the preview signal
+    signal_items = [
+        device_selection.signal_combo_box.itemText(i)
+        for i in range(device_selection.signal_combo_box.count())
+    ]
+    assert "monitor_1d" in signal_items
+    assert "wave" in signal_items
+
+    device_selection.signal_combo_box.setCurrentText("wave")
+    assert mw.monitor_signal == "wave"
+    assert bridges[-1].scan is None
+    assert bridges[-1].sources == [("waveform1d", "wave")]
+
+    cmap_action = mw.toolbar.components.get_action("color_map")
     cmap_action.widget.colormap = "viridis"
     assert mw.color_palette == "viridis"
+
+
+def test_selection_toolbar_monitor_1d_entry(qtbot, mocked_client, monkeypatch):
+    """Selecting the monitor_1d sentinel routes to the scan-less device stream."""
+    bridges = _fake_bridge_factory(monkeypatch)
+    mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+
+    def fake_get(signal_class_filter):
+        return []
+
+    monkeypatch.setattr(mw.client.device_manager, "get_bec_signals", fake_get)
+    device_selection = mw.toolbar.components.get_action("device_selection").widget
+    device_selection.device_combo_box.update_devices_from_filters()
+
+    # Async-readout devices are listed even without matching class signals
+    assert "eiger" in device_selection.device_combo_box.devices
+
+    device_selection.device_combo_box.setCurrentText("eiger")
+    device_selection.signal_combo_box.setCurrentText("monitor_1d")
+    assert mw.monitor == "eiger"
+    assert mw.monitor_signal == "monitor_1d"
+    assert bridges[-1].scan is None
+    assert bridges[-1].sources == [("eiger", "monitor_1d")]
+
+
+def test_toolbar_syncs_from_properties(qtbot, mocked_client, monkeypatch):
+    """Programmatic plot() calls are mirrored into the selection comboboxes."""
+    _fake_bridge_factory(monkeypatch)
+    mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+
+    mw.plot("waveform1d")
+    qtbot.wait(100)
+    device_selection = mw.toolbar.components.get_action("device_selection").widget
+    assert device_selection.device_combo_box.currentText() == "waveform1d"
+    assert device_selection.signal_combo_box.currentText() == "monitor_1d"
 
 
 def test_control_panel_opacity_slider_spinbox(qtbot, mocked_client):
