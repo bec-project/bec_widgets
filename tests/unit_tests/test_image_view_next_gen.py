@@ -1,3 +1,4 @@
+from unittest import mock
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -230,6 +231,36 @@ def test_full_colorbar_uses_bec_histogram_lut_item(qtbot, mocked_client):
     assert isinstance(color_bar, BECHistogramLUTItem)
     # The confusing default pyqtgraph plot menu is replaced on the histogram view.
     assert color_bar.vb.getMenu(None) is color_bar._bec_menu
+
+
+def test_full_colorbar_frames_do_not_disable_autorange(qtbot, mocked_client):
+    """Rendering frames must not count as a user level change: pyqtgraph's
+    HistogramLUTItem snaps its region to the image levels on every setImage,
+    which used to fire the drag-disable hook on each update."""
+    view = create_widget(qtbot, Image, client=mocked_client)
+    view.enable_full_colorbar = True
+    view.autorange = True
+    rng = np.random.default_rng(7)
+    with mock.patch.object(view, "_set_autorange", wraps=view._set_autorange) as spy:
+        for frame in range(3):
+            view.main_image.set_data(rng.random((20, 20)) * (frame + 1))
+    disable_calls = [call for call in spy.call_args_list if call.args and call.args[0] is False]
+    assert not disable_calls
+    assert view.autorange is True
+
+
+def test_full_colorbar_region_drag_disables_autorange(qtbot, mocked_client):
+    """An actual mouse drag of the histogram region must still switch
+    autorange off."""
+    view = create_widget(qtbot, Image, client=mocked_client)
+    view.enable_full_colorbar = True
+    view.autorange = True
+    view.main_image.set_data(np.ones((20, 20)))
+    region = view._color_bar.region
+    region.moving = True  # simulate an active mouse drag
+    region.setRegion((0.1, 0.7))
+    region.moving = False
+    assert view.autorange is False
 
 
 def test_colorbar_menu_set_levels_updates_vrange(qtbot, mocked_client):

@@ -515,7 +515,17 @@ class ImageBase(PlotBase):
                 self._color_bar.setImageItem(main_image)
                 self.config.color_bar = "full"
                 self._apply_colormap_to_colorbar(self.config.color_map)
-                self._color_bar.sigLevelsChanged.connect(disable_autorange)
+                region = self._color_bar.region
+
+                def disable_autorange_on_drag():
+                    # sigLevelsChanged also fires on every rendered frame:
+                    # HistogramLUTItem.imageChanged snaps the region to the
+                    # current image levels on each setImage. Only a mouse drag
+                    # of the region (or one of its edge lines) is user intent.
+                    if region.moving or any(line.moving for line in region.lines):
+                        disable_autorange()
+
+                self._color_bar.sigLevelsChanged.connect(disable_autorange_on_drag)
 
             # Custom colorbar context menu (replaces pyqtgraph's default menus).
             self._color_bar.sigColorMapChangeRequested.connect(self._set_colormap_from_menu)
