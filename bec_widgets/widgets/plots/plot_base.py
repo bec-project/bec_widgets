@@ -166,7 +166,7 @@ class PlotBase(BECWidget, QWidget):
         self.plot_widget = pg.GraphicsLayoutWidget(parent=self)
         # GraphicsLayoutWidget forwards no viewport argument to GraphicsView, so the
         # viewport is swapped after construction instead.
-        self.use_opengl = self.USE_OPENGL
+        self._set_use_opengl(self.USE_OPENGL, explicit=False)
         self.plot_widget.ci.setContentsMargins(0, 0, 0, 0)
         self.plot_item = pg.PlotItem(viewBox=BECViewBox(enableMenu=True))
         self.plot_widget.addItem(self.plot_item)
@@ -322,8 +322,12 @@ class PlotBase(BECWidget, QWidget):
         Whether the plot currently renders through an OpenGL viewport.
 
         Reflects the live viewport rather than the requested value: setting this to
-        True is best effort, and stays False when no hardware-accelerated context is
-        available (see `bec_widgets.utils.gpu_acceleration.opengl_available`).
+        True is best effort and stays False when no OpenGL context can be created
+        at all (see `bec_widgets.utils.gpu_acceleration.opengl_available`).
+
+        Setting it is an explicit request, so it overrides the software-renderer
+        default that keeps freshly built plots on the raster viewport. That is what
+        makes it possible to compare the two on a remote console.
         """
         return isinstance(self.plot_widget.viewport(), QOpenGLWidget)
 
@@ -335,8 +339,19 @@ class PlotBase(BECWidget, QWidget):
         Args:
             value(bool): Whether the OpenGL viewport is wanted.
         """
-        if value and not opengl_available(True):
-            if self.use_opengl:
+        self._set_use_opengl(value, explicit=True)
+
+    def _set_use_opengl(self, value: bool, explicit: bool) -> None:
+        """
+        Apply an OpenGL viewport request.
+
+        Args:
+            value(bool): Whether the OpenGL viewport is wanted.
+            explicit(bool): Whether this came from a deliberate request rather than
+                the construction default. See `opengl_available`.
+        """
+        if value and not opengl_available(True, explicit=explicit):
+            if isinstance(self.plot_widget.viewport(), QOpenGLWidget):
                 set_view_opengl(self.plot_widget, False)
             return
         set_view_opengl(self.plot_widget, value)

@@ -19,12 +19,15 @@ def _reset_opengl_probe(monkeypatch):
     # hold on to the real cached function: monkeypatch may swap the module
     # attribute for a stub, and it is only restored after this fixture resumes
     probe = gpu_acceleration.opengl_info
+    notice = gpu_acceleration._log_software_renderer
     probe.cache_clear()
+    notice.cache_clear()
     monkeypatch.delenv(ENV_VAR, raising=False)
     previous = pg.getConfigOption("useOpenGL")
     yield
     pg.setConfigOption("useOpenGL", previous)
     probe.cache_clear()
+    notice.cache_clear()
 
 
 def _fake_renderer(monkeypatch, renderer: str | None):
@@ -48,6 +51,33 @@ def test_opengl_refused_on_software_renderer(monkeypatch, renderer):
     """A remote/X-forwarded session must stay on the raster viewport."""
     _fake_renderer(monkeypatch, renderer)
     assert opengl_available(requested=True) is False
+
+
+def test_explicit_request_overrides_software_renderer(monkeypatch):
+    """The use_opengl property must be able to force OpenGL on a remote console."""
+    _fake_renderer(monkeypatch, "llvmpipe (LLVM 15.0.7, 256 bits)")
+    assert opengl_available(requested=True) is False
+    assert opengl_available(requested=True, explicit=True) is True
+
+
+def test_explicit_request_cannot_invent_a_context(monkeypatch):
+    _fake_renderer(monkeypatch, None)
+    assert opengl_available(requested=True, explicit=True) is False
+
+
+def test_env_var_off_beats_an_explicit_request(monkeypatch):
+    _fake_renderer(monkeypatch, "NVIDIA GeForce RTX 3090")
+    monkeypatch.setenv(ENV_VAR, "0")
+    assert opengl_available(requested=True, explicit=True) is False
+
+
+def test_software_renderer_notice_is_logged_once(monkeypatch, caplog):
+    """opengl_available runs per widget; the notice must not repeat per plot."""
+    _fake_renderer(monkeypatch, "llvmpipe (LLVM 15.0.7, 256 bits)")
+    with caplog.at_level("INFO"):
+        for _ in range(5):
+            opengl_available(requested=True)
+    assert sum("software rendered" in r.message for r in caplog.records) <= 1
 
 
 def test_env_var_forces_opengl_on_software_renderer(monkeypatch):

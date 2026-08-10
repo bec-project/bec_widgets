@@ -569,8 +569,37 @@ def test_use_opengl_can_be_toggled_at_runtime(qtbot, mocked_client):
 def test_use_opengl_declines_without_hardware_context(qtbot, mocked_client, monkeypatch):
     """Requesting OpenGL on a software renderer leaves the raster viewport in place."""
     pb = create_widget(qtbot, PlotBase, client=mocked_client)
-    monkeypatch.setattr(plot_base_module, "opengl_available", lambda requested=True: False)
+    monkeypatch.setattr(
+        plot_base_module, "opengl_available", lambda requested=True, explicit=False: False
+    )
 
     pb.use_opengl = True
     assert pb.use_opengl is False
     assert not isinstance(pb.plot_widget.viewport(), QOpenGLWidget)
+
+
+def test_software_renderer_defaults_to_raster_but_property_can_force(qtbot, mocked_client):
+    """On a remote console the default is raster, yet use_opengl must still work."""
+    from bec_widgets.utils import gpu_acceleration
+
+    real = gpu_acceleration.opengl_available
+
+    def fake(requested=True, explicit=False):
+        # pretend we are on llvmpipe: refused by default, honoured when explicit
+        return bool(requested and explicit)
+
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(plot_base_module, "opengl_available", fake)
+    try:
+        pb = create_widget(qtbot, PlotBase, client=mocked_client)
+        # construction takes the software-renderer default
+        assert pb.use_opengl is False
+        # an explicit request overrides it
+        pb.use_opengl = True
+        assert pb.use_opengl is True
+        assert isinstance(pb.plot_widget.viewport(), QOpenGLWidget)
+        pb.use_opengl = False
+        assert pb.use_opengl is False
+    finally:
+        monkeypatch.undo()
+    assert gpu_acceleration.opengl_available is real

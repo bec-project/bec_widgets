@@ -107,11 +107,26 @@ def _env_override() -> bool | None:
     return None
 
 
-def opengl_available(requested: bool = True) -> bool:
+@lru_cache(maxsize=4)
+def _log_software_renderer(renderer: str) -> None:
+    """Report the software-renderer decision once per process, not per widget."""
+    logger.info(
+        f"OpenGL is software rendered ({renderer}); keeping the raster viewport by default. "
+        f"Set the plot's use_opengl property to True to use it anyway, or {ENV_VAR}=1 "
+        "to opt in for the whole session."
+    )
+
+
+def opengl_available(requested: bool = True, explicit: bool = False) -> bool:
     """Decide whether a widget that asked for OpenGL should actually get it.
 
     Args:
         requested(bool): Whether the widget wants the OpenGL viewport at all.
+        explicit(bool): True when a caller deliberately asked -- a `use_opengl`
+            property set or an RPC call -- rather than this being the construction
+            default. A deliberate request overrides the software-renderer default,
+            since the caller has said what they want; it still cannot conjure a
+            context that does not exist, and `BEC_WIDGETS_OPENGL=0` still wins.
 
     Returns:
         bool: True if the OpenGL viewport should be installed.
@@ -123,13 +138,10 @@ def opengl_available(requested: bool = True) -> bool:
         return False
     if opengl_info() is None:
         return False
-    if override is True:
+    if override is True or explicit:
         return True
     if is_software_renderer():
-        logger.info(
-            "OpenGL is available but software rendered; keeping the raster viewport. "
-            f"Set {ENV_VAR}=1 to override."
-        )
+        _log_software_renderer(opengl_info()["renderer"])
         return False
     return True
 
