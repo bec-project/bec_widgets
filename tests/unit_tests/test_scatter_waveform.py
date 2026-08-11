@@ -544,3 +544,45 @@ def test_scatter_curve_settings_fetch_all_properties(qtbot, mocked_client):
     assert settings.ui.device_x.currentText() == "samx"
     assert settings.ui.device_y.currentText() == "samy"
     assert settings.ui.device_z.currentText() == "bpm4i"
+
+
+def test_z_gradient_uses_shared_brush_pool(qtbot, mocked_client):
+    """Brushes must be identity-stable pooled objects: pyqtgraph caches
+    rendered symbols by brush identity, and fresh per-point objects force a
+    full symbol-atlas rebuild on every update (the old dominant cost)."""
+    import pyqtgraph as pg
+    from qtpy.QtGui import QBrush
+
+    from bec_widgets.widgets.plots.scatter_waveform.scatter_curve import Z_COLOR_LEVELS
+
+    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+    swf.plot("samx", "samy", "bpm4i")
+    curve = swf.main_curve
+
+    z = np.linspace(0, 1, 400)
+    brushes_first = curve._make_z_gradient(z, "plasma")
+    brushes_second = curve._make_z_gradient(z * 2 + 5, "plasma")  # same normalized shape
+
+    assert all(isinstance(b, QBrush) for b in brushes_first)
+    assert len({id(b) for b in brushes_first}) <= Z_COLOR_LEVELS
+    assert [id(b) for b in brushes_first] == [id(b) for b in brushes_second]
+
+    cmap = pg.colormap.get("plasma")
+    lo = cmap.map(0.0, mode="qcolor")
+    hi = cmap.map(1.0, mode="qcolor")
+    assert brushes_first[0].color().getRgb()[:3] == lo.getRgb()[:3]
+    assert brushes_first[-1].color().getRgb()[:3] == hi.getRgb()[:3]
+
+
+def test_z_gradient_flat_and_empty_z(qtbot, mocked_client):
+    """Degenerate z inputs keep returning None (no gradient)."""
+    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+    swf.plot("samx", "samy", "bpm4i")
+    curve = swf.main_curve
+    assert curve._make_z_gradient([5.0, 5.0, 5.0], "plasma") is None
+    assert curve._make_z_gradient([], "plasma") is None
+    # live-path shapes that used to crash or warn: scalar, scalar NaN, mixed NaN
+    assert curve._make_z_gradient(3.7, "plasma") is None
+    assert curve._make_z_gradient(float("nan"), "plasma") is None
+    mixed = curve._make_z_gradient([float("nan"), 1.0, 2.0], "plasma")
+    assert mixed is not None and len(mixed) == 3

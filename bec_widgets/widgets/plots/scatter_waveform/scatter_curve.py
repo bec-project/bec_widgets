@@ -7,6 +7,7 @@ import pyqtgraph as pg
 from bec_lib import bec_logger
 from pydantic import BaseModel, Field, ValidationError, field_validator
 from qtpy import QtCore
+from qtpy.QtGui import QBrush, QColor
 
 from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
 from bec_widgets.utils.colors import Colors
@@ -15,6 +16,8 @@ if TYPE_CHECKING:  # pragma: no cover
     from bec_widgets.widgets.plots.scatter_waveform.scatter_waveform import ScatterWaveform
 
 logger = bec_logger.logger
+
+Z_COLOR_LEVELS = 256
 
 
 # noinspection PyDataclass
@@ -59,6 +62,18 @@ class ScatterCurve(BECConnector, pg.PlotDataItem):
     """Scatter curve item for the scatter waveform widget."""
 
     USER_ACCESS = ["color_map"]
+
+    _brush_pools: dict[str, list[QBrush]] = {}
+
+    @classmethod
+    def _brush_pool(cls, colormap: str) -> list[QBrush]:
+        """Return (creating once) the shared brush pool of one colormap."""
+        pool = cls._brush_pools.get(colormap)
+        if pool is None:
+            lut = pg.colormap.get(colormap).getLookupTable(nPts=Z_COLOR_LEVELS, alpha=True)
+            pool = [QBrush(QColor(int(r), int(g), int(b), int(a))) for r, g, b, a in lut]
+            cls._brush_pools[colormap] = pool
+        return pool
 
     def __init__(
         self,
@@ -164,25 +179,31 @@ class ScatterCurve(BECConnector, pg.PlotDataItem):
 
     def _make_z_gradient(self, data_z: list | np.ndarray, colormap: str) -> list | None:
         """
-        Make a gradient color for the z values.
+        Map the z values to brushes from the shared quantized colormap pool.
 
         Args:
             data_z(list|np.ndarray): Z values.
             colormap(str): Colormap for the gradient color.
 
         Returns:
-            list: List of colors for the z values.
+            list: List of shared QBrush objects for the z values.
         """
-        # Normalize z_values for color mapping
-        z_min, z_max = np.min(data_z), np.max(data_z)
-
-        if z_max != z_min:  # Ensure that there is a range in the z values
-            z_values_norm = (data_z - z_min) / (z_max - z_min)
-            colormap = pg.colormap.get(colormap)  # using colormap from global settings
-            colors = [colormap.map(z, mode="qcolor") for z in z_values_norm]
-            return colors
-        else:
+        data_z = np.atleast_1d(np.asarray(data_z, dtype=float))
+        if data_z.size == 0:
             return None
+        finite = np.isfinite(data_z)
+        if not finite.any():
+            return None
+        z_min, z_max = data_z[finite].min(), data_z[finite].max()
+        if z_max == z_min:
+            return None
+        z_values_norm = np.clip((data_z - z_min) / (z_max - z_min), 0.0, 1.0)
+        z_values_norm = np.nan_to_num(z_values_norm, nan=0.0)
+        indices = np.clip(
+            np.round(z_values_norm * (Z_COLOR_LEVELS - 1)).astype(int), 0, Z_COLOR_LEVELS - 1
+        )
+        pool = self._brush_pool(colormap)
+        return [pool[int(i)] for i in indices]
 
     def refresh_color_map(self, color_map: str):
         """

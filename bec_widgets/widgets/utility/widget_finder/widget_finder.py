@@ -15,6 +15,7 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets import SafeProperty
+from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.widget_highlighter import WidgetHighlighter
 from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindowNoRPC
@@ -202,6 +203,7 @@ if __name__ == "__main__":  # pragma: no cover
     import sys
 
     app = QApplication(sys.argv)
+    apply_theme("dark")
     main_window = InspectorMainWindow()
     main_window.show()
     sys.exit(app.exec())
