@@ -87,6 +87,7 @@ def _fake_bridge_factory(monkeypatch, gated_bytes: int | None = None):
             self.closed = False
             self.updated = MagicMock()
             self.size_limit_bytes = size_limit_bytes
+            self.min_emit_interval = min_emit_interval
             self.estimated_bytes = gated_bytes
             self.size_gated = (
                 gated_bytes is not None
@@ -105,7 +106,13 @@ def _fake_bridge_factory(monkeypatch, gated_bytes: int | None = None):
     def factory(
         client, sources, scan="live", parent=None, min_emit_interval=0.1, size_limit_bytes=None
     ):
-        bridge = _FakeBridge(client, sources, scan=scan, size_limit_bytes=size_limit_bytes)
+        bridge = _FakeBridge(
+            client,
+            sources,
+            scan=scan,
+            min_emit_interval=min_emit_interval,
+            size_limit_bytes=size_limit_bytes,
+        )
         created.append(bridge)
         return bridge
 
@@ -243,6 +250,16 @@ def test_plot_single_arg_input_2d(qtbot, mocked_client):
     x_data, y_data = curve.get_data()
     np.testing.assert_array_equal(x_data, data[:, 0])
     np.testing.assert_array_equal(y_data, data[:, 1])
+
+
+def test_update_rate_reaches_bridge(qtbot, mocked_client, monkeypatch):
+    """The widget's update_rate defines the bridge coalescing interval."""
+    created = _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    assert wf.update_rate == 15.0  # Waveform default (benchmarked)
+    wf.plot(arg1="bpm4i")
+    assert created, "no data bridge was created"
+    assert created[-1].min_emit_interval == pytest.approx(1.0 / 15.0)
 
 
 def test_plot_single_arg_input_sync(qtbot, mocked_client):

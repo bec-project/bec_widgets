@@ -835,7 +835,7 @@ class MultiWaveform(PlotBase):
                 sources=[(device, entry)],
                 scan=scan,
                 parent=self,
-                min_emit_interval=0.04,
+                min_emit_interval=self.update_interval_s,
                 max_points=max_points,
             )
             self._data_bridge.updated.connect(self._on_data_update)

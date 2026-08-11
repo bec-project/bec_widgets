@@ -104,6 +104,16 @@ class QtDataSubscription(QObject):
 
     # --- public --------------------------------------------------------------
 
+    def set_min_emit_interval(self, seconds: float) -> None:
+        """
+        Change the backend coalescing interval of the live subscription.
+
+        Args:
+            seconds (float): New interval in seconds; 0 disables coalescing.
+        """
+        if self._subscription is not None:
+            self._subscription.set_min_emit_interval(seconds)
+
     @property
     def scan_id(self) -> str | None:
         """The currently bound scan id."""

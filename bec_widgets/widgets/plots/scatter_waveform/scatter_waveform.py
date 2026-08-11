@@ -345,7 +345,11 @@ class ScatterWaveform(PlotBase):
             return
         try:
             self._data_bridge = QtDataSubscription(
-                self.client, sources=sources, scan=scan, parent=self, min_emit_interval=0.04
+                self.client,
+                sources=sources,
+                scan=scan,
+                parent=self,
+                min_emit_interval=self.update_interval_s,
             )
             self._data_bridge.updated.connect(self._on_data_update)
         except Exception as exc:

@@ -15,6 +15,7 @@ from bec_widgets.utils.entry_validator import EntryValidator
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.fps_counter import FPSCounter
 from bec_widgets.utils.plot_indicator_items import BECArrowItem, BECTickItem
+from bec_widgets.utils.qt_data_subscription import QtDataSubscription
 from bec_widgets.utils.round_frame import RoundedFrame
 from bec_widgets.utils.side_panel import SidePanel
 from bec_widgets.utils.toolbars.performance import PerformanceConnection, performance_bundle
@@ -65,6 +66,9 @@ class UIMode(Enum):
 class PlotBase(BECWidget, QWidget):
     PLUGIN = False
     RPC = False
+    #: Default data-update rate in Hz; widgets override it to match their
+    #: render cost (see the ``update_rate`` property).
+    DEFAULT_UPDATE_RATE: float = 25.0
     BASE_USER_ACCESS = [
         "enable_toolbar",
         "enable_toolbar.setter",
@@ -106,6 +110,8 @@ class PlotBase(BECWidget, QWidget):
         "legend_label_size.setter",
         "minimal_crosshair_precision",
         "minimal_crosshair_precision.setter",
+        "update_rate",
+        "update_rate.setter",
         "screenshot",
     ]
     USER_ACCESS = [*BECWidget.USER_ACCESS, *BASE_USER_ACCESS]
@@ -175,6 +181,7 @@ class PlotBase(BECWidget, QWidget):
         self._y_label_suffix = ""
         self._y_axis_units = ""
         self._minimal_crosshair_precision = 3
+        self._update_rate = min(100.0, max(1.0, float(self.DEFAULT_UPDATE_RATE)))
 
         # Plot Indicator Items
         self.tick_item = BECTickItem(parent=self, plot_item=self.plot_item)
@@ -1034,6 +1041,45 @@ class PlotBase(BECWidget, QWidget):
             value / 9
         )  # 9 is the default font size of the legend, so we always scale it against 9
         self.plot_item.legend.setScale(scale)
+
+    @SafeProperty(float, doc="Data update rate in Hz (clamped to 1-100).")
+    def update_rate(self) -> float:
+        """
+        Rate at which data subscriptions deliver updates to the widget, in Hz.
+
+        Clamped to 1-100 Hz. Each widget class defines its own default via
+        ``DEFAULT_UPDATE_RATE`` (25 Hz unless overridden).
+        """
+        return self._update_rate
+
+    @update_rate.setter
+    def update_rate(self, value: float):
+        """
+        Set the data update rate and apply it to all active subscriptions.
+
+        Args:
+            value(float): Update rate in Hz; clamped to 1-100.
+        """
+        try:
+            rate = float(value)
+        except (TypeError, ValueError):
+            logger.warning(f"Invalid update_rate {value!r}; keeping {self._update_rate} Hz.")
+            return
+        rate = min(100.0, max(1.0, rate))
+        self._update_rate = rate
+        self._apply_update_rate()
+        self.property_changed.emit("update_rate", rate)
+
+    @property
+    def update_interval_s(self) -> float:
+        """The subscription coalescing interval in seconds for :attr:`update_rate`."""
+        return 1.0 / self._update_rate
+
+    def _apply_update_rate(self):
+        """Propagate the current update rate to every active data bridge."""
+        interval = self.update_interval_s
+        for bridge in self.findChildren(QtDataSubscription):
+            bridge.set_min_emit_interval(interval)
 
     ################################################################################
     # FPS Counter

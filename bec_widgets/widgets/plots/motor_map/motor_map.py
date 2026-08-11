@@ -672,7 +672,7 @@ class MotorMap(PlotBase):
                 sources=[(device_x, device_x), (device_y, device_y)],
                 scan=None,
                 parent=self,
-                min_emit_interval=0.04,
+                min_emit_interval=self.update_interval_s,
                 max_points=self.config.max_points,
             )
             self._data_bridge.updated.connect(self._on_data_update)

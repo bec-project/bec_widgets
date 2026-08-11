@@ -207,6 +207,10 @@ class Heatmap(ImageBase):
     Heatmap widget for visualizing 2d grid data with color mapping for the z-axis.
     """
 
+    #: 5 Hz: grid recomputation is comparatively expensive and scan points
+    #: arrive slowly; a faster rate only burns paint time.
+    DEFAULT_UPDATE_RATE = 5.0
+
     USER_ACCESS = [
         *PlotBase.USER_ACCESS,
         # ImageView Specific Settings
@@ -764,7 +768,11 @@ class Heatmap(ImageBase):
 
         try:
             self._data_bridge = QtDataSubscription(
-                self.client, sources=sources, scan=scan, parent=self, min_emit_interval=0.2
+                self.client,
+                sources=sources,
+                scan=scan,
+                parent=self,
+                min_emit_interval=self.update_interval_s,
             )
             self._data_bridge.updated.connect(self._on_data_update)
         except Exception as exc:

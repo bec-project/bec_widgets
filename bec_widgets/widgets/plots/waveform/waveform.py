@@ -76,6 +76,9 @@ class WaveformConfig(ConnectionConfig):
 
 
 class Waveform(PlotBase):
+    #: 15 Hz: above typical device message rates while leaving paint headroom
+    #: for multi-million-point async curves (benchmarked).
+    DEFAULT_UPDATE_RATE = 15.0
     """
     Widget for plotting waveforms.
     """
@@ -1748,10 +1751,12 @@ class Waveform(PlotBase):
         if not sources:
             return
         try:
-            # 15 Hz render coalescing: above typical device message rates while
-            # leaving paint headroom for multi-million-point curves.
             self._data_bridge = QtDataSubscription(
-                self.client, sources=sources, scan=scan, parent=self, min_emit_interval=0.0667
+                self.client,
+                sources=sources,
+                scan=scan,
+                parent=self,
+                min_emit_interval=self.update_interval_s,
             )
             self._data_bridge.updated.connect(self._on_data_update)
         except Exception as exc:
@@ -1795,7 +1800,7 @@ class Waveform(PlotBase):
                     sources=list(dict.fromkeys(sources)),
                     scan=scan_id,
                     parent=self,
-                    min_emit_interval=0.0667,
+                    min_emit_interval=self.update_interval_s,
                 )
                 bridge.updated.connect(self._on_data_update)
                 self._history_bridges[scan_id] = bridge
