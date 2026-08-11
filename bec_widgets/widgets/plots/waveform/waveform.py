@@ -1749,12 +1749,21 @@ class Waveform(PlotBase):
                 # Fetch data from signal instead
                 device_data_x = self._get_x_data(device_name, device_entry)
 
-            # Fallback to 'index' in case data is not of equal length
+            # x and y arrive on independent streams, so one side may lag by a
+            # message; pair up to the common length instead of degrading to index.
             if len(device_data_x) != len(device_data):
-                logger.warning(
-                    f"Async data for curve {curve.name()} and x_axis {device_entry} is not of equal length. Falling back to 'index' plotting."
-                )
-                device_data_x = np.linspace(0, len(device_data) - 1, len(device_data))
+                paired = min(len(device_data_x), len(device_data))
+                if paired == 0:
+                    logger.warning(
+                        f"No x-axis data ({device_entry}) available yet for curve {curve.name()}. Falling back to 'index' plotting."
+                    )
+                    device_data_x = np.linspace(0, len(device_data) - 1, len(device_data))
+                else:
+                    logger.debug(
+                        f"Curve {curve.name()}: x_axis {device_entry} and y data differ in length; plotting the common {paired} points."
+                    )
+                    device_data_x = device_data_x[:paired]
+                    device_data = device_data[:paired]
 
             self._auto_adjust_async_curve_settings(curve, len(device_data))
             curve.setData(device_data_x, device_data)
@@ -1928,18 +1937,28 @@ class Waveform(PlotBase):
             # Only consider device signals that are async for now, fallback is index
             signal_x = self.x_axis_mode["entry"]
             async_data = msg["signals"].get(signal_x, None)
-            # Make sure the signal exists, otherwise fall back to index
-            if async_data is None:
-                # Try to grab the data from device signals
-                data_plot_x = self._get_x_data(plot_mode, signal_x)
-            else:
+            if async_data is not None:
+                # x arrived in the SAME message as y: accumulate the delta like y.
                 data_plot_x = np.asarray(async_data["value"])
-            if x_data is not None:
-                data_plot_x = np.hstack((x_data, data_plot_x))
-            # Fallback incase data is not of equal length
+                if x_data is not None:
+                    data_plot_x = np.hstack((x_data, data_plot_x))
+            else:
+                # x lives on a DIFFERENT stream: _get_x_data returns the full
+                # accumulated x array, so it must NOT be appended to the
+                # previously plotted x (that grows x quadratically and made
+                # every update fall back to index plotting). It may lag or lead
+                # y by one message; adjust for display only — y is never
+                # touched, it doubles as the accumulation buffer.
+                data_plot_x = np.asarray(self._get_x_data(plot_mode, signal_x))
+                if len(data_plot_x) > len(data_plot_y):
+                    data_plot_x = data_plot_x[: len(data_plot_y)]
+                elif 0 < len(data_plot_x) < len(data_plot_y):
+                    # pad with the last known x; corrected on the next x update
+                    pad = np.full(len(data_plot_y) - len(data_plot_x), data_plot_x[-1])
+                    data_plot_x = np.hstack((data_plot_x, pad))
             if len(data_plot_x) != len(data_plot_y):
                 logger.warning(
-                    f"Async data for curve {curve.name()} and x_axis {signal_x} is not of equal length. Falling back to 'index' plotting."
+                    f"No x-axis data ({signal_x}) available yet for curve {curve.name()}. Falling back to 'index' plotting."
                 )
                 data_plot_x = np.linspace(0, len(data_plot_y) - 1, len(data_plot_y))
 
