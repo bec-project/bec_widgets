@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v3.33.2 (2026-08-12)
+
+### Bug Fixes
+
+- **scatter_waveform**: Trim live x/y/z buffers to common length before plotting
+  ([`cab8844`](https://github.com/bec-project/bec_widgets/commit/cab8844d0dd3525344a9e599b474a86891dcd9e2))
+
+### Performance Improvements
+
+- **scatter**: Pooled quantized z-brushes enable symbol-atlas caching
+  ([`dc57a90`](https://github.com/bec-project/bec_widgets/commit/dc57a90357c709c4ff57d31350b7c06d0fb9f7f0))
+
+
 ## v3.33.1 (2026-08-05)
 
 ### Bug Fixes
