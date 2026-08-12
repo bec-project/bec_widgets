@@ -60,6 +60,12 @@ class LaunchProgressClient:
             }
         )
 
+    def emit_info(self, **fields: object) -> bool:
+        """Send an informational message (e.g. cold-start / bytecode-cache status)."""
+        payload: dict[str, object] = {"t": "info"}
+        payload.update(fields)
+        return self._send(payload)
+
     def emit_ready(self, total_ms: float | None = None) -> bool:
         payload: dict[str, object] = {"t": "ready"}
         if total_ms is not None:
