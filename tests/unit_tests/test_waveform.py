@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 import numpy as np
 import pyqtgraph as pg
 import pytest
+from bec_lib.scan_history import ScanHistory
 from pyqtgraph.graphicsItems.DateAxisItem import DateAxisItem
 from qtpy.QtCore import QTimer
 from qtpy.QtWidgets import QApplication, QCheckBox, QDialog, QDialogButtonBox, QDoubleSpinBox
@@ -1626,6 +1627,26 @@ def test_history_curve_auto_valid_uses_first_report_device(
     assert c.isVisible()
     # Should have fallen back to the first scan_report_device
     assert c.config.current_x_mode == "auto"
+
+
+def test_history_curve_auto_shape_mismatch_hides_curve(
+    qtbot, mocked_client, scan_history_factory, suppress_message_box
+):
+    """
+    For auto x-mode, a shape mismatch between the report device and y data must
+    hide the curve without crashing on the pydantic stored_data_info entries.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_mode = "auto"
+    # bpm4i is stored with shape (10,); 16 points make the report device (samx) mismatch
+    history_msg = scan_history_factory(scan_id="hist_auto_shape", scan_number=1, num_points=16)
+    wf.client.history = ScanHistory(wf.client, False)
+    wf.client.history._scan_data[history_msg.scan_id] = history_msg
+    wf.client.history._scan_ids.append(history_msg.scan_id)
+    wf.client.queue.scan_storage.current_scan = None
+    c = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id=history_msg.scan_id)
+    assert c is not None
+    assert not c.isVisible()
 
 
 def test_history_curve_file_not_found_returns_none(qtbot, mocked_client, scan_history_factory):
