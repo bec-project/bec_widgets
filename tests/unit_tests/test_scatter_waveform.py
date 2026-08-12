@@ -10,7 +10,7 @@ from bec_widgets.widgets.plots.scatter_waveform.scatter_waveform import ScatterW
 from bec_widgets.widgets.plots.scatter_waveform.settings.scatter_curve_setting import (
     ScatterCurveSettings,
 )
-from tests.unit_tests.client_mocks import create_dummy_scan_item, mocked_client
+from tests.unit_tests.client_mocks import DummyData, create_dummy_scan_item, mocked_client
 
 from .conftest import create_widget
 
@@ -572,6 +572,69 @@ def test_z_gradient_uses_shared_brush_pool(qtbot, mocked_client):
     hi = cmap.map(1.0, mode="qcolor")
     assert brushes_first[0].color().getRgb()[:3] == lo.getRgb()[:3]
     assert brushes_first[-1].color().getRgb()[:3] == hi.getRgb()[:3]
+
+
+def test_scatter_waveform_live_update_unequal_lengths(qtbot, mocked_client, monkeypatch):
+    """Device buffers fill independently during a live scan, so one of them can
+    be a point ahead when the update slot fires; the data must be trimmed to the
+    common length instead of handing pyqtgraph mismatched arrays."""
+    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+
+    dummy_scan = create_dummy_scan_item()
+    # samx is one point ahead of samy and bpm4i
+    dummy_scan.live_data["samx"]["samx"].val = [10, 20, 30, 40]
+    monkeypatch.setattr(swf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: dummy_scan)
+
+    swf.plot("samx", "samy", "bpm4i", label="live_curve")
+    swf.scan_id = "dummy"
+    swf.scan_item = dummy_scan
+
+    swf.update_sync_curves()
+
+    x_data, y_data = swf.main_curve.getData()
+    np.testing.assert_array_equal(x_data, [10, 20, 30])
+    np.testing.assert_array_equal(y_data, [5, 10, 15])
+
+
+def test_scatter_waveform_live_update_incomplete_data(qtbot, mocked_client, monkeypatch):
+    """Missing or empty device buffers skip the update instead of erroring."""
+    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+
+    dummy_scan = create_dummy_scan_item()
+    dummy_scan.live_data["samy"] = {}  # y signal not delivered yet
+    monkeypatch.setattr(swf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: dummy_scan)
+
+    swf.plot("samx", "samy", "bpm4i", label="live_curve")
+    swf.scan_id = "dummy"
+    swf.scan_item = dummy_scan
+
+    swf.update_sync_curves()
+    assert swf.main_curve.getData() == (None, None)
+
+    dummy_scan.live_data["samy"] = {"samy": DummyData(val=[], timestamps=[])}
+    swf.update_sync_curves()
+    assert swf.main_curve.getData() == (None, None)
+
+
+def test_scatter_waveform_live_update_scalar_readback(qtbot, mocked_client, monkeypatch):
+    """The first live update can deliver bare scalar readbacks instead of buffers;
+    they must be plotted as a single point, not raise TypeError on len()."""
+    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+
+    dummy_scan = create_dummy_scan_item()
+    for device in ("samx", "samy", "bpm4i"):
+        dummy_scan.live_data[device][device] = DummyData(val=5.0, timestamps=100)
+    monkeypatch.setattr(swf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: dummy_scan)
+
+    swf.plot("samx", "samy", "bpm4i", label="live_curve")
+    swf.scan_id = "dummy"
+    swf.scan_item = dummy_scan
+
+    swf.update_sync_curves()
+
+    x_data, y_data = swf.main_curve.getData()
+    np.testing.assert_array_equal(x_data, [5.0])
+    np.testing.assert_array_equal(y_data, [5.0])
 
 
 def test_z_gradient_flat_and_empty_z(qtbot, mocked_client):
