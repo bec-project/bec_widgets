@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import numpy as np
 import pyqtgraph as pg
 from bec_lib import bec_logger
 from bec_lib.endpoints import MessageEndpoints
@@ -369,7 +370,14 @@ class ScatterWaveform(PlotBase):
             y_data = data.get(device_y, {}).get(signal_y, {}).read().get("value", None)
             z_data = data.get(device_z, {}).get(signal_z, {}).read().get("value", None)
 
-        self._main_curve.set_data(x=x_data, y=y_data, z=z_data)
+        if x_data is None or y_data is None or z_data is None:
+            return
+
+        x_data, y_data, z_data = (np.atleast_1d(arr) for arr in (x_data, y_data, z_data))
+        min_len = min(len(x_data), len(y_data), len(z_data))
+        if min_len == 0:
+            return
+        self._main_curve.set_data(x=x_data[:min_len], y=y_data[:min_len], z=z_data[:min_len])
 
     def _fetch_scan_data_and_access(self):
         """
