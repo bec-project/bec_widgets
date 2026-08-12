@@ -1,6 +1,7 @@
 from bec_widgets.applications.startup_profiler import startup_profiler  # isort: skip
 
 from bec_qthemes import material_icon
+from qtpy.QtCore import QTimer
 from qtpy.QtGui import QAction  # type: ignore
 from qtpy.QtWidgets import QApplication, QHBoxLayout, QStackedWidget, QWidget
 
@@ -14,6 +15,7 @@ from bec_widgets.applications.views.dock_area_view.dock_area_view import DockAre
 from bec_widgets.applications.views.view import ViewBase, WaveformViewInline, WaveformViewPopup
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.guided_tour import GuidedTour
+from bec_widgets.utils.launcher_ready import notify_launcher_ready
 from bec_widgets.utils.name_utils import sanitize_namespace
 from bec_widgets.utils.screen_utils import (
     apply_centered_size,
@@ -41,6 +43,7 @@ class BECMainApp(BECMainWindow):
         super().__init__(parent=parent, *args, **kwargs)
         startup_profiler.mark("BEC connection + base window")
         self._show_examples = bool(show_examples)
+        self._launcher_ready_notified = False
 
         # --- Compose central UI (sidebar + stack)
         self.sidebar = SideBar(parent=self, anim_duration=anim_duration)
@@ -66,6 +69,13 @@ class BECMainApp(BECMainWindow):
         self.guided_tour = GuidedTour(self)
         self._setup_guided_tour()
         startup_profiler.mark("guided tour")
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if self._launcher_ready_notified:
+            return
+        self._launcher_ready_notified = True
+        QTimer.singleShot(0, lambda: notify_launcher_ready("bec-app", self))
 
     def _add_views(self):
         self.add_section("BEC Applications", "bec_apps")

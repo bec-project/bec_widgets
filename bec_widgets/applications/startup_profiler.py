@@ -38,6 +38,13 @@ try:
 except Exception:  # pragma: no cover - logging must never break startup
     _logger = None
 
+try:
+    # Stdlib-only client: streams the marks below to bec_launcher's loading banner
+    # when this process was started by the launcher. A no-op otherwise.
+    from bec_widgets.utils.launch_progress import launch_progress
+except Exception:  # pragma: no cover - progress streaming must never break startup
+    launch_progress = None
+
 
 def _emit(msg: str) -> None:
     if _logger is not None:
@@ -76,6 +83,9 @@ class StartupProfiler:
             _emit(f"[startup] {stage:<26} +{delta:6.2f}s   (total {total:6.2f}s)")
             if final:
                 _emit(f"[startup] ---- bec-app interactive after {total:.2f}s ----")
+        if launch_progress is not None:
+            # Best-effort; the client swallows all socket errors internally.
+            launch_progress.emit_stage(stage, delta * 1000.0, total * 1000.0)
         return total
 
 
