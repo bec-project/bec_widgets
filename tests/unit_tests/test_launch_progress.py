@@ -106,6 +106,36 @@ def test_client_streams_hello_stage_and_ready(monkeypatch, server):
     assert ready and ready[0]["total_ms"] == 27710.0
 
 
+def test_client_streams_info_message(monkeypatch, server):
+    _client_env(monkeypatch, server.path)
+    client = lp.LaunchProgressClient()
+    assert client.emit_info(cold_start=True, bytecode_cached_pct=12) is True
+
+    messages = server.read_lines()
+    info = [m for m in messages if m["t"] == "info"]
+    assert info and info[0]["cold_start"] is True
+    assert info[0]["bytecode_cached_pct"] == 12
+
+
+def test_bytecode_cache_probe_reports_and_streams(monkeypatch, server):
+    from bec_widgets.applications import startup_profiler as sp
+
+    checked, cached = sp._bytecode_cache_status()
+    # The probe must find real sampled files in this env and never exceed bounds.
+    assert checked > 0
+    assert 0 <= cached <= checked
+
+    _client_env(monkeypatch, server.path)
+    monkeypatch.setattr(sp, "launch_progress", lp.LaunchProgressClient())
+    sp._report_bytecode_cache()
+
+    messages = server.read_lines()
+    info = [m for m in messages if m["t"] == "info"]
+    assert info
+    assert isinstance(info[0]["cold_start"], bool)
+    assert 0 <= info[0]["bytecode_cached_pct"] <= 100
+
+
 def test_client_never_raises_on_bad_socket(monkeypatch):
     _client_env(monkeypatch, _short_socket_path("nonexistent"))
     client = lp.LaunchProgressClient()
