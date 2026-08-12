@@ -484,13 +484,23 @@ class LaunchWindow(BECMainWindow):
             if isinstance(result_widget, BECMainWindow):
                 apply_window_geometry(result_widget, geometry)
                 result_widget.show()
+                self._notify_launcher_ready(result_widget)
             else:
                 window = BECMainWindowNoRPC()
                 window.setCentralWidget(result_widget)
                 window.setWindowTitle(f"BEC - {result_widget.objectName()}")
                 apply_window_geometry(window, geometry)
                 window.show()
+                self._notify_launcher_ready(window)
             return result_widget
+
+    @staticmethod
+    def _notify_launcher_ready(window: QWidget) -> None:
+        from qtpy.QtCore import QTimer
+
+        from bec_widgets.utils.launcher_ready import notify_launcher_ready
+
+        QTimer.singleShot(0, lambda: notify_launcher_ready("bec-gui-server", window))
 
     def _launch_custom_ui_file(self, ui_file: str | None) -> BECMainWindow:
         """

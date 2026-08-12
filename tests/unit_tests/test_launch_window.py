@@ -131,6 +131,22 @@ def test_open_dock_area_with_start_empty_option_calls_launch(bec_launch_window):
     mock_launch.assert_called_once_with("dock_area", startup_profile=None)
 
 
+def test_launch_window_notifies_launcher_ready(qtbot, bec_launch_window, monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        "bec_widgets.utils.launcher_ready.notify_launcher_ready",
+        lambda app_name, window: calls.append((app_name, window)) or True,
+    )
+
+    window = QWidget()
+    qtbot.addWidget(window)
+    window.show()
+    bec_launch_window._notify_launcher_ready(window)
+    qtbot.wait(10)
+
+    assert calls == [("bec-gui-server", window)]
+
+
 @pytest.mark.parametrize(
     "connection_names, hide",
     [

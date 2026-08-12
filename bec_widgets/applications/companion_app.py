@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+# isort: off
+# startup_profiler must load before the heavy third-party imports below so its origin
+# timestamp captures this process's real import cost (streamed as the "module imports"
+# stage to the launcher banner). The fence keeps isort from reordering it downward.
+from bec_widgets.applications.startup_profiler import startup_profiler
+
 import argparse
 import json
 import os
@@ -14,7 +20,7 @@ from bec_lib.logger import bec_logger
 from bec_lib.service_config import ServiceConfig
 from bec_qthemes import apply_theme
 from qtmonaco.pylsp_provider import pylsp_server
-from qtpy.QtCore import QSize, Qt
+from qtpy.QtCore import QSize, Qt, QTimer
 from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QApplication
 
@@ -23,9 +29,13 @@ from bec_widgets.applications.launch_window import LaunchWindow
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
 from bec_widgets.utils.rpc_register import RPCRegister
 
+# isort: on
+
 logger = bec_logger.logger
 
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
+
+startup_profiler.mark("module imports")
 
 
 class SimpleFileLikeFromLogOutputFunc:
@@ -99,10 +109,12 @@ class GUIServer:
         """
         logger.info("Starting GUIServer", repr(self))
         self.app = QApplication(sys.argv)
+        startup_profiler.mark("QApplication")
         if darkdetect.isDark():
             apply_theme("dark")
         else:
             apply_theme("light")
+        startup_profiler.mark("theme applied")
 
         self.app.setApplicationName("BEC")
         self.app.gui_id = self.gui_id  # type: ignore
@@ -111,6 +123,8 @@ class GUIServer:
 
         service_config = self._get_service_config()
         self.dispatcher = BECDispatcher(config=service_config, gui_id=self.gui_id)
+        # Dominant cold-start cost when Redis is remote.
+        startup_profiler.mark("BEC connection")
 
         if self.gui_class:
             self.launcher_window = LaunchWindow(
@@ -121,6 +135,7 @@ class GUIServer:
         else:
             self.launcher_window = LaunchWindow(gui_id=f"{self.gui_id}:launcher")
         self.launcher_window.setAttribute(Qt.WA_ShowWithoutActivating)  # type: ignore
+        startup_profiler.mark("launch window built")
 
         self.app.aboutToQuit.connect(self.shutdown)
         self.app.setQuitOnLastWindowClosed(True)
@@ -128,7 +143,23 @@ class GUIServer:
         signal.signal(signal.SIGINT, self.request_shutdown)
         signal.signal(signal.SIGTERM, self.request_shutdown)
 
+        # First event-loop iteration -> the server is up and interactive.
+        QTimer.singleShot(0, self._notify_server_ready)
+
         sys.exit(self.app.exec())
+
+    def _notify_server_ready(self):
+        """Mark the final startup stage and resolve the launcher's loading banner.
+
+        This is a safety net so the banner resolves even when no ``gui_class`` window
+        is auto-launched; :meth:`LaunchWindow.launch` also notifies for a launched
+        window, and a duplicate ready edge is harmless (the launcher finalises once).
+        """
+        # pylint: disable=import-outside-toplevel
+        from bec_widgets.utils.launcher_ready import notify_launcher_ready
+
+        startup_profiler.mark("interactive", final=True)
+        notify_launcher_ready("bec-gui-server", self.launcher_window)
 
     def setup_bec_icon(self):
         """

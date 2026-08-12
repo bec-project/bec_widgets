@@ -77,6 +77,22 @@ def test_viewbase_initializes(viewbase):
     assert viewbase.on_exit() is True
 
 
+def test_main_app_notifies_launcher_ready_after_show(qtbot, mocked_client, monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        "bec_widgets.applications.main_app.notify_launcher_ready",
+        lambda app_name, window: calls.append((app_name, window)) or True,
+    )
+
+    app = BECMainApp(client=mocked_client, anim_duration=ANIM_TEST_DURATION, show_examples=False)
+    qtbot.addWidget(app)
+    app.show()
+    qtbot.waitExposed(app)
+    qtbot.wait(10)
+
+    assert calls == [("bec-app", app)]
+
+
 def test_on_enter_and_on_exit_are_called_on_switch(app_with_spies, qtbot):
     app, v1, v2, _ = app_with_spies
 
