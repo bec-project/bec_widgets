@@ -22,6 +22,7 @@ from qtpy.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMainWindow,
+    QProgressBar,
     QVBoxLayout,
     QWidget,
 )
@@ -73,6 +74,55 @@ class WaveformConfig(ConnectionConfig):
 
     model_config: dict = {"validate_assignment": True}
     _validate_color_palette = field_validator("color_palette")(Colors.validate_color_map)
+
+
+#: Curves above this many points are decimated to a min/max envelope before
+#: rendering: pyqtgraph's per-paint work is O(points) with a large constant,
+#: and a pixel column can only ever show a vertical range.
+DISPLAY_POINT_LIMIT = 1_000_000
+#: Envelope bins of a decimated display (output length = 2 * bins).
+DISPLAY_ENVELOPE_BINS = 250_000
+
+
+def _decimate_envelope(
+    y_data: np.ndarray, x_data: np.ndarray | None = None, offset: int = 0
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Reduce a long series to an interleaved per-bin (min, max) envelope.
+
+    Every bin contributes its true extremes, so outliers stay visible at any
+    zoom level — unlike point skipping. The raw data is NOT modified; callers
+    keep it for zoom-window re-decimation.
+
+    Args:
+        y_data (np.ndarray): Raw values.
+        x_data (np.ndarray | None): Optional x column parallel to ``y_data``;
+            ``None`` means sample-index x (offset by ``offset``).
+        offset (int): Index of ``y_data[0]`` in the full series (window mode).
+
+    Returns:
+        tuple[np.ndarray, np.ndarray]: Decimated (x, y) columns.
+    """
+    n = len(y_data)
+    bin_size = int(np.ceil(n / DISPLAY_ENVELOPE_BINS))
+    n_bins = n // bin_size
+    body = y_data[: n_bins * bin_size].reshape(n_bins, bin_size)
+    mins = body.min(axis=1)
+    maxs = body.max(axis=1)
+    tail = y_data[n_bins * bin_size :]
+    if tail.size:
+        mins = np.append(mins, tail.min())
+        maxs = np.append(maxs, tail.max())
+        n_bins += 1
+    y_out = np.empty(2 * n_bins, dtype=mins.dtype)
+    y_out[0::2] = mins
+    y_out[1::2] = maxs
+    center_idx = np.minimum(np.arange(n_bins, dtype=np.int64) * bin_size + bin_size // 2, n - 1)
+    if x_data is None:
+        centers = (center_idx + offset).astype(np.float64)
+    else:
+        centers = np.asarray(x_data)[center_idx]
+    return np.repeat(centers, 2), y_out
 
 
 class Waveform(PlotBase):
@@ -1759,6 +1809,7 @@ class Waveform(PlotBase):
                 min_emit_interval=self.update_interval_s,
             )
             self._data_bridge.updated.connect(self._on_data_update)
+            self._data_bridge.progress.connect(self._on_data_load_progress)
         except Exception as exc:
             logger.warning(f"Failed to configure waveform data subscription: {exc}")
             self._cleanup_data_api_subscription()
@@ -1803,6 +1854,7 @@ class Waveform(PlotBase):
                     min_emit_interval=self.update_interval_s,
                 )
                 bridge.updated.connect(self._on_data_update)
+                bridge.progress.connect(self._on_data_load_progress)
                 self._history_bridges[scan_id] = bridge
             except Exception as exc:
                 logger.warning(
@@ -2073,10 +2125,24 @@ class Waveform(PlotBase):
                     f"Async data for curve {curve.name()} and x_axis {x_key} is not of equal "
                     "length. Falling back to 'index' plotting."
                 )
+        n_points = len(y_data)
+        self._auto_adjust_async_curve_settings(curve, n_points)
+        y_arr = np.asarray(y_data)
+        if n_points > DISPLAY_POINT_LIMIT and y_arr.dtype != object:
+            # min/max envelope: bounded render cost, extremes stay visible.
+            # The raw series is kept on the curve so zooming re-decimates the
+            # visible window at full fidelity (see _apply_lod_windows).
+            x_arr = None if x_data is None else np.asarray(x_data)
+            curve._lod_raw = (x_arr, y_arr)
+            curve._lod_window = None
+            self._ensure_lod_hooks()
+            x_dec, y_dec = _decimate_envelope(y_arr, x_arr)
+            curve.setData(x_dec, y_dec)
+            return True
+        curve._lod_raw = None
         if x_data is None:
-            x_data = np.arange(len(y_data))
-        self._auto_adjust_async_curve_settings(curve, len(y_data))
-        curve.setData(x_data, np.asarray(y_data))
+            x_data = np.arange(n_points)
+        curve.setData(np.asarray(x_data), y_arr)
         return True
 
     @staticmethod
@@ -2188,6 +2254,91 @@ class Waveform(PlotBase):
             "buffer": buffer,
         }
         return buffer
+
+    def _ensure_lod_hooks(self):
+        """Re-decimate oversized curves for the visible window on zoom/pan."""
+        if getattr(self, "_lod_timer", None) is not None:
+            return
+        self._lod_timer = QTimer(self)
+        self._lod_timer.setSingleShot(True)
+        self._lod_timer.setInterval(150)
+        self._lod_timer.timeout.connect(self._apply_lod_windows)
+        self._lod_applying = False
+        self.plot_item.vb.sigXRangeChanged.connect(self._schedule_lod)
+
+    @SafeSlot()
+    def _schedule_lod(self, *_args):
+        """Debounce zoom/pan events; sigXRangeChanged passes (viewbox, range)."""
+        if not getattr(self, "_lod_applying", False):
+            self._lod_timer.start()
+
+    @SafeSlot()
+    def _apply_lod_windows(self):
+        """Render the visible slice of every oversized curve.
+
+        Zoomed out, the min/max envelope of all data is shown; zooming in
+        narrows the window until the raw samples themselves are rendered —
+        no information is lost at any zoom level.
+        """
+        x_min, x_max = self.plot_item.vb.viewRange()[0]
+        self._lod_applying = True
+        try:
+            for curve in self.curves + self._history_curves:
+                raw = getattr(curve, "_lod_raw", None)
+                if raw is None:
+                    continue
+                x_arr, y_arr = raw
+                n = len(y_arr)
+                if x_arr is None:
+                    i0 = max(0, int(np.floor(x_min)))
+                    i1 = min(n, int(np.ceil(x_max)) + 1)
+                else:
+                    i0, i1 = np.searchsorted(x_arr, [x_min, x_max])
+                    i0, i1 = max(0, i0 - 1), min(n, i1 + 1)
+                if i1 <= i0:
+                    continue
+                window = (i0, i1)
+                if getattr(curve, "_lod_window", None) == window:
+                    continue
+                curve._lod_window = window
+                y_win = y_arr[i0:i1]
+                x_win = None if x_arr is None else x_arr[i0:i1]
+                if len(y_win) > DISPLAY_POINT_LIMIT:
+                    x_dec, y_dec = _decimate_envelope(y_win, x_win, offset=i0)
+                    curve.setData(x_dec, y_dec)
+                else:
+                    curve.setData(np.arange(i0, i1) if x_win is None else x_win, y_win)
+        finally:
+            self._lod_applying = False
+
+    def _ensure_load_progress_bar(self) -> QProgressBar:
+        """Create (once) a full-width progress row below the plot."""
+        if getattr(self, "_load_progress_row", None) is None:
+            row = QWidget(self)
+            row_layout = QHBoxLayout(row)
+            row_layout.setContentsMargins(8, 2, 8, 2)
+            row_layout.setSpacing(8)
+            label = QLabel("Loading large dataset...", row)
+            bar = QProgressBar(row)
+            bar.setRange(0, 100)
+            bar.setTextVisible(True)
+            row_layout.addWidget(label)
+            row_layout.addWidget(bar, 1)
+            row.hide()
+            self.layout.addWidget(row)
+            self._load_progress_row = row
+            self._load_progress_bar = bar
+        return self._load_progress_bar
+
+    @SafeSlot(float)
+    def _on_data_load_progress(self, fraction: float):
+        """Show bulk-load progress so a long history read is visibly alive."""
+        bar = self._ensure_load_progress_bar()
+        if fraction >= 1.0:
+            self._load_progress_row.hide()
+            return
+        bar.setValue(int(fraction * 100))
+        self._load_progress_row.show()
 
     def _auto_adjust_async_curve_settings(
         self,

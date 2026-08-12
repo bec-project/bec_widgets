@@ -25,8 +25,12 @@ class QtDataSubscription(QObject):
 
     #: Emitted on the Qt thread with each SubscriptionUpdate.
     updated = Signal(object)
+    #: Emitted on the Qt thread with the bulk-load fraction (0..1) while the
+    #: backend reads history data.
+    progress = Signal(float)
 
     _raw = Signal(object)
+    _raw_progress = Signal(float)
 
     def __init__(
         self,
@@ -73,6 +77,7 @@ class QtDataSubscription(QObject):
         # auto-connection would then invoke _filter before _subscription is
         # assigned and before the widget had a chance to connect `updated`.
         self._raw.connect(self._filter, Qt.QueuedConnection)
+        self._raw_progress.connect(self._emit_progress, Qt.QueuedConnection)
         self._api = DataAPI(client)
         self._subscription = self._api.subscribe(
             sources=sources,
@@ -81,6 +86,7 @@ class QtDataSubscription(QObject):
             min_emit_interval=min_emit_interval,
             max_points=max_points,
             size_limit_bytes=size_limit_bytes,
+            progress_callback=self._deliver_progress,
         )
         self.destroyed.connect(lambda: self.close())
 
@@ -90,7 +96,15 @@ class QtDataSubscription(QObject):
         if not self._closed:
             self._raw.emit(update)
 
+    def _deliver_progress(self, fraction: float) -> None:
+        if not self._closed:
+            self._raw_progress.emit(float(fraction))
+
     # --- qt-thread side ------------------------------------------------------
+
+    def _emit_progress(self, fraction: float) -> None:
+        if not self._closed:
+            self.progress.emit(fraction)
 
     def _filter(self, update: SubscriptionUpdate) -> None:
         if self._closed or self._subscription is None:

@@ -86,6 +86,7 @@ def _fake_bridge_factory(monkeypatch, gated_bytes: int | None = None):
             self.healthy = True
             self.closed = False
             self.updated = MagicMock()
+            self.progress = MagicMock()
             self.size_limit_bytes = size_limit_bytes
             self.min_emit_interval = min_emit_interval
             self.estimated_bytes = gated_bytes
@@ -2235,3 +2236,86 @@ def test_async_display_values_accepts_numpy(qtbot, mocked_client):
     carrier = SimpleNamespace(_data_api_async_cache=None)
     cached = wf._async_display_values_cached(carrier, _make_update([src]), src)
     assert list(cached) == [1, 2, 3]
+
+
+def test_decimate_envelope_preserves_extremes():
+    """The envelope must contain the global min/max (spikes stay visible)."""
+    from bec_widgets.widgets.plots.waveform.waveform import _decimate_envelope
+
+    rng = np.random.default_rng(1)
+    y = rng.random(3_000_000)
+    y[1_234_567] = 5.0  # single-sample spike
+    y[2_222_222] = -5.0
+    x_dec, y_dec = _decimate_envelope(y)
+    assert len(y_dec) <= 2 * 250_000 + 2
+    assert len(x_dec) == len(y_dec)
+    assert y_dec.max() == 5.0
+    assert y_dec.min() == -5.0
+    assert x_dec[0] >= 0 and x_dec[-1] <= len(y) - 1
+
+    # custom x column keeps positional correspondence
+    x = np.linspace(100.0, 200.0, len(y))
+    x_dec2, y_dec2 = _decimate_envelope(y, x)
+    assert 100.0 <= x_dec2[0] <= x_dec2[-1] <= 200.0
+
+
+def test_oversized_async_curve_is_decimated_and_zoomable(qtbot, mocked_client, monkeypatch):
+    """An oversized history curve renders a bounded envelope; zooming into a
+    small window re-renders the raw samples (no data loss on investigation)."""
+    from bec_widgets.widgets.plots.waveform.waveform import DISPLAY_POINT_LIMIT
+
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    c = wf.plot(arg1="async_device", label="async_device-async_device")
+    wf.scan_id = "dummy"
+    wf.x_axis_mode["name"] = "index"
+
+    n = DISPLAY_POINT_LIMIT + 500_000
+    raw = np.random.default_rng(2).random(n)
+    src = _async_source("async_device", values=raw, update_type=None, as_numpy=True)
+    src.metadata.pop("async_update_type", None)
+    wf._on_data_update(_make_update([src], reason="history"))
+
+    x_data, y_data = c.get_data()
+    assert len(y_data) <= 2 * 250_000 + 2  # bounded display
+    assert c._lod_raw is not None  # raw kept for zooming
+
+    # zoom into a 1000-sample window -> raw samples rendered exactly
+    wf.plot_item.vb.setXRange(1000, 2000, padding=0)
+    wf._apply_lod_windows()
+    x_data, y_data = c.get_data()
+    assert len(y_data) <= 1200
+    i0 = int(x_data[0])
+    np.testing.assert_array_almost_equal(y_data[:10], raw[i0 : i0 + 10])
+
+
+def test_data_load_progress_bar_shows_and_hides(qtbot, mocked_client, monkeypatch):
+    """The load progress bar appears with fractions < 1 and hides at 1.0."""
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf._on_data_load_progress(0.3)
+    assert not wf._load_progress_row.isHidden()
+    assert wf._load_progress_bar.value() == 30
+    wf._on_data_load_progress(1.0)
+    assert wf._load_progress_row.isHidden()
+
+
+def test_zoom_signal_schedules_lod_redecimation(qtbot, mocked_client, monkeypatch):
+    """Regression: sigXRangeChanged passes (viewbox, range); the debounce slot
+    must accept them — a TypeError here was swallowed by SafeSlot on every
+    plot interaction and LOD re-decimation never ran."""
+    from bec_widgets.widgets.plots.waveform.waveform import DISPLAY_POINT_LIMIT
+
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    c = wf.plot(arg1="async_device", label="async_device-async_device")
+    wf.scan_id = "dummy"
+    wf.x_axis_mode["name"] = "index"
+    raw = np.zeros(DISPLAY_POINT_LIMIT + 10)
+    src = _async_source("async_device", values=raw, update_type=None, as_numpy=True)
+    src.metadata.pop("async_update_type", None)
+    wf._on_data_update(_make_update([src], reason="history"))
+
+    wf._lod_timer.stop()
+    wf.plot_item.vb.setXRange(10, 20, padding=0)  # emits sigXRangeChanged
+    assert wf._lod_timer.isActive(), "zoom did not schedule LOD re-decimation"
