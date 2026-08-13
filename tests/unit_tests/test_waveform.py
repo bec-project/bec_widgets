@@ -480,6 +480,151 @@ def test_on_scan_status(qtbot, mocked_client, monkeypatch, mode, calls):
     assert async_spy.call_count == calls[1], "async_signal_update should be called exactly once"
 
 
+def test_on_scan_status_ignored_without_device_curves(qtbot, mocked_client_with_dap, monkeypatch):
+    """
+    A widget with only custom/dap curves (no live scan to follow) must not have its
+    scan_id -- and therefore its DAP request/response subscription -- reassigned by
+    unrelated scan_status messages. Otherwise an in-flight DAP request can have its
+    response dropped because the widget resubscribed to a different scan_id before
+    the response arrived.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    x = np.linspace(-1, 1, 50)
+    y = np.sin(x)
+    wf.plot(x=x, y=y, label="custom-curve", dap="GaussianModel")
+
+    dummy_scan = create_dummy_scan_item()
+    dummy_scan.metadata["bec"]["scan_id"] = "unrelated-scan-1"
+    monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: dummy_scan)
+
+    setup_dap_spy = MagicMock(wraps=wf.setup_dap_for_scan)
+    monkeypatch.setattr(wf, "setup_dap_for_scan", setup_dap_spy)
+
+    scan_id_before = wf.scan_id
+    calls_before = setup_dap_spy.call_count
+
+    wf.on_scan_status({"scan_id": "unrelated-scan-1"}, {})
+    wf.on_scan_status({"scan_id": "unrelated-scan-2"}, {})
+
+    assert wf.scan_id == scan_id_before
+    assert setup_dap_spy.call_count == calls_before
+
+
+def test_request_dap_skips_unchanged_static_parent(qtbot, mocked_client_with_dap, monkeypatch):
+    """
+    DAP curves whose parent is a static custom curve must not be resubmitted by
+    scan-driven request_dap calls when the fit inputs are unchanged. Changing the
+    custom data (or the oversample) triggers exactly one new request.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    curve = wf.plot(x=[0, 1, 2], y=[1, 2, 3], label="custom-static", dap="GaussianModel")
+    dap_curve = wf.get_curve(f"{curve.name()}-GaussianModel")
+    assert dap_curve is not None
+
+    published = []
+    monkeypatch.setattr(
+        wf.client.connector,
+        "set_and_publish",
+        lambda topic, msg, *args, **kwargs: published.append(msg),
+    )
+
+    # The creation-time request already stored a fingerprint; identical inputs are skipped
+    wf.request_dap()
+    wf.request_dap()
+    assert len(published) == 0
+
+    # New custom data -> one new request, further identical calls skipped again
+    curve.set_data([0, 1, 2], [3, 2, 1])
+    wf.request_dap()
+    wf.request_dap()
+    assert len(published) == 1
+
+    # Oversample change requests immediately via the setter and updates the fingerprint
+    dap_curve.dap_oversample = 4
+    assert len(published) == 2
+    wf.request_dap()
+    assert len(published) == 2
+
+
+def test_request_dap_resubmits_on_roi_change_for_static_parent(
+    qtbot, mocked_client_with_dap, monkeypatch
+):
+    """
+    Changing the linear region selector changes the cropped fit inputs, so a DAP
+    curve with a static custom parent must be resubmitted even though the parent
+    data itself did not change.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    x = np.linspace(0, 10, 50)
+    wf.plot(x=x, y=np.sin(x), label="custom-roi", dap="GaussianModel")
+
+    published = []
+    monkeypatch.setattr(
+        wf.client.connector,
+        "set_and_publish",
+        lambda topic, msg, *args, **kwargs: published.append(msg),
+    )
+
+    wf.request_dap()
+    assert len(published) == 0
+
+    wf.roi_region = (2.0, 8.0)
+    wf.request_dap()
+    assert len(published) == 1
+    assert len(published[0].content["config"]["kwargs"]["data_x"]) < len(x)
+
+    # Same region again -> no resubmission
+    wf.request_dap()
+    assert len(published) == 1
+
+    # Removing the region restores the full data set -> one resubmission
+    wf.roi_region = None
+    wf.request_dap()
+    assert len(published) == 2
+
+
+def test_request_dap_releases_proxy_when_nothing_published(
+    qtbot, mocked_client_with_dap, monkeypatch
+):
+    """
+    When request_dap skips every DAP curve (static parents, unchanged inputs), no
+    dap_response will arrive to unblock proxy_dap_request. The proxy must be
+    released immediately, otherwise the next trigger (e.g. an ROI change) would be
+    delayed by the proxy timeout.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    wf.plot(x=[0, 1, 2], y=[1, 2, 3], label="custom-blocked", dap="GaussianModel")
+
+    monkeypatch.setattr(
+        wf.client.connector, "set_and_publish", lambda topic, msg, *args, **kwargs: None
+    )
+
+    wf.request_dap_update.emit()
+    assert wf.proxy_dap_request.blocked is True
+    # The proxy timeout is 10 s; the no-publish call must release it much earlier
+    qtbot.waitUntil(lambda: wf.proxy_dap_request.blocked is False, timeout=3000)
+
+
+def test_request_dap_always_resubmits_device_parent(qtbot, mocked_client_with_dap, monkeypatch):
+    """
+    DAP curves attached to device curves keep the resubmit-on-every-update behavior,
+    since their parent data changes as the scan progresses.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    wf.plot(arg1="bpm4i", label="bpm4i-bpm4i", dap="GaussianModel")
+
+    published = []
+    monkeypatch.setattr(
+        wf.client.connector,
+        "set_and_publish",
+        lambda topic, msg, *args, **kwargs: published.append(msg),
+    )
+
+    wf.request_dap()
+    wf.request_dap()
+    assert len(published) == 2
+
+
 def test_add_dap_curve(qtbot, mocked_client_with_dap, monkeypatch):
     """
     Test add_dap_curve creates a new DAP curve from an existing device curve
@@ -792,6 +937,15 @@ def test_normalize_dap_parameters_composite_dict():
 
 def test_request_dap_includes_normalized_parameters(qtbot, mocked_client_with_dap, monkeypatch):
     wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+
+    captured = {}
+
+    def capture(topic, msg, *args, **kwargs):  # noqa: ARG001
+        captured["topic"] = topic
+        captured["msg"] = msg
+
+    monkeypatch.setattr(wf.client.connector, "set_and_publish", capture)
+
     curve = wf.plot(
         x=[0, 1, 2],
         y=[1, 2, 3],
@@ -801,16 +955,8 @@ def test_request_dap_includes_normalized_parameters(qtbot, mocked_client_with_da
     )
     dap_curve = wf.get_curve(f"{curve.name()}-GaussianModel")
     assert dap_curve is not None
+    # The oversample setter issues a fresh DAP request with the new value
     dap_curve.dap_oversample = 3
-
-    captured = {}
-
-    def capture(topic, msg, *args, **kwargs):  # noqa: ARG001
-        captured["topic"] = topic
-        captured["msg"] = msg
-
-    monkeypatch.setattr(wf.client.connector, "set_and_publish", capture)
-    wf.request_dap()
 
     msg = captured["msg"]
     dap_kwargs = msg.content["config"]["kwargs"]
@@ -822,6 +968,15 @@ def test_request_dap_includes_normalized_parameters(qtbot, mocked_client_with_da
 
 def test_request_dap_includes_composite_parameters_list(qtbot, mocked_client_with_dap, monkeypatch):
     wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+
+    captured = {}
+
+    def capture(topic, msg, *args, **kwargs):  # noqa: ARG001
+        captured["topic"] = topic
+        captured["msg"] = msg
+
+    monkeypatch.setattr(wf.client.connector, "set_and_publish", capture)
+
     curve = wf.plot(
         x=[0, 1, 2],
         y=[1, 2, 3],
@@ -831,15 +986,6 @@ def test_request_dap_includes_composite_parameters_list(qtbot, mocked_client_wit
     )
     dap_curve = wf.get_curve(f"{curve.name()}-GaussianModel+GaussianModel")
     assert dap_curve is not None
-
-    captured = {}
-
-    def capture(topic, msg, *args, **kwargs):  # noqa: ARG001
-        captured["topic"] = topic
-        captured["msg"] = msg
-
-    monkeypatch.setattr(wf.client.connector, "set_and_publish", capture)
-    wf.request_dap()
 
     msg = captured["msg"]
     dap_kwargs = msg.content["config"]["kwargs"]

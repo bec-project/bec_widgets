@@ -106,6 +106,8 @@ class Curve(BECConnector, pg.PlotDataItem):
         self.dap_params = None
         self.dap_summary = None
         self.slice_index = None
+        self._data_version = 0
+        self._last_dap_request_fingerprint: tuple | None = None
         if kwargs:
             self.set(**kwargs)
         # Activate setClipToView, to boost performance for large datasets per default
@@ -194,6 +196,17 @@ class Curve(BECConnector, pg.PlotDataItem):
         """
         self.config.signal.dap_oversample = value
         self.parent_item.request_dap()  # do immediate request for dap update
+
+    @property
+    def data_version(self) -> int:
+        """Monotonic counter bumped on every ``setData`` call."""
+        return self._data_version
+
+    def setData(self, *args, **kwargs):
+        """Wrap ``PlotDataItem.setData`` to track how often the data changes."""
+        # getattr guards against setData being reached before __init__ sets the field.
+        self._data_version = getattr(self, "_data_version", 0) + 1
+        super().setData(*args, **kwargs)
 
     def set_data(self, x: list | np.ndarray, y: list | np.ndarray):
         """

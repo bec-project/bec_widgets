@@ -1582,6 +1582,9 @@ class Waveform(PlotBase):
         if current_scan_id is None:
             return
 
+        if self.curves and not any(curve.config.source == "device" for curve in self.curves):
+            return
+
         if current_scan_id != self.scan_id:
             self.reset()
             self.new_scan.emit()
@@ -1974,6 +1977,7 @@ class Waveform(PlotBase):
     def request_dap(self, _=None):
         """Request new fit for data"""
 
+        published = False
         for dap_curve in self._dap_curves:
             parent_label = getattr(dap_curve.config, "parent_label", None)
             if not parent_label:
@@ -1999,6 +2003,15 @@ class Waveform(PlotBase):
                 x_max = None
 
             dap_parameters = getattr(dap_curve.config.signal, "dap_parameters", None)
+
+            if parent_curve.config.source != "device":
+                fingerprint = self._dap_request_fingerprint(
+                    dap_curve, parent_curve, model_name, dap_parameters
+                )
+                if fingerprint == dap_curve._last_dap_request_fingerprint:
+                    continue
+                dap_curve._last_dap_request_fingerprint = fingerprint
+
             dap_kwargs = {
                 "data_x": x_data,
                 "data_y": y_data,
@@ -2027,6 +2040,42 @@ class Waveform(PlotBase):
                 metadata={"RID": f"{self.scan_id}-{self.gui_id}"},
             )
             self.client.connector.set_and_publish(MessageEndpoints.dap_request(), msg)
+            published = True
+
+        if not published:
+            self.unblock_dap_proxy.emit()
+
+    def _dap_request_fingerprint(
+        self,
+        dap_curve: Curve,
+        parent_curve: Curve,
+        model_name: str | list[str],
+        dap_parameters: dict | list | None,
+    ) -> tuple:
+        """
+        Fingerprint of everything that determines the outcome of a DAP request for a
+        curve with a static (custom/history) parent. Two identical fingerprints mean
+        the request can be skipped. scan_id is included because it keys the request
+        RID and the response subscription, so a new scan re-issues the fit once under
+        the current subscription.
+
+        Args:
+            dap_curve(Curve): The DAP curve the request would be issued for.
+            parent_curve(Curve): The static source curve providing the fit data.
+            model_name(str | list[str]): The DAP model name(s).
+            dap_parameters(dict | list | None): Optional lmfit parameter overrides.
+
+        Returns:
+            tuple: The fingerprint.
+        """
+        return (
+            self.scan_id,
+            str(model_name),
+            dap_curve.dap_oversample,
+            dap_parameters,
+            parent_curve.data_version,
+            self.roi_region,
+        )
 
     @staticmethod
     def _normalize_dap_parameters(
