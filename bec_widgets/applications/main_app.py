@@ -434,8 +434,6 @@ def main():  # pragma: no cover
     startup_profiler.mark("window shown")
 
     # First event-loop iteration -> the window is actually painted/interactive.
-    from qtpy.QtCore import QTimer
-
     QTimer.singleShot(0, lambda: startup_profiler.mark("interactive", final=True))
 
     sys.exit(app.exec())
