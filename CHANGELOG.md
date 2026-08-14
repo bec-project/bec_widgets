@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.33.3 (2026-08-14)
+
+### Bug Fixes
+
+- **waveform**: Static dap curve updates not linked to scan id; optimization of custom curve fitting
+  ([`dce6e30`](https://github.com/bec-project/bec_widgets/commit/dce6e306379cb31a1b63a443f8bf4c7fc58e0915))
+
+
 ## v3.33.2 (2026-08-12)
 
 ### Bug Fixes
