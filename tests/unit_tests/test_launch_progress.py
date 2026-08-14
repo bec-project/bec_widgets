@@ -23,6 +23,12 @@ class _Server:
         self.path = path
         self._srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self._srv.settimeout(2.0)
+        # A crashed previous run (with pid reuse) can leave the socket file behind,
+        # which would make bind() fail with "Address already in use".
+        try:
+            os.unlink(path)
+        except FileNotFoundError:
+            pass
         self._srv.bind(path)
         self._srv.listen(1)
         self._conn: socket.socket | None = None

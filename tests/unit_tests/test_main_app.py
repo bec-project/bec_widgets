@@ -88,8 +88,7 @@ def test_main_app_notifies_launcher_ready_after_show(qtbot, mocked_client, monke
     qtbot.addWidget(app)
     app.show()
     qtbot.waitExposed(app)
-    qtbot.wait(10)
-
+    qtbot.waitUntil(lambda: calls == [("bec-app", app)], timeout=1000)
     assert calls == [("bec-app", app)]
 
 

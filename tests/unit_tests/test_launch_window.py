@@ -142,7 +142,7 @@ def test_launch_window_notifies_launcher_ready(qtbot, bec_launch_window, monkeyp
     qtbot.addWidget(window)
     window.show()
     bec_launch_window._notify_launcher_ready(window)
-    qtbot.wait(10)
+    qtbot.waitUntil(lambda: calls == [("bec-gui-server", window)], timeout=1000)
 
     assert calls == [("bec-gui-server", window)]
 

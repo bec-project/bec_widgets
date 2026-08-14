@@ -26,6 +26,12 @@ def test_notify_launcher_ready_sends_ready(monkeypatch):
     path = _short_socket_path()
     srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     srv.settimeout(2.0)
+    # A crashed previous run (with pid reuse) can leave the socket file behind,
+    # which would make bind() fail with "Address already in use".
+    try:
+        os.unlink(path)
+    except FileNotFoundError:
+        pass
     srv.bind(path)
     srv.listen(1)
     try:
