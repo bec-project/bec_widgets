@@ -1,0 +1,130 @@
+# Builds the graphify knowledge graph and publishes it with the release it describes.
+#
+# Triggered after "Continuous Delivery" (semantic-release) completes: releases happen
+# exactly when releasable code (feat/fix/perf) lands on the default branch, so the graph
+# tracks actual code changes rather than every push. A release-tag gate skips CD runs
+# that released nothing — and, because it only proceeds when HEAD carries a v* tag, it
+# also guarantees the graph describes exactly the commit that was released. Note:
+# chaining via workflow_run is deliberate — tags pushed by a workflow's own GITHUB_TOKEN
+# do not fire `on: push: tags` workflows.
+#
+# Two publication paths:
+#   * release runs attach knowledge-graph.tar.gz to the GitHub Release for that tag, so
+#     every developer can fetch the map for a given version, unauthenticated and
+#     permanently, at a URL derived from the version alone;
+#   * all runs also upload a job artifact, which is what makes PR and workflow_dispatch
+#     dry-runs inspectable.
+#
+# The graph is never committed (graphify-out/ is gitignored). actions/cache carries the
+# AST cache between runs, so rebuilds are incremental. CI builds are AST-only
+# (deterministic, no LLM key); the semantic docs layer and community labels ride along
+# via the cache when a locally refreshed one was uploaded.
+
+name: knowledge-graph
+
+on:
+  workflow_run:
+    workflows: ["Continuous Delivery"]
+    types: [completed]
+  workflow_dispatch: {}
+  # TEMPORARY dry-run trigger — this commit is meant to be dropped before merge.
+  pull_request: {}
+
+permissions:
+  contents: read
+
+jobs:
+  build-graph:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # write is needed only to attach the tarball to an existing release; the workflow
+    # never pushes commits, tags or branches.
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-tags: true
+
+      - name: Release gate
+        id: gate
+        run: |
+          TAG="$(git tag --points-at HEAD | grep '^v' | head -n 1 || true)"
+          # TEMPORARY: on pull_request the checkout is the merge commit, which exists in
+          # no local clone - stamping it would make every staleness check report
+          # "Invalid revision range". Stamp the PR head, which developers do have.
+          SHA="${{ github.event.pull_request.head.sha }}"
+          [ -n "$SHA" ] || SHA="$(git rev-parse HEAD)"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" != "workflow_run" ]; then
+            # dry-run contexts: build, but there is no release to attach to
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif [ -n "$TAG" ]; then
+            echo "Released $TAG - building and attaching the graph."
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "CD run made no release - skipping graph build."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-python@v5
+        if: steps.gate.outputs.run == 'true'
+        with:
+          python-version: "3.12"
+
+      - name: Restore graph cache
+        if: steps.gate.outputs.run == 'true'
+        uses: actions/cache@v4
+        with:
+          path: graphify-out
+          key: graphify-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            graphify-${{ runner.os }}-
+
+      - name: Install graphify
+        if: steps.gate.outputs.run == 'true'
+        # pinned so CI node ids stay identical to locally built graphs;
+        # bump deliberately together with local installs
+        run: pip install --quiet 'graphifyy==0.9.5'
+
+      - name: Build knowledge graph
+        if: steps.gate.outputs.run == 'true'
+        env:
+          PYTHONHASHSEED: "0" # deterministic clustering
+          # identity written into build_meta.json; GITHUB_SHA is overridden because on
+          # workflow_run it names the triggering run's head, not what we checked out
+          GITHUB_SHA: ${{ steps.gate.outputs.sha }}
+          GRAPH_RELEASE_TAG: ${{ steps.gate.outputs.tag }}
+        run: python .github/scripts/graphify/graph_rebuild.py . .github/scripts/graphify/graph_spec.json
+
+      - name: Package graph
+        id: package
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          # name the asset after the version it describes, so a downloaded file is
+          # identifiable on disk without unpacking it first
+          VERSION=$(python -c "import json; print(json.load(open('graphify-out/build_meta.json'))['version'])")
+          NAME="knowledge-graph-v${VERSION}.tar.gz"
+          tar -czf "$NAME" -C graphify-out graph.json GRAPH_REPORT.md build_meta.json
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "Packaged $NAME ($(du -h "$NAME" | cut -f1)):"
+          cat graphify-out/build_meta.json
+
+      - name: Attach graph to release
+        # only release runs have a tag to attach to; dry-runs stop at the artifact below
+        if: steps.gate.outputs.run == 'true' && steps.gate.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ steps.gate.outputs.tag }}" "${{ steps.package.outputs.name }}" --clobber
+
+      - name: Publish graph artifact
+        if: steps.gate.outputs.run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: knowledge-graph
+          path: ${{ steps.package.outputs.name }}
+          retention-days: 90
