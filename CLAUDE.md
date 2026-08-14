@@ -8,6 +8,12 @@ truth). The points that matter most in day-to-day work:
 - **Check for `AGENTS_PERSONAL.md` first.** If it exists, it extends `AGENTS.md` with
   machine-specific environment setup and takes precedence over the generic venv/pip instructions there.
   It is untracked and personal — never commit it, and never assume it exists.
+- **If `graphify-out/` exists, route through it before grepping** — `graphify query/path/explain/affected`
+  answer "what talks to what" faster than a repo-wide search. It is optional and gitignored; if it is
+  missing, just work from the code. Before trusting a downloaded map, check it against the checkout —
+  not the installed package, which can lag — with the `git rev-list --count` snippet in `AGENTS.md`.
+  Anything but `0` means the map is behind your working tree: say so and verify against the code
+  instead of answering from the graph.
 - **Import from `qtpy`, never `PySide6.*`.** CI greps for `from PySide6.` and fails the build (only
   `PySide6.QtDesigner` and `PySide6.scripts` are exempt).
 - **`bec_widgets/cli/client.py` and the Designer plugin files are generated — never hand-edit them.**

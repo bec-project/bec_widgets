@@ -34,6 +34,86 @@ Console scripts declared in `pyproject.toml`:
 - `bec-designer` — Qt Designer with the BEC widget plugins loaded.
 - `bw-generate-cli` — regenerates the RPC client and Designer plugin stubs.
 
+## Knowledge Graph (optional)
+
+CI builds a [graphify](https://pypi.org/project/graphifyy/) knowledge graph of this repository on every
+release and attaches it to that release as `knowledge-graph.tar.gz`. It maps modules, classes, and the
+import/call relationships between them, and it answers "what talks to what" faster than a repo-wide
+grep does.
+
+**It is optional and never committed** — `graphify-out/` is gitignored. If graphify is not installed or
+no graph is present, skip this section entirely and work from the layout above; nothing here is a
+prerequisite for contributing.
+
+When a graph *is* present, use it for routing before falling back to grep:
+
+```bash
+graphify query "How does a waveform get its scan data?"   # BFS context around a question
+graphify path "ScanControl" "BECDispatcher"               # shortest path between two nodes
+graphify explain "BECConnector"                           # one node and its neighbours
+graphify affected "BECWidget" --depth 2                   # reverse impact of a change
+```
+
+### Fetching and refreshing the map
+
+The graph describes the code in a checkout, so match it to the checkout you are reading — not to
+whatever happens to be installed in the environment, which for an editable install can be several
+releases behind:
+
+```bash
+VERSION=$(python -c "import tomllib, pathlib; \
+    print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+TMP=$(mktemp -d)
+gh release download "v$VERSION" --repo bec-project/bec_widgets \
+    --pattern 'knowledge-graph-*.tar.gz' --dir "$TMP"
+mkdir -p graphify-out && tar -xzf "$TMP"/knowledge-graph-v*.tar.gz -C graphify-out && rm -rf "$TMP"
+```
+
+Unpacking through a temp directory keeps the tarball out of the working tree — only `graphify-out/`
+is gitignored, so a downloaded archive left in the repo root is one `git add -A` away from being
+committed.
+
+`pyproject.toml`'s version is always a released one — semantic-release bumps it in the release commit —
+so `v$VERSION` reliably resolves.
+
+The map is self-describing. `graphify-out/build_meta.json` records what it covers — `version`/`tag` for
+the release, `packages` for every distribution built from that tree, `commit` for the exact revision,
+and `requires` for cross-repo BEC-family constraints — and the same block is embedded in `graph.json`
+under `build_meta`, so a map that gets copied around on its own still says which release it belongs to:
+
+```bash
+python -c "import json; print(json.load(open('graphify-out/graph.json'))['build_meta'])"
+```
+
+**Check `commit` before trusting the graph**, because a checkout normally sits *ahead* of its last
+release and matching version strings do not mean matching code:
+
+```bash
+GRAPH_COMMIT=$(python -c \
+    "import json; print(json.load(open('graphify-out/build_meta.json'))['commit'] or '')" 2>/dev/null)
+git rev-list --count "${GRAPH_COMMIT:?no stamped build_meta.json - refetch the map}..HEAD"
+```
+
+Read the result as:
+
+- **`0`** — the map matches HEAD exactly.
+- **a small number** — it lags by that many commits. Usable for orientation, but confirm anything it
+  says about recently touched code by reading the file.
+- **`fatal: Invalid revision range`** — the map was built from a commit that is not in your history, so
+  it describes a different line of development. Do not rely on it.
+- **`no stamped build_meta.json`** — there is no CI-built map here. Either nothing was downloaded, or
+  the graph was built locally (a locally rebuilt graph tracks your tree continuously and needs no
+  version check).
+
+The `:?` guard matters: without it an unreadable `build_meta.json` yields an empty revision range and
+`git rev-list` cheerfully answers `0`, which is indistinguishable from a perfectly current map. In every
+non-zero case, say the map is stale rather than presenting its answer as current.
+
+`requires` is what to check when a *cross-repo* answer looks wrong. Note these are floors
+(`bec_lib~=3.134`), not the version resolved at build time — `bec` may be many releases past the floor —
+so treat them as a coarse signal, and read `bec`'s own graph or source when the question is really about
+`bec_lib`.
+
 ## Local Environment Overlay
 
 If a file named **`AGENTS_PERSONAL.md`** exists next to this one, read it and treat it as an extension
