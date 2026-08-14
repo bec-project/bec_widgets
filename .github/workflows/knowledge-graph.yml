@@ -27,6 +27,8 @@ on:
     workflows: ["Continuous Delivery"]
     types: [completed]
   workflow_dispatch: {}
+  # TEMPORARY dry-run trigger — this commit is meant to be dropped before merge.
+  pull_request: {}
 
 permissions:
   contents: read
@@ -51,7 +53,12 @@ jobs:
         id: gate
         run: |
           TAG="$(git tag --points-at HEAD | grep '^v' | head -n 1 || true)"
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          # TEMPORARY: on pull_request the checkout is the merge commit, which exists in
+          # no local clone - stamping it would make every staleness check report
+          # "Invalid revision range". Stamp the PR head, which developers do have.
+          SHA="${{ github.event.pull_request.head.sha }}"
+          [ -n "$SHA" ] || SHA="$(git rev-parse HEAD)"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           if [ "${{ github.event_name }}" != "workflow_run" ]; then
             # dry-run contexts: build, but there is no release to attach to

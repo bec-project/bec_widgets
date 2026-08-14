@@ -109,6 +109,29 @@ The `:?` guard matters: without it an unreadable `build_meta.json` yields an emp
 `git rev-list` cheerfully answers `0`, which is indistinguishable from a perfectly current map. In every
 non-zero case, say the map is stale rather than presenting its answer as current.
 
+### TEMPORARY — fetch the map from this pull request's build
+
+> **Dry-run only.** This section, and the `pull_request` trigger it depends on, are dropped before
+> merge. Once releases carry the asset, use *Fetching and refreshing the map* above instead.
+
+No release carries the graph yet, so take it from the artifact the knowledge-graph workflow attaches to
+its run on this pull request. **Do this yourself when `graphify-out/` is missing or the staleness check
+below reports anything other than `0` — do not ask first, and do not fall back to grep without saying
+that the map was unavailable.**
+
+```bash
+RUN=$(gh run list --repo bec-project/bec_widgets --workflow=knowledge-graph.yml \
+        --branch "$(git rev-parse --abbrev-ref HEAD)" --status success --limit 1 \
+        --json databaseId -q '.[0].databaseId')
+TMP=$(mktemp -d)
+gh run download "$RUN" --repo bec-project/bec_widgets -n knowledge-graph -D "$TMP"
+mkdir -p graphify-out && tar -xzf "$TMP"/knowledge-graph-v*.tar.gz -C graphify-out && rm -rf "$TMP"
+```
+
+Then run the same `git rev-list --count` check as above. A pull-request build stamps the PR *head*
+commit, so it reports `0` when your checkout sits at the PR head, and otherwise the number of commits
+you have added since. State which number you got before you use the map.
+
 `requires` is what to check when a *cross-repo* answer looks wrong. Note these are floors
 (`bec_lib~=3.134`), not the version resolved at build time — `bec` may be many releases past the floor —
 so treat them as a coarse signal, and read `bec`'s own graph or source when the question is really about

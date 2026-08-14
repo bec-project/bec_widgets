@@ -14,6 +14,10 @@ truth). The points that matter most in day-to-day work:
   not the installed package, which can lag — with the `git rev-list --count` snippet in `AGENTS.md`.
   Anything but `0` means the map is behind your working tree: say so and verify against the code
   instead of answering from the graph.
+- **TEMPORARY (dropped before merge):** if `graphify-out/` is missing or that check is not `0`, fetch
+  the map yourself from this pull request's workflow artifact — see *TEMPORARY — fetch the map from
+  this pull request's build* in `AGENTS.md`. Do it without asking, and report the staleness number you
+  got before using the map.
 - **Import from `qtpy`, never `PySide6.*`.** CI greps for `from PySide6.` and fails the build (only
   `PySide6.QtDesigner` and `PySide6.scripts` are exempt).
 - **`bec_widgets/cli/client.py` and the Designer plugin files are generated — never hand-edit them.**
