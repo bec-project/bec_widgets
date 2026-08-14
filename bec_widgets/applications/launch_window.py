@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 from typing import TYPE_CHECKING, Callable
 
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import Qt, Signal  # type: ignore
+from qtpy.QtCore import Qt, QTimer, Signal  # type: ignore
 from qtpy.QtGui import QFontMetrics, QPainter, QPainterPath, QPixmap
 from qtpy.QtWidgets import (
     QApplication,
@@ -496,7 +496,6 @@ class LaunchWindow(BECMainWindow):
 
     @staticmethod
     def _notify_launcher_ready(window: QWidget) -> None:
-        from qtpy.QtCore import QTimer
 
         from bec_widgets.utils.launcher_ready import notify_launcher_ready
 
