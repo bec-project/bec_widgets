@@ -1,125 +1,109 @@
 # Repository Guidelines — `bec_widgets`
 
-**BEC Widgets** is a modular **PySide6 / Qt6** toolkit for
-[BEC (Beamline Experiment Control)](https://github.com/bec-project/bec). It provides dockable, composable
-GUI components that move devices, run scans, and stream live or on-disk data. Widgets stay in sync with a
-running BEC deployment through Redis, are scriptable over an RPC layer, and are extensible through a
-plugin system so beamlines can add their own widgets without forking this repository.
+`bec_widgets` is the core BEC Qt widget toolkit. Prefer focused changes, follow existing local widget
+patterns, verify the smallest relevant test scope, and keep generated code plus downstream plugin
+compatibility in mind.
 
-This file is a quick-reference for AI coding agents (and new contributors). User-facing documentation
-lives at <https://bec.readthedocs.io>, authored in the separate
+This file is an agent-oriented operating manual. User-facing documentation lives at
+<https://bec.readthedocs.io> and is authored in the separate
 [`bec-project/bec_docs`](https://github.com/bec-project/bec_docs) repository.
 
-## Project Structure & Module Organization
+## Core Rules
 
-`bec_widgets/` is the importable package:
+- Import Qt modules from `qtpy`, not `PySide6`.
+- Do not hand-edit generated RPC or Designer files; regenerate them with `bw-generate-cli`.
+- If a widget exposes `USER_ACCESS` or is available in Qt Designer, treat its generated CLI and plugin
+  stubs as part of the change.
+- Inherit `BECWidget` first, then the Qt base class.
+- Use `MessageEndpoints`, `BECDispatcher`, `SafeSlot`, and existing local widget patterns before
+  introducing a new abstraction.
+- Do not block the Qt event loop with slow I/O, RPC, or heavy computation.
+- Clean up dispatcher subscriptions, timers, and long-lived resources in `cleanup()`.
+- Beamline-specific widgets usually belong in a plugin repository, not core `bec_widgets`.
+- Keep diffs focused. Avoid unrelated refactors while fixing a specific issue.
+- Add regression tests for bug fixes.
+- Do not commit, push, or open PRs unless explicitly asked.
 
-| Path | What goes there |
-| --- | --- |
-| `bec_widgets/widgets/` | Reusable Qt widgets, grouped by domain: `plots/`, `control/`, `containers/`, `services/`, `utility/`, `dap/`, `editors/`, `progress/`. This is where most contributions land. |
-| `bec_widgets/applications/` | Assembled, launchable applications — `main_app.py` (`bec-app`), `companion_app.py` (`bec-gui-server`), and the launch window. |
-| `bec_widgets/utils/` | Shared plumbing: `bec_widget.py`, `bec_connector.py`, `bec_dispatcher.py`, `error_popups.py` (`SafeSlot`), `colors.py`, `generate_cli.py`, the plugin helpers, and Designer glue. |
-| `bec_widgets/cli/` | RPC client layer and Designer plugin registry. **`cli/client.py` is generated — see below.** |
-| `bec_widgets/assets/` | Packaged icons, `.ui` files, and templates. |
-| `bec_widgets/examples/` | Small runnable examples. |
-| `bec_widgets/tests/` | Test helpers shipped *with* the package (`FakeDevice`, `FakePositioner`, `DMMock`) so downstream plugin repos can reuse them. |
-| `tests/unit_tests/` | The main test suite; mirrors the package layout. |
-| `tests/end-2-end/` | Tests against a real BEC deployment. |
-| `tests/reference_failures/` | Output directory for failed image comparisons; uploaded as a CI artifact. |
+## First Read
+
+Start here when orienting yourself:
+
+- `bec_widgets/utils/bec_widget.py` — base widget behavior and shortcuts
+- `bec_widgets/utils/bec_dispatcher.py` — widget-side subscription wiring
+- `bec_widgets/utils/error_popups.py` — `SafeSlot` and user-visible exception handling
+- `bec_widgets/utils/generate_cli.py` — generated RPC and Designer code entry point
+- `bec_widgets/utils/bec_plugin_helper.py` — plugin discovery and entry points
+- `tests/unit_tests/conftest.py` — shared widget fixtures and `create_widget(...)`
+- `pyproject.toml` — scripts, tooling, and dependency source of truth
+
+## Repo Layout
+
+Main package and test areas:
+
+- `bec_widgets/widgets/` — reusable Qt widgets grouped by domain
+- `bec_widgets/applications/` — assembled applications such as `bec-app` and `bec-gui-server`
+- `bec_widgets/utils/` — shared plumbing, widget base classes, CLI generation, and plugin helpers
+- `bec_widgets/cli/` — RPC client layer and Designer plugin registry; generated files live here
+- `bec_widgets/assets/` — packaged icons, `.ui` files, and templates
+- `bec_widgets/examples/` — small runnable examples
+- `bec_widgets/tests/` — packaged test helpers for downstream plugin repos
+- `tests/unit_tests/` — main test suite
+- `tests/end-2-end/` — tests against a real BEC deployment
+- `tests/reference_failures/` — failed image-comparison output collected in CI
 
 Console scripts declared in `pyproject.toml`:
 
-- `bec-app` — the main dockable application.
-- `bec-gui-server` — companion GUI server driven by the BEC IPython client.
-- `bec-designer` — Qt Designer with the BEC widget plugins loaded.
-- `bw-generate-cli` — regenerates the RPC client and Designer plugin stubs.
+- `bec-app` — main dockable application
+- `bec-gui-server` — companion GUI server driven by the BEC IPython client
+- `bec-designer` — Qt Designer with BEC widget plugins loaded
+- `bw-generate-cli` — regenerates RPC client and Designer plugin stubs
 
-## Local Environment Overlay
+Treat `pyproject.toml` as the source of truth for dependencies, scripts, Black, isort, and pylint
+behavior.
 
-If a file named **`AGENTS_PERSONAL.md`** exists next to this one, read it and treat it as an extension
-of this file. It carries machine-specific setup — interpreter and environment manager, local paths,
-private workflow conventions — and **its instructions take precedence over the generic
-"Development Environment" section below**. Everything else in this file still applies.
+## Local Overlay
 
-That file is intentionally untracked and personal to one developer's machine. Do not commit it, do not
-reference it from committed files, and do not assume it exists — if it is absent, follow this file as
-written.
+If `AGENTS_PERSONAL.md` exists beside this file, treat it as an extension of this file.
+Machine-specific environment and workflow instructions in `AGENTS_PERSONAL.md` take precedence over
+the generic guidance here.
 
-## Development Environment
+- `AGENTS_PERSONAL.md` is untracked and local to one developer machine
+- do not commit it
+- do not reference it from committed files
+- do not assume it exists
 
-Requires **Python 3.11+** (CI tests 3.11, 3.12, 3.13). Qt6 comes in via the pinned `PySide6` dependency —
-do not install PySide6 separately.
+## Common Task Routing
 
-```bash
-python -m venv .venv
-source .venv/bin/activate          # macOS/Linux only; see "Platform Notes"
-python -m pip install --upgrade pip
-python -m pip install -e '.[dev]'
-```
+If you change:
 
-Verify the environment resolves to this checkout rather than a released wheel:
+- a widget's `USER_ACCESS`, a Designer plugin, or any RPC-visible widget API: run
+  `bw-generate-cli --target bec_widgets`, inspect the generated diff, and keep generated files in sync
+- visible widget layout or rendering behavior: run focused widget tests and update reference images only
+  when the visual change is intentional
+- `bec_widgets/utils/bec_dispatcher.py`, `bec_widget.py`, or shared plumbing used by many widgets: run
+  the relevant focused tests plus the broader affected package test scope before finishing
+- test behavior or a flaky widget test: check `tests/unit_tests/conftest.py` and `bec_widgets/tests/`
+  for reusable fixtures and helpers before adding new ones
+- docs, examples, or commands only: no broad GUI or e2e run is required unless commands or runnable
+  examples changed
 
-```bash
-python -c "import bec_widgets; print(bec_widgets.__file__)"
-```
+If the requested change sounds like one of these, it probably belongs elsewhere:
 
-If you work in a git worktree or a second clone, re-run the editable install from that directory. A
-virtualenv holds exactly one editable install per package, so give each checkout its own virtualenv
-instead of sharing one — otherwise one checkout silently shadows the other.
+- new core device or hardware behavior: `ophyd_devices`
+- server or client service behavior: `bec`
+- beamline-specific widget or one-off beamline workflow: that beamline's plugin repo
+- published documentation changes: `bec_docs`
 
-**Running against a live BEC** additionally needs BEC services and Redis (see the `bec` repository).
-Widgets can be developed and unit-tested without them; the test suite mocks the BEC client.
+## Widget Architecture
 
-**Headless / remote sessions** need an offscreen Qt platform. CI sets:
+Most widgets follow the same pattern:
 
-```bash
-export QT_QPA_PLATFORM=offscreen
-export QTWEBENGINE_DISABLE_SANDBOX=1
-export QTWEBENGINE_CHROMIUM_FLAGS=--disable-gpu
-```
-
-On Linux you may also need system Qt libraries (`libgl1`, `libegl1`, `libxkbcommon-x11-0`, `libdbus-1-3`,
-`libnss3`, `xvfb`). `pytest-xvfb` is a dev dependency and handles the virtual display automatically when
-`xvfb` is installed.
-
-## Generated Code — Do Not Hand-Edit
-
-`bec_widgets/cli/client.py`, the Qt Designer plugin files, and the `cli/designer_plugins.py` registry
-are **generated**:
-
-```bash
-bw-generate-cli --target bec_widgets
-```
-
-Regenerate whenever the RPC surface or the set of Designer plugins changes — that is, when you
-
-- **add a widget that is reachable over RPC** (any widget declaring `USER_ACCESS`) or that is exposed as
-  a **Qt Designer plugin**,
-- **change an existing widget's RPC API** — the entries in `USER_ACCESS`, or the signature of a method
-  or property exposed through it,
-- rename or remove such a widget.
-
-CI runs the same command and then `git diff --exit-code`, so a stale `client.py` fails the build.
-
-For a **beamline plugin repository**, `--target` is that repository's own importable package name, and
-the package has to be installed in the environment — the tool imports `<plugin_repo>.bec_widgets` and
-writes the client to `<plugin_repo>/bec_widgets/widgets/client.py`:
-
-```bash
-bw-generate-cli --target my_plugin_repo
-```
-
-## The BEC Widget Pattern
-
-Every BEC widget follows the same shape:
-
-1. Inherit from **`BECWidget`** and mix in the Qt class (`QWidget`, `QLabel`, …). `BECWidget` must come first.
-2. Declare **`USER_ACCESS`** — the list of method names exposed over RPC and to the CLI.
-3. Subscribe to BEC data through **`BECDispatcher`** and `MessageEndpoints`.
-4. Decorate slots with **`@SafeSlot`** so exceptions surface as user-visible errors instead of killing
-   the Qt event loop.
-5. Reach BEC objects through **`self.get_bec_shortcuts()`**, which populates `self.dev`, `self.scans`,
-   `self.queue`, and friends.
+1. Inherit from `BECWidget` and then the Qt class.
+2. Declare `USER_ACCESS` for methods exposed over RPC and to the generated CLI.
+3. Subscribe to BEC data through `BECDispatcher` and `MessageEndpoints`.
+4. Decorate Qt slots with `@SafeSlot` so failures surface to users without killing the event loop.
+5. Call `self.get_bec_shortcuts()` to populate shortcuts such as `self.dev`, `self.scans`, and
+   `self.queue`.
 
 ```python
 from qtpy.QtWidgets import QWidget
@@ -141,120 +125,133 @@ class MyMotorWidget(BECWidget, QWidget):
 
     @SafeSlot(dict, dict)
     def on_readback(self, data: dict, meta: dict):
-        ...  # update the UI from the readback
+        ...
 
     @SafeSlot(float)
     def move(self, position: float):
         self.dev[self.motor_name].move(position)
 ```
 
-**Clean up after yourself.** Widgets live inside a long-running application. Disconnect dispatcher
-subscriptions and stop timers in `cleanup()`; a leaked subscription keeps the widget alive and keeps
-firing after the dock is closed.
+Generated files:
 
-**Do not block the Qt event loop.** Anything slow — file I/O, RPC round-trips, large array work — belongs
-off the GUI thread, and results must come back through a signal, not by touching widgets directly.
+- `bec_widgets/cli/client.py`
+- Designer plugin files
+- `bec_widgets/cli/designer_plugins.py`
 
-### Plugins
+Do not hand-edit those files. Regenerate them:
 
-Beamline-specific widgets live in separate plugin repositories and are discovered through the
-`bec.widgets.user_widgets` entry-point group (see `bec_widgets/utils/bec_plugin_helper.py`). Widgets that
-only make sense at one beamline belong in that beamline's plugin repository, not here.
+```bash
+bw-generate-cli --target bec_widgets
+```
 
-## Testing
+Beamline plugin widgets are discovered through the `bec.widgets.user_widgets` entry-point group. Keep
+core widgets generic; move beamline-specific behavior to plugin repositories.
+
+## Validation
+
+Run the smallest relevant test target first. For substantial UI plumbing changes, generated-code
+changes, or work that affects many widgets, run the broader affected package suite before finishing.
+
+Unit tests are the default. CI runs them with `--random-order`, so local validation should do the same
+when practical. Create widgets with `create_widget(...)` from `tests/unit_tests/conftest.py` so
+registration and teardown stay consistent. Before adding a new fixture, check for reusable fixtures in
+`tests/unit_tests/conftest.py` and helpers in `bec_widgets/tests/utils.py`.
+
+Mock BEC, Redis, and hardware in unit tests. Reuse existing helpers such as `FakeDevice`,
+`FakePositioner`, `DMMock`, and the shared autouse fixtures rather than rolling your own.
+
+Reference test commands:
 
 ```bash
 python -m pytest --random-order tests/unit_tests/
-```
-
-`--random-order` matches CI and is how order-dependent test pollution gets caught — a test that only
-passes in file order is a broken test.
-
-Coverage, as CI measures it — the plain `coverage` CLI:
-
-```bash
-coverage run --branch --source=./bec_widgets -m pytest --random-order \
-    --ignore=tests/unit_tests/benchmarks tests/unit_tests/
-coverage report
-```
-
-End-to-end tests need BEC services and GUI dependencies available:
-
-```bash
 python -m pytest -v --files-path ./ --start-servers tests/end-2-end/
 ```
 
-**Conventions:**
+Use end-to-end tests only when service interaction, live BEC startup, GUI/server integration, or real
+Redis-backed behavior is what you are changing.
 
-- Name files `test_<feature>.py`; name tests after behaviour — `test_widget_updates_on_readback()`, not
-  `test_widget_2()`.
-- Create widgets with the `create_widget(qtbot, WidgetClass, ...)` helper from
-  `tests/unit_tests/conftest.py`. It registers the widget with `qtbot` and waits for exposure, so
-  teardown stays consistent. Never instantiate a widget in a test without handing it to `qtbot` — leaked
-  widgets cause failures in *other* tests.
-- Mock BEC, Redis, and hardware. Reuse `FakeDevice`, `FakePositioner`, and `DMMock` from
-  `bec_widgets/tests/utils.py` and the autouse fixtures in `tests/unit_tests/conftest.py` (mock client,
-  dispatcher, RPC register, message-box suppression) rather than rolling your own.
-- Update reference images only when a visual change is intentional, and say so in the pull request.
-- Benchmarks live in `tests/unit_tests/benchmarks/` and are excluded from coverage runs.
+Benchmarks live in `tests/unit_tests/benchmarks/` and are excluded from normal coverage runs.
 
-## Coding Style & Naming Conventions
+## Running Locally
 
-- Python 3.11+, 4-space indentation, **100-character** line limit.
-- **Black** and **isort** are the source of truth (settings in `pyproject.toml`). CI fails on any diff:
+For widget-only unit-test work, a live BEC deployment is not required.
 
-  ```bash
-  black --line-length=100 --skip-magic-trailing-comma .
-  isort --line-length=100 --profile=black --multi-line=3 --trailing-comma .
-  ```
+For interactive validation against a running BEC deployment, you usually need:
 
-- **Import from `qtpy`, not `PySide6`.** CI explicitly greps for `from PySide6.` and fails the build;
-  only `PySide6.QtDesigner` and `PySide6.scripts` are exempt.
+- Redis reachable by the BEC services
+- BEC services started from the `bec` repository
+- this repository installed editable in the current environment
 
-  ```python
-  from qtpy.QtWidgets import QWidget    # yes
-  from PySide6.QtWidgets import QWidget # no — CI rejects this
-  ```
+Useful local entry points:
 
-- **Pylint** runs in CI and reports a score; do not introduce new warnings.
-- `snake_case` for modules, functions, test files, and most widget directories; `PascalCase` for widget
-  and Qt class names. Follow existing file patterns — `*_plugin.py` for Designer plugins, `register_*.py`
-  for registration helpers.
-- Use f-strings; use `pathlib` and forward slashes for resource paths.
-- Type-annotate new public methods and give public widgets and methods docstrings — they feed both the
-  generated CLI and the API reference.
+```bash
+bec-app
+bec-gui-server
+bec-designer
+```
+
+Headless or remote sessions generally need:
+
+```bash
+export QT_QPA_PLATFORM=offscreen
+export QTWEBENGINE_DISABLE_SANDBOX=1
+export QTWEBENGINE_CHROMIUM_FLAGS=--disable-gpu
+```
+
+CI also relies on `pytest-xvfb` when `xvfb` is available.
+
+## Style And Change Hygiene
+
+- Python 3.11+, 4-space indentation, 100-character line limit
+- run Black and isort on changed files or the affected package
+- use `f`-strings instead of `%` formatting or `str.format()`
+- use `pathlib` instead of manual path-string manipulation
+- type-annotate new public methods
+- public widgets, public methods, and modules should have docstrings
+- avoid formatting or import-order churn in untouched files
+
+Whole-repo formatting equivalents:
+
+```bash
+black --line-length=100 --skip-magic-trailing-comma .
+isort --line-length=100 --profile=black --multi-line=3 --trailing-comma .
+```
+
+Pylint runs in CI. Do not introduce new warnings.
+
+## Development Environment
+
+Requires:
+
+- Python 3.11+
+- Qt6 through the pinned `PySide6` dependency
+- BEC services and Redis only when validating against a live deployment or running e2e tests
+
+Install this repository editable from the checkout you are actively using. If you switch to another
+clone or git worktree, reinstall from that location so the environment does not silently point at a
+different checkout.
+
+CI currently tests Python 3.11, 3.12, and 3.13.
 
 ## Platform Notes
 
-Code must run on **macOS and Linux**. Windows is not supported or tested. Use `pathlib`, never
-backslash paths or drive letters.
+Code must run on macOS and Linux. Windows is unsupported and untested. Prefer portable `pathlib`
+usage and do not add Windows-specific branches unless explicitly requested.
 
 ## Related Repositories
 
-- [`bec`](https://github.com/bec-project/bec) — core library and services; source of `bec_lib`,
-  `MessageEndpoints`, and the client.
-- [`ophyd_devices`](https://github.com/bec-project/ophyd_devices) — hardware abstraction layer.
-- [`bec_qthemes`](https://github.com/bec-project/bec_qthemes) — theming and Material icons used here.
-- [`bec_docs`](https://github.com/bec-project/bec_docs) — the published documentation site.
+- `bec` — core library and services; source of `bec_lib`, `MessageEndpoints`, and the client
+- `ophyd_devices` — hardware abstraction layer
+- `bec_qthemes` — theming and Material icons used here
+- `bec_docs` — published documentation
 
-CI installs `bec` and `ophyd_devices` from source, so a breaking change upstream shows up here first.
-When a widget change depends on an unreleased `bec_lib` feature, say so in the pull request.
+When a widget change depends on an unreleased `bec` or `ophyd_devices` change, say so explicitly.
 
-## Commit & Pull Request Guidelines
+## Commit And PR Notes
 
-- **Do not commit or push unless explicitly asked to.** Leave the working tree for the human to review.
-- **Never open, update, or merge a pull request.** Submitting the change is the human contributor's
-  step. An agent's work ends at a reviewed working tree — or at a local commit on a branch, when a
-  commit was explicitly requested.
-- Branch from `main` with a descriptive name such as `feat/heatmap-roi` or `fix/waveform-autorange`.
-- **Conventional Commits are mandatory** — `<type>(<scope>): <summary>`, e.g.
-  `feat(plots): add ROI export to waveform`. Allowed types: `build`, `chore`, `ci`, `docs`, `feat`,
-  `fix`, `perf`, `refactor`, `style`, `test`. `feat` triggers a minor release, `fix` and `perf` a patch
-  release; breaking changes need `!` or a `BREAKING CHANGE:` footer.
-- Commit messages are parsed by python-semantic-release and become the published `CHANGELOG.md`. Keep
-  them to a single clean subject line.
-- The pull request itself needs a clear description, test evidence, and confirmation that
-  `bw-generate-cli --target bec_widgets` produced no diff. Produce that evidence and leave it for
-  whoever opens the PR.
-- Capture a **screenshot or short GIF for any visible GUI change** — reviewers cannot evaluate a layout
-  change from a diff.
+- Branch from `main` for new work
+- use Conventional Commits
+- breaking changes need `!` or a `BREAKING CHANGE:` footer
+- leave the eventual PR author with a short summary of what changed, why, what you validated, and
+  whether `bw-generate-cli --target bec_widgets` produced a diff
+- capture a screenshot or short GIF for any visible GUI change
