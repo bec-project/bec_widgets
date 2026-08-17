@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.34.0 (2026-08-17)
+
+### Features
+
+- **agents**: Curated AGENTS.md and CLAUDE.md files added with best practives for the project
+  ([`84859d0`](https://github.com/bec-project/bec_widgets/commit/84859d044cd942640ae7cea4620678548637ab8b))
+
+
 ## v3.33.3 (2026-08-14)
 
 ### Bug Fixes
