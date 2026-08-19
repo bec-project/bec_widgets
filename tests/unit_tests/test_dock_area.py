@@ -1083,7 +1083,7 @@ class TestToolbarFunctionality:
             plugin_actions = dock_area_module._plugin_toolbar_actions()
 
         assert plugin_actions == {
-            "FakePluginWidget": ("star", "Add FakePluginWidget", "FakePluginWidget")
+            "FakePluginWidget": ("star", "Fake Plugin Widget", "FakePluginWidget")
         }
 
     def test_plugin_toolbar_actions_ignore_builtin_name_collisions(
