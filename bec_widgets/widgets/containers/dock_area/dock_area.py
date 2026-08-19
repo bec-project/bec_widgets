@@ -26,6 +26,7 @@ from bec_widgets.utils.bec_plugin_helper import (
     get_plugin_widget_icons,
 )
 from bec_widgets.utils.colors import apply_theme
+from bec_widgets.utils.name_utils import pascal_to_title
 from bec_widgets.utils.plugin_utils import get_rpc_widget_registry
 from bec_widgets.utils.rpc_decorator import rpc_timeout
 from bec_widgets.utils.rpc_widget_handler import widget_handler
@@ -88,7 +89,11 @@ def _plugin_toolbar_actions() -> dict[str, tuple[str, str, str]]:
     plugin_icons = get_plugin_widget_icons()
 
     return {
-        widget_name: (plugin_icons.get(widget_name, "widgets"), f"Add {widget_name}", widget_name)
+        widget_name: (
+            plugin_icons.get(widget_name, "widgets"),
+            pascal_to_title(widget_name),
+            widget_name,
+        )
         for widget_name in sorted(plugin_registry)
         if widget_name not in internal_registry
     }
