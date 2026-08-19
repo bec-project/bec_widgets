@@ -16,6 +16,20 @@ def pascal_to_snake(name: str) -> str:
     return s2.lower()
 
 
+def pascal_to_title(name: str) -> str:
+    """
+    Convert PascalCase to a space-separated title.
+
+    Args:
+        name (str): The name to be converted.
+
+    Returns:
+        str: The converted name.
+    """
+    s1 = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", name)
+    return re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1 \2", s1)
+
+
 def sanitize_namespace(namespace: str | None) -> str | None:
     """
     Clean user-provided namespace labels for filesystem compatibility.

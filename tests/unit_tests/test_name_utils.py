@@ -1,9 +1,14 @@
-from bec_widgets.utils.name_utils import pascal_to_snake, sanitize_namespace
+from bec_widgets.utils.name_utils import pascal_to_snake, pascal_to_title, sanitize_namespace
 
 
 def test_pascal_to_snake():
     assert pascal_to_snake("DeviceWithinLimitsState") == "device_within_limits_state"
     assert pascal_to_snake("BECStatusWidget") == "bec_status_widget"
+
+
+def test_pascal_to_title():
+    assert pascal_to_title("DigitalTwin") == "Digital Twin"
+    assert pascal_to_title("BECStatusWidget") == "BEC Status Widget"
 
 
 def test_sanitize_namespace():
