@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v3.35.0 (2026-08-24)
+
+### Bug Fixes
+
+- **toolbar**: Update plugin toolbar action titles to use pascal_to_title formatting
+  ([`f7aed54`](https://github.com/bec-project/bec_widgets/commit/f7aed54433932c34fc2dc231eadfea48e70436be))
+
+### Features
+
+- **title**: Add pascal_to_title function and corresponding tests
+  ([`c8e01a3`](https://github.com/bec-project/bec_widgets/commit/c8e01a38f406913bf2454d4239cb9596e73de54c))
+
+
 ## v3.34.0 (2026-08-17)
 
 ### Features
