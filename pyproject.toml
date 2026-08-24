@@ -10,7 +10,7 @@ classifiers = [
 ]
 dependencies = [
   "PyJWT~=2.9",
-  "PySide6==6.11.1",
+  "PySide6==6.11.2",
   "PySide6-QtAds==5.0.0",
   "bec_ipython_client~=3.134", # needed for jupyter console
   "bec_lib~=3.134",
