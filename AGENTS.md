@@ -10,14 +10,16 @@ This file is an agent-oriented operating manual. User-facing documentation lives
 
 ## Core Rules
 
-- Import Qt modules from `qtpy`, not `PySide6`.
+- Import Qt modules from `qtpy`, not `PySide6` — CI greps for `from PySide6.` and fails the build;
+  only `PySide6.QtDesigner` and `PySide6.scripts` are exempt.
 - Do not hand-edit generated RPC or Designer files; regenerate them with `bw-generate-cli`.
 - If a widget exposes `USER_ACCESS` or is available in Qt Designer, treat its generated CLI and plugin
   stubs as part of the change.
 - Inherit `BECWidget` first, then the Qt base class.
 - Use `MessageEndpoints`, `BECDispatcher`, `SafeSlot`, and existing local widget patterns before
   introducing a new abstraction.
-- Do not block the Qt event loop with slow I/O, RPC, or heavy computation.
+- Do not block the Qt event loop with slow I/O, RPC, or heavy computation. Run slow work off the GUI
+  thread and deliver results back through signals — never touch widgets from another thread.
 - Clean up dispatcher subscriptions, timers, and long-lived resources in `cleanup()`.
 - Beamline-specific widgets usually belong in a plugin repository, not core `bec_widgets`.
 - Keep diffs focused. Avoid unrelated refactors while fixing a specific issue.
@@ -153,8 +155,10 @@ Run the smallest relevant test target first. For substantial UI plumbing changes
 changes, or work that affects many widgets, run the broader affected package suite before finishing.
 
 Unit tests are the default. CI runs them with `--random-order`, so local validation should do the same
-when practical. Create widgets with `create_widget(...)` from `tests/unit_tests/conftest.py` so
-registration and teardown stay consistent. Before adding a new fixture, check for reusable fixtures in
+when practical. Create widgets with `create_widget(...)` from `tests/unit_tests/conftest.py`. It
+registers the widget with `qtbot` so it is closed at test end; the autouse conftest fixtures handle the
+rest of the teardown (dispatcher disconnect, singleton resets) and fail the test if any top-level
+widget is left open. Before adding a new fixture, check for reusable fixtures in
 `tests/unit_tests/conftest.py` and helpers in `bec_widgets/tests/utils.py`.
 
 Mock BEC, Redis, and hardware in unit tests. Reuse existing helpers such as `FakeDevice`,
