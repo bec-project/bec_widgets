@@ -105,7 +105,6 @@ class Curve(BECConnector, pg.PlotDataItem):
         self.apply_config()
         self.dap_params = None
         self.dap_summary = None
-        self.slice_index = None
         self._data_version = 0
         self._last_dap_request_fingerprint: tuple | None = None
         if kwargs:

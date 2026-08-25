@@ -44,6 +44,9 @@ class DeviceInputConfig(ConnectionConfig):
             editable-combobox completer.
         include_signals_with_write_access: Whether to additionally list signals that report
             write access, in addition to the devices selected by the other filters.
+        include_async_readout_devices: Whether to additionally list devices with async
+            readout priority (potential ``device_monitor_1d`` publishers), in addition to
+            the devices selected by the other filters.
     """
 
     device_filter: list[str] = Field(default_factory=list)
@@ -55,6 +58,7 @@ class DeviceInputConfig(ConnectionConfig):
     signal_class_filter: list[str] = Field(default_factory=list)
     autocomplete: bool = False
     include_signals_with_write_access: bool = False
+    include_async_readout_devices: bool = False
 
     @field_validator("device_filter")
     @classmethod
@@ -120,6 +124,9 @@ class DeviceComboBox(BECWidget, QComboBox):
             Qt's default editable-combobox completion behavior.
         include_signals_with_write_access: If True, additionally list signals that report
             write access on top of the devices selected by the other filters.
+        include_async_readout_devices: If True, additionally list devices with async readout
+            priority (potential ``device_monitor_1d`` publishers) on top of the devices
+            selected by the other filters.
         **kwargs: Additional keyword arguments passed to ``BECWidget``.
     """
 
@@ -152,6 +159,7 @@ class DeviceComboBox(BECWidget, QComboBox):
         signal_class_filter: list[str] | None = None,
         autocomplete: bool | None = None,
         include_signals_with_write_access: bool | None = None,
+        include_async_readout_devices: bool | None = None,
         **kwargs,
     ):
         self.config = self._process_config(config)
@@ -191,6 +199,8 @@ class DeviceComboBox(BECWidget, QComboBox):
             self.autocomplete = True
         if include_signals_with_write_access is not None:
             self.config.include_signals_with_write_access = include_signals_with_write_access
+        if include_async_readout_devices is not None:
+            self.config.include_async_readout_devices = include_async_readout_devices
 
         if available_devices is not None:
             self.set_available_devices(available_devices)
@@ -273,6 +283,14 @@ class DeviceComboBox(BECWidget, QComboBox):
                 if name not in seen:
                     device_names.append(name)
                     seen.add(name)
+        if self.include_async_readout_devices:
+            seen = set(device_names)
+            for device in enabled_devices:
+                if device.name in seen:
+                    continue
+                if getattr(device, "readout_priority", None) == ReadoutPriority.ASYNC:
+                    device_names.append(device.name)
+                    seen.add(device.name)
         self.devices = device_names
 
     @SafeSlot(list)
@@ -334,6 +352,16 @@ class DeviceComboBox(BECWidget, QComboBox):
     @include_signals_with_write_access.setter
     def include_signals_with_write_access(self, value: bool):
         self.config.include_signals_with_write_access = value
+        self.update_devices_from_filters()
+
+    @SafeProperty(bool)
+    def include_async_readout_devices(self) -> bool:
+        """Whether async-readout devices are listed in addition to the other filters."""
+        return self.config.include_async_readout_devices
+
+    @include_async_readout_devices.setter
+    def include_async_readout_devices(self, value: bool):
+        self.config.include_async_readout_devices = value
         self.update_devices_from_filters()
 
     @SafeProperty(bool)

@@ -5,7 +5,6 @@ from typing import Literal
 
 import numpy as np
 from bec_lib import bec_logger
-from bec_lib.endpoints import MessageEndpoints
 from pydantic import BaseModel, Field, field_validator
 from qtpy.QtCore import QTimer
 from qtpy.QtWidgets import QWidget
@@ -13,6 +12,7 @@ from qtpy.QtWidgets import QWidget
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.colors import Colors, apply_theme
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.qt_data_subscription import QtDataSubscription
 from bec_widgets.widgets.plots.image.image_base import ImageBase
 from bec_widgets.widgets.plots.image.image_item import ImageItem
 from bec_widgets.widgets.plots.image.toolbar_components.device_selection import (
@@ -106,6 +106,11 @@ class Image(ImageBase):
 
     SUPPORTED_SIGNALS = ["AsyncSignal", "AsyncMultiSignal", "DynamicSignal"]
 
+    #: Retention cap for scan-less 1D preview streams (rows of the waterfall buffer).
+    PREVIEW_1D_MAX_ROWS = 1000
+    #: Retention cap for scan-less 2D preview streams (only the newest frame is shown).
+    PREVIEW_2D_MAX_FRAMES = 2
+
     def __init__(
         self,
         parent: QWidget | None = None,
@@ -121,6 +126,14 @@ class Image(ImageBase):
         self.subscriptions: defaultdict[str, ImageLayerConfig] = defaultdict(ImageLayerConfig)
         # Store signal configs separately (not serialized to QSettings)
         self._signal_configs: dict[str, dict] = {}
+        # Data delivery through the DataAPI (one bridge for the main layer).
+        self._data_bridge: QtDataSubscription | None = None
+        self._source_key: tuple[str, str] | None = None
+        self._min_display_ordinal: int | None = None
+        self._waterfall_cache: dict | None = None
+        self.old_scan_id = None
+        self.scan_id = None
+        self.async_update = False
 
         super().__init__(
             parent=parent, config=config, client=client, gui_id=gui_id, popups=popups, **kwargs
@@ -129,11 +142,6 @@ class Image(ImageBase):
         self._autorange_on_next_update = False
         self._init_toolbar_image()
         self.layer_removed.connect(self._on_layer_removed)
-        self.old_scan_id = None
-        self.scan_id = None
-        self.async_update = False
-        self.bec_dispatcher.connect_slot(self.on_scan_status, MessageEndpoints.scan_status())
-        self.bec_dispatcher.connect_slot(self.on_scan_progress, MessageEndpoints.scan_progress())
 
     @property
     def _config(self) -> ImageLayerConfig:
@@ -271,15 +279,8 @@ class Image(ImageBase):
 
         old_device = self._config.device
         old_signal = self._config.signal
-        old_config = self.subscriptions["main"]
         if old_device and old_signal and old_device != value:
-            self._disconnect_monitor_subscription(
-                device=old_device,
-                signal=old_signal,
-                source=old_config.source,
-                async_update=self.async_update,
-                async_signal_name=old_config.async_signal_name,
-            )
+            self._cleanup_data_api_subscription()
         self._config.device = value
 
         # If we have a signal, reconnect with the new device
@@ -336,15 +337,8 @@ class Image(ImageBase):
             return
 
         old_signal = self._config.signal
-        old_config = self.subscriptions["main"]
         if self._config.device and old_signal and old_signal != value:
-            self._disconnect_monitor_subscription(
-                device=self._config.device,
-                signal=old_signal,
-                source=old_config.source,
-                async_update=self.async_update,
-                async_signal_name=old_config.async_signal_name,
-            )
+            self._cleanup_data_api_subscription()
         self._config.signal = value
 
         # If we have a device, try to connect
@@ -381,7 +375,8 @@ class Image(ImageBase):
 
     def _setup_connection(self):
         """
-        Internal method to setup connection based on current device, signal, and signal_config.
+        Internal method to setup the DataAPI subscription based on current
+        device, signal, and signal_config.
         """
         if not self._config.device or not self._config.signal:
             logger.warning("Cannot setup connection without both device and signal")
@@ -396,8 +391,8 @@ class Image(ImageBase):
             self._set_connection_status("error", "Missing signal config")
             return
 
-        # Disconnect any existing monitor first
-        self._disconnect_current_monitor()
+        # Close any existing subscription first
+        self._cleanup_data_api_subscription()
 
         # Determine monitor type and source from signal_config
         signal_class = signal_config.get("signal_class", None)
@@ -422,123 +417,83 @@ class Image(ImageBase):
             self._set_connection_status("error", "Missing ndim in signal_info")
             return
 
-        config = self.subscriptions["main"]
-        self.async_update = False
-        config.async_signal_name = None
-
-        if ndim == 1:
-            config.source = "device_monitor_1d"
-            config.monitor_type = "1d"
-            if signal_class == "PreviewSignal":
-                self.bec_dispatcher.connect_slot(
-                    self.on_image_update_1d,
-                    MessageEndpoints.device_preview(self._config.device, self._config.signal),
-                )
-            elif signal_class in self.SUPPORTED_SIGNALS:
-                self.async_update = True
-                config.async_signal_name = signal_config.get(
-                    "obj_name", f"{self._config.device}_{self._config.signal}"
-                )
-                self._setup_async_image(self.scan_id)
-        elif ndim == 2:
-            config.source = "device_monitor_2d"
-            config.monitor_type = "2d"
-            if signal_class == "PreviewSignal":
-                self.bec_dispatcher.connect_slot(
-                    self.on_image_update_2d,
-                    MessageEndpoints.device_preview(self._config.device, self._config.signal),
-                )
-            elif signal_class in self.SUPPORTED_SIGNALS:
-                self.async_update = True
-                config.async_signal_name = signal_config.get(
-                    "obj_name", f"{self._config.device}_{self._config.signal}"
-                )
-                self._setup_async_image(self.scan_id)
-        else:
+        if ndim not in (1, 2):
             logger.warning(
                 f"Unsupported ndim '{ndim}' for monitor '{self._config.device}.{self._config.signal}'."
             )
             self._set_connection_status("error", f"Unsupported ndim '{ndim}'")
             return
 
+        config = self.subscriptions["main"]
+        self.async_update = False
+        config.async_signal_name = None
+        config.monitor_type = "1d" if ndim == 1 else "2d"
+        config.source = "device_monitor_1d" if ndim == 1 else "device_monitor_2d"
+
+        if signal_class == "PreviewSignal":
+            # Scan-less device stream served by the DataAPI device plugin.
+            scan = None
+            entry = self._config.signal
+            max_points = self.PREVIEW_1D_MAX_ROWS if ndim == 1 else self.PREVIEW_2D_MAX_FRAMES
+        else:
+            # Scan-scoped async stream; the DataAPI rebinds on new scans and
+            # hands terminal scans over to history automatically.
+            self.async_update = True
+            config.async_signal_name = signal_config.get(
+                "obj_name", f"{self._config.device}_{self._config.signal}"
+            )
+            scan = "live"
+            entry = config.async_signal_name
+            max_points = None
+
+        try:
+            self._data_bridge = QtDataSubscription(
+                self.client,
+                sources=[(self._config.device, entry)],
+                scan=scan,
+                parent=self,
+                min_emit_interval=self.update_interval_s,
+                max_points=max_points,
+            )
+            self._data_bridge.updated.connect(self._on_data_update)
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.warning(
+                f"Failed to configure image data subscription for "
+                f"{self._config.device}.{self._config.signal}: {exc}"
+            )
+            self._cleanup_data_api_subscription()
+            self._set_connection_status("error", str(exc))
+            return
+
+        self._source_key = (self._config.device, entry)
+        self._min_display_ordinal = None
+        self._waterfall_cache = None
         self._set_connection_status("connected")
         logger.info(
             f"Connected to {self._config.device}.{self._config.signal} with type {config.monitor_type}"
         )
         self._autorange_on_next_update = True
 
-    def _disconnect_monitor_subscription(
-        self,
-        *,
-        device: str,
-        signal: str,
-        source: Literal["device_monitor_1d", "device_monitor_2d"] | None,
-        async_update: bool,
-        async_signal_name: str | None,
-    ) -> None:
-        if not device or not signal:
+    def _cleanup_data_api_subscription(self):
+        """Close the active DataAPI bridge, if any."""
+        self._source_key = None
+        self._min_display_ordinal = None
+        self._waterfall_cache = None
+        if self._data_bridge is None:
             return
-
-        if async_update:
-            async_signal_name = async_signal_name or signal
-            ids_to_check = [self.scan_id, self.old_scan_id]
-
-            if source == "device_monitor_1d":
-                for scan_id in ids_to_check:
-                    if scan_id is None:
-                        continue
-                    self.bec_dispatcher.disconnect_slot(
-                        self.on_image_update_1d,
-                        MessageEndpoints.device_async_signal(scan_id, device, async_signal_name),
-                    )
-                    logger.info(
-                        f"Disconnecting 1d update ScanID:{scan_id}, Device Name:{device},Device Entry:{async_signal_name}"
-                    )
-            elif source == "device_monitor_2d":
-                for scan_id in ids_to_check:
-                    if scan_id is None:
-                        continue
-                    self.bec_dispatcher.disconnect_slot(
-                        self.on_image_update_2d,
-                        MessageEndpoints.device_async_signal(scan_id, device, async_signal_name),
-                    )
-                    logger.info(
-                        f"Disconnecting 2d update ScanID:{scan_id}, Device Name:{device},Device Entry:{async_signal_name}"
-                    )
-            return
-
-        if source == "device_monitor_1d":
-            self.bec_dispatcher.disconnect_slot(
-                self.on_image_update_1d, MessageEndpoints.device_preview(device, signal)
-            )
-            logger.info(
-                f"Disconnecting preview 1d update Device Name:{device}, Device Entry:{signal}"
-            )
-        elif source == "device_monitor_2d":
-            self.bec_dispatcher.disconnect_slot(
-                self.on_image_update_2d, MessageEndpoints.device_preview(device, signal)
-            )
-            logger.info(
-                f"Disconnecting preview 2d update Device Name:{device}, Device Entry:{signal}"
-            )
+        try:
+            self._data_bridge.close()
+        finally:
+            self._data_bridge = None
 
     def _disconnect_current_monitor(self):
         """
-        Internal method to disconnect the current monitor subscriptions.
+        Close the current DataAPI subscription and reset the async bookkeeping.
         """
-        if not self._config.device or not self._config.signal:
-            return
-
-        config = self.subscriptions["main"]
-        self._disconnect_monitor_subscription(
-            device=self._config.device,
-            signal=self._config.signal,
-            source=config.source,
-            async_update=self.async_update,
-            async_signal_name=config.async_signal_name,
-        )
+        self._cleanup_data_api_subscription()
 
         # Reset async state
+        config = self.subscriptions["main"]
         self.async_update = False
         config.async_signal_name = None
         self._set_connection_status("disconnected")
@@ -755,131 +710,9 @@ class Image(ImageBase):
     # Image Update Methods
     ################################################################################
 
-    ########################################
-    # Connections
-
-    @SafeSlot(dict, dict)
-    def on_scan_status(self, msg: dict, meta: dict):
-        """
-        Initial scan status message handler, which is triggered at the beginning and end of scan.
-        Needed for setup of AsyncSignal connections.
-
-        Args:
-            msg(dict): The message content.
-            meta(dict): The message metadata.
-        """
-        current_scan_id = msg.get("scan_id", None)
-        if current_scan_id is None:
-            return
-        self._handle_scan_change(current_scan_id)
-
-    @SafeSlot(dict, dict)
-    def on_scan_progress(self, msg: dict, meta: dict):
-        """
-        For setting async image readback during scan progress updates if widget is started later than scan.
-
-        Args:
-            msg(dict): The message content.
-            meta(dict): The message metadata.
-        """
-        current_scan_id = meta.get("scan_id", None)
-        if current_scan_id is None:
-            return
-        self._handle_scan_change(current_scan_id)
-
-    def _handle_scan_change(self, current_scan_id: str):
-        """
-        Update internal scan ids and refresh async connections if needed.
-        Also clears image buffers when scan changes.
-
-        Args:
-            current_scan_id (str): The current scan identifier.
-        """
-        if current_scan_id == self.scan_id:
-            return
-
-        # Scan ID changed - clear buffers and reset image
-        self.old_scan_id = self.scan_id
-        self.scan_id = current_scan_id
-
-        # Clear image buffer for 1D data accumulation
-        self.main_image.clear()
-        if hasattr(self.main_image, "buffer"):
-            self.main_image.buffer = []
-            self.main_image.max_len = 0
-
-        # Reset crosshair if present
-        if self.crosshair is not None:
-            self.crosshair.reset()
-
-        # Reconnect async image subscription with new scan_id
-        if self.async_update:
-            self._setup_async_image(scan_id=self.scan_id)
-
-    def _get_async_signal_name(self) -> tuple[str, str] | None:
-        """
-        Returns device and async signal names used for endpoints/messages.
-
-        Returns:
-            tuple[str, str] | None: (device, async_signal_name) or None if not available.
-        """
-        if not self._config.device or not self._config.signal:
-            return None
-
-        config = self.subscriptions["main"]
-        async_signal = config.async_signal_name or self._config.signal
-        return self._config.device, async_signal
-
-    def _setup_async_image(self, scan_id: str | None):
-        """
-        (Re)connect async image readback for the current scan.
-
-        Args:
-            scan_id (str | None): The scan identifier to subscribe to.
-        """
-        if not self.async_update:
-            return
-
-        config = self.subscriptions["main"]
-        async_names = self._get_async_signal_name()
-        if async_names is None:
-            logger.info("Async image setup skipped because monitor information is incomplete.")
-            return
-
-        device, async_signal = async_names
-        if config.monitor_type == "1d":
-            slot = self.on_image_update_1d
-        elif config.monitor_type == "2d":
-            slot = self.on_image_update_2d
-        else:
-            logger.warning(
-                f"Async image setup skipped due to unsupported monitor type '{config.monitor_type}'."
-            )
-            return
-
-        # Disconnect any previous scan subscriptions to avoid stale updates.
-        for prev_scan_id in (self.old_scan_id, self.scan_id):
-            if prev_scan_id is None:
-                continue
-            self.bec_dispatcher.disconnect_slot(
-                slot, MessageEndpoints.device_async_signal(prev_scan_id, device, async_signal)
-            )
-
-        if scan_id is None:
-            logger.info("Scan ID not available yet; delaying async image subscription.")
-            return
-
-        self.bec_dispatcher.connect_slot(
-            slot,
-            MessageEndpoints.device_async_signal(scan_id, device, async_signal),
-            from_start=True,
-            cb_info={"scan_id": scan_id},
-        )
-        logger.info(f"Setup async image for {device}.{async_signal} and scan {scan_id}.")
-
     def disconnect_monitor(self, device: str | None = None, signal: str | None = None):
         """
-        Disconnect the monitor from the image update signals, both 1D and 2D.
+        Disconnect the monitor from the image update stream, both 1D and 2D.
 
         Args:
             device(str|None): The name of the device to disconnect. Defaults to current device.
@@ -899,109 +732,193 @@ class Image(ImageBase):
             )
             return
 
-        self._disconnect_monitor_subscription(
-            device=target_device,
-            signal=target_entry,
-            source=config.source,
-            async_update=self.async_update,
-            async_signal_name=config.async_signal_name,
-        )
-
-        self.subscriptions["main"].async_signal_name = None
-        self.async_update = False
+        self._disconnect_current_monitor()
         self._sync_device_selection()
 
-    ########################################
-    # 1D updates
-
-    @SafeSlot(dict, dict)
-    def on_image_update_1d(self, msg: dict, metadata: dict):
+    @SafeSlot(object)
+    def _on_data_update(self, update) -> None:
         """
-        Update the image with 1D data.
-        For preview signals: metadata doesn't contain scan_id.
-        For async signals: scan_id is managed via on_scan_status/on_scan_progress.
+        Render one columnar DataAPI update (live, backfill or history).
+
+        2-D sources display the latest frame; 1-D sources rebuild the
+        waterfall buffer from the columnar fragments (newest row last).
 
         Args:
-            msg(dict): The message containing the data.
-            metadata(dict): The metadata associated with the message.
+            update (SubscriptionUpdate): Full-state columnar snapshot.
         """
-        try:
-            image = self.main_image
-        except Exception:
+        if self._source_key is None:
             return
-        data = self._get_payload_data(msg)
-
+        source = update.sources.get(self._source_key)
+        if source is None or source.values is None or len(source.values) == 0:
+            return
+        self._handle_scan_rollover(update, source)
+        if self.subscriptions["main"].monitor_type == "2d":
+            data = np.asarray(source.values[-1])
+        else:
+            data = self._build_1d_buffer(source, reason=update.reason)
         if data is None:
-            logger.warning("No data received for image update from 1D.")
             return
-
-        image_buffer = self.adjust_image_buffer(image, data)
-
-        if self._color_bar is not None:
-            self._color_bar.blockSignals(True)
-        image.set_data(image_buffer)
-        if self._color_bar is not None:
-            self._color_bar.blockSignals(False)
-        if self._autorange_on_next_update:
-            self._autorange_on_next_update = False
-            self.auto_range()
-        self.image_updated.emit()
+        self._render_image_data(data)
 
     @staticmethod
-    def adjust_image_buffer(image: ImageItem, new_data: np.ndarray) -> np.ndarray:
+    def _effective_scan_id(update, source) -> str | None:
         """
-        Adjusts the image buffer to accommodate the new data, ensuring that all rows have the same length.
+        The scan id an update belongs to: the bound scan for scan-scoped
+        subscriptions, the last-seen scan id from the stream metadata for
+        scan-less preview streams.
 
         Args:
-            image: The image object (used to store a buffer list and max_len).
-            new_data (np.ndarray): The new incoming 1D waveform data.
+            update (SubscriptionUpdate): The update snapshot.
+            source (SourceData): The rendered source of the update.
 
         Returns:
-            np.ndarray: The updated image buffer with adjusted shapes.
+            str | None: The scan id, or None if not known (yet).
         """
-        # Guard for wrong data shapes
-        new_data = np.atleast_1d(np.asarray(new_data))
-        new_len = new_data.shape[0]
-        if not hasattr(image, "buffer"):
-            image.buffer = []
-            image.max_len = 0
+        if update.scan_id:
+            return update.scan_id
+        return source.metadata.get("scan_id")
 
-        if new_len > image.max_len:
-            image.max_len = new_len
-            for i in range(len(image.buffer)):
-                wf = image.buffer[i]
-                pad_width = image.max_len - wf.shape[0]
-                if pad_width > 0:
-                    image.buffer[i] = np.pad(wf, (0, pad_width), mode="constant", constant_values=0)
-            image.buffer.append(new_data)
-        else:
-            pad_width = image.max_len - new_len
-            if pad_width > 0:
-                new_data = np.pad(new_data, (0, pad_width), mode="constant", constant_values=0)
-            image.buffer.append(new_data)
-
-        image_buffer = np.array(image.buffer)
-        return image_buffer
-
-    ########################################
-    # 2D updates
-
-    @SafeSlot(dict, dict)
-    def on_image_update_2d(self, msg: dict, metadata: dict):
+    def _handle_scan_rollover(self, update, source) -> None:
         """
-        Update the image with 2D data.
+        Reset per-scan display state once the data belongs to a new scan.
+
+        Scan-scoped subscriptions deliver fresh per-scan series, so only the
+        bookkeeping and the crosshair need a reset. Scan-less preview streams
+        retain pre-rollover points; the display window is restricted to the
+        newest point (the one that carried the new scan id) onward.
 
         Args:
-            msg(dict): The message containing the data.
-            metadata(dict): The metadata associated with the message.
+            update (SubscriptionUpdate): The update snapshot.
+            source (SourceData): The rendered source of the update.
+        """
+        scan_id = self._effective_scan_id(update, source)
+        if scan_id is None or scan_id == self.scan_id:
+            return
+        previous = self.scan_id
+        self.old_scan_id = previous
+        self.scan_id = scan_id
+        if previous is None:
+            return
+        if source.kind == "unindexed" and source.ordinals:
+            self._min_display_ordinal = source.ordinals[-1]
+        if self.crosshair is not None:
+            self.crosshair.reset()
+
+    def _build_1d_buffer(self, source, reason: str = "live") -> np.ndarray | None:
+        """
+        Build the 2-D waterfall buffer from the 1-D columnar fragments of a
+        source: one row per ordinal, rows zero-padded to the longest row,
+        newest row last. Covers async 'add' (one fragment per ordinal),
+        'add_slice' (accumulated row per ordinal), 'replace' (single current
+        state) and preview streams (one waveform per arrival) alike.
+
+        The padded buffer and the consumed ordinal frontier are cached, so a
+        live append-only emission stacks only the new rows (padded to the
+        cached width) — O(new data) per emission instead of O(total). The
+        buffer is rebuilt from all fragments when the emission cannot be a
+        pure append: a non-live reason, a scan or display-window change, new
+        data at or below the frontier (late hole-fills, retention drops) or a
+        new row wider than the cached buffer. Every full rebuild reseeds the
+        cache.
+
+        Args:
+            source (SourceData): The 1-D source snapshot.
+            reason (str): The update reason ("live", "backfill", ...).
+
+        Returns:
+            np.ndarray | None: The (n_rows, max_len) buffer, or None if no
+                displayable rows remain.
+        """
+        ordinals = source.ordinals
+        cache = self._waterfall_cache
+        if (
+            cache is not None
+            and reason == "live"
+            and ordinals
+            and cache["scan_id"] == self.scan_id
+            and cache["min_display_ordinal"] == self._min_display_ordinal
+        ):
+            n_seen = cache["n_seen"]
+            frontier_intact = (
+                len(ordinals) >= n_seen and ordinals[n_seen - 1] == cache["last_ordinal"]
+            )
+            if frontier_intact and len(ordinals) == n_seen:
+                # Unchanged snapshot (the backend reuses source snapshots).
+                return cache["buffer"]
+            if frontier_intact and ordinals[n_seen] > cache["last_ordinal"]:
+                new_rows = [np.atleast_1d(np.asarray(value)) for value in source.values[n_seen:]]
+                new_rows = [row for row in new_rows if row.ndim == 1]
+                width = cache["width"]
+                if all(row.shape[0] <= width for row in new_rows):
+                    buffer = cache["buffer"]
+                    if new_rows:
+                        padded = [
+                            np.pad(
+                                row, (0, width - row.shape[0]), mode="constant", constant_values=0
+                            )
+                            for row in new_rows
+                        ]
+                        buffer = np.vstack([buffer, *padded])
+                        cache["buffer"] = buffer
+                    cache["n_seen"] = len(ordinals)
+                    cache["last_ordinal"] = ordinals[-1]
+                    return buffer
+        buffer = self._rebuild_1d_buffer(source)
+        if ordinals:
+            self._waterfall_cache = {
+                "scan_id": self.scan_id,
+                "min_display_ordinal": self._min_display_ordinal,
+                "n_seen": len(ordinals),
+                "last_ordinal": ordinals[-1],
+                "buffer": buffer,
+                "width": 0 if buffer is None else buffer.shape[1],
+            }
+        else:
+            self._waterfall_cache = None
+        return buffer
+
+    def _rebuild_1d_buffer(self, source) -> np.ndarray | None:
+        """
+        From-scratch reference construction of the waterfall buffer (see
+        :meth:`_build_1d_buffer`): all fragments, zero-padded to the longest
+        row, restricted to the current display window.
+
+        Args:
+            source (SourceData): The 1-D source snapshot.
+
+        Returns:
+            np.ndarray | None: The (n_rows, max_len) buffer, or None if no
+                displayable rows remain.
+        """
+        values = source.values
+        if self._min_display_ordinal is not None:
+            values = [
+                value
+                for ordinal, value in zip(source.ordinals, values)
+                if ordinal >= self._min_display_ordinal
+            ]
+        rows = [np.atleast_1d(np.asarray(value)) for value in values]
+        rows = [row for row in rows if row.ndim == 1]
+        if not rows:
+            return None
+        max_len = max(row.shape[0] for row in rows)
+        return np.array(
+            [
+                np.pad(row, (0, max_len - row.shape[0]), mode="constant", constant_values=0)
+                for row in rows
+            ]
+        )
+
+    def _render_image_data(self, data: np.ndarray) -> None:
+        """
+        Display the given data on the main image (shared render tail).
+
+        Args:
+            data (np.ndarray): The 2-D buffer or frame to render.
         """
         try:
             image = self.main_image
-        except Exception:
-            return
-        data = self._get_payload_data(msg)
-        if data is None:
-            logger.warning("No data received for image update from 2D.")
+        except Exception:  # pylint: disable=broad-except
             return
         if self._color_bar is not None:
             self._color_bar.blockSignals(True)
@@ -1012,22 +929,6 @@ class Image(ImageBase):
             self._autorange_on_next_update = False
             self.auto_range()
         self.image_updated.emit()
-
-    def _get_payload_data(self, msg: dict) -> np.ndarray | None:
-        """
-        Extract payload from async/preview/monitor1D/2D message structures due to inconsistent formats in backend.
-
-        Args:
-            msg (dict): The incoming message containing data.
-        """
-        if not self.async_update:
-            return msg.get("data")
-        async_names = self._get_async_signal_name()
-        if async_names is None:
-            logger.warning("Async payload extraction failed; monitor info incomplete.")
-            return None
-        _, async_signal = async_names
-        return msg.get("signals", {}).get(async_signal, {}).get("value", None)
 
     ################################################################################
     # Clean up
@@ -1056,9 +957,8 @@ class Image(ImageBase):
         """
         self.layer_removed.disconnect(self._on_layer_removed)
 
-        # Disconnect current monitor
-        if self._config.device and self._config.signal:
-            self._disconnect_current_monitor()
+        # Close the DataAPI subscription
+        self._cleanup_data_api_subscription()
 
         self.subscriptions.clear()
 

@@ -6,25 +6,57 @@ from bec_widgets.utils.toolbars.connections import BundleConnection
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import SignalComboBox
 
+#: Signal classes supported by the DataAPI-backed plot widgets.
+DEFAULT_SIGNAL_CLASSES = ["PreviewSignal", "AsyncSignal", "AsyncMultiSignal", "DynamicSignal"]
+
+#: Reserved entry name of the scan-less device_monitor_1d stream (DataAPI device plugin).
+MONITOR_1D_ENTRY = "monitor_1d"
+
+#: Signal-config shape offered for the monitor_1d sentinel entry. The capability is not
+#: introspectable from device info, so the entry is offered for every selected device.
+MONITOR_1D_SIGNAL_CONFIG = {
+    "component_name": MONITOR_1D_ENTRY,
+    "obj_name": MONITOR_1D_ENTRY,
+    "signal_class": "DeviceMonitor1D",
+    "describe": {"signal_info": {"ndim": 1}},
+}
+
 
 class DeviceSelection(QWidget):
-    """Device and signal selection widget for image toolbar."""
+    """Device and signal selection widget for plot widget toolbars.
 
-    def __init__(self, parent=None, client=None):
+    Args:
+        parent: Optional parent widget.
+        client: The BEC client instance.
+        signal_classes: Signal class names offered in the comboboxes. Defaults to
+            ``DEFAULT_SIGNAL_CLASSES``.
+        ndim_filter: Dimensionality filter for the signal combobox. Defaults to ``[1, 2]``.
+        include_monitor_1d: If True, offer the reserved ``"monitor_1d"`` stream entry in the
+            signal combobox and additionally list async-readout devices in the device
+            combobox (potential ``device_monitor_1d`` publishers).
+    """
+
+    def __init__(
+        self,
+        parent=None,
+        client=None,
+        signal_classes: list[str] | None = None,
+        ndim_filter: list[int] | None = None,
+        include_monitor_1d: bool = False,
+    ):
         super().__init__(parent=parent)
 
         self.client = client
-        self.supported_signals = [
-            "PreviewSignal",
-            "AsyncSignal",
-            "AsyncMultiSignal",
-            "DynamicSignal",
-        ]
+        self.supported_signals = list(signal_classes or DEFAULT_SIGNAL_CLASSES)
+        ndim_filter = list(ndim_filter or [1, 2])
 
         # Create device combobox with signal class filter
         # This will only show devices that have signals matching the supported signal classes
         self.device_combo_box = DeviceComboBox(
-            parent=self, client=self.client, signal_class_filter=self.supported_signals
+            parent=self,
+            client=self.client,
+            signal_class_filter=self.supported_signals,
+            include_async_readout_devices=include_monitor_1d,
         )
         self.device_combo_box.setToolTip("Select Device")
         self.device_combo_box.setEditable(True)
@@ -32,20 +64,18 @@ class DeviceSelection(QWidget):
         self.device_combo_box.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.device_combo_box.lineEdit().setPlaceholderText("Select Device")
 
-        # Configure SignalComboBox to filter by PreviewSignal and supported async signals
-        # Also filter by ndim (1D and 2D only) for Image widget
+        # Configure SignalComboBox to filter by the supported signal classes and the
+        # requested dimensionality; optionally offer the reserved monitor_1d stream entry.
         self.signal_combo_box = SignalComboBox(
             parent=self,
             client=self.client,
-            signal_class_filter=[
-                "PreviewSignal",
-                "AsyncSignal",
-                "AsyncMultiSignal",
-                "DynamicSignal",
-            ],
-            ndim_filter=[1, 2],  # Only show 1D and 2D signals for Image widget
+            signal_class_filter=self.supported_signals,
+            ndim_filter=ndim_filter,
             store_signal_config=True,
             require_device=True,
+            extra_class_signals=(
+                [(MONITOR_1D_ENTRY, MONITOR_1D_SIGNAL_CONFIG)] if include_monitor_1d else None
+            ),
         )
         self.signal_combo_box.setToolTip("Select Signal")
         self.signal_combo_box.setEditable(True)
@@ -90,7 +120,7 @@ class DeviceSelection(QWidget):
 
                 # Sync signal combobox selection
                 if signal:
-                    # Try to find the signal by component_name (which is what's displayed)
+                    # Try to find the signal by display text, component_name or obj_name
                     found = False
                     for i in range(self.signal_combo_box.count()):
                         text = self.signal_combo_box.itemText(i)
@@ -99,7 +129,8 @@ class DeviceSelection(QWidget):
                         # Check if this matches our signal
                         if config_data:
                             component_name = config_data.get("component_name", "")
-                            if text == component_name or text == signal:
+                            obj_name = config_data.get("obj_name", "")
+                            if signal in (text, component_name, obj_name):
                                 self.signal_combo_box.setCurrentIndex(i)
                                 found = True
                                 break
@@ -144,9 +175,11 @@ class DeviceSelection(QWidget):
         self.signal_combo_box.deleteLater()
 
 
-def device_selection_bundle(components: ToolbarComponents, client=None) -> ToolbarBundle:
+def device_selection_bundle(
+    components: ToolbarComponents, client=None, **selection_kwargs
+) -> ToolbarBundle:
     """
-    Creates a device selection toolbar bundle for Image widget.
+    Creates a device selection toolbar bundle for plot widgets.
 
     Includes a resizable splitter after the device selection. All subsequent bundles'
     actions will appear compactly after the splitter with no gaps.
@@ -154,11 +187,15 @@ def device_selection_bundle(components: ToolbarComponents, client=None) -> Toolb
     Args:
         components (ToolbarComponents): The components to be added to the bundle.
         client: The BEC client instance.
+        **selection_kwargs: Additional keyword arguments passed to ``DeviceSelection``
+            (e.g. ``ndim_filter``, ``include_monitor_1d``).
 
     Returns:
         ToolbarBundle: The device selection toolbar bundle.
     """
-    device_selection_widget = DeviceSelection(parent=components.toolbar, client=client)
+    device_selection_widget = DeviceSelection(
+        parent=components.toolbar, client=client, **selection_kwargs
+    )
     components.add_safe(
         "device_selection", WidgetAction(widget=device_selection_widget, adjust_size=False)
     )

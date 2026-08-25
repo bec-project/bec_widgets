@@ -538,3 +538,53 @@ def test_limits_accept_fractional_values(qtbot, mocked_client):
     pb.y_limits = (-1.75, 3.5)
     assert (pb.x_limits.x(), pb.x_limits.y()) == (0.5, 9.25)
     assert (pb.y_limits.x(), pb.y_limits.y()) == (-1.75, 3.5)
+
+
+def test_update_rate_default_and_clamp(qtbot, mocked_client):
+    """update_rate defaults to the class rate and clamps to 1-100 Hz."""
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    assert pb.update_rate == 25.0
+    assert pb.update_interval_s == 1.0 / 25.0
+
+    pb.update_rate = 0.2
+    assert pb.update_rate == 1.0
+    pb.update_rate = 500
+    assert pb.update_rate == 100.0
+    pb.update_rate = 10
+    assert pb.update_rate == 10.0
+    pb.update_rate = "not-a-number"
+    assert pb.update_rate == 10.0
+
+
+def test_update_rate_propagates_to_bridges(qtbot, mocked_client):
+    """Setting update_rate reconfigures every child data bridge in place."""
+    from unittest import mock
+
+    from qtpy.QtCore import QObject
+
+    from bec_widgets.utils.qt_data_subscription import QtDataSubscription
+
+    class _StubBridge(QtDataSubscription):
+        # pylint: disable=super-init-not-called
+        def __init__(self, parent):
+            QObject.__init__(self, parent)
+            self._closed = False
+            self._subscription = mock.MagicMock()
+
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    bridge = _StubBridge(pb)
+    with qtbot.waitSignal(pb.property_changed, timeout=500) as signal:
+        pb.update_rate = 5
+    assert signal.args == ["update_rate", 5.0]
+    bridge._subscription.set_min_emit_interval.assert_called_once_with(0.2)
+
+
+def test_update_rate_widget_defaults():
+    """Per-widget defaults preserve the benchmarked rates."""
+    from bec_widgets.widgets.plots.heatmap.heatmap import Heatmap
+    from bec_widgets.widgets.plots.image.image import Image
+    from bec_widgets.widgets.plots.waveform.waveform import Waveform
+
+    assert Waveform.DEFAULT_UPDATE_RATE == 15.0
+    assert Heatmap.DEFAULT_UPDATE_RATE == 5.0
+    assert Image.DEFAULT_UPDATE_RATE == 25.0

@@ -2084,6 +2084,26 @@ class Heatmap(RPCBase):
         Minimum decimal places for crosshair when dynamic precision is enabled.
         """
 
+    @property
+    @rpc_call
+    def update_rate(self) -> "float":
+        """
+        Rate at which data subscriptions deliver updates to the widget, in Hz.
+
+        Clamped to 1-100 Hz. Each widget class defines its own default via
+        ``DEFAULT_UPDATE_RATE`` (25 Hz unless overridden).
+        """
+
+    @update_rate.setter
+    @rpc_call
+    def update_rate(self) -> "float":
+        """
+        Rate at which data subscriptions deliver updates to the widget, in Hz.
+
+        Clamped to 1-100 Hz. Each widget class defines its own default via
+        ``DEFAULT_UPDATE_RATE`` (25 Hz unless overridden).
+        """
+
     @rpc_timeout(None)
     @rpc_call
     def screenshot(self, file_name: "str | None" = None):
@@ -2790,6 +2810,26 @@ class Image(RPCBase):
     def minimal_crosshair_precision(self) -> "int":
         """
         Minimum decimal places for crosshair when dynamic precision is enabled.
+        """
+
+    @property
+    @rpc_call
+    def update_rate(self) -> "float":
+        """
+        Rate at which data subscriptions deliver updates to the widget, in Hz.
+
+        Clamped to 1-100 Hz. Each widget class defines its own default via
+        ``DEFAULT_UPDATE_RATE`` (25 Hz unless overridden).
+        """
+
+    @update_rate.setter
+    @rpc_call
+    def update_rate(self) -> "float":
+        """
+        Rate at which data subscriptions deliver updates to the widget, in Hz.
+
+        Clamped to 1-100 Hz. Each widget class defines its own default via
+        ``DEFAULT_UPDATE_RATE`` (25 Hz unless overridden).
         """
 
     @rpc_timeout(None)
@@ -3965,6 +4005,26 @@ class MotorMap(RPCBase):
         Minimum decimal places for crosshair when dynamic precision is enabled.
         """
 
+    @property
+    @rpc_call
+    def update_rate(self) -> "float":
+        """
+        Rate at which data subscriptions deliver updates to the widget, in Hz.
+
+        Clamped to 1-100 Hz. Each widget class defines its own default via
+        ``DEFAULT_UPDATE_RATE`` (25 Hz unless overridden).
+        """
+
+    @update_rate.setter
+    @rpc_call
+    def update_rate(self) -> "float":
+        """
+        Rate at which data subscriptions deliver updates to the widget, in Hz.
+
+        Clamped to 1-100 Hz. Each widget class defines its own default via
+        ``DEFAULT_UPDATE_RATE`` (25 Hz unless overridden).
+        """
+
     @rpc_timeout(None)
     @rpc_call
     def screenshot(self, file_name: "str | None" = None):
@@ -4437,6 +4497,26 @@ class MultiWaveform(RPCBase):
         Minimum decimal places for crosshair when dynamic precision is enabled.
         """
 
+    @property
+    @rpc_call
+    def update_rate(self) -> "float":
+        """
+        Rate at which data subscriptions deliver updates to the widget, in Hz.
+
+        Clamped to 1-100 Hz. Each widget class defines its own default via
+        ``DEFAULT_UPDATE_RATE`` (25 Hz unless overridden).
+        """
+
+    @update_rate.setter
+    @rpc_call
+    def update_rate(self) -> "float":
+        """
+        Rate at which data subscriptions deliver updates to the widget, in Hz.
+
+        Clamped to 1-100 Hz. Each widget class defines its own default via
+        ``DEFAULT_UPDATE_RATE`` (25 Hz unless overridden).
+        """
+
     @rpc_timeout(None)
     @rpc_call
     def screenshot(self, file_name: "str | None" = None):
@@ -4536,14 +4616,28 @@ class MultiWaveform(RPCBase):
     @rpc_call
     def monitor(self) -> "str":
         """
-        The monitor of the figure widget.
+        The monitored device of the figure widget (alias of ``device``).
         """
 
     @monitor.setter
     @rpc_call
     def monitor(self) -> "str":
         """
-        The monitor of the figure widget.
+        The monitored device of the figure widget (alias of ``device``).
+        """
+
+    @property
+    @rpc_call
+    def monitor_signal(self) -> "str":
+        """
+        The monitored signal/entry on the device (alias of ``signal``).
+        """
+
+    @monitor_signal.setter
+    @rpc_call
+    def monitor_signal(self) -> "str":
+        """
+        The monitored signal/entry on the device (alias of ``signal``).
         """
 
     @rpc_call
@@ -4557,11 +4651,18 @@ class MultiWaveform(RPCBase):
         """
 
     @rpc_call
-    def plot(self, monitor: "str", color_palette: "str | None" = "plasma"):
+    def plot(
+        self, monitor: "str", signal: "str | None" = None, color_palette: "str | None" = "plasma"
+    ):
         """
-        Create a plot for the given monitor.
+        Create a plot for the given monitor device and signal.
+
         Args:
-            monitor (str): The monitor to set.
+            monitor (str): The device to monitor.
+            signal (str|None): The signal/entry to monitor on the device. The reserved
+                entry ``"monitor_1d"`` selects the scan-less device_monitor_1d stream.
+                If None, the signal is auto-selected: the device's only 1D-capable
+                preview/async signal if unambiguous, the monitor_1d stream otherwise.
             color_palette (str|None): The color palette to use for the plot.
         """
 
@@ -5698,6 +5799,26 @@ class ScatterWaveform(RPCBase):
         Minimum decimal places for crosshair when dynamic precision is enabled.
         """
 
+    @property
+    @rpc_call
+    def update_rate(self) -> "float":
+        """
+        Rate at which data subscriptions deliver updates to the widget, in Hz.
+
+        Clamped to 1-100 Hz. Each widget class defines its own default via
+        ``DEFAULT_UPDATE_RATE`` (25 Hz unless overridden).
+        """
+
+    @update_rate.setter
+    @rpc_call
+    def update_rate(self) -> "float":
+        """
+        Rate at which data subscriptions deliver updates to the widget, in Hz.
+
+        Clamped to 1-100 Hz. Each widget class defines its own default via
+        ``DEFAULT_UPDATE_RATE`` (25 Hz unless overridden).
+        """
+
     @rpc_timeout(None)
     @rpc_call
     def screenshot(self, file_name: "str | None" = None):
@@ -6033,8 +6154,6 @@ class ViewBase(RPCBase):
 
 
 class Waveform(RPCBase):
-    """Widget for plotting waveforms."""
-
     _IMPORT_MODULE = "bec_widgets.widgets.plots.waveform.waveform"
 
     @rpc_call
@@ -6347,6 +6466,26 @@ class Waveform(RPCBase):
     def minimal_crosshair_precision(self) -> "int":
         """
         Minimum decimal places for crosshair when dynamic precision is enabled.
+        """
+
+    @property
+    @rpc_call
+    def update_rate(self) -> "float":
+        """
+        Rate at which data subscriptions deliver updates to the widget, in Hz.
+
+        Clamped to 1-100 Hz. Each widget class defines its own default via
+        ``DEFAULT_UPDATE_RATE`` (25 Hz unless overridden).
+        """
+
+    @update_rate.setter
+    @rpc_call
+    def update_rate(self) -> "float":
+        """
+        Rate at which data subscriptions deliver updates to the widget, in Hz.
+
+        Clamped to 1-100 Hz. Each widget class defines its own default via
+        ``DEFAULT_UPDATE_RATE`` (25 Hz unless overridden).
         """
 
     @rpc_timeout(None)

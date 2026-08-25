@@ -420,3 +420,46 @@ def _register_worker_thread_dummies():
         barrier.wait()
     except threading.BrokenBarrierError:
         pass
+
+
+@pytest.fixture(autouse=True)
+def _isolate_data_api_instances():
+    """
+    Drop DataAPI per-client instances between tests.
+
+    The registry is keyed by id(client); mock clients die between tests and
+    CPython reuses addresses, so a GC-lagged instance from a previous test can
+    answer for a fresh mock (order-dependent discovery failures).
+    """
+    from bec_lib.data_api import DataAPI
+
+    DataAPI.clear_instance()
+    yield
+    DataAPI.clear_instance()
+
+
+@pytest.fixture(autouse=True)
+def _isolate_device_signal_info(bec_dispatcher):
+    """
+    Restore the mock devices' ``_info["signals"]`` after each test.
+
+    The dispatcher's fake devices are shared; tests that inject signal
+    configs (image, multi-waveform, device-input suites) would otherwise
+    leak them into later tests, making signal discovery order-dependent.
+    """
+    import copy
+
+    devices = getattr(getattr(bec_dispatcher.client, "device_manager", None), "devices", None)
+    snapshots = {}
+    if devices is not None:
+        for name in list(getattr(devices, "keys", dict)() or []):
+            device = devices[name]
+            info = getattr(device, "_info", None)
+            if isinstance(info, dict) and isinstance(info.get("signals"), dict):
+                snapshots[name] = copy.deepcopy(info["signals"])
+    yield
+    for name, signals in snapshots.items():
+        try:
+            devices[name]._info["signals"] = signals
+        except (KeyError, TypeError, AttributeError):
+            continue
