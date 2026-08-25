@@ -1508,15 +1508,13 @@ class Waveform(PlotBase):
 
     def _curve_clean_up(self, curve: Curve):
         """
-        Clean up the curve by disconnecting the async update signal (even for sync curves).
+        Clean up the curve, releasing its async stream subscription when it was the last
+        curve fed by that stream (a safe no-op for sync and DAP curves).
 
         Args:
             curve(Curve): The curve to clean up.
         """
-        self.bec_dispatcher.disconnect_slot(
-            self.on_async_readback,
-            MessageEndpoints.device_async_readback(self.scan_id, curve.name()),
-        )
+        self._release_async_stream(curve)
         curve.rpc_register.remove_rpc(curve)
 
         # Remove itself from the DAP summary only for side panels
@@ -1534,6 +1532,29 @@ class Waveform(PlotBase):
             if c.config.parent_label == curve.name():
                 self.plot_item.removeItem(c)
                 self._curve_clean_up(c)
+
+    def _release_async_stream(self, curve: Curve) -> None:
+        """
+        Drop the curve's signal from its shared async stream; unsubscribe the exact
+        endpoint recorded at setup time once no curve uses the stream anymore.
+
+        Disconnecting with a re-derived endpoint instead would silently miss (the
+        subscription is keyed by device name and endpoint family), leaving the stream
+        subscribed until widget teardown.
+        """
+        signal_config = getattr(curve.config, "signal", None)
+        device = getattr(signal_config, "device", None)
+        if device is None:
+            return
+        signal = signal_config.signal
+        for stream_key, stream in list(self._async_streams_setup.items()):
+            if stream_key[0] != device or signal not in stream["signals"]:
+                continue
+            stream["signals"].remove(signal)
+            if not stream["signals"]:
+                self.bec_dispatcher.disconnect_slot(self.on_async_readback, stream["endpoint"])
+                self._async_streams_setup.pop(stream_key, None)
+            return
 
     def _check_curve_id(self, curve_id: str) -> bool:
         """
@@ -1797,9 +1818,9 @@ class Waveform(PlotBase):
         shared = self._async_streams_setup.get(stream_key)
         if shared is not None:
             # Another curve already subscribed to this exact stream this scan.
-            shared.append(signal)
+            shared["signals"].append(signal)
             logger.info(
-                f"Async signals {shared} share a single subscription on endpoint "
+                f"Async signals {shared['signals']} share a single subscription on endpoint "
                 f"'{endpoint_str}'; reusing it instead of subscribing again."
             )
             return
@@ -1814,7 +1835,9 @@ class Waveform(PlotBase):
         #         "waveform widget will be removed in a future release."
         #     )
 
-        self._async_streams_setup[stream_key] = [signal]
+        # Record the exact endpoint next to the subscribers so _curve_clean_up can
+        # release precisely what was registered here.
+        self._async_streams_setup[stream_key] = {"signals": [signal], "endpoint": new_endpoint}
         self.bec_dispatcher.disconnect_slot(self.on_async_readback, old_endpoint)
         self.bec_dispatcher.connect_slot(
             self.on_async_readback, new_endpoint, from_start=True, cb_info={"scan_id": self.scan_id}

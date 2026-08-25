@@ -1059,6 +1059,45 @@ def test_setup_async_curve(qtbot, mocked_client, monkeypatch):
     connect_spy.assert_called_once()
 
 
+def test_curve_clean_up_releases_exact_async_stream(qtbot, mocked_client, monkeypatch):
+    """
+    Removing the last curve of an async stream must unsubscribe the exact endpoint
+    recorded at setup time; while other curves still share the stream, the
+    subscription stays untouched.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.old_scan_id = "111"
+    wf.scan_id = "222"
+
+    c = wf.plot(arg1="async_device", label="async_device-async_device")
+    wf._async_curves = [c]
+
+    disconnect_spy = MagicMock()
+    monkeypatch.setattr(wf.bec_dispatcher, "disconnect_slot", disconnect_spy)
+
+    wf._async_streams_setup = {}
+    wf._setup_async_curve(c)
+    setup_disconnects = disconnect_spy.call_count  # old-scan endpoint disconnect
+
+    stream_key, stream = next(iter(wf._async_streams_setup.items()))
+    recorded_endpoint = stream["endpoint"]
+    # simulate a second curve sharing the stream
+    stream["signals"].append("second_signal")
+
+    # stream still shared -> nothing released
+    wf._curve_clean_up(c)
+    assert disconnect_spy.call_count == setup_disconnects
+    assert stream_key in wf._async_streams_setup
+
+    # last user gone -> the EXACT recorded endpoint is released
+    stream["signals"].clear()
+    stream["signals"].append(c.config.signal.signal)
+    wf._curve_clean_up(c)
+    assert disconnect_spy.call_count == setup_disconnects + 1
+    assert disconnect_spy.call_args[0][1] is recorded_endpoint
+    assert stream_key not in wf._async_streams_setup
+
+
 def test_on_async_readback_add_update(qtbot, mocked_client):
     """
     Test that on_async_readback extends or replaces async data depending on metadata instruction.
