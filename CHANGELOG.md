@@ -1,6 +1,41 @@
 # CHANGELOG
 
 
+## v3.36.0 (2026-08-25)
+
+### Documentation
+
+- Update .gitignore to include .python-version and AGENTS_PERSONAL.md
+  ([`2655f30`](https://github.com/bec-project/bec_widgets/commit/2655f307c155bd9cb947e1f1bfac09c1b7de16f7))
+
+- Update agents file
+  ([`ddb6e6d`](https://github.com/bec-project/bec_widgets/commit/ddb6e6d1088e332f051ce7ac656d4d2f7abf13a1))
+
+- Update AGENTS.md to clarify Qt module import rules and threading guidelines
+  ([`9014417`](https://github.com/bec-project/bec_widgets/commit/9014417b84b1c6397369ef7ffe92043abe92b296))
+
+### Features
+
+- Add a startup stage profiler
+  ([`a00b0c4`](https://github.com/bec-project/bec_widgets/commit/a00b0c40e30f8926f7ebdeb7c06f29525f49ec13))
+
+- Report bytecode cache status to the launcher on startup
+  ([`99349da`](https://github.com/bec-project/bec_widgets/commit/99349da3041080efa7aec9bcd5d567184b9920cd))
+
+- Stream startup stages to the launcher over a progress socket
+  ([`d6e523e`](https://github.com/bec-project/bec_widgets/commit/d6e523eea417231548ea2e1bebc8161364cf8cd3))
+
+### Refactoring
+
+- Remove redundant QTimer import in main_app
+  ([`4c59064`](https://github.com/bec-project/bec_widgets/commit/4c59064d70a7d7bb7e3aac713a6463fdb784f33a))
+
+### Testing
+
+- Harden handshake tests against timing and stale socket files
+  ([`ea222a0`](https://github.com/bec-project/bec_widgets/commit/ea222a06acef0284083a5c126c8bec6614b6711b))
+
+
 ## v3.35.0 (2026-08-24)
 
 ### Bug Fixes
