@@ -115,6 +115,54 @@ def test_dispatcher_disconnect_one(bec_dispatcher_w_connector, qtbot, send_msg_e
 
 
 @pytest.mark.parametrize("topics_msg_list", [(("topic1", dummy_msg),)])
+def test_dispatcher_disconnect_wrong_topic_is_safe_noop(
+    bec_dispatcher_w_connector, qtbot, send_msg_event
+):
+    bec_dispatcher = bec_dispatcher_w_connector
+    cb1 = mock.Mock(spec=[])
+
+    bec_dispatcher.connect_slot(cb1, "topic1")
+    # disconnecting a topic the slot is NOT subscribed to must not release topic1
+    bec_dispatcher.disconnect_slot(cb1, "topic-wrong")
+    assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 1
+
+    send_msg_event.set()
+    qtbot.wait(10)
+    cb1.assert_called_once()
+
+    bec_dispatcher.disconnect_slot(cb1, "topic1")
+    assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 0
+
+
+@pytest.mark.parametrize("topics_msg_list", [(("topic1", dummy_msg), ("topic2", dummy_msg))])
+def test_dispatcher_disconnect_selects_wrapper_by_topic(
+    bec_dispatcher_w_connector, qtbot, send_msg_event
+):
+    # The same callback registered twice with different cb_info produces two wrappers;
+    # disconnecting a topic must release it from the wrapper that actually holds it,
+    # not silently no-op on the first wrapper that matches the callback.
+    bec_dispatcher = bec_dispatcher_w_connector
+    cb1 = mock.Mock(spec=[])
+
+    bec_dispatcher.connect_slot(cb1, "topic1", cb_info={"scan": "a"})
+    bec_dispatcher.connect_slot(cb1, "topic2", cb_info={"scan": "b"})
+    assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 2
+
+    bec_dispatcher.disconnect_slot(cb1, "topic2")
+    remaining = bec_dispatcher.client.connector._managed_connection._topics_cb
+    assert len(remaining) == 1
+    assert "topic1" in remaining
+
+    # release the remaining subscription explicitly instead of leaning on fixture teardown
+    bec_dispatcher.disconnect_slot(cb1, "topic1")
+    assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 0
+
+    # unblock the fixture's message generator so connector.shutdown() can join
+    send_msg_event.set()
+    qtbot.wait(10)
+
+
+@pytest.mark.parametrize("topics_msg_list", [(("topic1", dummy_msg),)])
 def test_dispatcher_2_cb_same_topic(bec_dispatcher_w_connector, qtbot, send_msg_event):
     # test for BEC issue #276
     bec_dispatcher = bec_dispatcher_w_connector
@@ -272,3 +320,85 @@ def test_stop_cli_server_is_idempotent(bec_dispatcher):
         bec_dispatcher.stop_cli_server()
         bec_dispatcher.stop_cli_server()
     mock_logger.error.assert_not_called()
+
+
+@pytest.mark.parametrize("topics_msg_list", [(("topic1", dummy_msg), ("topic2", dummy_msg))])
+def test_dispatcher_disconnect_topic_list_single_wrapper(
+    bec_dispatcher_w_connector, qtbot, send_msg_event
+):
+    # One wrapper holding several topics: a list disconnect releases them all at once.
+    bec_dispatcher = bec_dispatcher_w_connector
+    cb1 = mock.Mock(spec=[])
+    try:
+        bec_dispatcher.connect_slot(cb1, "topic1")
+        bec_dispatcher.connect_slot(cb1, "topic2")
+        assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 2
+
+        bec_dispatcher.disconnect_slot(cb1, ["topic1", "topic2"])
+        assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 0
+    finally:
+        # unblock the fixture's message generator so connector.shutdown() can join
+        send_msg_event.set()
+    qtbot.wait(10)
+    cb1.assert_not_called()
+
+
+@pytest.mark.parametrize("topics_msg_list", [(("topic1", dummy_msg), ("topic2", dummy_msg))])
+def test_dispatcher_disconnect_topic_list_spans_wrappers(
+    bec_dispatcher_w_connector, qtbot, send_msg_event
+):
+    # The same callback registered twice with different cb_info produces two wrappers,
+    # each holding one of the requested topics: a list disconnect must release BOTH,
+    # not only the first wrapper that overlaps.
+    bec_dispatcher = bec_dispatcher_w_connector
+    cb1 = mock.Mock(spec=[])
+    try:
+        bec_dispatcher.connect_slot(cb1, "topic1", cb_info={"scan": "a"})
+        bec_dispatcher.connect_slot(cb1, "topic2", cb_info={"scan": "b"})
+        assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 2
+
+        bec_dispatcher.disconnect_slot(cb1, ["topic1", "topic2"])
+        assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 0
+        assert not any(
+            s.cb == cb1 for s in bec_dispatcher._registered_slots.values()
+        ), "all wrappers of the slot must be dropped"
+    finally:
+        send_msg_event.set()
+    qtbot.wait(10)
+    cb1.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "topics_msg_list", [(("topic1", dummy_msg), ("topic2", dummy_msg), ("topic3", dummy_msg))]
+)
+def test_dispatcher_disconnect_without_topics_releases_slot_everywhere(
+    bec_dispatcher_w_connector, qtbot, send_msg_event
+):
+    # Omitting topics disconnects the slot from everything it is subscribed to,
+    # across all its wrappers — while other slots stay untouched.
+    bec_dispatcher = bec_dispatcher_w_connector
+    cb1 = mock.Mock(spec=[])
+    cb2 = mock.Mock(spec=[])
+    try:
+        bec_dispatcher.connect_slot(cb1, "topic1", cb_info={"scan": "a"})
+        bec_dispatcher.connect_slot(cb1, "topic2", cb_info={"scan": "a"})
+        bec_dispatcher.connect_slot(cb1, "topic3", cb_info={"scan": "b"})
+        bec_dispatcher.connect_slot(cb2, "topic1")
+        assert len(bec_dispatcher.client.connector._managed_connection._topics_cb) == 3
+
+        bec_dispatcher.disconnect_slot(cb1)
+
+        remaining = bec_dispatcher.client.connector._managed_connection._topics_cb
+        assert list(remaining) == ["topic1"], "only cb2's topic1 subscription remains"
+        assert not any(s.cb == cb1 for s in bec_dispatcher._registered_slots.values())
+        assert any(s.cb == cb2 for s in bec_dispatcher._registered_slots.values())
+    finally:
+        send_msg_event.set()
+    qtbot.waitUntil(lambda: cb2.call_count == 1, timeout=2000)
+    cb1.assert_not_called()
+
+    bec_dispatcher.disconnect_slot(cb2)
+    # the fixture's generator delivers messages for already-released topics, which
+    # auto-creates empty defaultdict keys — assert no callbacks remain instead
+    assert not any(bec_dispatcher.client.connector._managed_connection._topics_cb.values())
+    assert not any(s.cb == cb2 for s in bec_dispatcher._registered_slots.values())
