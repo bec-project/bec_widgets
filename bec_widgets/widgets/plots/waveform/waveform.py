@@ -1301,9 +1301,10 @@ class Waveform(PlotBase):
                     )
                     curve.setVisible(False)
                     return
-                if y_shape != all_devices_used.get(scan_motors[0]).get(signal_x, {}).shape[0]:
+                x_shape = all_devices_used.get(scan_motors[0]).get(signal_x).shape[0]
+                if y_shape != x_shape:
                     logger.warning(
-                        f"Shape mismatch for x data '{all_devices_used.get(scan_motors[0]).get(signal_x, {}).get('shape', [0])[0]}' and y data '{y_shape}' in history curve '{curve.name()}'; scan ID: {curve.config.scan_id}."
+                        f"Shape mismatch for x data '{x_shape}' and y data '{y_shape}' in history curve '{curve.name()}'; scan ID: {curve.config.scan_id}."
                     )
                     curve.setVisible(False)
                     return
