@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 import numpy as np
 import pyqtgraph as pg
 import pytest
+from bec_lib import messages
 from pyqtgraph.graphicsItems.DateAxisItem import DateAxisItem
 from qtpy.QtCore import QTimer
 from qtpy.QtWidgets import QApplication, QCheckBox, QDialog, QDialogButtonBox, QDoubleSpinBox
@@ -459,6 +460,16 @@ def test_on_scan_status(qtbot, mocked_client, monkeypatch, mode, calls):
     # We mock out the scan_item, pretending we found a new scan.
     dummy_scan = create_dummy_scan_item()
     dummy_scan.metadata["bec"]["scan_id"] = "1234"
+    dummy_scan.status_message = messages.ScanStatusMessage(
+        scan_id="1234",
+        scan_number=12,
+        scan_name="line_scan",
+        status="open",
+        info={
+            "readout_priority": {"monitored": ["bpm4i"], "async": ["async_device"]},
+            "scan_report_devices": ["samx"],
+        },
+    )
     monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: dummy_scan)
 
     # We'll track calls to sync_signal_update and async_signal_update
@@ -475,6 +486,10 @@ def test_on_scan_status(qtbot, mocked_client, monkeypatch, mode, calls):
     assert wf.scan_id == "1234"
     assert wf.scan_item == dummy_scan
     assert wf._mode == mode
+    assert [label.text for _, label in wf.info_label.items] == [
+        "Scan: 12 (live)",
+        "Scan Name: line_scan",
+    ]
 
     assert sync_spy.call_count == calls[0], "sync_signal_update should be called exactly once"
     assert async_spy.call_count == calls[1], "async_signal_update should be called exactly once"
@@ -1641,6 +1656,13 @@ def test_update_with_scan_history_by_index(qtbot, mocked_client, scan_history_fa
     assert c2.config.scan_id == "hist2"
     assert c2.config.scan_number == 2
     assert c2.name() == "bpm4i-bpm4i-scan-2"
+
+    wf.update_with_scan_history(scan_id="hist1")
+
+    assert [label.text for _, label in wf.info_label.items] == [
+        "Scan: 1 (history)",
+        "Scan Name: line_scan",
+    ]
 
 
 @pytest.mark.parametrize("mode", ["auto", "timestamp", "index", "samx"])

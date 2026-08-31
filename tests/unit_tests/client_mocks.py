@@ -7,6 +7,7 @@ import pytest
 from bec_lib.bec_service import messages
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.scan_history import ScanHistory
+from bec_lib.scan_items import ScanItem
 
 from bec_widgets.tests.utils import FakePositioner, Positioner
 
@@ -197,7 +198,7 @@ def create_dummy_scan_item():
         "bpm4i": {"bpm4i": DummyData(val=[5, 6, 7], timestamps=[101, 201, 301])},
         "async_device": {"async_device": DummyData(val=[1, 2, 3], timestamps=[11, 21, 31])},
     }
-    dummy_scan = MagicMock()
+    dummy_scan = MagicMock(spec=ScanItem)
     dummy_scan.live_data = dummy_live_data
     dummy_scan.metadata = {
         "bec": {
@@ -206,10 +207,14 @@ def create_dummy_scan_item():
             "readout_priority": {"monitored": ["bpm4i"], "async": ["async_device"]},
         }
     }
-    dummy_scan.status_message.info = {
-        "readout_priority": {"monitored": ["bpm4i"], "async": ["async_device"]},
-        "scan_report_devices": ["samx"],
-    }
+    dummy_scan.status_message = messages.ScanStatusMessage(
+        scan_id="dummy",
+        status="open",
+        info={
+            "readout_priority": {"monitored": ["bpm4i"], "async": ["async_device"]},
+            "scan_report_devices": ["samx"],
+        },
+    )
     return dummy_scan
 
 

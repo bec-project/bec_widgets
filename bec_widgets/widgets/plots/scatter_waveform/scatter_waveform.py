@@ -318,6 +318,7 @@ class ScatterWaveform(PlotBase):
             self.old_scan_id = self.scan_id
             self.scan_id = current_scan_id
             self.scan_item = self.queue.scan_storage.find_scan_by_ID(self.scan_id)
+            self.update_scan_info_from_source(self.scan_item, mode="live")
 
             # First trigger to update the scan curves
             self.sync_signal_update.emit()
@@ -703,6 +704,7 @@ class ScatterWaveform(PlotBase):
         if scan_index is None:
             self.scan_id = scan_id
             self.scan_item = self.client.history.get_by_scan_id(scan_id)
+            self.update_scan_info_from_source(self.scan_item, mode="history")
             self.sync_signal_update.emit()
             return
 
@@ -714,6 +716,7 @@ class ScatterWaveform(PlotBase):
                     return
                 self.scan_item = scan_item
                 self.scan_id = scan_item.scan_id
+                self.update_scan_info_from_source(scan_item, mode="live")
                 self.sync_signal_update.emit()
                 return
 
@@ -724,6 +727,7 @@ class ScatterWaveform(PlotBase):
         self.scan_item = self.client.history[scan_index]
         metadata = self.scan_item.metadata
         self.scan_id = metadata["bec"]["scan_id"]
+        self.update_scan_info_from_source(self.scan_item, mode="history")
 
         self.sync_signal_update.emit()
 

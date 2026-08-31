@@ -8,10 +8,10 @@ import numpy as np
 import pyqtgraph as pg
 from bec_lib import bec_logger, messages
 from bec_lib.endpoints import MessageEndpoints
-from bec_lib.utils.import_utils import lazy_import, lazy_import_from
+from bec_lib.utils.import_utils import lazy_import_from
 from bec_qthemes import material_icon
 from pydantic import BaseModel, Field, field_validator
-from qtpy.QtCore import QObject, QRectF, Qt, QThread, QTimer, Signal
+from qtpy.QtCore import QObject, Qt, QThread, QTimer, Signal
 from qtpy.QtGui import QTransform
 from qtpy.QtWidgets import QDialog, QPushButton, QVBoxLayout
 from toolz import partition
@@ -91,30 +91,6 @@ class HeatmapConfig(ConnectionConfig):
 
     model_config: dict = {"validate_assignment": True}
     _validate_color_palette = field_validator("color_map")(Colors.validate_color_map)
-
-
-class _TextOnlyLegendSample(pg.graphicsItems.LegendItem.ItemSample):
-    """Zero-size legend sample for text-only rows in the config label.
-
-    The stock ItemSample expects a plottable item with an ``opts`` dict; since
-    PySide 6.10 an exception raised inside its paint() override propagates out
-    of the C++ paint loop and crashes the application, so the config label rows
-    must not carry a real sample item.
-    """
-
-    def __init__(self):
-        super().__init__(item=None)
-        self.setFixedWidth(0)
-        self.setFixedHeight(0)
-
-    def boundingRect(self):
-        return QRectF(0, 0, 0, 0)
-
-    def paint(self, p, *args):
-        pass
-
-    def mouseClickEvent(self, event):
-        event.ignore()
 
 
 @dataclass
@@ -300,12 +276,8 @@ class Heatmap(ImageBase):
         # Scan ID the widget is pinned to when plotting from history; None means live mode.
         self._history_scan_id: str | None = None
         self._selected_history_scan_id: str | None = None
-        bg_color = pg.mkColor((240, 240, 240, 150))
-        self.config_label = pg.LegendItem(
-            labelTextColor=(0, 0, 0), offset=(-30, 1), brush=pg.mkBrush(bg_color), horSpacing=0
-        )
-        self.config_label.setParentItem(self.plot_item.vb)
-        self.config_label.setVisible(False)
+        self.config_label = self.info_label
+        self.show_info_label = self._image_config.show_config_label
         self.reload = False
         self.bec_dispatcher.connect_slot(self.on_scan_status, MessageEndpoints.scan_status())
         self.bec_dispatcher.connect_slot(self.on_scan_progress, MessageEndpoints.scan_progress())
@@ -325,7 +297,6 @@ class Heatmap(ImageBase):
                 "image_colorbar",
                 "image_processing",
                 "axis_popup",
-                "interpolation_info",
             ]
         )
 
@@ -344,15 +315,7 @@ class Heatmap(ImageBase):
         Apply the current theme to the heatmap widget.
         """
         super().apply_theme(theme)
-        if theme == "dark":
-            brush = pg.mkBrush(pg.mkColor(50, 50, 50, 150))
-            color = pg.mkColor(255, 255, 255)
-        else:
-            brush = pg.mkBrush(pg.mkColor(240, 240, 240, 150))
-            color = pg.mkColor(0, 0, 0)
-        if hasattr(self, "config_label"):
-            self.config_label.setBrush(brush)
-            self.config_label.setLabelTextColor(color)
+        if hasattr(self, "info_label"):
             self.redraw_config_label()
 
     @SafeSlot(popup_error=True)
@@ -588,19 +551,6 @@ class Heatmap(ImageBase):
             if name not in ["image_processing_fft", "image_processing_log"]:
                 action().action.setVisible(False)
 
-        self.toolbar.add_action(
-            "interpolation_info",
-            MaterialIconAction(
-                icon_name="info", tooltip="Show Interpolation Info", checkable=True, parent=self
-            ),
-        )
-        self.toolbar.components.get_action("interpolation_info").action.triggered.connect(
-            self.toggle_interpolation_info
-        )
-        self.toolbar.components.get_action("interpolation_info").action.setChecked(
-            self._image_config.show_config_label
-        )
-
     def show_heatmap_settings(self):
         """
         Show the heatmap settings dialog.
@@ -687,15 +637,27 @@ class Heatmap(ImageBase):
         self._selected_history_scan_id = None
         self.toolbar.components.get_action("scan_history").action.setChecked(False)
 
+    @SafeProperty(bool, auto_emit=True)
+    def show_config_label(self) -> bool:
+        """Whether to show heatmap configuration rows in the plot info label."""
+        return self._image_config.show_config_label
+
+    @show_config_label.setter
+    def show_config_label(self, value: bool) -> None:
+        self._image_config.show_config_label = bool(value)
+        self.show_info_label = bool(value)
+        self.redraw_config_label()
+
+    @SafeSlot()
+    def toggle_info_label(self):
+        """Toggle the heatmap information label and keep heatmap config in sync."""
+        self.show_config_label = not self.show_config_label
+
     def toggle_interpolation_info(self):
         """
-        Toggle the visibility of the interpolation info label.
+        Toggle the visibility of the heatmap information label.
         """
-        self._image_config.show_config_label = not self._image_config.show_config_label
-        self.toolbar.components.get_action("interpolation_info").action.setChecked(
-            self._image_config.show_config_label
-        )
-        self.redraw_config_label()
+        self.toggle_info_label()
 
     def _heatmap_dialog_closed(self):
         """
@@ -989,27 +951,29 @@ class Heatmap(ImageBase):
         self._latest_interpolation_version = -1
 
     def redraw_config_label(self):
-        scan_msg = self.status_message
+        scan_msg = getattr(self, "status_message", None)
         if scan_msg is None:
             return
         if not self._image_config.show_config_label:
-            self.config_label.setVisible(False)
+            self.show_info_label = False
             return
 
-        self.config_label.setOffset((-30, 1))
-        self.config_label.setVisible(True)
-        self.config_label.clear()
         # Indicate whether the widget follows the live acquisition or is pinned to a history scan
         mode = "history" if self._history_scan_id is not None else "live"
-        self.config_label.addItem(_TextOnlyLegendSample(), f"Scan: {scan_msg.scan_number} ({mode})")
-        self.config_label.addItem(_TextOnlyLegendSample(), f"Scan Name: {scan_msg.scan_name}")
+        extra_rows = []
         if scan_msg.scan_name != "grid_scan" or self._image_config.enforce_interpolation:
-            self.config_label.addItem(
-                _TextOnlyLegendSample(), f"Interpolation: {self._image_config.interpolation}"
+            extra_rows.extend(
+                [
+                    ("Interpolation", self._image_config.interpolation),
+                    ("Oversampling", f"{self._image_config.oversampling_factor}x"),
+                ]
             )
-            self.config_label.addItem(
-                _TextOnlyLegendSample(), f"Oversampling: {self._image_config.oversampling_factor}x"
-            )
+        self.set_scan_info(
+            scan_number=scan_msg.scan_number,
+            scan_name=scan_msg.scan_name,
+            mode=mode,
+            extra_rows=extra_rows,
+        )
 
     def get_image_data(
         self,

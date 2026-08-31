@@ -1,4 +1,6 @@
 import numpy as np
+from bec_lib import messages
+from bec_lib.scan_items import ScanItem
 
 from bec_widgets.widgets.plots.multi_waveform.multi_waveform import MultiWaveform
 from tests.unit_tests.client_mocks import mocked_client
@@ -86,6 +88,22 @@ def test_multiwaveform_curve_limit_no_flush(qtbot, mocked_client):
     assert len(mw.curves) == 5
     visible_curves = [c for c in mw.curves if c.isVisible()]
     assert len(visible_curves) == 3
+
+
+def test_multiwaveform_scan_update_populates_info_label(qtbot, mocked_client, monkeypatch):
+    mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    scan_item = ScanItem(queue_id="queue-1", scan_number=1, scan_id="scan_1", status="open")
+    scan_item.status_message = messages.ScanStatusMessage(
+        scan_id="scan_1", scan_number=1, scan_name="line_scan", status="open", info={}
+    )
+    monkeypatch.setattr(mw.queue.scan_storage, "find_scan_by_ID", lambda scan_id: scan_item)
+
+    mw.on_monitor_1d_update({"data": np.array([1, 2, 3])}, metadata={"scan_id": "scan_1"})
+
+    assert [label.text for _, label in mw.info_label.items] == [
+        "Scan: 1 (live)",
+        "Scan Name: line_scan",
+    ]
 
 
 def test_multiwaveform_curve_limit_flush(qtbot, mocked_client):

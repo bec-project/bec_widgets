@@ -1594,6 +1594,7 @@ class Waveform(PlotBase):
             self.old_scan_id = self.scan_id
             self.scan_id = current_scan_id
             self.scan_item = self.queue.scan_storage.find_scan_by_ID(self.scan_id)  # live scan
+            self.update_scan_info_from_source(self.scan_item, mode="live")
             self._slice_index = None  # Reset the slice index
             self._update_curve_visibility()
             self._mode = self._categorise_device_curves()
@@ -2495,6 +2496,7 @@ class Waveform(PlotBase):
             else:
                 self.scan_id = self.scan_item.scan_id
 
+        self.update_scan_info_from_source(self.scan_item, mode="history")
         self._emit_signal_update()
 
     def _emit_signal_update(self):
