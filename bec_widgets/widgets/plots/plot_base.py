@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from enum import Enum
+from typing import TypeAlias
 
 import numpy as np
 import pyqtgraph as pg
-from bec_lib import bec_logger
+from bec_lib import bec_logger, messages
+from bec_lib.scan_data_container import ScanDataContainer
+from bec_lib.scan_items import ScanItem
 from qtpy.QtCore import QPoint, QPointF, Qt, Signal
 from qtpy.QtWidgets import QHBoxLayout, QLabel, QMainWindow, QVBoxLayout, QWidget
 
@@ -17,10 +20,12 @@ from bec_widgets.utils.fps_counter import FPSCounter
 from bec_widgets.utils.plot_indicator_items import BECArrowItem, BECTickItem
 from bec_widgets.utils.round_frame import RoundedFrame
 from bec_widgets.utils.side_panel import SidePanel
+from bec_widgets.utils.toolbars.actions import MaterialIconAction
 from bec_widgets.utils.toolbars.performance import PerformanceConnection, performance_bundle
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.utils.widget_state_manager import WidgetStateManager
 from bec_widgets.widgets.containers.layout_manager.layout_manager import LayoutManagerWidget
+from bec_widgets.widgets.plots.plot_info_label import PlotInfoLabel
 from bec_widgets.widgets.plots.setting_menus.axis_settings import AxisSettings
 from bec_widgets.widgets.plots.toolbar_components.axis_settings_popup import (
     AxisSettingsPopupConnection,
@@ -37,6 +42,8 @@ from bec_widgets.widgets.plots.toolbar_components.plot_export import (
 from bec_widgets.widgets.plots.toolbar_components.roi import RoiConnection, roi_bundle
 
 logger = bec_logger.logger
+
+ScanInfoSource: TypeAlias = ScanItem | ScanDataContainer | None
 
 
 class BECViewBox(pg.ViewBox):
@@ -162,6 +169,8 @@ class PlotBase(BECWidget, QWidget):
 
         # PlotItem Addons
         self.plot_item.addLegend()
+        self.info_label = PlotInfoLabel()
+        self.info_label.setParentItem(self.plot_item.vb)
         self.crosshair = None
         # Holds a pin that outlived its crosshair (e.g. crosshair toggled off) so it
         # can be re-adopted when the crosshair is hooked again.
@@ -183,6 +192,7 @@ class PlotBase(BECWidget, QWidget):
         # Visibility States
         self._toolbar_visible = True
         self._enable_fps_monitor = False
+        self._show_info_label = False
         self._outer_axes_visible = self.plot_item.getAxis("top").isVisible()
         self._inner_axes_visible = self.plot_item.getAxis("bottom").isVisible()
 
@@ -195,6 +205,8 @@ class PlotBase(BECWidget, QWidget):
 
     def apply_theme(self, theme: str):
         self.round_plot_widget.apply_theme(theme)
+        if hasattr(self, "info_label"):
+            self.info_label.set_theme(theme)
 
     def _init_ui(self):
         self.layout.addWidget(self.layout_manager)
@@ -219,6 +231,16 @@ class PlotBase(BECWidget, QWidget):
         self.toolbar.add_bundle(mouse_interaction_bundle(self.toolbar.components))
         self.toolbar.add_bundle(roi_bundle(self.toolbar.components))
         self.toolbar.add_bundle(axis_popup_bundle(self.toolbar.components))
+        self.toolbar.components.add_safe(
+            "plot_info_label",
+            MaterialIconAction(
+                icon_name="info", tooltip="Show Plot Info", checkable=True, parent=self
+            ),
+        )
+        self.toolbar.get_bundle("axis_popup").add_action("plot_info_label")
+        self.toolbar.components.get_action("plot_info_label").action.triggered.connect(
+            self.toggle_info_label
+        )
 
         self.toolbar.connect_bundle(
             "plot_base", PlotExportConnection(self.toolbar.components, self)
@@ -236,6 +258,7 @@ class PlotBase(BECWidget, QWidget):
 
         # hide some options by default
         self.toolbar.toggle_action_visibility("fps_monitor", False)
+        self._sync_info_label_action()
 
         # Get default viewbox state
         self.toolbar.show_bundles(
@@ -260,6 +283,137 @@ class PlotBase(BECWidget, QWidget):
     def reset_legend(self):
         """In the case that the legend is not visible, reset it to be visible to top left corner"""
         self.plot_item.legend.autoAnchor(50)
+
+    ################################################################################
+    # Plot Info Label
+    ################################################################################
+
+    @SafeProperty(bool, auto_emit=True, doc="Show the plot info label.")
+    def show_info_label(self) -> bool:
+        """Return whether the plot info label is enabled."""
+        return self._show_info_label
+
+    @show_info_label.setter
+    def show_info_label(self, value: bool) -> None:
+        """Show or hide the plot info label."""
+        visible = bool(value)
+        if visible and not self._show_info_label:
+            self.info_label.reset_position()
+        self._show_info_label = visible
+        self._sync_info_label_visibility()
+        self._sync_info_label_action()
+
+    @SafeSlot()
+    def toggle_info_label(self) -> None:
+        """Toggle the plot info label visibility."""
+        self.show_info_label = not self.show_info_label
+
+    def set_info_label_rows(
+        self, rows: dict[str, object | None] | list[tuple[str, object | None]]
+    ) -> None:
+        """Submit arbitrary rows for the plot info label."""
+        self.info_label.set_rows(rows)
+        self._sync_info_label_visibility()
+        self._sync_info_label_action()
+
+    def clear_info_label(self) -> None:
+        """Clear all rows from the plot info label."""
+        self.info_label.clear_rows()
+        self._sync_info_label_action()
+
+    def set_scan_info(
+        self,
+        *,
+        scan_id: str | None = None,
+        scan_number: int | str | None = None,
+        scan_name: str | None = None,
+        mode: str | None = None,
+        extra_rows: dict[str, object | None] | list[tuple[str, object | None]] | None = None,
+    ) -> None:
+        """Submit common scan metadata rows to the plot info label."""
+        rows: list[tuple[str, object | None]] = []
+        if scan_number is not None:
+            scan_value = f"{scan_number} ({mode})" if mode else scan_number
+            rows.append(("Scan", scan_value))
+        elif scan_id is not None and mode != "history":
+            scan_value = f"{scan_id} ({mode})" if mode else scan_id
+            rows.append(("Scan ID", scan_value))
+        if scan_name is not None:
+            rows.append(("Scan Name", scan_name))
+        if extra_rows:
+            rows.extend(extra_rows.items() if isinstance(extra_rows, dict) else extra_rows)
+        self.set_info_label_rows(rows)
+
+    def update_scan_info_from_source(
+        self, scan_source: ScanInfoSource, *, mode: str | None = None
+    ) -> None:
+        """Extract common scan metadata from a scan item and submit it."""
+        scan_info = self._extract_scan_info(scan_source)
+        if scan_info is None:
+            return
+        scan_id, scan_number, scan_name = scan_info
+        self.set_scan_info(scan_id=scan_id, scan_number=scan_number, scan_name=scan_name, mode=mode)
+
+    def update_scan_info_from_scan_id(
+        self, scan_id: str | None, *, mode: str | None = None
+    ) -> ScanItem | None:
+        """Fetch a live scan item by ID and submit common scan metadata."""
+        if scan_id is None:
+            return None
+        scan_item = self.queue.scan_storage.find_scan_by_ID(scan_id)
+        if not isinstance(scan_item, ScanItem):
+            return None
+        self.update_scan_info_from_source(scan_item, mode=mode)
+        return scan_item
+
+    def _extract_scan_info(
+        self, scan_source: ScanInfoSource
+    ) -> tuple[str | None, int | str | None, str | None] | None:
+        if scan_source is None:
+            return None
+
+        if isinstance(scan_source, ScanItem):
+            return self._scan_info_from_status_message(scan_source.status_message)
+
+        if isinstance(scan_source, ScanDataContainer):
+            metadata = scan_source.metadata
+            scan_info = self._scan_info_from_metadata(metadata.get("bec", metadata))
+            if scan_info is not None:
+                return scan_info
+
+        return None
+
+    @staticmethod
+    def _scan_info_from_status_message(
+        status_message: messages.ScanStatusMessage | None,
+    ) -> tuple[str | None, int | str | None, str | None] | None:
+        if status_message is None:
+            return None
+        scan_info = (status_message.scan_id, status_message.scan_number, status_message.scan_name)
+        return scan_info if any(value is not None for value in scan_info) else None
+
+    @staticmethod
+    def _scan_info_from_metadata(
+        metadata: dict | None,
+    ) -> tuple[str | None, int | str | None, str | None] | None:
+        if not isinstance(metadata, dict):
+            return None
+        scan_id = metadata.get("scan_id")
+        scan_number = metadata.get("scan_number")
+        scan_name = metadata.get("scan_name")
+        scan_info = (scan_id, scan_number, scan_name)
+        return scan_info if any(value is not None for value in scan_info) else None
+
+    def _sync_info_label_visibility(self) -> None:
+        self.info_label.setVisible(self._show_info_label and bool(self.info_label.rows))
+
+    def _sync_info_label_action(self) -> None:
+        try:
+            action = self.toolbar.components.get_action("plot_info_label").action
+        except KeyError:
+            return
+        action.setEnabled(True)
+        action.setChecked(self._show_info_label)
 
     ################################################################################
     # Toggle UI Elements
