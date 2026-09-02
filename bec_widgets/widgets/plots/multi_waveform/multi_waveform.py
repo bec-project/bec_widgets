@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import deque
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 import pyqtgraph as pg
 from bec_lib.endpoints import MessageEndpoints
@@ -361,7 +361,8 @@ class MultiWaveform(PlotBase):
         current_scan_id = metadata.get("scan_id", None)
 
         if current_scan_id != self.scan_id:
-            self.scan_id = current_scan_id
+            scan_item = self.update_scan_info_from_scan_id(current_scan_id, mode="live")
+            self.scan_id = scan_item.scan_id if scan_item is not None else current_scan_id
             self.clear_curves()
             self.curves.clear()
             if self.crosshair:

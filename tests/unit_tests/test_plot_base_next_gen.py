@@ -1,6 +1,17 @@
 import numpy as np
+import pytest
+from bec_lib import messages
+from bec_lib.scan_data_container import ScanDataContainer
+from bec_lib.scan_items import ScanItem
 
+from bec_widgets.widgets.plots.heatmap.heatmap import Heatmap
+from bec_widgets.widgets.plots.image.image import Image
+from bec_widgets.widgets.plots.motor_map.motor_map import MotorMap
+from bec_widgets.widgets.plots.multi_waveform.multi_waveform import MultiWaveform
 from bec_widgets.widgets.plots.plot_base import PlotBase, UIMode
+from bec_widgets.widgets.plots.plot_info_label import TextOnlyLegendSample
+from bec_widgets.widgets.plots.scatter_waveform.scatter_waveform import ScatterWaveform
+from bec_widgets.widgets.plots.waveform.waveform import Waveform
 
 from .client_mocks import mocked_client
 from .conftest import create_widget
@@ -71,6 +82,185 @@ def test_set_y_label_emits_signal(qtbot, mocked_client):
     assert pb.y_label == "Current"
     pb.y_label_units = "A"
     assert pb.plot_item.getAxis("left").labelText == "Current [A]"
+
+
+def test_info_label_rows_are_submitted_without_forcing_visibility(qtbot, mocked_client):
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    action = pb.toolbar.components.get_action("plot_info_label").action
+
+    assert action.isVisible()
+    assert action.isEnabled()
+    assert not action.isChecked()
+
+    pb.set_info_label_rows([("Scan", "5 (live)"), ("Mode", "alignment")])
+
+    labels = [label.text for _, label in pb.info_label.items]
+    assert labels == ["Scan: 5 (live)", "Mode: alignment"]
+    assert pb.info_label.rows == [("Scan", "5 (live)"), ("Mode", "alignment")]
+    assert not pb.info_label.isVisible()
+    assert action.isVisible()
+    assert action.isEnabled()
+    assert not action.isChecked()
+
+
+def test_info_label_can_be_enabled_before_rows_are_available(qtbot, mocked_client):
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    action = pb.toolbar.components.get_action("plot_info_label").action
+
+    action.trigger()
+
+    assert pb.show_info_label
+    assert action.isChecked()
+    assert not pb.info_label.isVisible()
+
+    pb.set_info_label_rows({"Scan": "5 (live)"})
+
+    assert pb.info_label.isVisible()
+    assert action.isChecked()
+
+
+def test_info_label_visibility_property_and_toolbar_action(qtbot, mocked_client):
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    pb.set_info_label_rows({"Scan": "5 (live)"})
+
+    with qtbot.waitSignal(pb.property_changed, timeout=500) as signal:
+        pb.show_info_label = True
+    assert signal.args == ["show_info_label", True]
+    assert pb.info_label.isVisible()
+    assert pb.toolbar.components.get_action("plot_info_label").action.isChecked()
+
+    pb.toolbar.components.get_action("plot_info_label").action.trigger()
+    assert not pb.show_info_label
+    assert not pb.info_label.isVisible()
+
+
+def test_set_scan_info_formats_common_scan_rows(qtbot, mocked_client):
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+
+    pb.show_info_label = True
+    pb.set_scan_info(
+        scan_number=7, scan_name="grid_scan", mode="history", extra_rows=[("Detector", "eiger")]
+    )
+
+    labels = [label.text for _, label in pb.info_label.items]
+    assert labels == ["Scan: 7 (history)", "Scan Name: grid_scan", "Detector: eiger"]
+
+
+def test_update_scan_info_from_scan_item_status_message(qtbot, mocked_client):
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    scan_item = ScanItem(queue_id="queue-1", scan_number=7, scan_id="scan-7", status="open")
+    status_message = messages.ScanStatusMessage(
+        scan_id="scan-7", scan_number=7, scan_name="line_scan", status="open", info={}
+    )
+    scan_item.status_message = status_message
+
+    pb.update_scan_info_from_source(scan_item, mode="live")
+
+    labels = [label.text for _, label in pb.info_label.items]
+    assert labels == ["Scan: 7 (live)", "Scan Name: line_scan"]
+
+
+def test_update_scan_info_from_history_scan_item_uses_scan_number(
+    qtbot, mocked_client, scan_history_factory
+):
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    history_message = scan_history_factory(
+        scan_id="history-id", scan_number=42, scan_name="line_scan"
+    )
+    scan_item = ScanDataContainer(file_path=history_message.file_path, msg=history_message)
+
+    pb.update_scan_info_from_source(scan_item, mode="history")
+
+    labels = [label.text for _, label in pb.info_label.items]
+    assert labels == ["Scan: 42 (history)", "Scan Name: line_scan"]
+
+
+def test_history_scan_info_does_not_fall_back_to_scan_id(qtbot, mocked_client):
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+
+    pb.set_scan_info(scan_id="history-id", mode="history")
+
+    assert pb.info_label.rows == []
+
+
+def test_update_scan_info_noops_when_source_has_no_scan_info(qtbot, mocked_client):
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    scan_item = ScanItem(queue_id="queue-1", scan_number=7, scan_id="scan-7", status="open")
+    pb.set_scan_info(scan_id="scan-7", mode="live")
+
+    pb.update_scan_info_from_source(scan_item, mode="live")
+
+    assert [label.text for _, label in pb.info_label.items] == ["Scan ID: scan-7 (live)"]
+
+
+def test_info_label_paints_without_error(qtbot, mocked_client):
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+
+    pb.show_info_label = True
+    pb.set_info_label_rows({"Scan": "5 (live)"})
+
+    samples = [sample for sample, _ in pb.info_label.items]
+    assert samples
+    assert all(isinstance(sample, TextOnlyLegendSample) for sample in samples)
+
+    pixmap = pb.grab()
+    assert not pixmap.isNull()
+
+
+def test_info_label_redraw_preserves_user_position(qtbot, mocked_client):
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    pb.show_info_label = True
+    pb.set_info_label_rows({"Scan": "5 (live)"})
+
+    pb.info_label.autoAnchor((42, 24), relative=False)
+    position = pb.info_label.pos()
+    pb.set_info_label_rows({"Scan": "6 (live)"})
+
+    assert pb.info_label.pos() == position
+
+
+def test_info_label_toggle_resets_position(qtbot, mocked_client):
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    pb.set_info_label_rows({"Scan": "5 (live)"})
+    pb.show_info_label = True
+    default_position = pb.info_label.pos()
+
+    pb.info_label.autoAnchor((42, 24), relative=False)
+    assert pb.info_label.pos() != default_position
+
+    pb.show_info_label = False
+    pb.show_info_label = True
+
+    assert pb.info_label.pos() == default_position
+
+
+@pytest.mark.parametrize(
+    "widget_cls", [PlotBase, Waveform, ScatterWaveform, MultiWaveform, MotorMap, Image, Heatmap]
+)
+def test_info_label_is_available_on_plot_base_subclasses(qtbot, mocked_client, widget_cls):
+    widget = create_widget(qtbot, widget_cls, client=mocked_client)
+
+    if hasattr(widget, "show_config_label"):
+        widget.show_config_label = False
+    else:
+        widget.show_info_label = False
+
+    widget.set_info_label_rows([("Widget", widget_cls.__name__), ("Mode", "custom")])
+    assert [label.text for _, label in widget.info_label.items] == [
+        f"Widget: {widget_cls.__name__}",
+        "Mode: custom",
+    ]
+    assert not widget.info_label.isVisible()
+
+    if isinstance(widget, MotorMap):
+        assert "plot_info_label" not in widget.toolbar.get_bundle("axis_popup").bundle_actions
+        return
+
+    action = widget.toolbar.components.get_action("plot_info_label").action
+    action.trigger()
+    assert widget.show_info_label
+    assert widget.info_label.isVisible()
+    assert action.isChecked()
 
 
 def test_set_x_min_max(qtbot, mocked_client):

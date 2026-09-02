@@ -13,8 +13,8 @@ from bec_widgets.widgets.plots.heatmap.heatmap import (
     HeatmapDeviceSignal,
     _InterpolationRequest,
     _StepInterpolationWorker,
-    _TextOnlyLegendSample,
 )
+from bec_widgets.widgets.plots.plot_info_label import TextOnlyLegendSample
 
 # pytest: disable=unused-import
 from tests.unit_tests.client_mocks import mocked_client
@@ -1048,7 +1048,9 @@ def test_heatmap_config_label_shows_live_or_history(heatmap_widget):
 
     heatmap_widget.redraw_config_label()
     labels = [label.text for _, label in heatmap_widget.config_label.items]
+    assert heatmap_widget.config_label is heatmap_widget.info_label
     assert "Scan: 5 (live)" in labels
+    assert "Interpolation: linear" in labels
 
     heatmap_widget._history_scan_id = "scan-1"
     heatmap_widget.redraw_config_label()
@@ -1071,7 +1073,7 @@ def test_heatmap_config_label_paints_without_error(heatmap_widget):
 
     samples = [sample for sample, _ in heatmap_widget.config_label.items]
     assert samples
-    assert all(isinstance(sample, _TextOnlyLegendSample) for sample in samples)
+    assert all(isinstance(sample, TextOnlyLegendSample) for sample in samples)
 
     pixmap = heatmap_widget.grab()
     assert not pixmap.isNull()

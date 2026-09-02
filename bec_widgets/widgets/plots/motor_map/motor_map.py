@@ -167,6 +167,7 @@ class MotorMap(PlotBase):
         )
 
         self.toolbar.components.get_action("reset_legend").action.setVisible(False)
+        self.toolbar.get_bundle("axis_popup").remove_action("plot_info_label")
 
         reset_legend = MaterialIconAction(
             icon_name="history",

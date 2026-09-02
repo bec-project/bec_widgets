@@ -358,14 +358,10 @@ class BECDockArea(DockAreaWidget):
             "waveform": (widget_icons["Waveform"], "Waveform", "Waveform"),
             "scatter_waveform": (
                 widget_icons["ScatterWaveform"],
-                "Add Scatter Waveform",
+                "Scatter Waveform",
                 "ScatterWaveform",
             ),
-            "multi_waveform": (
-                widget_icons["MultiWaveform"],
-                "Add Multi Waveform",
-                "MultiWaveform",
-            ),
+            "multi_waveform": (widget_icons["MultiWaveform"], "Multi Waveform", "MultiWaveform"),
             "image": (widget_icons["Image"], "Image", "Image"),
             "motor_map": (widget_icons["MotorMap"], "Motor Map", "MotorMap"),
             "heatmap": (widget_icons["Heatmap"], "Heatmap", "Heatmap"),

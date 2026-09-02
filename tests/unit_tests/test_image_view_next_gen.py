@@ -674,6 +674,7 @@ def test_handle_scan_change_clears_buffers_and_resets_crosshair(qtbot, mocked_cl
 
     assert view.old_scan_id == "scan_1"
     assert view.scan_id == "scan_2"
+    assert view.info_label.rows == []
     assert clear_called == [True]
     assert view.main_image.buffer == []
     assert view.main_image.max_len == 0
