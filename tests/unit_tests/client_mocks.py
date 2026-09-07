@@ -188,9 +188,16 @@ class DummyData:
         return default
 
 
-def create_dummy_scan_item():
+def create_dummy_scan_item(
+    scan_id: str = "dummy", scan_number: int | None = None, scan_name: str | None = None
+):
     """
     Helper to create a dummy scan item with both live_data and metadata/status_message info.
+
+    Args:
+        scan_id (str): Scan ID used in the metadata and the status message.
+        scan_number (int | None): Scan number of the status message and the metadata.
+        scan_name (str | None): Scan name of the status message and the metadata.
     """
     dummy_live_data = {
         "samx": {"samx": DummyData(val=[10, 20, 30], timestamps=[100, 200, 300])},
@@ -198,17 +205,26 @@ def create_dummy_scan_item():
         "bpm4i": {"bpm4i": DummyData(val=[5, 6, 7], timestamps=[101, 201, 301])},
         "async_device": {"async_device": DummyData(val=[1, 2, 3], timestamps=[11, 21, 31])},
     }
+    # spec=ScanItem makes isinstance checks pass but hides the instance attributes that
+    # ScanItem.__init__ assigns, so the ones the widgets read are set explicitly.
     dummy_scan = MagicMock(spec=ScanItem)
+    dummy_scan.scan_id = scan_id
+    dummy_scan.scan_number = scan_number
+    dummy_scan.status = "open"
     dummy_scan.live_data = dummy_live_data
     dummy_scan.metadata = {
         "bec": {
-            "scan_id": "dummy",
+            "scan_id": scan_id,
+            "scan_number": scan_number,
+            "scan_name": scan_name,
             "scan_report_devices": ["samx"],
             "readout_priority": {"monitored": ["bpm4i"], "async": ["async_device"]},
         }
     }
     dummy_scan.status_message = messages.ScanStatusMessage(
-        scan_id="dummy",
+        scan_id=scan_id,
+        scan_number=scan_number,
+        scan_name=scan_name,
         status="open",
         info={
             "readout_priority": {"monitored": ["bpm4i"], "async": ["async_device"]},

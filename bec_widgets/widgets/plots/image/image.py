@@ -159,6 +159,7 @@ class Image(ImageBase):
         crosshair_bundle = self.toolbar.get_bundle("image_crosshair")
         crosshair_bundle.add_action("image_autorange")
         crosshair_bundle.add_action("image_colorbar_switch")
+        self.remove_info_label_action()
 
         self.toolbar.show_bundles(
             [

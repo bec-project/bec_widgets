@@ -154,7 +154,7 @@ def test_update_scan_info_from_scan_item_status_message(qtbot, mocked_client):
     )
     scan_item.status_message = status_message
 
-    pb.update_scan_info_from_source(scan_item, mode="live")
+    pb.update_scan_info_from_source(scan_item)
 
     labels = [label.text for _, label in pb.info_label.items]
     assert labels == ["Scan: 7 (live)", "Scan Name: line_scan"]
@@ -169,28 +169,55 @@ def test_update_scan_info_from_history_scan_item_uses_scan_number(
     )
     scan_item = ScanDataContainer(file_path=history_message.file_path, msg=history_message)
 
-    pb.update_scan_info_from_source(scan_item, mode="history")
+    pb.update_scan_info_from_source(scan_item)
 
     labels = [label.text for _, label in pb.info_label.items]
     assert labels == ["Scan: 42 (history)", "Scan Name: line_scan"]
 
 
-def test_history_scan_info_does_not_fall_back_to_scan_id(qtbot, mocked_client):
+@pytest.mark.parametrize(
+    "scan_source",
+    [None, ScanItem(queue_id="queue-1", scan_number=7, scan_id="scan-7", status="open")],
+    ids=["no_scan_item", "scan_item_without_status_message"],
+)
+def test_update_scan_info_clears_rows_when_source_has_no_scan_info(
+    qtbot, mocked_client, scan_source
+):
+    """Regression: a missing scan item left the previous scan's rows on the label."""
     pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    pb.show_info_label = True
+    pb.set_scan_info(scan_number=6, scan_name="line_scan", mode="live")
+    assert pb.info_label.isVisible()
 
-    pb.set_scan_info(scan_id="history-id", mode="history")
+    pb.update_scan_info_from_source(scan_source)
 
     assert pb.info_label.rows == []
+    assert not pb.info_label.isVisible()
 
 
-def test_update_scan_info_noops_when_source_has_no_scan_info(qtbot, mocked_client):
+def test_custom_info_rows_survive_scan_info_updates(qtbot, mocked_client):
+    """Regression: set_info_label_rows rows were replaced by the next set_scan_info call."""
     pb = create_widget(qtbot, PlotBase, client=mocked_client)
-    scan_item = ScanItem(queue_id="queue-1", scan_number=7, scan_id="scan-7", status="open")
-    pb.set_scan_info(scan_id="scan-7", mode="live")
 
-    pb.update_scan_info_from_source(scan_item, mode="live")
+    pb.set_info_label_rows({"Sample": "Si"})
+    pb.set_scan_info(scan_number=5, scan_name="line_scan", mode="live")
+    assert [label.text for _, label in pb.info_label.items] == [
+        "Scan: 5 (live)",
+        "Scan Name: line_scan",
+        "Sample: Si",
+    ]
 
-    assert [label.text for _, label in pb.info_label.items] == ["Scan ID: scan-7 (live)"]
+    pb.set_scan_info(scan_number=6, scan_name="grid_scan", mode="live")
+    pb.set_info_label_rows({"Sample": "Ge"})
+    assert [label.text for _, label in pb.info_label.items] == [
+        "Scan: 6 (live)",
+        "Scan Name: grid_scan",
+        "Sample: Ge",
+    ]
+
+    pb.clear_info_label()
+    assert pb.info_label.rows == []
+    assert not pb.info_label.isVisible()
 
 
 def test_info_label_paints_without_error(qtbot, mocked_client):
@@ -219,6 +246,41 @@ def test_info_label_redraw_preserves_user_position(qtbot, mocked_client):
     assert pb.info_label.pos() == position
 
 
+def test_info_label_rows_accept_values_without_boolean_equality(qtbot, mocked_client):
+    """Regression: comparing raw row values raised for numpy arrays on the second submit."""
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+
+    pb.set_info_label_rows({"Positions": np.array([1, 2]), "Points": 3})
+    pb.set_info_label_rows({"Positions": np.array([1, 2]), "Points": 3})
+
+    assert pb.info_label.rows == [("Positions", "[1 2]"), ("Points", "3")]
+    assert [label.text for _, label in pb.info_label.items] == ["Positions: [1 2]", "Points: 3"]
+
+
+def test_info_label_box_shrinks_when_row_text_gets_shorter(qtbot, mocked_client):
+    """Regression: the same-row-count redraw used to keep the widest frame ever drawn."""
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    pb.show_info_label = True
+
+    pb.set_info_label_rows({"Scan": "1 (live)", "Scan Name": "line_scan"})
+    short_width = pb.info_label.geometry().width()
+    pb.set_info_label_rows({"Scan": "2 (live)", "Scan Name": "fermat_scan_with_a_much_longer_name"})
+    assert pb.info_label.geometry().width() > short_width + 50
+    pb.set_info_label_rows({"Scan": "3 (live)", "Scan Name": "line_scan"})
+
+    assert pb.info_label.geometry().width() == pytest.approx(short_width, abs=1)
+
+
+def test_info_label_set_rows_skips_redraw_for_unchanged_rows(qtbot, mocked_client):
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    pb.set_info_label_rows({"Scan": "1 (live)"})
+    items_before = [label for _, label in pb.info_label.items]
+
+    pb.set_info_label_rows({"Scan": "1 (live)"})
+
+    assert [label for _, label in pb.info_label.items] == items_before
+
+
 def test_info_label_toggle_resets_position(qtbot, mocked_client):
     pb = create_widget(qtbot, PlotBase, client=mocked_client)
     pb.set_info_label_rows({"Scan": "5 (live)"})
@@ -240,10 +302,7 @@ def test_info_label_toggle_resets_position(qtbot, mocked_client):
 def test_info_label_is_available_on_plot_base_subclasses(qtbot, mocked_client, widget_cls):
     widget = create_widget(qtbot, widget_cls, client=mocked_client)
 
-    if hasattr(widget, "show_config_label"):
-        widget.show_config_label = False
-    else:
-        widget.show_info_label = False
+    widget.show_info_label = False
 
     widget.set_info_label_rows([("Widget", widget_cls.__name__), ("Mode", "custom")])
     assert [label.text for _, label in widget.info_label.items] == [
@@ -252,8 +311,13 @@ def test_info_label_is_available_on_plot_base_subclasses(qtbot, mocked_client, w
     ]
     assert not widget.info_label.isVisible()
 
-    if isinstance(widget, MotorMap):
+    if isinstance(widget, (Image, MotorMap)):
+        # these widgets never publish scan info and remove the toolbar button
+        assert not widget.toolbar.components.exists("plot_info_label")
         assert "plot_info_label" not in widget.toolbar.get_bundle("axis_popup").bundle_actions
+        # the property itself keeps working without the button
+        widget.show_info_label = True
+        assert widget.info_label.isVisible()
         return
 
     action = widget.toolbar.components.get_action("plot_info_label").action

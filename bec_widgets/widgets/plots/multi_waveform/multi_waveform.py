@@ -361,8 +361,10 @@ class MultiWaveform(PlotBase):
         current_scan_id = metadata.get("scan_id", None)
 
         if current_scan_id != self.scan_id:
-            scan_item = self.update_scan_info_from_scan_id(current_scan_id, mode="live")
-            self.scan_id = scan_item.scan_id if scan_item is not None else current_scan_id
+            self.scan_id = current_scan_id
+            self.update_scan_info_from_source(
+                self.queue.scan_storage.find_scan_by_ID(current_scan_id)
+            )
             self.clear_curves()
             self.curves.clear()
             if self.crosshair:

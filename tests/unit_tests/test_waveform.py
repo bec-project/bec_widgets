@@ -9,6 +9,7 @@ import numpy as np
 import pyqtgraph as pg
 import pytest
 from bec_lib import messages
+from bec_lib.scan_items import ScanItem
 from pyqtgraph.graphicsItems.DateAxisItem import DateAxisItem
 from qtpy.QtCore import QTimer
 from qtpy.QtWidgets import QApplication, QCheckBox, QDialog, QDialogButtonBox, QDoubleSpinBox
@@ -458,18 +459,7 @@ def test_on_scan_status(qtbot, mocked_client, monkeypatch, mode, calls):
         wf.plot(arg1="async_device")
 
     # We mock out the scan_item, pretending we found a new scan.
-    dummy_scan = create_dummy_scan_item()
-    dummy_scan.metadata["bec"]["scan_id"] = "1234"
-    dummy_scan.status_message = messages.ScanStatusMessage(
-        scan_id="1234",
-        scan_number=12,
-        scan_name="line_scan",
-        status="open",
-        info={
-            "readout_priority": {"monitored": ["bpm4i"], "async": ["async_device"]},
-            "scan_report_devices": ["samx"],
-        },
-    )
+    dummy_scan = create_dummy_scan_item(scan_id="1234", scan_number=12, scan_name="line_scan")
     monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: dummy_scan)
 
     # We'll track calls to sync_signal_update and async_signal_update
@@ -1661,6 +1651,52 @@ def test_update_with_scan_history_by_index(qtbot, mocked_client, scan_history_fa
 
     assert [label.text for _, label in wf.info_label.items] == [
         "Scan: 1 (history)",
+        "Scan Name: line_scan",
+    ]
+
+
+def test_on_scan_status_clears_info_label_when_scan_item_is_missing(
+    qtbot, mocked_client, monkeypatch
+):
+    """Regression: a scan whose ScanItem is not in scan storage kept the previous scan's rows."""
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.show_info_label = True
+    scan_item = ScanItem(queue_id="queue-1", scan_number=1, scan_id="scan-1", status="open")
+    scan_item.status_message = messages.ScanStatusMessage(
+        scan_id="scan-1", scan_number=1, scan_name="line_scan", status="open", info={}
+    )
+    storage = {"scan-1": scan_item}
+    monkeypatch.setattr(
+        wf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: storage.get(scan_id)
+    )
+
+    wf.on_scan_status({"scan_id": "scan-1", "status": "open"}, {})
+    assert [label.text for _, label in wf.info_label.items] == [
+        "Scan: 1 (live)",
+        "Scan Name: line_scan",
+    ]
+
+    wf.on_scan_status({"scan_id": "scan-2", "status": "closed"}, {})
+
+    assert wf.scan_id == "scan-2"
+    assert wf.info_label.rows == []
+    assert not wf.info_label.isVisible()
+
+
+def test_update_with_scan_history_labels_running_scan_as_live(qtbot, mocked_client):
+    """Regression: a Waveform created during a running scan labelled the live scan '(history)'."""
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    scan_item = ScanItem(queue_id="queue-1", scan_number=9, scan_id="scan-9", status="open")
+    scan_item.status_message = messages.ScanStatusMessage(
+        scan_id="scan-9", scan_number=9, scan_name="line_scan", status="open", info={}
+    )
+    mocked_client.queue.scan_storage.current_scan = scan_item
+
+    wf.update_with_scan_history(-1)
+
+    assert wf.scan_item is scan_item
+    assert [label.text for _, label in wf.info_label.items] == [
+        "Scan: 9 (live)",
         "Scan Name: line_scan",
     ]
 
