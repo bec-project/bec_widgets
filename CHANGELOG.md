@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v3.37.0 (2026-09-07)
+
+### Bug Fixes
+
+- Remove Add-prefix from MultiWaveform and ScatterWaveform
+  ([`9d5da61`](https://github.com/bec-project/bec_widgets/commit/9d5da6137b000be05bd650e9688d81d928353631))
+
+- **signal_info_label**: Various fixes to implementation of signal info in plotting widgets
+  ([`870eb91`](https://github.com/bec-project/bec_widgets/commit/870eb910fac8bfd83db2a348373cf89ce857fe74))
+
+### Features
+
+- Generalized scan info label
+  ([`bc5dca2`](https://github.com/bec-project/bec_widgets/commit/bc5dca29157972f01fa48a9b1368d5c88b624f6a))
+
+
 ## v3.36.0 (2026-08-25)
 
 ### Documentation
