@@ -1044,18 +1044,75 @@ def test_heatmap_config_label_shows_live_or_history(heatmap_widget):
     scan_msg.scan_number = 5
     scan_msg.scan_name = "line_scan"
     heatmap_widget.status_message = scan_msg
-    heatmap_widget._image_config.show_config_label = True
+    heatmap_widget.show_info_label = True
 
     heatmap_widget.redraw_config_label()
-    labels = [label.text for _, label in heatmap_widget.config_label.items]
-    assert heatmap_widget.config_label is heatmap_widget.info_label
+    labels = [label.text for _, label in heatmap_widget.info_label.items]
     assert "Scan: 5 (live)" in labels
     assert "Interpolation: linear" in labels
 
     heatmap_widget._history_scan_id = "scan-1"
     heatmap_widget.redraw_config_label()
-    labels = [label.text for _, label in heatmap_widget.config_label.items]
+    labels = [label.text for _, label in heatmap_widget.info_label.items]
     assert "Scan: 5 (history)" in labels
+
+
+def test_heatmap_plot_show_config_label_reenables_hidden_label(heatmap_widget):
+    """Regression: plot(show_config_label=True) after the toolbar hid the label kept it hidden."""
+    scan_msg = mock.MagicMock()
+    scan_msg.scan_number = 5
+    scan_msg.scan_name = "grid_scan"
+    heatmap_widget.status_message = scan_msg
+    heatmap_widget.redraw_config_label()
+    assert heatmap_widget.info_label.isVisible()
+
+    action = heatmap_widget.toolbar.components.get_action("plot_info_label").action
+    action.trigger()
+    assert not heatmap_widget.show_info_label
+    assert not heatmap_widget.info_label.isVisible()
+
+    heatmap_widget.plot(
+        "samx",
+        "samy",
+        "bpm4i",
+        signal_x="samx",
+        signal_y="samy",
+        signal_z="bpm4i",
+        validate_bec=False,
+        show_config_label=True,
+    )
+    heatmap_widget.redraw_config_label()
+
+    assert heatmap_widget.show_info_label
+    assert heatmap_widget._image_config.show_config_label
+    assert heatmap_widget.info_label.isVisible()
+    assert action.isChecked()
+
+    action.trigger()
+    assert not heatmap_widget.info_label.isVisible()
+
+
+def test_heatmap_show_info_label_is_the_only_visibility_flag(heatmap_widget):
+    """Regression: writes to the inherited show_info_label property were reverted on redraw."""
+    scan_msg = mock.MagicMock()
+    scan_msg.scan_number = 5
+    scan_msg.scan_name = "grid_scan"
+    heatmap_widget.status_message = scan_msg
+    action = heatmap_widget.toolbar.components.get_action("plot_info_label").action
+
+    # what a Designer .ui file / QUiLoader does
+    heatmap_widget.setProperty("show_info_label", False)
+    heatmap_widget.redraw_config_label()
+    assert not heatmap_widget.info_label.isVisible()
+    assert not action.isChecked()
+
+    action.trigger()
+    assert heatmap_widget.info_label.isVisible()
+
+    heatmap_widget.apply_theme("dark")
+    heatmap_widget.redraw_config_label()
+    assert heatmap_widget.show_info_label
+    assert heatmap_widget.info_label.isVisible()
 
 
 def test_heatmap_config_label_paints_without_error(heatmap_widget):
@@ -1068,10 +1125,10 @@ def test_heatmap_config_label_paints_without_error(heatmap_widget):
     scan_msg.scan_number = 5
     scan_msg.scan_name = "line_scan"
     heatmap_widget.status_message = scan_msg
-    heatmap_widget._image_config.show_config_label = True
+    heatmap_widget.show_info_label = True
     heatmap_widget.redraw_config_label()
 
-    samples = [sample for sample, _ in heatmap_widget.config_label.items]
+    samples = [sample for sample, _ in heatmap_widget.info_label.items]
     assert samples
     assert all(isinstance(sample, TextOnlyLegendSample) for sample in samples)
 

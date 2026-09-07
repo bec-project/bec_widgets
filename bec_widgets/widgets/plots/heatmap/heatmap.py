@@ -276,7 +276,6 @@ class Heatmap(ImageBase):
         # Scan ID the widget is pinned to when plotting from history; None means live mode.
         self._history_scan_id: str | None = None
         self._selected_history_scan_id: str | None = None
-        self.config_label = self.info_label
         self.show_info_label = self._image_config.show_config_label
         self.reload = False
         self.bec_dispatcher.connect_slot(self.on_scan_status, MessageEndpoints.scan_status())
@@ -308,15 +307,6 @@ class Heatmap(ImageBase):
     ################################################################################
     # Widget Specific GUI interactions
     ################################################################################
-
-    @SafeSlot(str)
-    def apply_theme(self, theme: str):
-        """
-        Apply the current theme to the heatmap widget.
-        """
-        super().apply_theme(theme)
-        if hasattr(self, "info_label"):
-            self.redraw_config_label()
 
     @SafeSlot(popup_error=True)
     def plot(
@@ -380,7 +370,7 @@ class Heatmap(ImageBase):
             lock_aspect_ratio = self._image_config.lock_aspect_ratio
 
         if show_config_label is None:
-            show_config_label = self._image_config.show_config_label
+            show_config_label = self.show_info_label
 
         def _device_key(device: HeatmapDeviceSignal | None) -> tuple[str | None, str | None]:
             return (device.device if device else None, device.signal if device else None)
@@ -409,6 +399,7 @@ class Heatmap(ImageBase):
             lock_aspect_ratio=lock_aspect_ratio,
             show_config_label=show_config_label,
         )
+        self.show_info_label = show_config_label
         self.color_map = color_map
         self.reload = reload or config_changed
         if config_changed:
@@ -637,28 +628,6 @@ class Heatmap(ImageBase):
         self._selected_history_scan_id = None
         self.toolbar.components.get_action("scan_history").action.setChecked(False)
 
-    @SafeProperty(bool, auto_emit=True)
-    def show_config_label(self) -> bool:
-        """Whether to show heatmap configuration rows in the plot info label."""
-        return self._image_config.show_config_label
-
-    @show_config_label.setter
-    def show_config_label(self, value: bool) -> None:
-        self._image_config.show_config_label = bool(value)
-        self.show_info_label = bool(value)
-        self.redraw_config_label()
-
-    @SafeSlot()
-    def toggle_info_label(self):
-        """Toggle the heatmap information label and keep heatmap config in sync."""
-        self.show_config_label = not self.show_config_label
-
-    def toggle_interpolation_info(self):
-        """
-        Toggle the visibility of the heatmap information label.
-        """
-        self.toggle_info_label()
-
     def _heatmap_dialog_closed(self):
         """
         Slot for when the heatmap settings dialog is closed.
@@ -785,9 +754,7 @@ class Heatmap(ImageBase):
             logger.warning("Scan message is None; skipping update.")
             return
         self.status_message = scan_msg
-
-        if self._image_config.show_config_label:
-            self.redraw_config_label()
+        self.redraw_config_label()
 
         if self._is_grid_scan_supported(scan_msg):
             img, transform = self.get_grid_scan_image(z_data, scan_msg)
@@ -951,11 +918,8 @@ class Heatmap(ImageBase):
         self._latest_interpolation_version = -1
 
     def redraw_config_label(self):
-        scan_msg = getattr(self, "status_message", None)
+        scan_msg = self.status_message
         if scan_msg is None:
-            return
-        if not self._image_config.show_config_label:
-            self.show_info_label = False
             return
 
         # Indicate whether the widget follows the live acquisition or is pinned to a history scan

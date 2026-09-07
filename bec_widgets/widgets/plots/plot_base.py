@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from enum import Enum
-from typing import TypeAlias
+from typing import Literal, TypeAlias
 
 import numpy as np
 import pyqtgraph as pg
-from bec_lib import bec_logger, messages
+from bec_lib import bec_logger
 from bec_lib.scan_data_container import ScanDataContainer
 from bec_lib.scan_items import ScanItem
 from qtpy.QtCore import QPoint, QPointF, Qt, Signal
@@ -44,6 +45,7 @@ from bec_widgets.widgets.plots.toolbar_components.roi import RoiConnection, roi_
 logger = bec_logger.logger
 
 ScanInfoSource: TypeAlias = ScanItem | ScanDataContainer | None
+ScanInfoMode: TypeAlias = Literal["live", "history"]
 
 
 class BECViewBox(pg.ViewBox):
@@ -79,6 +81,8 @@ class PlotBase(BECWidget, QWidget):
         "enable_side_panel.setter",
         "enable_fps_monitor",
         "enable_fps_monitor.setter",
+        "show_info_label",
+        "show_info_label.setter",
         "set",
         "title",
         "title.setter",
@@ -171,6 +175,8 @@ class PlotBase(BECWidget, QWidget):
         self.plot_item.addLegend()
         self.info_label = PlotInfoLabel()
         self.info_label.setParentItem(self.plot_item.vb)
+        self._scan_info_rows: list[tuple[str, object | None]] = []
+        self._custom_info_rows: list[tuple[str, object | None]] = []
         self.crosshair = None
         # Holds a pin that outlived its crosshair (e.g. crosshair toggled off) so it
         # can be re-adopted when the crosshair is hooked again.
@@ -290,7 +296,7 @@ class PlotBase(BECWidget, QWidget):
 
     @SafeProperty(bool, auto_emit=True, doc="Show the plot info label.")
     def show_info_label(self) -> bool:
-        """Return whether the plot info label is enabled."""
+        """Whether the plot info label is shown."""
         return self._show_info_label
 
     @show_info_label.setter
@@ -309,111 +315,85 @@ class PlotBase(BECWidget, QWidget):
         self.show_info_label = not self.show_info_label
 
     def set_info_label_rows(
-        self, rows: dict[str, object | None] | list[tuple[str, object | None]]
+        self, rows: Mapping[str, object | None] | Iterable[tuple[str, object | None]]
     ) -> None:
-        """Submit arbitrary rows for the plot info label."""
-        self.info_label.set_rows(rows)
-        self._sync_info_label_visibility()
-        self._sync_info_label_action()
+        """Show caller-defined rows in the info label, below the scan rows.
+
+        The rows replace previously submitted custom rows and survive scan updates.
+        """
+        self._custom_info_rows = list(rows.items() if isinstance(rows, Mapping) else rows)
+        self._render_info_label()
 
     def clear_info_label(self) -> None:
-        """Clear all rows from the plot info label."""
-        self.info_label.clear_rows()
+        """Clear the scan rows and the custom rows of the info label."""
+        self._scan_info_rows = []
+        self._custom_info_rows = []
+        self._render_info_label()
+
+    def _render_info_label(self) -> None:
+        self.info_label.set_rows([*self._scan_info_rows, *self._custom_info_rows])
+        self._sync_info_label_visibility()
         self._sync_info_label_action()
 
     def set_scan_info(
         self,
         *,
-        scan_id: str | None = None,
         scan_number: int | str | None = None,
         scan_name: str | None = None,
-        mode: str | None = None,
-        extra_rows: dict[str, object | None] | list[tuple[str, object | None]] | None = None,
+        mode: ScanInfoMode | None = None,
+        extra_rows: Iterable[tuple[str, object | None]] | None = None,
     ) -> None:
-        """Submit common scan metadata rows to the plot info label."""
+        """Submit the common scan rows (scan number with mode, scan name) to the info label."""
         rows: list[tuple[str, object | None]] = []
         if scan_number is not None:
-            scan_value = f"{scan_number} ({mode})" if mode else scan_number
-            rows.append(("Scan", scan_value))
-        elif scan_id is not None and mode != "history":
-            scan_value = f"{scan_id} ({mode})" if mode else scan_id
-            rows.append(("Scan ID", scan_value))
+            rows.append(("Scan", f"{scan_number} ({mode})" if mode else scan_number))
         if scan_name is not None:
             rows.append(("Scan Name", scan_name))
         if extra_rows:
-            rows.extend(extra_rows.items() if isinstance(extra_rows, dict) else extra_rows)
-        self.set_info_label_rows(rows)
+            rows.extend(extra_rows)
+        self._scan_info_rows = rows
+        self._render_info_label()
 
-    def update_scan_info_from_source(
-        self, scan_source: ScanInfoSource, *, mode: str | None = None
-    ) -> None:
-        """Extract common scan metadata from a scan item and submit it."""
-        scan_info = self._extract_scan_info(scan_source)
-        if scan_info is None:
-            return
-        scan_id, scan_number, scan_name = scan_info
-        self.set_scan_info(scan_id=scan_id, scan_number=scan_number, scan_name=scan_name, mode=mode)
+    def update_scan_info_from_source(self, scan_source: ScanInfoSource) -> None:
+        """
+        Show the scan rows of a live ScanItem or a history ScanDataContainer.
 
-    def update_scan_info_from_scan_id(
-        self, scan_id: str | None, *, mode: str | None = None
-    ) -> ScanItem | None:
-        """Fetch a live scan item by ID and submit common scan metadata."""
-        if scan_id is None:
-            return None
-        scan_item = self.queue.scan_storage.find_scan_by_ID(scan_id)
-        if not isinstance(scan_item, ScanItem):
-            return None
-        self.update_scan_info_from_source(scan_item, mode=mode)
-        return scan_item
+        Args:
+            scan_source(ScanInfoSource): The source of the scan information, which can be a ScanItem, ScanDataContainer, or None.
+        """
+        if isinstance(scan_source, ScanItem) and scan_source.status_message is not None:
+            status_message = scan_source.status_message
+            self.set_scan_info(
+                scan_number=status_message.scan_number,
+                scan_name=status_message.scan_name,
+                mode="live",
+            )
+        elif isinstance(scan_source, ScanDataContainer):
+            metadata = scan_source.metadata.get("bec", {})
+            self.set_scan_info(
+                scan_number=metadata.get("scan_number"),
+                scan_name=metadata.get("scan_name"),
+                mode="history",
+            )
+        else:
+            self.set_scan_info()
 
-    def _extract_scan_info(
-        self, scan_source: ScanInfoSource
-    ) -> tuple[str | None, int | str | None, str | None] | None:
-        if scan_source is None:
-            return None
-
-        if isinstance(scan_source, ScanItem):
-            return self._scan_info_from_status_message(scan_source.status_message)
-
-        if isinstance(scan_source, ScanDataContainer):
-            metadata = scan_source.metadata
-            scan_info = self._scan_info_from_metadata(metadata.get("bec", metadata))
-            if scan_info is not None:
-                return scan_info
-
-        return None
-
-    @staticmethod
-    def _scan_info_from_status_message(
-        status_message: messages.ScanStatusMessage | None,
-    ) -> tuple[str | None, int | str | None, str | None] | None:
-        if status_message is None:
-            return None
-        scan_info = (status_message.scan_id, status_message.scan_number, status_message.scan_name)
-        return scan_info if any(value is not None for value in scan_info) else None
-
-    @staticmethod
-    def _scan_info_from_metadata(
-        metadata: dict | None,
-    ) -> tuple[str | None, int | str | None, str | None] | None:
-        if not isinstance(metadata, dict):
-            return None
-        scan_id = metadata.get("scan_id")
-        scan_number = metadata.get("scan_number")
-        scan_name = metadata.get("scan_name")
-        scan_info = (scan_id, scan_number, scan_name)
-        return scan_info if any(value is not None for value in scan_info) else None
+    def remove_info_label_action(self) -> None:
+        """Remove the info label toolbar button, for widgets that never populate the label."""
+        component = self.toolbar.components.get_action("plot_info_label")
+        component.action.triggered.disconnect(self.toggle_info_label)
+        self.toolbar.components.remove_action("plot_info_label")
+        component.action.deleteLater()
 
     def _sync_info_label_visibility(self) -> None:
         self.info_label.setVisible(self._show_info_label and bool(self.info_label.rows))
 
     def _sync_info_label_action(self) -> None:
-        try:
-            action = self.toolbar.components.get_action("plot_info_label").action
-        except KeyError:
-            return
-        action.setEnabled(True)
-        action.setChecked(self._show_info_label)
+        if not self.toolbar.components.exists("plot_info_label"):
+            return  # the widget removed the button with remove_info_label_action()
+        self.toolbar.components.get_action("plot_info_label").action.setChecked(
+            self._show_info_label
+        )
 
     ################################################################################
     # Toggle UI Elements

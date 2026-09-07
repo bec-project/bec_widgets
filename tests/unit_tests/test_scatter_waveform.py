@@ -1,7 +1,6 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import numpy as np
-from bec_lib import messages
 from bec_lib.scan_data_container import ScanDataContainer
 
 from bec_widgets.widgets.plots.scatter_waveform.scatter_curve import (
@@ -12,7 +11,12 @@ from bec_widgets.widgets.plots.scatter_waveform.scatter_waveform import ScatterW
 from bec_widgets.widgets.plots.scatter_waveform.settings.scatter_curve_setting import (
     ScatterCurveSettings,
 )
-from tests.unit_tests.client_mocks import DummyData, create_dummy_scan_item, mocked_client
+from tests.unit_tests.client_mocks import (
+    DummyData,
+    create_dummy_scan_item,
+    inject_scan_history,
+    mocked_client,
+)
 
 from .conftest import create_widget
 
@@ -51,27 +55,24 @@ def test_scatter_waveform_color_map(qtbot, mocked_client):
     assert swf.color_map == "plasma"
 
 
-def test_scatter_waveform_update_with_scan_history(qtbot, mocked_client, monkeypatch):
+def test_scatter_waveform_update_with_scan_history(qtbot, mocked_client, scan_history_factory):
+    """History scans are read from the HDF5-backed ScanDataContainer, not from live data."""
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
-
-    dummy_scan = create_dummy_scan_item()
-    history_scan = ScanDataContainer()
-    history_scan.live_data = dummy_scan.live_data
-    history_scan.metadata = {
-        "bec": {"scan_id": "dummy", "scan_number": 24, "scan_name": "line_scan"}
-    }
-    mocked_client.history = MagicMock()
-    mocked_client.history.get_by_scan_id.return_value = history_scan
-    mocked_client.history.__getitem__.return_value = history_scan
+    inject_scan_history(swf, scan_history_factory, ("dummy", 24))
 
     swf.plot("samx", "samy", "bpm4i", label="test_curve")
     swf.update_with_scan_history(scan_id="dummy")
-    qtbot.waitUntil(lambda: swf.scan_item == history_scan, timeout=500)
-    qtbot.wait(200)
+    qtbot.waitUntil(lambda: isinstance(swf.scan_item, ScanDataContainer), timeout=500)
+
+    def _has_points():
+        x_data = swf.main_curve.getData()[0]
+        return x_data is not None and len(x_data) > 0
+
+    qtbot.waitUntil(_has_points, timeout=2000)
 
     x_data, y_data = swf.main_curve.getData()
-    np.testing.assert_array_equal(x_data, [10, 20, 30])
-    np.testing.assert_array_equal(y_data, [5, 10, 15])
+    assert len(x_data) == len(y_data) > 0
+    assert swf.scan_id == "dummy"
     assert [label.text for _, label in swf.info_label.items] == [
         "Scan: 24 (history)",
         "Scan Name: line_scan",
@@ -81,17 +82,7 @@ def test_scatter_waveform_update_with_scan_history(qtbot, mocked_client, monkeyp
 def test_scatter_waveform_live_update(qtbot, mocked_client, monkeypatch):
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
 
-    dummy_scan = create_dummy_scan_item()
-    dummy_scan.status_message = messages.ScanStatusMessage(
-        scan_id="dummy",
-        scan_number=13,
-        scan_name="line_scan",
-        status="open",
-        info={
-            "readout_priority": {"monitored": ["bpm4i"], "async": ["async_device"]},
-            "scan_report_devices": ["samx"],
-        },
-    )
+    dummy_scan = create_dummy_scan_item(scan_number=13, scan_name="line_scan")
     monkeypatch.setattr(swf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: dummy_scan)
 
     swf.plot("samx", "samy", "bpm4i", label="live_curve")

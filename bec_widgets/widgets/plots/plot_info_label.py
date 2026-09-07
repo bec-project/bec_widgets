@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable
 
 import pyqtgraph as pg
 from qtpy.QtCore import QRectF
@@ -32,44 +32,35 @@ class TextOnlyLegendSample(pg.graphicsItems.LegendItem.ItemSample):
 class PlotInfoLabel(pg.LegendItem):
     """Paint-safe text overlay for plot metadata.
 
-    Plot widgets submit arbitrary rows; this class owns the pyqtgraph legend
-    mechanics and keeps the display independent from any specific metadata
-    source such as scans.
+    Plot widgets submit (label, value) rows; this class owns the pyqtgraph
+    legend mechanics and keeps the display independent from any specific
+    metadata source such as scans.
     """
 
     def __init__(self, offset: tuple[int, int] = (-30, 1), theme: str = "light"):
         super().__init__(offset=offset, horSpacing=0)
-        self._rows: list[tuple[str, object | None]] = []
+        self._rows: list[tuple[str, str | None]] = []
         self._offset = offset
-        self._has_drawn_rows = False
         self.set_theme(theme)
         self.setVisible(False)
 
     @property
-    def rows(self) -> list[tuple[str, object | None]]:
-        """Return a copy of the currently submitted rows."""
+    def rows(self) -> list[tuple[str, str | None]]:
+        """Return a copy of the currently displayed rows."""
         return list(self._rows)
 
-    def set_rows(
-        self, rows: Mapping[str, object | None] | Iterable[tuple[str, object | None]]
-    ) -> None:
-        """Replace all displayed rows."""
-        if isinstance(rows, Mapping):
-            rows = rows.items()
-        self._rows = [(str(label), value) for label, value in rows]
-        self.redraw()
+    def set_rows(self, rows: Iterable[tuple[str, object | None]]) -> None:
+        """
+        Replace all displayed rows. Unchanged rows are not re-rendered.
 
-    def add_row(self, label: str, value: object | None = None) -> None:
-        """Append one displayed row."""
-        self._rows.append((str(label), value))
+        Args:
+            rows(Iterable[tuple[str, object | None]]): An iterable of (label, value) pairs to display. The label is a string and the value can be any object or None.
+        """
+        rows = [(str(label), None if value is None else str(value)) for label, value in rows]
+        if rows == self._rows:
+            return
+        self._rows = rows
         self.redraw()
-
-    def clear_rows(self) -> None:
-        """Remove all displayed rows and hide the label."""
-        self._rows = []
-        self._has_drawn_rows = False
-        self.clear()
-        self.setVisible(False)
 
     def reset_position(self) -> None:
         """Reset the label to its default anchored position."""
@@ -88,24 +79,13 @@ class PlotInfoLabel(pg.LegendItem):
         self.redraw()
 
     def redraw(self) -> None:
-        """Refresh the pyqtgraph legend rows."""
-        previous_pos = self.pos()
-        preserve_pos = self._has_drawn_rows and self.isVisible()
-        row_texts = [self._format_row(label, value) for label, value in self._rows]
-        if len(row_texts) == len(self.items):
-            for row_text, (_, label_item) in zip(row_texts, self.items, strict=True):
-                label_item.setText(row_text)
-            self.updateSize()
-        else:
-            self.clear()
-            for row_text in row_texts:
-                self.addItem(TextOnlyLegendSample(), row_text)
-            if preserve_pos:
-                self.setPos(previous_pos)
-        self._has_drawn_rows = bool(self._rows)
+        """Rebuild the pyqtgraph legend rows from scratch."""
+        self.clear()
+        for label, value in self._rows:
+            self.addItem(TextOnlyLegendSample(), self._format_row(label, value))
 
     @staticmethod
-    def _format_row(label: str, value: object | None) -> str:
+    def _format_row(label: str, value: str | None) -> str:
         if value is None:
             return label
         return f"{label}: {value}"

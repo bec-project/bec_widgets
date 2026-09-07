@@ -1832,6 +1832,20 @@ class Heatmap(RPCBase):
         Enable the FPS monitor.
         """
 
+    @property
+    @rpc_call
+    def show_info_label(self) -> "bool":
+        """
+        Whether the plot info label is shown.
+        """
+
+    @show_info_label.setter
+    @rpc_call
+    def show_info_label(self) -> "bool":
+        """
+        Whether the plot info label is shown.
+        """
+
     @rpc_call
     def set(self, **kwargs):
         """
@@ -2538,6 +2552,20 @@ class Image(RPCBase):
     def enable_fps_monitor(self) -> "bool":
         """
         Enable the FPS monitor.
+        """
+
+    @property
+    @rpc_call
+    def show_info_label(self) -> "bool":
+        """
+        Whether the plot info label is shown.
+        """
+
+    @show_info_label.setter
+    @rpc_call
+    def show_info_label(self) -> "bool":
+        """
+        Whether the plot info label is shown.
         """
 
     @rpc_call
@@ -3713,6 +3741,20 @@ class MotorMap(RPCBase):
         Enable the FPS monitor.
         """
 
+    @property
+    @rpc_call
+    def show_info_label(self) -> "bool":
+        """
+        Whether the plot info label is shown.
+        """
+
+    @show_info_label.setter
+    @rpc_call
+    def show_info_label(self) -> "bool":
+        """
+        Whether the plot info label is shown.
+        """
+
     @rpc_call
     def set(self, **kwargs):
         """
@@ -4183,6 +4225,20 @@ class MultiWaveform(RPCBase):
     def enable_fps_monitor(self) -> "bool":
         """
         Enable the FPS monitor.
+        """
+
+    @property
+    @rpc_call
+    def show_info_label(self) -> "bool":
+        """
+        Whether the plot info label is shown.
+        """
+
+    @show_info_label.setter
+    @rpc_call
+    def show_info_label(self) -> "bool":
+        """
+        Whether the plot info label is shown.
         """
 
     @rpc_call
@@ -5446,6 +5502,20 @@ class ScatterWaveform(RPCBase):
         Enable the FPS monitor.
         """
 
+    @property
+    @rpc_call
+    def show_info_label(self) -> "bool":
+        """
+        Whether the plot info label is shown.
+        """
+
+    @show_info_label.setter
+    @rpc_call
+    def show_info_label(self) -> "bool":
+        """
+        Whether the plot info label is shown.
+        """
+
     @rpc_call
     def set(self, **kwargs):
         """
@@ -6095,6 +6165,20 @@ class Waveform(RPCBase):
     def enable_fps_monitor(self) -> "bool":
         """
         Enable the FPS monitor.
+        """
+
+    @property
+    @rpc_call
+    def show_info_label(self) -> "bool":
+        """
+        Whether the plot info label is shown.
+        """
+
+    @show_info_label.setter
+    @rpc_call
+    def show_info_label(self) -> "bool":
+        """
+        Whether the plot info label is shown.
         """
 
     @rpc_call

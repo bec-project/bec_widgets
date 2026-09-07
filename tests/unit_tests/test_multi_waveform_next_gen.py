@@ -106,6 +106,30 @@ def test_multiwaveform_scan_update_populates_info_label(qtbot, mocked_client, mo
     ]
 
 
+def test_multiwaveform_clears_info_label_when_scan_id_is_unknown(qtbot, mocked_client, monkeypatch):
+    """Regression: monitor data without a known scan_id kept the previous scan's rows."""
+    mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    mw.show_info_label = True
+    scan_item = ScanItem(queue_id="queue-1", scan_number=1, scan_id="scan_1", status="open")
+    scan_item.status_message = messages.ScanStatusMessage(
+        scan_id="scan_1", scan_number=1, scan_name="line_scan", status="open", info={}
+    )
+    storage = {"scan_1": scan_item}
+    monkeypatch.setattr(
+        mw.queue.scan_storage, "find_scan_by_ID", lambda scan_id: storage.get(scan_id)
+    )
+
+    mw.on_monitor_1d_update({"data": np.array([1, 2, 3])}, metadata={"scan_id": "scan_1"})
+    assert mw.info_label.isVisible()
+
+    # e.g. the device was triggered outside a scan: no scan_id in the metadata
+    mw.on_monitor_1d_update({"data": np.array([4, 5, 6])}, metadata={})
+
+    assert mw.scan_id is None
+    assert mw.info_label.rows == []
+    assert not mw.info_label.isVisible()
+
+
 def test_multiwaveform_curve_limit_flush(qtbot, mocked_client):
     """Check that limiting the number of curves with flush removes older ones."""
     mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
