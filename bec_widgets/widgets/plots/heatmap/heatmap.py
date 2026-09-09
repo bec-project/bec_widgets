@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import atexit
 import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
@@ -158,6 +159,9 @@ class _StepInterpolationWorker(QObject):
             request(_InterpolationRequest): The interpolation request payload.
             data_version(int): The data version for the request.
         """
+        thread = QThread.currentThread()
+        if thread.isInterruptionRequested():
+            return
         self._active_request = request
         self._processing = True
         try:
@@ -170,11 +174,29 @@ class _StepInterpolationWorker(QObject):
             )
         except Exception as exc:  # pragma: no cover - defensive
             logger.warning(f"Step-scan interpolation failed with: {exc}")
-            self.failed.emit(str(exc), data_version, request.scan_id)
+            if not thread.isInterruptionRequested():
+                self.failed.emit(str(exc), data_version, request.scan_id)
             self._processing = False
             return
         self._processing = False
-        self.finished.emit(image, transform, data_version, request.scan_id)
+        if not thread.isInterruptionRequested():
+            self.finished.emit(image, transform, data_version, request.scan_id)
+
+
+# Neither QObject may be owned by the widget: parent destruction can happen while
+# SciPy is still running. Retain both Python wrappers until Qt deletes the stopped thread.
+_interpolation_threads: dict[QThread, _StepInterpolationWorker] = {}
+
+
+@atexit.register
+def _wait_for_interpolation_threads() -> None:
+    """Drain surviving workers at interpreter exit, after the GUI event loop has stopped."""
+    threads = list(_interpolation_threads)
+    for thread in threads:
+        thread.requestInterruption()
+        thread.quit()
+    for thread in threads:
+        thread.wait()
 
 
 class Heatmap(ImageBase):
@@ -269,6 +291,7 @@ class Heatmap(ImageBase):
         self._latest_interpolation_version = -1
         self._interpolation_thread: QThread | None = None
         self._interpolation_worker: _StepInterpolationWorker | None = None
+        self._interpolation_shutdown = False
         self._pending_interpolation_request: _InterpolationRequest | None = None
         self.heatmap_dialog = None
         self.scan_history_dialog = None
@@ -813,6 +836,8 @@ class Heatmap(ImageBase):
             z_data(list[float]): Z values at each point
             msg(messages.ScanStatusMessage): Scan status message containing scan metadata
         """
+        if self._interpolation_shutdown:
+            return
         request = _InterpolationRequest(
             x_data=list(x_data),
             y_data=list(y_data),
@@ -830,10 +855,21 @@ class Heatmap(ImageBase):
         self._start_step_scan_interpolation(request)
 
     def _ensure_interpolation_thread(self):
+        if self._interpolation_shutdown:
+            return
         if self._interpolation_thread is None:
             self._interpolation_thread = QThread()
             self._interpolation_worker = _StepInterpolationWorker()
-            self._interpolation_worker.moveToThread(self._interpolation_thread)
+            thread = self._interpolation_thread
+            worker = self._interpolation_worker
+            worker.moveToThread(thread)
+            _interpolation_threads[thread] = worker
+            thread.finished.connect(worker.deleteLater)
+            thread.finished.connect(thread.deleteLater)
+            thread.destroyed.connect(lambda: _interpolation_threads.pop(thread, None))
+            # These receivers outlive the widget and never access its deleted Qt wrapper.
+            self.destroyed.connect(thread.requestInterruption)
+            self.destroyed.connect(thread.quit)
             self.interpolation_requested.connect(
                 self._interpolation_worker.process, Qt.ConnectionType.QueuedConnection
             )
@@ -847,6 +883,8 @@ class Heatmap(ImageBase):
             self._interpolation_thread.start()
 
     def _start_step_scan_interpolation(self, request: _InterpolationRequest):
+        if self._interpolation_shutdown:
+            return
         # data_version = len(z_data) at the time of the request; keep the latest to gate results.
         self._ensure_interpolation_thread()
         if self._interpolation_thread is not None and not self._interpolation_thread.isRunning():
@@ -854,9 +892,12 @@ class Heatmap(ImageBase):
         self._latest_interpolation_version = request.data_version
         self.interpolation_requested.emit(request, request.data_version)
 
+    @SafeSlot(object, object, int, str)
     def _on_interpolation_finished(
         self, img: np.ndarray, transform: QTransform, data_version: int, scan_id: str
     ):
+        if self._interpolation_shutdown:
+            return
         # Only accept results that match the latest dispatched version for the active scan.
         if data_version == self._latest_interpolation_version and scan_id == self.scan_id:
             self._apply_image_update(img, transform)
@@ -864,33 +905,32 @@ class Heatmap(ImageBase):
             logger.info("Discarding outdated interpolation result.")
         self._maybe_start_pending_interpolation()
 
+    @SafeSlot(str, int, str)
     def _on_interpolation_failed(self, error: str, data_version: int, scan_id: str):
+        if self._interpolation_shutdown:
+            return
         logger.warning(f"Interpolation failed for scan {scan_id} (version {data_version}): {error}")
         self._maybe_start_pending_interpolation()
 
     def _finish_interpolation_thread(self):
-        self._pending_interpolation_request = None
+        """Request shutdown without blocking the GUI or deleting a running thread."""
+        self._interpolation_shutdown = True
+        self._invalidate_interpolation_generation()
         if self._interpolation_worker is not None:
             try:
                 self.interpolation_requested.disconnect(self._interpolation_worker.process)
             except (TypeError, RuntimeError) as ext:
                 logger.warning(f"Processing thread already disconnected: {ext}")
                 pass
-            self._interpolation_worker.deleteLater()
             self._interpolation_worker = None
         if self._interpolation_thread is not None:
-            if self._interpolation_thread.isRunning():
-                self._interpolation_thread.quit()
-                if not self._interpolation_thread.wait(3000):  # 3s timeout
-                    logger.error(
-                        f"Interpolation thread of widget {self.gui_id} did not stop within timeout 3s; leaving it dangling."
-                    )
-            self._interpolation_thread.deleteLater()
+            self._interpolation_thread.requestInterruption()
+            self._interpolation_thread.quit()
             self._interpolation_thread = None
-        logger.info(f"Interpolation thread finished of widget {self.gui_id}")
+        logger.info(f"Interpolation shutdown requested for widget {self.gui_id}")
 
     def _maybe_start_pending_interpolation(self):
-        if self._pending_interpolation_request is None:
+        if self._interpolation_shutdown or self._pending_interpolation_request is None:
             return
         if self._pending_interpolation_request.scan_id != self.scan_id:
             self._pending_interpolation_request = None

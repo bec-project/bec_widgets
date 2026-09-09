@@ -1,11 +1,16 @@
+import gc
+from threading import Event
+from time import monotonic
 from unittest import mock
 
 import numpy as np
 import pytest
+import shiboken6
 from bec_lib import messages
 from bec_lib.scan_history import ScanHistory
-from qtpy.QtCore import QPointF
+from qtpy.QtCore import QEvent, QPointF
 from qtpy.QtGui import QTransform
+from qtpy.QtWidgets import QApplication, QWidget
 
 from bec_widgets.widgets.plots.heatmap.heatmap import (
     Heatmap,
@@ -20,14 +25,131 @@ from bec_widgets.widgets.plots.plot_info_label import TextOnlyLegendSample
 from tests.unit_tests.client_mocks import mocked_client
 
 from .client_mocks import create_dummy_scan_item
+from .conftest import create_widget
 
 
 @pytest.fixture
 def heatmap_widget(qtbot, mocked_client):
-    widget = Heatmap(client=mocked_client)
-    qtbot.addWidget(widget)
-    qtbot.waitExposed(widget)
+    widget = create_widget(qtbot, Heatmap, client=mocked_client)
     yield widget
+
+
+@pytest.fixture
+def blocked_interpolation(monkeypatch):
+    """Keep native interpolation active until the test explicitly releases it."""
+    entered = Event()
+    release = Event()
+
+    def compute(**kwargs):
+        entered.set()
+        if not release.wait(10):
+            raise TimeoutError("Test did not release interpolation")
+        return np.ones((2, 2)), QTransform()
+
+    monkeypatch.setattr(Heatmap, "compute_step_scan_image", compute)
+    yield entered, release
+    release.set()
+
+
+def _start_blocked_interpolation(widget, qtbot, entered):
+    widget.scan_id = "shutdown-scan"
+    request = _InterpolationRequest(
+        x_data=[0, 1, 0, 1],
+        y_data=[0, 0, 1, 1],
+        z_data=[1, 2, 3, 4],
+        data_version=4,
+        scan_id=widget.scan_id,
+        interpolation="linear",
+        oversampling_factor=1.0,
+    )
+    widget._start_step_scan_interpolation(request)
+    qtbot.waitUntil(entered.is_set)
+    return request
+
+
+@pytest.mark.parametrize("shutdown", ["close", "deleteLater"])
+def test_shutdown_preserves_running_interpolation(
+    mocked_client, qtbot, monkeypatch, blocked_interpolation, shutdown
+):
+    # These destruction tests delete their own widgets, so qtbot must not close them again.
+    heatmap_widget = Heatmap(client=mocked_client)
+    entered, release = blocked_interpolation
+    request = _start_blocked_interpolation(heatmap_widget, qtbot, entered)
+    heatmap_widget._pending_interpolation_request = request
+    thread = heatmap_widget._interpolation_thread
+    worker = heatmap_widget._interpolation_worker
+    unsafe_deletions = []
+    delete_thread = thread.deleteLater
+
+    def guarded_delete():
+        # Record the regression without letting Qt abort the entire test process.
+        if thread.isRunning():
+            unsafe_deletions.append(True)
+        else:
+            delete_thread()
+
+    monkeypatch.setattr(thread, "deleteLater", guarded_delete)
+    try:
+        start = monotonic()
+        getattr(heatmap_widget, shutdown)()
+        elapsed = monotonic() - start
+        assert not unsafe_deletions, "Shutdown scheduled deletion of a running QThread"
+        assert elapsed < 1, "Shutdown blocked the GUI waiting for interpolation"
+        QApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        assert shiboken6.isValid(thread) and thread.isRunning()
+        assert shiboken6.isValid(worker)
+        assert heatmap_widget._pending_interpolation_request is None
+
+        release.set()
+        qtbot.waitUntil(lambda: not shiboken6.isValid(worker))
+        qtbot.waitUntil(lambda: not shiboken6.isValid(thread))
+    finally:
+        # Also leave the unpatched implementation safe after a failed assertion.
+        heatmap_widget._invalidate_interpolation_generation()
+        release.set()
+        if shiboken6.isValid(thread):
+            thread.quit()
+            assert thread.wait(2000)
+            delete_thread()
+        if shiboken6.isValid(heatmap_widget):
+            heatmap_widget.deleteLater()
+
+
+@pytest.mark.parametrize("busy", [False, True], ids=["idle", "interpolating"])
+def test_parent_destruction_stops_interpolation(qtbot, mocked_client, blocked_interpolation, busy):
+    parent = QWidget()
+    widget = Heatmap(parent=parent, client=mocked_client)
+    entered, release = blocked_interpolation
+    if busy:
+        _start_blocked_interpolation(widget, qtbot, entered)
+    else:
+        widget._ensure_interpolation_thread()
+    thread = widget._interpolation_thread
+    worker = widget._interpolation_worker
+    try:
+        parent.deleteLater()
+        QApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        assert not shiboken6.isValid(widget)
+        # Keep the Python child wrapper alive: Qt destruction alone must stop the thread.
+        release.set()
+        qtbot.waitUntil(
+            lambda: not shiboken6.isValid(thread) or not thread.isRunning(), timeout=1000
+        )
+        qtbot.waitUntil(lambda: not shiboken6.isValid(worker))
+        qtbot.waitUntil(lambda: not shiboken6.isValid(thread))
+    finally:
+        release.set()
+        if shiboken6.isValid(thread):
+            if shiboken6.isValid(worker):
+                worker.deleteLater()
+            thread.quit()
+            assert thread.wait(2000)
+            thread.deleteLater()
+        if shiboken6.isValid(parent):
+            parent.deleteLater()
+        # Pyqtgraph's unparented menus are owned by Python objects in the deleted plot.
+        del widget, parent
+        gc.collect()
 
 
 def test_heatmap_plot(heatmap_widget):
@@ -651,12 +773,37 @@ def test_finish_interpolation_thread_cleans_references(heatmap_widget):
 
     heatmap_widget._finish_interpolation_thread()
 
-    worker_mock.deleteLater.assert_called_once()
+    worker_mock.deleteLater.assert_not_called()
+    thread_mock.requestInterruption.assert_called_once()
     thread_mock.quit.assert_called_once()
-    thread_mock.wait.assert_called_once()
-    thread_mock.deleteLater.assert_called_once()
+    thread_mock.wait.assert_not_called()
+    thread_mock.deleteLater.assert_not_called()
     assert heatmap_widget._interpolation_worker is None
     assert heatmap_widget._interpolation_thread is None
+
+
+@pytest.mark.parametrize("failed", [False, True], ids=["finished", "failed"])
+def test_queued_interpolation_callback_after_shutdown_is_ignored(heatmap_widget, qtbot, failed):
+    heatmap_widget.scan_id = "shutdown-scan"
+    heatmap_widget._ensure_interpolation_thread()
+    worker = heatmap_widget._interpolation_worker
+    thread = heatmap_widget._interpolation_thread
+    # The signal is queued for the widget's GUI thread and arrives only after cleanup.
+    if failed:
+        worker.failed.emit("interpolation failed", 4, heatmap_widget.scan_id)
+    else:
+        worker.finished.emit(np.ones((2, 2)), QTransform(), 4, heatmap_widget.scan_id)
+    heatmap_widget._finish_interpolation_thread()
+    heatmap_widget._finish_interpolation_thread()  # Shutdown is safe to repeat.
+    with (
+        mock.patch.object(heatmap_widget, "_apply_image_update") as apply_image,
+        mock.patch.object(heatmap_widget, "_maybe_start_pending_interpolation") as start_pending,
+    ):
+        QApplication.processEvents()
+        apply_image.assert_not_called()
+        start_pending.assert_not_called()
+    qtbot.waitUntil(lambda: not shiboken6.isValid(worker))
+    qtbot.waitUntil(lambda: not shiboken6.isValid(thread))
 
 
 def test_device_safe_properties_get(heatmap_widget):
