@@ -9,7 +9,7 @@ from bec_lib.logger import bec_logger
 from bec_lib.messages import ConfigAction, ScanStatusMessage
 from bec_qthemes import material_icon
 from pyqtgraph import SignalProxy
-from qtpy.QtCore import QThreadPool, Signal
+from qtpy.QtCore import Qt, QThreadPool, Signal
 from qtpy.QtWidgets import QFileDialog, QListWidget, QToolButton, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
@@ -34,6 +34,8 @@ class DeviceBrowser(BECWidget, QWidget):
     devices_changed: Signal = Signal()
     editing_enabled: Signal = Signal(bool)
     device_update: Signal = Signal(str, dict)
+    _scan_status_received = Signal(dict, dict)
+
     PLUGIN = True
     ICON_NAME = "lists"
 
@@ -62,8 +64,12 @@ class DeviceBrowser(BECWidget, QWidget):
         self._device_update_callback_id = self.bec_dispatcher.client.callbacks.register(
             EventType.DEVICE_UPDATE, self.on_device_update
         )
+        self._scan_status_updates_enabled = True
+        self._scan_status_received.connect(
+            self.scan_status_changed, Qt.ConnectionType.QueuedConnection
+        )
         self._scan_status_callback_id = self.bec_dispatcher.client.callbacks.register(
-            EventType.SCAN_STATUS, self.scan_status_changed
+            EventType.SCAN_STATUS, self._on_scan_status
         )
         self._default_config_dir = os.path.abspath(
             os.path.join(os.path.dirname(bec_lib.__file__), "./configs/")
@@ -149,9 +155,15 @@ class DeviceBrowser(BECWidget, QWidget):
         tooltip = self.dev[device]._config.get("description", "")
         device_item.setToolTip(tooltip)
 
+    def _on_scan_status(self, scan_info: dict, metadata: dict) -> None:
+        """Forward BEC callbacks to the GUI thread before accessing controls."""
+        self._scan_status_received.emit(scan_info, metadata)
+
     @SafeSlot(dict, dict)
     def scan_status_changed(self, scan_info: dict, _: dict):
         """disable editing when scans are running and enable editing when they are finished"""
+        if not self._scan_status_updates_enabled:
+            return
         msg = ScanStatusMessage.model_validate(scan_info)
         self.set_editing_mode(msg.status not in ["open", "paused"])
 
@@ -199,6 +211,7 @@ class DeviceBrowser(BECWidget, QWidget):
             self._config_helper.save_current_session(file_path)
 
     def cleanup(self):
+        self._scan_status_updates_enabled = False
         super().cleanup()
         self.bec_dispatcher.client.callbacks.remove(self._scan_status_callback_id)
         self.bec_dispatcher.client.callbacks.remove(self._device_update_callback_id)

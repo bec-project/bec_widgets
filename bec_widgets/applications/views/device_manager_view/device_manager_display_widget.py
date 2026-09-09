@@ -153,6 +153,8 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
 
     RPC = False
 
+    _scan_status_received = Signal(dict, dict)
+
     request_ophyd_validation = Signal(list, bool, bool)
 
     def __init__(self, parent=None, *args, **kwargs):
@@ -226,8 +228,12 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
             for slot in slots:
                 signal.connect(slot)
 
+        self._scan_status_updates_enabled = True
+        self._scan_status_received.connect(
+            self._update_scan_running, Qt.ConnectionType.QueuedConnection
+        )
         self._scan_status_callback_id = self.bec_dispatcher.client.callbacks.register(
-            EventType.SCAN_STATUS, self._update_scan_running
+            EventType.SCAN_STATUS, self._on_scan_status
         )
 
         # Add toolbar
@@ -237,6 +243,7 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
         self._build_docks()
 
     def cleanup(self):
+        self._scan_status_updates_enabled = False
         self.bec_dispatcher.client.callbacks.remove(self._scan_status_callback_id)
         super().cleanup()
 
@@ -456,9 +463,15 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
     ### Update button state management ###
     ######################################
 
+    def _on_scan_status(self, scan_info: dict, metadata: dict) -> None:
+        """Forward BEC callbacks to the GUI thread before accessing controls."""
+        self._scan_status_received.emit(scan_info, metadata)
+
     @SafeSlot(dict, dict)
     def _update_scan_running(self, scan_info: dict, _: dict):
         """disable editing when scans are running and enable editing when they are finished"""
+        if not self._scan_status_updates_enabled:
+            return
         msg = ScanStatusMessage.model_validate(scan_info)
         self._scan_is_running = msg.status in ["open", "paused"]
         self._update_config_enabled_button()
