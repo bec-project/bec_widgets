@@ -77,6 +77,7 @@ class SignalComboBox(BECWidget, QComboBox):
 
     device_signal_changed = Signal(str)
     signal_reset = Signal()
+    _device_update_requested = Signal()
 
     def __init__(
         self,
@@ -137,8 +138,10 @@ class SignalComboBox(BECWidget, QComboBox):
         if self.config.autocomplete:
             self.autocomplete = True
 
+        self._device_update_register = None
+        self._device_update_requested.connect(self.update_signals_from_filters)
         self._device_update_register = self.bec_dispatcher.client.callbacks.register(
-            EventType.DEVICE_UPDATE, self.update_signals_from_filters
+            EventType.DEVICE_UPDATE, self._on_device_update
         )
         self.currentTextChanged.connect(self.on_text_changed)
 
@@ -195,6 +198,13 @@ class SignalComboBox(BECWidget, QComboBox):
         if valid_device is None or valid_device != previous_device:
             self.setCurrentText("")
         self.update_signals_from_filters()
+
+    def _on_device_update(self, action: str, content: dict) -> None:
+        """Deliver BEC callbacks to the widget thread before accessing Qt models."""
+        if self._device_update_register is None or getattr(self, "_destroyed", False):
+            return
+        if action in ["add", "remove", "reload"]:
+            self._device_update_requested.emit()
 
     @SafeSlot()
     @SafeSlot(str, dict)

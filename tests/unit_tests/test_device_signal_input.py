@@ -1,7 +1,11 @@
+from concurrent.futures import ThreadPoolExecutor
+from threading import get_ident
 from unittest import mock
 
 import pytest
+from bec_lib.callback_handler import EventType
 from bec_lib.device import Signal
+from qtpy.QtCore import Qt
 
 from bec_widgets.utils.ophyd_kind_util import Kind
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import (
@@ -54,6 +58,59 @@ def test_signal_combobox_init(device_signal_combobox):
     assert device_signal_combobox.autocomplete is False
     assert device_signal_combobox.completer() is not None
     assert device_signal_combobox.completer().model() == device_signal_combobox.model()
+
+
+@pytest.mark.parametrize("action", ["add", "remove", "reload"])
+@pytest.mark.parametrize("class_filter", [False, True])
+def test_signal_combobox_device_callback_updates_on_gui_thread(
+    qtbot, mocked_client, action, class_filter
+):
+    mocked_client.device_manager.get_bec_signals = mock.MagicMock(
+        return_value=[("samx", "readback", {"obj_name": "samx_readback"})]
+    )
+    widget = create_widget(
+        qtbot=qtbot,
+        widget=SignalComboBox,
+        client=mocked_client,
+        device="samx",
+        autocomplete=True,
+        signal_class_filter=["AsyncSignal"] if class_filter else None,
+    )
+    expected_signals = widget.signals.copy()
+    widget.signals = []
+    gui_thread = get_ident()
+    rebuild_threads = []
+    model_threads = []
+    original_replace = widget._replace_signal_items
+
+    def record_rebuild(*args, **kwargs):
+        rebuild_threads.append(get_ident())
+        # Record a regression without actually mutating Qt models from a worker.
+        assert get_ident() == gui_thread
+        original_replace(*args, **kwargs)
+
+    def record_model_change(*_args):
+        model_threads.append(get_ident())
+
+    widget.model().rowsInserted.connect(record_model_change, Qt.ConnectionType.DirectConnection)
+    widget._completer_model.modelReset.connect(
+        record_model_change, Qt.ConnectionType.DirectConnection
+    )
+    with mock.patch.object(widget, "_replace_signal_items", side_effect=record_rebuild):
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            executor.submit(
+                widget.bec_dispatcher.client.callbacks.run,
+                EventType.DEVICE_UPDATE,
+                action=action,
+                content={},
+            ).result(timeout=5)
+        assert rebuild_threads == []
+        qtbot.waitUntil(lambda: bool(rebuild_threads))
+
+    assert rebuild_threads == [gui_thread]
+    assert model_threads and all(thread == gui_thread for thread in model_threads)
+    assert widget.signals == expected_signals
+    assert widget._completer_model.stringList() == signal_names(expected_signals)
 
 
 def test_signal_combobox_config_defaults_are_independent_lists():
@@ -233,7 +290,7 @@ def test_signal_combobox_cleanup_blocks_in_flight_device_update(qtbot, mocked_cl
     callback_id = widget._device_update_register
 
     def trigger_in_flight_update(_):
-        widget.update_signals_from_filters("reload", {})
+        widget._on_device_update("reload", {})
 
     with (
         mock.patch.object(
@@ -247,11 +304,27 @@ def test_signal_combobox_cleanup_blocks_in_flight_device_update(qtbot, mocked_cl
     set_signal_groups.assert_not_called()
 
 
+def test_signal_combobox_cleanup_blocks_queued_device_update(qtbot, mocked_client):
+    widget = create_widget(qtbot=qtbot, widget=SignalComboBox, client=mocked_client, device="samx")
+    callbacks = widget.bec_dispatcher.client.callbacks
+    callback_id = widget._device_update_register
+    with mock.patch.object(widget, "_set_signal_groups") as set_signal_groups:
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            executor.submit(callbacks.run, EventType.DEVICE_UPDATE, "reload", {}).result(timeout=5)
+        widget.cleanup()
+        qtbot.wait(10)
+        callbacks.run(EventType.DEVICE_UPDATE, "reload", {})
+
+    assert callback_id not in callbacks.callbacks
+    set_signal_groups.assert_not_called()
+
+
 def test_signal_combobox_device_update_ignores_update_action(qtbot, mocked_client):
     widget = create_widget(qtbot=qtbot, widget=SignalComboBox, client=mocked_client)
 
     with mock.patch.object(widget, "_set_signal_groups") as set_signal_groups:
         widget.update_signals_from_filters("update", {})
+        widget.bec_dispatcher.client.callbacks.run(EventType.DEVICE_UPDATE, "update", {})
 
     set_signal_groups.assert_not_called()
 
