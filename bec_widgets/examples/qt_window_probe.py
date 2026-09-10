@@ -3,6 +3,8 @@
 Run this file directly with the affected environment's Python interpreter.
 Enter ``cycle`` repeatedly to hide/show a plain QWidget in one event-loop callback.
 Compare with separate ``hide`` and ``show`` commands and with ``raise``.
+The ``recreate`` command also releases the native window resources before showing
+the same QWidget again, to test whether reusing the native surface causes the problem.
 """
 
 import json
@@ -14,16 +16,25 @@ from qtpy.QtCore import QSocketNotifier, QTimer, qVersion
 from qtpy.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget
 
 
+class ProbeWindow(QWidget):
+    """Plain widget with a diagnostic operation to recreate its native window."""
+
+    def recreate_native_window(self) -> None:
+        """Release native resources without closing or deleting the QWidget."""
+        self.hide()
+        self.destroy()
+        self.show()
+
+
 def main() -> int:
     """Run a plain Qt window controlled through standard input on macOS or Linux."""
     app = QApplication(sys.argv)
-    window = QWidget()
+    window = ProbeWindow()
     window.setWindowTitle("Qt window visibility probe")
     window.resize(800, 600)
     layout = QVBoxLayout(window)
     layout.addWidget(QLabel("Control this plain Qt window from the terminal."))
     window.show()
-    handle = window.windowHandle()
     command_number = 0
 
     print(
@@ -40,18 +51,20 @@ def main() -> int:
         ),
         flush=True,
     )
-    print("Commands: cycle, hide, show, raise, state, quit", flush=True)
+    print("Commands: cycle, recreate, hide, show, raise, state, quit", flush=True)
 
     def report(stage: str, number: int) -> None:
+        # Recreating the native window invalidates the previous QWindow wrapper.
+        handle = window.windowHandle()
         print(
             json.dumps(
                 {
                     "command": number,
                     "stage": stage,
                     "visible": window.isVisible(),
-                    "native_visible": handle.isVisible(),
+                    "native_visible": handle.isVisible() if handle is not None else None,
                     "active": window.isActiveWindow(),
-                    "exposed": handle.isExposed(),
+                    "exposed": handle.isExposed() if handle is not None else None,
                     "minimized": window.isMinimized(),
                 }
             ),
@@ -74,6 +87,8 @@ def main() -> int:
         if command == "cycle":
             window.hide()
             window.show()
+        elif command == "recreate":
+            window.recreate_native_window()
         elif command == "hide":
             window.hide()
         elif command == "show":

@@ -154,6 +154,21 @@ cannot determine whether another application's window obscures it. Record what y
 the output and the result of `gnome-shell --version` when reporting a GNOME issue. Run again with
 `QT_QPA_PLATFORM=xcb` to compare backends. This script starts no BEC services and imports no BEC code.
 
+If `cycle` alternates between appearing and disappearing, try `recreate` at least four times,
+one command at a time. It runs hide/destroy/show on the same QWidget: unlike `cycle`, it releases
+the native window resources before showing the widget again. This isolates native surface reuse
+without changing BEC's window behavior. It is a diagnostic experiment, not a validated workaround
+for BEC windows with docked widgets or embedded rendering contexts.
+
+To capture the Wayland protocol alongside the probe output, write to a unique temporary file if
+the checkout is not writable:
+
+```bash
+probe_log=$(mktemp /tmp/qt-window-wayland.XXXXXX)
+WAYLAND_DEBUG=1 QT_QPA_PLATFORM=wayland python -u bec_widgets/examples/qt_window_probe.py 2>&1 | tee "$probe_log"
+echo "$probe_log"
+```
+
 ### 4. Rapid development (extensible by design)
 
 Build new widgets fast: Inherit from `BECWidget`, list your RPC methods in `USER_ACCESS`, and use `bec_dispatcher` to
