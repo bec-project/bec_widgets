@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from bec_lib.service_config import ServiceConfig
-from qtpy.QtCore import QEvent, QObject, Qt
+from qtpy.QtCore import QCoreApplication, QEvent, QObject, Qt
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.applications import companion_app as companion_app_module
@@ -136,21 +136,6 @@ def test_repeated_show_and_raise_preserve_visibility_and_flags(
     assert events.hide_events == events.show_events == expected_remaps
 
 
-def test_widget_show_visible_window_does_not_request_activation(rpc_server, dummy_widget):
-    dummy_widget.show()
-    with (
-        patch.object(dummy_widget, "raise_") as raise_window,
-        patch.object(dummy_widget, "activateWindow") as activate_window,
-        patch.object(dummy_widget, "show") as show_window,
-        patch.object(dummy_widget, "setWindowState") as set_state,
-    ):
-        rpc_server.run_rpc(dummy_widget, "show", [], {})
-    raise_window.assert_not_called()
-    activate_window.assert_not_called()
-    show_window.assert_not_called()
-    set_state.assert_not_called()
-
-
 @pytest.mark.parametrize("method", ["show", "raise"])
 def test_show_and_raise_restore_hidden_window(rpc_server, dummy_widget, method):
     dummy_widget.hide()
@@ -158,20 +143,19 @@ def test_show_and_raise_restore_hidden_window(rpc_server, dummy_widget, method):
     assert dummy_widget.isVisible()
 
 
-@pytest.mark.parametrize("method", ["show", "raise"])
 @pytest.mark.parametrize("state", [Qt.WindowNoState, Qt.WindowMaximized, Qt.WindowFullScreen])
 @pytest.mark.parametrize("platform", ["wayland", "xcb"])
-def test_show_and_raise_restore_minimized_window_state(
-    rpc_server, dummy_widget, monkeypatch, method, state, platform
+def test_raise_restores_minimized_window_state(
+    rpc_server, dummy_widget, monkeypatch, qtbot, state, platform
 ):
     monkeypatch.setattr(rpc_server_module.QApplication, "platformName", lambda: platform)
     dummy_widget.setWindowState(state | Qt.WindowMinimized)
     dummy_widget.show()
     assert dummy_widget.isMinimized()
 
-    rpc_server.run_rpc(dummy_widget, method, [], {})
+    rpc_server.run_rpc(dummy_widget, "raise", [], {})
 
-    assert dummy_widget.isVisible()
+    qtbot.waitUntil(dummy_widget.isVisible)
     assert not dummy_widget.isMinimized()
     assert dummy_widget.windowState() & (Qt.WindowMaximized | Qt.WindowFullScreen) == state
 
@@ -208,7 +192,7 @@ def test_raise_active_window_is_noop(rpc_server, dummy_widget, monkeypatch, plat
 
 @pytest.mark.parametrize("platform", ["wayland", "wayland-egl", "cocoa"])
 def test_raise_visible_inactive_window_requests_activation(
-    rpc_server, dummy_widget, monkeypatch, platform
+    rpc_server, dummy_widget, monkeypatch, qtbot, platform
 ):
     dummy_widget.show()
     monkeypatch.setattr(rpc_server_module.QApplication, "platformName", lambda: platform)
@@ -218,14 +202,15 @@ def test_raise_visible_inactive_window_requests_activation(
         patch.object(dummy_widget, "setWindowFlags") as flags,
     ):
         rpc_server.run_rpc(dummy_widget, "raise", [], {})
+        qtbot.waitUntil(lambda: activate.called)
     activate.assert_called_once_with()
     flags.assert_not_called()
 
 
 @pytest.mark.parametrize("platform", ["wayland", "wayland-egl"])
 @pytest.mark.parametrize("initially_visible", [False, True])
-def test_wayland_raise_finishes_showing_before_requesting_activation(
-    rpc_server, dummy_widget, monkeypatch, platform, initially_visible
+def test_wayland_raise_defers_remapping_but_shows_hidden_windows_immediately(
+    rpc_server, dummy_widget, monkeypatch, qtbot, platform, initially_visible
 ):
     monkeypatch.setattr(rpc_server_module.QApplication, "platformName", lambda: platform)
     monkeypatch.setattr(dummy_widget, "isActiveWindow", lambda: False)
@@ -239,11 +224,86 @@ def test_wayland_raise_finishes_showing_before_requesting_activation(
         side_effect=lambda: visible_during_activation.append(dummy_widget.isVisible()),
     ):
         rpc_server.run_rpc(dummy_widget, "raise", [], {})
+        if initially_visible:
+            assert not dummy_widget.isVisible()
+            assert visible_during_activation == []
+        else:
+            assert dummy_widget.isVisible()
+        qtbot.waitUntil(lambda: bool(visible_during_activation))
 
     assert events.hide_events == int(initially_visible)
     assert events.show_events == 1
     assert visible_during_activation == [True]
     assert dummy_widget.isVisible()
+
+
+def test_repeated_wayland_raises_share_pending_remap(rpc_server, dummy_widget, monkeypatch, qtbot):
+    monkeypatch.setattr(rpc_server_module.QApplication, "platformName", lambda: "wayland")
+    monkeypatch.setattr(dummy_widget, "isActiveWindow", lambda: False)
+    dummy_widget.show()
+    events = WindowEvents(dummy_widget)
+
+    for _ in range(3):
+        rpc_server.run_rpc(dummy_widget, "raise", [], {})
+        assert not dummy_widget.isVisible()
+
+    qtbot.waitUntil(dummy_widget.isVisible)
+    assert events.hide_events == events.show_events == 1
+
+
+@pytest.mark.parametrize("method", ["hide", "close", "show"])
+def test_visibility_request_cancels_pending_wayland_raise(
+    rpc_server, dummy_widget, monkeypatch, qapp, method
+):
+    monkeypatch.setattr(rpc_server_module.QApplication, "platformName", lambda: "wayland")
+    monkeypatch.setattr(dummy_widget, "isActiveWindow", lambda: False)
+    dummy_widget.show()
+
+    with patch.object(dummy_widget, "activateWindow") as activate:
+        rpc_server.run_rpc(dummy_widget, "raise", [], {})
+        if method == "close":
+            dummy_widget.close()  # Also cover a close that does not arrive through RPC.
+        else:
+            rpc_server.run_rpc(dummy_widget, method, [], {})
+        qapp.processEvents()
+
+    assert dummy_widget.isVisible() == (method == "show")
+    activate.assert_not_called()
+
+
+def test_destroying_window_cancels_pending_wayland_raise(rpc_server, qapp, monkeypatch):
+    monkeypatch.setattr(rpc_server_module.QApplication, "platformName", lambda: "wayland")
+    window = QWidget()  # Deleted explicitly below, before the timer can fire.
+    monkeypatch.setattr(window, "isActiveWindow", lambda: False)
+    window.show()
+
+    with patch.object(window, "activateWindow") as activate:
+        rpc_server.run_rpc(window, "raise", [], {})
+        window.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        qapp.processEvents()
+
+    activate.assert_not_called()
+
+
+@pytest.mark.parametrize("method", ["hide", "show"])
+def test_child_visibility_does_not_cancel_pending_window_raise(
+    rpc_server, dummy_widget, qtbot, qapp, monkeypatch, method
+):
+    window = QWidget()
+    qtbot.addWidget(window)
+    dummy_widget.setParent(window)
+    dummy_widget.setVisible(method == "hide")
+    window.show()
+    monkeypatch.setattr(rpc_server_module.QApplication, "platformName", lambda: "wayland")
+    monkeypatch.setattr(window, "isActiveWindow", lambda: False)
+
+    rpc_server.run_rpc(window, "raise", [], {})
+    rpc_server.run_rpc(dummy_widget, method, [], {})
+    qapp.processEvents()
+
+    assert window.isVisible()
+    assert dummy_widget.isVisible() == (method == "show")
 
 
 def test_wayland_remap_preserves_dock_contents(rpc_server, qtbot, qapp, monkeypatch, tmp_path):

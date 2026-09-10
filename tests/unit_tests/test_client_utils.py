@@ -158,6 +158,18 @@ def test_client_show_and_raise_request_foreground_activation(method, window_name
             window._run_rpc.assert_not_called()
 
 
+@pytest.mark.parametrize("method", ["show", "raise_window"])
+@pytest.mark.parametrize("wait", [False, True])
+def test_client_show_and_raise_start_gui_with_requested_wait(method, wait):
+    gui = BECGuiClient()
+    with (
+        mock.patch.object(gui, "_check_if_server_is_alive", return_value=False),
+        mock.patch.object(gui, "_start") as start,
+    ):
+        getattr(gui, method)(wait=wait)
+    start.assert_called_once_with(wait=wait)
+
+
 def test_client_display_info_comes_from_server_without_starting_gui():
     gui = BECGuiClient()
     with (

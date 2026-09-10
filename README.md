@@ -106,12 +106,16 @@ when a window is behind another application. `gui.raise_window()` uses the same 
 `gui.flomni.raise_window()` targets one window. Already-visible, active windows are left unchanged.
 
 On XCB (X11/XWayland), BEC retains its GNOME/RHEL window-raising workaround and restores the original
-window flags afterwards. On native Wayland, BEC briefly hides and shows visible, inactive windows
-before requesting activation, because GNOME can refuse to activate an existing window. This keeps
-the window's contents and flags, but may cause flicker or let the compositor reposition it. Each
-call finishes with the window shown; already-active windows are left untouched. On macOS, BEC
-requests activation without remapping the window. Activation is still subject to the window
-manager/compositor's focus policy; a Redis RPC is not a local mouse or keyboard event.
+window flags afterwards. On native Wayland, the experimental workaround hides a visible, inactive
+window and schedules showing it on a subsequent Qt event-loop turn. Repeated requests share one
+pending show; an explicit RPC hide/show of that window, or a close, cancels it. Hidden windows are
+shown immediately.
+The workaround preserves contents and flags, but may flicker or let the compositor reposition the
+window. It does not guarantee foreground activation. macOS uses Qt's normal activation request.
+
+Wayland's supported focus transfer uses an XDG activation token from the focused application.
+The terminal's input event/token is not carried by BEC's Redis RPC, so GNOME may reject activation.
+See [GNOME's explanation of focus stealing prevention](https://blogs.gnome.org/shell-dev/2024/09/20/understanding-gnome-shells-focus-stealing-prevention/).
 
 To inspect the **running GUI server process**, from the BEC IPython client:
 
