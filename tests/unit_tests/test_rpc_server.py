@@ -1,14 +1,18 @@
 import argparse
+from threading import Thread
 from unittest.mock import MagicMock, patch
 
 import pytest
 from bec_lib.service_config import ServiceConfig
-from qtpy.QtWidgets import QWidget
+from qtpy.QtCore import QEvent, QObject, Qt, QThread
+from qtpy.QtTest import QSignalSpy
+from qtpy.QtWidgets import QVBoxLayout, QWidget
 
 from bec_widgets.applications import companion_app as companion_app_module
 from bec_widgets.applications.companion_app import GUIServer
 from bec_widgets.utils import rpc_server as rpc_server_module
 from bec_widgets.utils.bec_connector import BECConnector
+from bec_widgets.utils.bec_dispatcher import QtThreadSafeCallback
 from bec_widgets.utils.rpc_server import RegistryNotReadyError, RPCServer, SingleshotRPCRepeat
 
 from .client_mocks import mocked_client
@@ -94,6 +98,321 @@ def test_rpc_server_system_capabilities_include_shutdown(rpc_server):
         "system.shutdown": True,
         "system.get_display_info": True,
     }
+
+
+class WindowEvents(QObject):
+    def __init__(self, widget):
+        super().__init__(widget)
+        self.hide_events = 0
+        self.show_events = 0
+        widget.installEventFilter(self)
+
+    def eventFilter(self, watched, event):
+        if event.type() == QEvent.Hide:
+            self.hide_events += 1
+        elif event.type() == QEvent.Show:
+            self.show_events += 1
+        return False
+
+
+@pytest.mark.parametrize("method", ["show", "raise"])
+@pytest.mark.parametrize("stay_on_top", [False, True])
+@pytest.mark.parametrize("platform", ["wayland", "wayland-egl", "cocoa"])
+def test_repeated_show_and_raise_preserve_visibility_and_flags(
+    rpc_server, dummy_widget, qapp, monkeypatch, method, stay_on_top, platform
+):
+    monkeypatch.setattr(rpc_server_module.QApplication, "platformName", lambda: platform)
+    # A background window remains visible. Exercise raising, even on an offscreen test backend.
+    monkeypatch.setattr(dummy_widget, "isActiveWindow", lambda: False)
+    dummy_widget.setWindowFlag(Qt.WindowStaysOnTopHint, stay_on_top)
+    dummy_widget.show()
+    qapp.processEvents()
+    flags = dummy_widget.windowFlags()
+    events = WindowEvents(dummy_widget)
+
+    for _ in range(3):
+        handle = dummy_widget.windowHandle()
+        rpc_server.run_rpc(dummy_widget, method, [], {})
+        qapp.processEvents()
+        assert dummy_widget.isVisible()
+        assert dummy_widget.windowFlags() == flags
+        if method == "raise" and platform.startswith("wayland"):
+            assert dummy_widget.windowHandle() is not handle
+        else:
+            assert dummy_widget.windowHandle() is handle
+    expected_remaps = 3 if method == "raise" and platform.startswith("wayland") else 0
+    assert events.hide_events == events.show_events == expected_remaps
+
+
+@pytest.mark.parametrize("method", ["show", "raise"])
+def test_show_and_raise_restore_hidden_window(rpc_server, dummy_widget, method):
+    dummy_widget.hide()
+    rpc_server.run_rpc(dummy_widget, method, [], {})
+    assert dummy_widget.isVisible()
+
+
+@pytest.mark.parametrize("state", [Qt.WindowNoState, Qt.WindowMaximized, Qt.WindowFullScreen])
+@pytest.mark.parametrize("platform", ["wayland", "xcb"])
+def test_raise_restores_minimized_window_state(
+    rpc_server, dummy_widget, monkeypatch, qtbot, state, platform
+):
+    monkeypatch.setattr(rpc_server_module.QApplication, "platformName", lambda: platform)
+    dummy_widget.setWindowState(state | Qt.WindowMinimized)
+    dummy_widget.show()
+    assert dummy_widget.isMinimized()
+
+    rpc_server.run_rpc(dummy_widget, "raise", [], {})
+
+    qtbot.waitUntil(dummy_widget.isVisible)
+    assert not dummy_widget.isMinimized()
+    assert dummy_widget.windowState() & (Qt.WindowMaximized | Qt.WindowFullScreen) == state
+
+
+def test_raise_requests_activation_after_showing_window(rpc_server, dummy_widget):
+    dummy_widget.hide()
+    visible_during_activation = []
+    with patch.object(
+        dummy_widget,
+        "activateWindow",
+        side_effect=lambda: visible_during_activation.append(dummy_widget.isVisible()),
+    ):
+        rpc_server.run_rpc(dummy_widget, "raise", [], {})
+    assert visible_during_activation == [True]
+
+
+@pytest.mark.parametrize("platform", ["wayland", "xcb", "cocoa"])
+def test_raise_active_window_is_noop(rpc_server, dummy_widget, monkeypatch, platform):
+    dummy_widget.show()
+    monkeypatch.setattr(rpc_server_module.QApplication, "platformName", lambda: platform)
+    monkeypatch.setattr(dummy_widget, "isActiveWindow", lambda: True)
+    with (
+        patch.object(dummy_widget, "setWindowFlags") as flags,
+        patch.object(dummy_widget, "setWindowState") as state,
+        patch.object(dummy_widget, "raise_") as raise_window,
+        patch.object(dummy_widget, "activateWindow") as activate,
+        patch.object(dummy_widget, "show") as show,
+        patch.object(dummy_widget, "hide") as hide,
+        patch.object(dummy_widget, "destroy") as destroy,
+    ):
+        rpc_server.run_rpc(dummy_widget, "raise", [], {})
+    for operation in (flags, state, raise_window, activate, show, hide, destroy):
+        operation.assert_not_called()
+
+
+@pytest.mark.parametrize("platform", ["wayland", "wayland-egl", "cocoa"])
+def test_raise_visible_inactive_window_requests_activation(
+    rpc_server, dummy_widget, monkeypatch, qtbot, platform
+):
+    dummy_widget.show()
+    monkeypatch.setattr(rpc_server_module.QApplication, "platformName", lambda: platform)
+    monkeypatch.setattr(dummy_widget, "isActiveWindow", lambda: False)
+    with (
+        patch.object(dummy_widget, "activateWindow") as activate,
+        patch.object(dummy_widget, "setWindowFlags") as flags,
+    ):
+        rpc_server.run_rpc(dummy_widget, "raise", [], {})
+        qtbot.waitUntil(lambda: activate.called)
+    activate.assert_called_once_with()
+    flags.assert_not_called()
+
+
+@pytest.mark.parametrize("platform", ["wayland", "wayland-egl"])
+@pytest.mark.parametrize("initial_state", ["never_shown", "hidden", "visible"])
+def test_wayland_raise_preserves_widget_and_replaces_existing_native_window(
+    rpc_server, dummy_widget, monkeypatch, qapp, platform, initial_state
+):
+    monkeypatch.setattr(rpc_server_module.QApplication, "platformName", lambda: platform)
+    monkeypatch.setattr(dummy_widget, "isActiveWindow", lambda: False)
+    if initial_state != "never_shown":
+        dummy_widget.show()
+        qapp.processEvents()
+    if initial_state == "hidden":
+        dummy_widget.hide()
+    handle = dummy_widget.windowHandle()
+    native_destroyed = QSignalSpy(handle.destroyed) if handle is not None else None
+    widget_destroyed = QSignalSpy(dummy_widget.destroyed)
+    last_window_closed = QSignalSpy(qapp.lastWindowClosed)
+    screen = dummy_widget.screen()
+    events = WindowEvents(dummy_widget)
+    visible_during_activation = []
+
+    with patch.object(
+        dummy_widget,
+        "activateWindow",
+        side_effect=lambda: visible_during_activation.append(dummy_widget.isVisible()),
+    ):
+        rpc_server.run_rpc(dummy_widget, "raise", [], {})
+        assert dummy_widget.isVisible()
+        qapp.processEvents()
+
+    assert events.hide_events == int(initial_state == "visible")
+    assert events.show_events == 1
+    assert visible_during_activation == [True]
+    assert dummy_widget.windowHandle() is not handle
+    assert dummy_widget.screen() is screen
+    if native_destroyed is not None:
+        assert native_destroyed.count() == 1
+    assert widget_destroyed.count() == last_window_closed.count() == 0
+
+
+def test_wayland_raise_from_dispatcher_worker_runs_on_gui_thread(
+    rpc_server, dummy_widget, monkeypatch, qtbot, qapp
+):
+    monkeypatch.setattr(rpc_server_module.QApplication, "platformName", lambda: "wayland")
+    monkeypatch.setattr(dummy_widget, "isActiveWindow", lambda: False)
+    dummy_widget.show()
+    events = WindowEvents(dummy_widget)
+    activation_threads = []
+    callback = QtThreadSafeCallback(rpc_server.on_rpc_update)
+    instruction = {
+        "action": "raise",
+        "parameter": {"gui_id": dummy_widget.gui_id, "args": [], "kwargs": {}},
+    }
+    with (
+        patch.object(rpc_server, "send_response") as response,
+        patch.object(
+            dummy_widget,
+            "activateWindow",
+            side_effect=lambda: activation_threads.append(QThread.currentThread()),
+        ),
+    ):
+        worker = Thread(target=callback, args=(instruction, {"request_id": "raise-from-worker"}))
+        worker.start()
+        worker.join(timeout=2)
+        assert not worker.is_alive()
+        qtbot.waitUntil(lambda: bool(activation_threads) and response.called)
+
+    assert activation_threads == [qapp.thread()]
+    assert events.hide_events == events.show_events == 1
+    assert dummy_widget.isVisible()
+    response.assert_called_once_with("raise-from-worker", True, {"result": None})
+
+
+def test_wayland_recreation_preserves_dock_data_and_bec_connections(
+    rpc_server, qtbot, qapp, monkeypatch, tmp_path
+):
+    monkeypatch.setenv("BECWIDGETS_PROFILE_DIR", str(tmp_path))
+    dock_area = rpc_server._launch_dock_area(name="flomni", startup_profile="skip")
+    window = dock_area.window()
+    qtbot.addWidget(window)
+    content = dock_area.new("TextBox", object_name="status")
+    content.set_plain_text("Preserved status")
+    waveform = dock_area.new("Waveform", object_name="waveform")
+    curve = waveform.plot(x=[1, 2, 3], y=[4, 5, 6])
+    qapp.processEvents()
+    widgets = dock_area.widget_map()
+    slots = dict(dock_area.bec_dispatcher._registered_slots)
+    objects = [window, dock_area, content, waveform, curve]
+    destroyed = [QSignalSpy(obj.destroyed) for obj in objects]
+    size = window.size()
+    monkeypatch.setattr(rpc_server_module.QApplication, "platformName", lambda: "wayland")
+    monkeypatch.setattr(window, "isActiveWindow", lambda: False)
+
+    for _ in range(3):
+        rpc_server.run_rpc(window, "raise", [], {})
+        qapp.processEvents()
+        assert window.isVisible()
+        assert window.size() == size
+        assert content.isVisible()
+        assert content.plain_text == "Preserved status"
+        x, y = curve.get_data()
+        assert list(x) == [1, 2, 3]
+        assert list(y) == [4, 5, 6]
+        assert dock_area.widget_map() == widgets
+        assert dock_area.bec_dispatcher._registered_slots == slots
+        for obj in objects[1:]:
+            assert rpc_server.rpc_register.get_rpc_by_id(obj.gui_id) is obj
+        assert all(spy.count() == 0 for spy in destroyed)
+
+    # The same widgets can still receive RPC updates after recreating their native resources.
+    rpc_server.run_rpc(content, "set_plain_text", ["Updated status"], {})
+    assert content.plain_text == "Updated status"
+    curve.set_data([7, 8], [9, 10])
+    x, y = curve.get_data()
+    assert list(x) == [7, 8]
+    assert list(y) == [9, 10]
+
+
+def test_wayland_recreation_preserves_native_child_widget(rpc_server, qtbot, monkeypatch, qapp):
+    window = QWidget()
+    qtbot.addWidget(window)
+    child = QWidget(window)
+    child.setAttribute(Qt.WA_NativeWindow)
+    QVBoxLayout(window).addWidget(child)
+    window.show()
+    qapp.processEvents()
+    native_visible = child.windowHandle().isVisible()
+    monkeypatch.setattr(rpc_server_module.QApplication, "platformName", lambda: "wayland")
+    monkeypatch.setattr(window, "isActiveWindow", lambda: False)
+    destroyed = QSignalSpy(child.destroyed)
+
+    for _ in range(3):
+        rpc_server.run_rpc(window, "raise", [], {})
+        qapp.processEvents()
+        assert child.parentWidget() is window
+        assert child.isVisible()
+        # Some QPA plugins (including offscreen) do not map native child windows.
+        assert child.windowHandle().isVisible() == native_visible
+        assert child.windowHandle().parent() is window.windowHandle()
+        assert destroyed.count() == 0
+
+
+def test_wayland_recreation_preserves_web_page_state(
+    rpc_server, qtbot, monkeypatch, qapp, tmp_path
+):
+    monkeypatch.setenv("BECWIDGETS_PROFILE_DIR", str(tmp_path))
+    dock_area = rpc_server._launch_dock_area(name="web_probe", startup_profile="skip")
+    window = dock_area.window()
+    qtbot.addWidget(window)
+    content = dock_area.new("WebsiteWidget", object_name="web_page")
+    view = content.website
+    page = view.page()
+    with qtbot.waitSignal(page.loadFinished, timeout=10000):
+        view.setHtml(
+            "<html><body>Preserved page<script>window.probeCounter = 40;</script></body></html>"
+        )
+    reloads = QSignalSpy(page.loadStarted)
+    destroyed = QSignalSpy(page.destroyed)
+    monkeypatch.setattr(rpc_server_module.QApplication, "platformName", lambda: "wayland")
+    monkeypatch.setattr(window, "isActiveWindow", lambda: False)
+
+    for expected in (41, 42, 43):
+        rpc_server.run_rpc(window, "raise", [], {})
+        qapp.processEvents()
+        assert content.website is view
+        assert view.page() is page
+        result = []
+        page.runJavaScript("window.probeCounter += 1", result.append)
+        qtbot.waitUntil(lambda: bool(result))
+        assert result == [expected]
+        assert reloads.count() == destroyed.count() == 0
+
+
+@pytest.mark.parametrize("stay_on_top", [False, True])
+def test_xcb_raise_preserves_workaround_and_original_flags(
+    rpc_server, dummy_widget, monkeypatch, stay_on_top
+):
+    # The actual QPA backend, not the desktop session or an environment override, selects the path.
+    monkeypatch.setenv("XDG_SESSION_TYPE", "wayland")
+    monkeypatch.setenv("QT_QPA_PLATFORM", "wayland")
+    monkeypatch.setattr(rpc_server_module.QApplication, "platformName", lambda: "xcb")
+    monkeypatch.setattr(dummy_widget, "isActiveWindow", lambda: False)
+    dummy_widget.setWindowFlag(Qt.WindowStaysOnTopHint, stay_on_top)
+    dummy_widget.show()
+    original_flags = dummy_widget.windowFlags()
+
+    with (
+        patch.object(dummy_widget, "setWindowFlags", wraps=dummy_widget.setWindowFlags) as flags,
+        patch.object(dummy_widget, "activateWindow") as activate,
+    ):
+        for _ in range(3):
+            rpc_server.run_rpc(dummy_widget, "raise", [], {})
+            assert dummy_widget.isVisible()
+            assert dummy_widget.windowFlags() == original_flags
+    assert flags.call_count == 6
+    assert flags.call_args_list[0].args == (original_flags | Qt.WindowStaysOnTopHint,)
+    assert flags.call_args_list[1].args == (original_flags,)
+    assert activate.call_count == 3
 
 
 def test_display_info_is_available_through_system_rpc(rpc_server, qapp):

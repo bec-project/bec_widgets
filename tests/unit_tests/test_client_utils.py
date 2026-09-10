@@ -135,6 +135,41 @@ def _no_wait_for_server(_client):
     yield
 
 
+@pytest.mark.parametrize("method", ["show", "raise_window"])
+@pytest.mark.parametrize("window_names", [(), ("bec", "flomni")])
+def test_client_show_and_raise_request_foreground_activation(method, window_names):
+    gui = BECGuiClient()
+    windows = {name: mock.MagicMock() for name in window_names}
+    gui._top_level = windows
+    launcher = mock.MagicMock()
+    with (
+        mock.patch.object(BECGuiClient, "launcher", new_callable=mock.PropertyMock) as prop,
+        mock.patch("bec_widgets.cli.client_utils.wait_for_server", _no_wait_for_server),
+        mock.patch.object(gui, "_check_if_server_is_alive", return_value=True),
+    ):
+        prop.return_value = launcher
+        getattr(gui, method)()
+    if not windows:
+        launcher._run_rpc.assert_called_once_with("raise")
+    else:
+        launcher._run_rpc.assert_not_called()
+        for window in windows.values():
+            window.raise_window.assert_called_once_with()
+            window._run_rpc.assert_not_called()
+
+
+@pytest.mark.parametrize("method", ["show", "raise_window"])
+@pytest.mark.parametrize("wait", [False, True])
+def test_client_show_and_raise_start_gui_with_requested_wait(method, wait):
+    gui = BECGuiClient()
+    with (
+        mock.patch.object(gui, "_check_if_server_is_alive", return_value=False),
+        mock.patch.object(gui, "_start") as start,
+    ):
+        getattr(gui, method)(wait=wait)
+    start.assert_called_once_with(wait=wait)
+
+
 @pytest.mark.parametrize("startup_completed", [False, True])
 def test_client_display_info_comes_from_server_without_starting_gui(startup_completed):
     gui = BECGuiClient()

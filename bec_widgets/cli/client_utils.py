@@ -414,17 +414,16 @@ class BECGuiClient(RPCBase):
         logger.warning("Using <gui>.start() is deprecated, use <gui>.show() instead.")
         return self._start(wait=wait)
 
-    def show(self, wait=True) -> None:
+    def show(self, wait: bool = True) -> None:
         """
-        Show the GUI window.
+        Show GUI windows and request foreground activation, including for visible windows
+        behind another application. Already-active windows are left unchanged.
         If the GUI server is not running, it will be started.
 
         Args:
             wait(bool): Whether to wait for the server to start. Defaults to True.
         """
-        if self._check_if_server_is_alive():
-            return self._show_all()
-        return self._start(wait=wait)
+        return self.raise_window(wait=wait)
 
     def hide(self):
         """Hide the GUI window."""
@@ -432,7 +431,8 @@ class BECGuiClient(RPCBase):
 
     def raise_window(self, wait: bool = True) -> None:
         """
-        Bring GUI windows to the front.
+        Show GUI windows and request that the desktop brings them to the front.
+        The window manager/compositor may reject the focus request.
         If the GUI server is not running, it will be started.
 
         Args:
@@ -741,16 +741,6 @@ class BECGuiClient(RPCBase):
         self._server_registry = cast(dict[str, RegistryState], msg["data"].state)
         self._update_dynamic_namespace(self._server_registry)
 
-    def _do_show_all(self):
-        if self.launcher and len(self._top_level) == 0:
-            self.launcher._run_rpc("show")  # pylint: disable=protected-access
-        for window in self._top_level.values():
-            window.raise_window()
-
-    def _show_all(self):
-        with wait_for_server(self):
-            return self._do_show_all()
-
     def _hide_all(self):
         with wait_for_server(self):
             if self._killed:
@@ -759,18 +749,15 @@ class BECGuiClient(RPCBase):
             for window in self._top_level.values():
                 window.hide()
 
-    def _do_raise_all(self):
-        """Bring GUI windows to the front."""
-        if self.launcher and len(self._top_level) == 0:
-            self.launcher._run_rpc("raise")  # pylint: disable=protected-access
-        for window in self._top_level.values():
-            window.raise_window()
-
     def _raise_all(self):
+        """Bring GUI windows to the front."""
         with wait_for_server(self):
             if self._killed:
                 return
-            return self._do_raise_all()
+            if self.launcher and not self._top_level:
+                self.launcher._run_rpc("raise")  # pylint: disable=protected-access
+            for window in self._top_level.values():
+                window.raise_window()
 
     def _update_dynamic_namespace(self, server_registry: dict):
         """
