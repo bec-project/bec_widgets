@@ -101,10 +101,14 @@ active devices, topics)—so your UI can be heavily automated.
 
 #### Window visibility and display diagnostics
 
-`gui.show()` shows hidden windows and restores minimized windows. Repeating it leaves visible
-windows unchanged. Use `gui.raise_window()` or `gui.flomni.raise_window()` to additionally request
-foreground activation. Activation is subject to the window manager/compositor's focus policy,
-particularly on Wayland; a Redis RPC is not a local mouse or keyboard event.
+`gui.show()` shows hidden windows, restores minimized windows, and requests foreground activation
+when a window is behind another application. `gui.raise_window()` uses the same behaviour;
+`gui.flomni.raise_window()` targets one window. Already-visible, active windows are left unchanged.
+
+On XCB (X11/XWayland), BEC retains its GNOME/RHEL window-raising workaround and restores the original
+window flags afterwards. On native Wayland and macOS it requests activation without changing flags.
+Activation is subject to the window manager/compositor's focus policy, particularly on Wayland;
+a Redis RPC is not a local mouse or keyboard event.
 
 To inspect the **running GUI server process**, from the BEC IPython client:
 

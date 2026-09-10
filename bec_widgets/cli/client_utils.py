@@ -416,15 +416,15 @@ class BECGuiClient(RPCBase):
 
     def show(self, wait=True) -> None:
         """
-        Show GUI windows without explicitly requesting focus.
-        Already-visible windows are left unchanged; minimized windows are restored.
+        Show GUI windows and request foreground activation, including for visible windows
+        behind another application. Already-active windows are left unchanged.
         If the GUI server is not running, it will be started.
 
         Args:
             wait(bool): Whether to wait for the server to start. Defaults to True.
         """
         if self._check_if_server_is_alive():
-            return self._show_all()
+            return self._raise_all()
         return self._start(wait=wait)
 
     def hide(self):
@@ -740,16 +740,6 @@ class BECGuiClient(RPCBase):
         # with self._lock:
         self._server_registry = cast(dict[str, RegistryState], msg["data"].state)
         self._update_dynamic_namespace(self._server_registry)
-
-    def _do_show_all(self):
-        if self.launcher and len(self._top_level) == 0:
-            self.launcher._run_rpc("show")  # pylint: disable=protected-access
-        for window in self._top_level.values():
-            window._run_rpc("show")
-
-    def _show_all(self):
-        with wait_for_server(self):
-            return self._do_show_all()
 
     def _hide_all(self):
         with wait_for_server(self):

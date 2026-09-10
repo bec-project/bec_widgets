@@ -235,18 +235,15 @@ class RPCServer:
         # Run with rpc registry broadcast, but only once
         with RPCRegister.delayed_broadcast():
             logger.debug(f"Running RPC instruction: {method} with args: {args}, kwargs: {kwargs}")
-            if method in ("show", "raise") and isinstance(obj, QWidget):
-                window = obj.window() if method == "raise" else obj
-                if window.isMinimized():
+            if method == "raise" and isinstance(obj, QWidget):
+                self._raise_window(obj.window())
+                res = None
+            elif method == "show" and isinstance(obj, QWidget):
+                if obj.isMinimized():
                     # Preserve maximized/full-screen state when restoring a minimized window.
-                    window.setWindowState(window.windowState() & ~Qt.WindowMinimized)
-                if not window.isVisible():
-                    window.show()
-                if method == "raise":
-                    # Changing window flags hides/recreates native windows. Request activation
-                    # without that workaround; the window manager/compositor decides focus.
-                    window.raise_()
-                    window.activateWindow()
+                    obj.setWindowState(obj.windowState() & ~Qt.WindowMinimized)
+                if not obj.isVisible():
+                    obj.show()
                 res = None
             else:
                 target_obj, method_obj = self._resolve_rpc_target(obj, method)
@@ -260,6 +257,37 @@ class RPCServer:
                 else:
                     res = method_obj(*args, **kwargs)
         return res
+
+    @staticmethod
+    def _raise_window(window: QWidget) -> None:
+        """Restore a window and request focus using its loaded Qt platform backend."""
+        if window.isVisible() and window.isActiveWindow() and not window.isMinimized():
+            return
+
+        state = window.windowState() & ~Qt.WindowMinimized
+        if QApplication.platformName() == "xcb":
+            # Keep the GNOME/RHEL X11 workaround that also works through XWayland.
+            # Never run it on native Wayland: flag changes hide/recreate the surface.
+            flags = window.windowFlags()
+            window.setWindowState(state | Qt.WindowActive)
+            try:
+                window.setWindowFlags(flags | Qt.WindowStaysOnTopHint)
+                window.raise_()
+                window.activateWindow()
+            finally:
+                # Preserve intentional always-on-top flags as well as all other flags.
+                window.setWindowFlags(flags)
+                window.show()
+            return
+
+        if window.isMinimized():
+            window.setWindowState(state)
+        if not window.isVisible():
+            window.show()
+        # Qt requests activation from the compositor on Wayland. A visible window can
+        # still be behind another application, so visibility alone must not skip this.
+        window.raise_()
+        window.activateWindow()
 
     def _resolve_rpc_target(self, obj, method: str) -> tuple[object, object]:
         """

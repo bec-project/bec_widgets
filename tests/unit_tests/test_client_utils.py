@@ -135,9 +135,9 @@ def _no_wait_for_server(_client):
     yield
 
 
-@pytest.mark.parametrize("method, action", [("show", "show"), ("raise_window", "raise")])
+@pytest.mark.parametrize("method", ["show", "raise_window"])
 @pytest.mark.parametrize("window_names", [(), ("bec", "flomni")])
-def test_client_show_and_raise_use_distinct_actions(method, action, window_names):
+def test_client_show_and_raise_request_foreground_activation(method, window_names):
     gui = BECGuiClient()
     windows = {name: mock.MagicMock() for name in window_names}
     gui._top_level = windows
@@ -150,15 +150,12 @@ def test_client_show_and_raise_use_distinct_actions(method, action, window_names
         prop.return_value = launcher
         getattr(gui, method)()
     if not windows:
-        launcher._run_rpc.assert_called_once_with(action)
+        launcher._run_rpc.assert_called_once_with("raise")
     else:
         launcher._run_rpc.assert_not_called()
         for window in windows.values():
-            if action == "show":
-                window._run_rpc.assert_called_once_with("show")
-                window.raise_window.assert_not_called()
-            else:
-                window.raise_window.assert_called_once_with()
+            window.raise_window.assert_called_once_with()
+            window._run_rpc.assert_not_called()
 
 
 def test_client_display_info_comes_from_server_without_starting_gui():
