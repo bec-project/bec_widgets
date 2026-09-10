@@ -101,18 +101,21 @@ class WindowEvents(QObject):
     def __init__(self, widget):
         super().__init__(widget)
         self.hide_events = 0
+        self.show_events = 0
         widget.installEventFilter(self)
 
     def eventFilter(self, watched, event):
         if event.type() == QEvent.Hide:
             self.hide_events += 1
+        elif event.type() == QEvent.Show:
+            self.show_events += 1
         return False
 
 
 @pytest.mark.parametrize("method", ["show", "raise"])
 @pytest.mark.parametrize("stay_on_top", [False, True])
 @pytest.mark.parametrize("platform", ["wayland", "wayland-egl", "cocoa"])
-def test_repeated_show_and_raise_do_not_hide_visible_window(
+def test_repeated_show_and_raise_preserve_visibility_and_flags(
     rpc_server, dummy_widget, qapp, monkeypatch, method, stay_on_top, platform
 ):
     monkeypatch.setattr(rpc_server_module.QApplication, "platformName", lambda: platform)
@@ -129,7 +132,8 @@ def test_repeated_show_and_raise_do_not_hide_visible_window(
         qapp.processEvents()
         assert dummy_widget.isVisible()
         assert dummy_widget.windowFlags() == flags
-    assert events.hide_events == 0
+    expected_remaps = 3 if method == "raise" and platform.startswith("wayland") else 0
+    assert events.hide_events == events.show_events == expected_remaps
 
 
 def test_widget_show_visible_window_does_not_request_activation(rpc_server, dummy_widget):
@@ -195,9 +199,10 @@ def test_raise_active_window_is_noop(rpc_server, dummy_widget, monkeypatch, plat
         patch.object(dummy_widget, "raise_") as raise_window,
         patch.object(dummy_widget, "activateWindow") as activate,
         patch.object(dummy_widget, "show") as show,
+        patch.object(dummy_widget, "hide") as hide,
     ):
         rpc_server.run_rpc(dummy_widget, "raise", [], {})
-    for operation in (flags, state, raise_window, activate, show):
+    for operation in (flags, state, raise_window, activate, show, hide):
         operation.assert_not_called()
 
 
@@ -215,6 +220,52 @@ def test_raise_visible_inactive_window_requests_activation(
         rpc_server.run_rpc(dummy_widget, "raise", [], {})
     activate.assert_called_once_with()
     flags.assert_not_called()
+
+
+@pytest.mark.parametrize("platform", ["wayland", "wayland-egl"])
+@pytest.mark.parametrize("initially_visible", [False, True])
+def test_wayland_raise_finishes_showing_before_requesting_activation(
+    rpc_server, dummy_widget, monkeypatch, platform, initially_visible
+):
+    monkeypatch.setattr(rpc_server_module.QApplication, "platformName", lambda: platform)
+    monkeypatch.setattr(dummy_widget, "isActiveWindow", lambda: False)
+    dummy_widget.setVisible(initially_visible)
+    events = WindowEvents(dummy_widget)
+    visible_during_activation = []
+
+    with patch.object(
+        dummy_widget,
+        "activateWindow",
+        side_effect=lambda: visible_during_activation.append(dummy_widget.isVisible()),
+    ):
+        rpc_server.run_rpc(dummy_widget, "raise", [], {})
+
+    assert events.hide_events == int(initially_visible)
+    assert events.show_events == 1
+    assert visible_during_activation == [True]
+    assert dummy_widget.isVisible()
+
+
+def test_wayland_remap_preserves_dock_contents(rpc_server, qtbot, qapp, monkeypatch, tmp_path):
+    monkeypatch.setenv("BECWIDGETS_PROFILE_DIR", str(tmp_path))
+    dock_area = rpc_server._launch_dock_area(name="flomni", startup_profile="skip")
+    window = dock_area.window()
+    qtbot.addWidget(window)
+    content = dock_area.new("TextBox", object_name="status")
+    qapp.processEvents()
+    widgets = dock_area.widget_map()
+    size = window.size()
+    monkeypatch.setattr(rpc_server_module.QApplication, "platformName", lambda: "wayland")
+    monkeypatch.setattr(window, "isActiveWindow", lambda: False)
+
+    for _ in range(3):
+        rpc_server.run_rpc(window, "raise", [], {})
+        qapp.processEvents()
+        assert window.isVisible()
+        assert window.size() == size
+        assert content.isVisible()
+        assert dock_area.widget_map() == widgets
+        assert rpc_server.rpc_register.get_rpc_by_id(dock_area.gui_id) is dock_area
 
 
 @pytest.mark.parametrize("stay_on_top", [False, True])

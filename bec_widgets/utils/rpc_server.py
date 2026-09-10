@@ -265,7 +265,8 @@ class RPCServer:
             return
 
         state = window.windowState() & ~Qt.WindowMinimized
-        if QApplication.platformName() == "xcb":
+        platform = QApplication.platformName()
+        if platform == "xcb":
             # Keep the GNOME/RHEL X11 workaround that also works through XWayland.
             # Never run it on native Wayland: flag changes hide/recreate the surface.
             flags = window.windowFlags()
@@ -282,10 +283,12 @@ class RPCServer:
 
         if window.isMinimized():
             window.setWindowState(state)
+        if platform.startswith("wayland") and window.isVisible():
+            # GNOME Wayland can refuse activation of an existing surface. Remap the
+            # inactive window using hide/show, which brings it forward on those consoles.
+            window.hide()
         if not window.isVisible():
             window.show()
-        # Qt requests activation from the compositor on Wayland. A visible window can
-        # still be behind another application, so visibility alone must not skip this.
         window.raise_()
         window.activateWindow()
 
