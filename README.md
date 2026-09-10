@@ -141,6 +141,19 @@ For an XWayland comparison on a Linux desktop with XWayland available, start a f
 `QT_QPA_PLATFORM=xcb bec --session flomni` and verify that `qt_platform` is `xcb`. This sets the backend
 for that invocation only. For plugin-loading details, start with `QT_DEBUG_PLUGINS=1 bec --session flomni`.
 
+To isolate a visibility problem from BEC, run the plain Qt probe directly from this checkout,
+using the same Python environment as the affected GUI:
+
+```bash
+QT_QPA_PLATFORM=wayland python bec_widgets/examples/qt_window_probe.py
+```
+
+Type `cycle` repeatedly in its terminal to test plain Qt hide/show. Compare with separate `hide`
+and `show` commands; `raise` tests activation without hiding. The probe reports Qt's state but
+cannot determine whether another application's window obscures it. Record what you see alongside
+the output and the result of `gnome-shell --version` when reporting a GNOME issue. Run again with
+`QT_QPA_PLATFORM=xcb` to compare backends. This script starts no BEC services and imports no BEC code.
+
 ### 4. Rapid development (extensible by design)
 
 Build new widgets fast: Inherit from `BECWidget`, list your RPC methods in `USER_ACCESS`, and use `bec_dispatcher` to

@@ -1,15 +1,17 @@
 import argparse
+from threading import Thread
 from unittest.mock import MagicMock, patch
 
 import pytest
 from bec_lib.service_config import ServiceConfig
-from qtpy.QtCore import QCoreApplication, QEvent, QObject, Qt
+from qtpy.QtCore import QCoreApplication, QEvent, QObject, Qt, QThread
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.applications import companion_app as companion_app_module
 from bec_widgets.applications.companion_app import GUIServer
 from bec_widgets.utils import rpc_server as rpc_server_module
 from bec_widgets.utils.bec_connector import BECConnector
+from bec_widgets.utils.bec_dispatcher import QtThreadSafeCallback
 from bec_widgets.utils.rpc_server import RegistryNotReadyError, RPCServer, SingleshotRPCRepeat
 
 from .client_mocks import mocked_client
@@ -249,6 +251,39 @@ def test_repeated_wayland_raises_share_pending_remap(rpc_server, dummy_widget, m
 
     qtbot.waitUntil(dummy_widget.isVisible)
     assert events.hide_events == events.show_events == 1
+
+
+def test_wayland_raise_from_dispatcher_worker_runs_on_gui_thread(
+    rpc_server, dummy_widget, monkeypatch, qtbot, qapp
+):
+    monkeypatch.setattr(rpc_server_module.QApplication, "platformName", lambda: "wayland")
+    monkeypatch.setattr(dummy_widget, "isActiveWindow", lambda: False)
+    dummy_widget.show()
+    events = WindowEvents(dummy_widget)
+    activation_threads = []
+    callback = QtThreadSafeCallback(rpc_server.on_rpc_update)
+    instruction = {
+        "action": "raise",
+        "parameter": {"gui_id": dummy_widget.gui_id, "args": [], "kwargs": {}},
+    }
+    with (
+        patch.object(rpc_server, "send_response") as response,
+        patch.object(
+            dummy_widget,
+            "activateWindow",
+            side_effect=lambda: activation_threads.append(QThread.currentThread()),
+        ),
+    ):
+        worker = Thread(target=callback, args=(instruction, {"request_id": "raise-from-worker"}))
+        worker.start()
+        worker.join(timeout=2)
+        assert not worker.is_alive()
+        qtbot.waitUntil(lambda: bool(activation_threads) and response.called)
+
+    assert activation_threads == [qapp.thread()]
+    assert events.hide_events == events.show_events == 1
+    assert dummy_widget.isVisible()
+    response.assert_called_once_with("raise-from-worker", True, {"result": None})
 
 
 @pytest.mark.parametrize("method", ["hide", "close", "show"])
