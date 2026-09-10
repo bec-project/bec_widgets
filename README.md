@@ -106,12 +106,17 @@ when a window is behind another application. `gui.raise_window()` uses the same 
 `gui.flomni.raise_window()` targets one window. Already-visible, active windows are left unchanged.
 
 On XCB (X11/XWayland), BEC retains its GNOME/RHEL window-raising workaround and restores the original
-window flags afterwards. On native Wayland, the experimental workaround hides a visible, inactive
-window and schedules showing it on a subsequent Qt event-loop turn. Repeated requests share one
-pending show; an explicit RPC hide/show of that window, or a close, cancels it. Hidden windows are
-shown immediately.
-The workaround preserves contents and flags, but may flicker or let the compositor reposition the
-window. It does not guarantee foreground activation. macOS uses Qt's normal activation request.
+window flags afterwards. On native Wayland, the experimental workaround releases an inactive
+window's existing native resources before showing it. This avoids reusing the Wayland surface
+involved in alternating visibility with Qt 6.11.1 on the affected GNOME 40 console. It also applies to
+previously hidden windows. A window that has never been shown is shown normally.
+
+The QWidget instances and their BEC connections stay alive; constructors and BEC cleanup are not
+called. Native QWindow handles and backing stores are recreated, so this has a rendering cost and
+cached native handles become invalid. Embedded renderers may have additional resource costs.
+Flags and the non-minimized window state are preserved, but the compositor may reposition the
+window and a visible window may flicker. Foreground activation remains compositor-dependent.
+macOS uses Qt's normal activation request.
 
 Wayland's supported focus transfer uses an XDG activation token from the focused application.
 The terminal's input event/token is not carried by BEC's Redis RPC, so GNOME may reject activation.
@@ -157,8 +162,8 @@ the output and the result of `gnome-shell --version` when reporting a GNOME issu
 If `cycle` alternates between appearing and disappearing, try `recreate` at least four times,
 one command at a time. It runs hide/destroy/show on the same QWidget: unlike `cycle`, it releases
 the native window resources before showing the widget again. This isolates native surface reuse
-without changing BEC's window behavior. It is a diagnostic experiment, not a validated workaround
-for BEC windows with docked widgets or embedded rendering contexts.
+without starting BEC. A successful plain-widget probe still needs verification with BEC's docked
+widgets and embedded renderers on the affected compositor.
 
 To capture the Wayland protocol alongside the probe output, write to a unique temporary file if
 the checkout is not writable:

@@ -11,7 +11,7 @@ from bec_lib.client import BECClient
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import
-from qtpy.QtCore import QEvent, QObject, Qt, QTimer
+from qtpy.QtCore import Qt, QTimer
 from qtpy.QtWidgets import QApplication, QWidget
 from redis.exceptions import RedisError
 
@@ -38,24 +38,6 @@ T = TypeVar("T")
 
 class RegistryNotReadyError(Exception):
     """Raised when trying to access an object from the RPC registry that is not yet registered."""
-
-
-class _WindowRaiser(QObject):
-    """Finish a Wayland hide/show across event-loop turns; the window owns the timer."""
-
-    def __init__(self, window: QWidget) -> None:
-        super().__init__(window)
-        self.timer = QTimer(self)
-        self.timer.setSingleShot(True)
-        self.timer.timeout.connect(window.show)
-        self.timer.timeout.connect(window.raise_)
-        self.timer.timeout.connect(window.activateWindow)
-        window.installEventFilter(self)
-
-    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-        if event.type() == QEvent.Close:
-            self.timer.stop()
-        return False
 
 
 @contextmanager
@@ -256,11 +238,6 @@ class RPCServer:
                 self._raise_window(obj.window())
                 res = None
             else:
-                if method in ("hide", "show") and isinstance(obj, QWidget) and obj.isWindow():
-                    # Explicit visibility requests supersede a deferred Wayland raise.
-                    raiser = obj.findChild(_WindowRaiser, options=Qt.FindDirectChildrenOnly)
-                    if raiser is not None:
-                        raiser.timer.stop()
                 target_obj, method_obj = self._resolve_rpc_target(obj, method)
                 # check if the method accepts args and kwargs
                 if not callable(method_obj):
@@ -277,10 +254,6 @@ class RPCServer:
     def _raise_window(window: QWidget) -> None:
         """Restore a window and request focus using its loaded Qt platform backend."""
         if window.isVisible() and window.isActiveWindow() and not window.isMinimized():
-            return
-
-        raiser = window.findChild(_WindowRaiser, options=Qt.FindDirectChildrenOnly)
-        if raiser is not None and raiser.timer.isActive():
             return
 
         state = window.windowState() & ~Qt.WindowMinimized
@@ -300,16 +273,16 @@ class RPCServer:
                 window.show()
             return
 
-        if window.isMinimized():
-            window.setWindowState(state)
-        if platform.startswith("wayland") and window.isVisible():
-            # Give Qt an event-loop turn between hiding and showing. A synchronous hide/show
-            # can leave the native Wayland surface hidden until the next RPC call.
-            if raiser is None:
-                raiser = _WindowRaiser(window)
+        if platform.startswith("wayland") and window.windowHandle() is not None:
+            # Qt 6.11/GNOME 40 can visually alternate when hide/show reuses a Wayland surface.
+            # Release native resources, keeping the QWidget instances and their BEC connections.
+            # Include previously hidden windows: plain show can reuse the affected surface too.
+            screen = window.screen()
             window.hide()
-            raiser.timer.start(0)
-            return
+            window.destroy()
+            window.setScreen(screen)
+        if window.windowState() != state:
+            window.setWindowState(state)
         if not window.isVisible():
             window.show()
         window.raise_()
