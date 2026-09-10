@@ -442,6 +442,21 @@ class BECGuiClient(RPCBase):
             return self._raise_all()
         return self._start(wait=wait)
 
+    def get_display_info(self) -> dict:
+        """Return display diagnostics from the running GUI server process.
+
+        Includes the actual Qt platform plugin, Qt paths, selected environment variables,
+        and window visibility/focus state. Desktop environment variables are hints, not
+        authoritative identification of a Wayland compositor. Does not start the GUI.
+
+        Returns:
+            dict: GUI server display diagnostics, suitable for ``pprint`` or JSON export.
+        """
+        # System diagnostics do not depend on this client's local widget-startup event.
+        if not self._gui_is_alive():
+            raise RuntimeError("GUI is not alive")
+        return self.launcher._run_rpc("system.get_display_info")
+
     def change_theme(self, theme: Literal["light", "dark"] | None = None) -> None:
         """
         Apply a GUI theme or toggle between dark and light.

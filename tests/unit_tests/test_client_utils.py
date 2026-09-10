@@ -135,6 +135,34 @@ def _no_wait_for_server(_client):
     yield
 
 
+@pytest.mark.parametrize("startup_completed", [False, True])
+def test_client_display_info_comes_from_server_without_starting_gui(startup_completed):
+    gui = BECGuiClient()
+    if startup_completed:
+        gui._gui_started_event.set()
+    with (
+        mock.patch.object(BECGuiClient, "launcher", new_callable=mock.PropertyMock) as prop,
+        mock.patch.object(gui, "_gui_is_alive", return_value=True),
+        mock.patch.object(gui, "_start") as start,
+    ):
+        prop.return_value._run_rpc.return_value = {"qt_platform": "wayland"}
+        assert gui.get_display_info() == {"qt_platform": "wayland"}
+        prop.return_value._run_rpc.assert_called_once_with("system.get_display_info")
+    start.assert_not_called()
+    assert gui._gui_started_event.is_set() is startup_completed
+
+
+def test_client_display_info_fails_without_running_server():
+    gui = BECGuiClient()
+    with (
+        mock.patch.object(gui, "_gui_is_alive", return_value=False),
+        mock.patch.object(gui, "_start") as start,
+        pytest.raises(RuntimeError, match="GUI is not alive"),
+    ):
+        gui.get_display_info()
+    start.assert_not_called()
+
+
 @pytest.mark.parametrize("theme", ["light", "dark"])
 def test_client_utils_apply_theme_explicit(theme):
     gui = BECGuiClient()

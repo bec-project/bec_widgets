@@ -92,7 +92,13 @@ def test_rpc_server_system_capabilities_include_shutdown(rpc_server):
     assert rpc_server.run_system_rpc("system.list_capabilities", [], {}) == {
         "system.launch_dock_area": True,
         "system.shutdown": True,
+        "system.get_display_info": True,
     }
+
+
+def test_display_info_is_available_through_system_rpc(rpc_server, qapp):
+    info = rpc_server.run_system_rpc("system.get_display_info", [], {})
+    assert info["qt_platform"] == qapp.platformName()
 
 
 def test_rpc_server_system_shutdown_requests_gui_server_shutdown(rpc_server, qapp):

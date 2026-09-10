@@ -18,6 +18,7 @@ from redis.exceptions import RedisError
 from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
 from bec_widgets.utils.container_utils import WidgetContainerUtils
+from bec_widgets.utils.display_info import get_display_info
 from bec_widgets.utils.error_popups import ErrorPopupUtility
 from bec_widgets.utils.rpc_logging import elapsed_seconds, format_elapsed
 from bec_widgets.utils.rpc_register import RPCRegister
@@ -319,8 +320,14 @@ class RPCServer:
             return self._launch_dock_area(*args, **kwargs)
         if method == "system.shutdown":
             return self._shutdown_gui_server()
+        if method == "system.get_display_info":
+            return get_display_info()
         if method == "system.list_capabilities":
-            return {"system.launch_dock_area": True, "system.shutdown": True}
+            return {
+                "system.launch_dock_area": True,
+                "system.shutdown": True,
+                "system.get_display_info": True,
+            }
         raise ValueError(f"Unknown system RPC method: {method}")
 
     @staticmethod
