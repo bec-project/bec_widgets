@@ -18,6 +18,7 @@ from redis.exceptions import RedisError
 from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
 from bec_widgets.utils.container_utils import WidgetContainerUtils
+from bec_widgets.utils.display_info import get_display_info
 from bec_widgets.utils.error_popups import ErrorPopupUtility
 from bec_widgets.utils.rpc_logging import elapsed_seconds, format_elapsed
 from bec_widgets.utils.rpc_register import RPCRegister
@@ -234,32 +235,18 @@ class RPCServer:
         # Run with rpc registry broadcast, but only once
         with RPCRegister.delayed_broadcast():
             logger.debug(f"Running RPC instruction: {method} with args: {args}, kwargs: {kwargs}")
-            if method == "raise" and hasattr(
-                obj, "setWindowState"
-            ):  # special case for raising windows, should work even if minimized
-                # this is a special case for raising windows for gnome on Red Hat (RHEL) 9 systems where changing focus is suppressed by default
-                # The procedure is as follows:
-                # 1. Get the current window state to check if the window is minimized and remove minimized flag
-                # 2. Then in order to force gnome to raise the window, we set the window to stay on top temporarily
-                #    and call raise_() and activateWindow()
-                #    This forces gnome to raise the window even if focus stealing is prevented
-                # 3. Flag for stay on top is removed again to restore the original window state
-                # 4. Finally, we call show() to ensure the window is visible
-
-                state = getattr(obj, "windowState", lambda: Qt.WindowNoState)()
-                target_state = state | Qt.WindowActive
-                if state & Qt.WindowMinimized:
-                    target_state &= ~Qt.WindowMinimized
-                obj.setWindowState(target_state)
-                if hasattr(obj, "showNormal") and state & Qt.WindowMinimized:
-                    obj.showNormal()
-                if hasattr(obj, "raise_"):
-                    obj.setWindowFlags(obj.windowFlags() | Qt.WindowStaysOnTopHint)
-                    obj.raise_()
-                if hasattr(obj, "activateWindow"):
-                    obj.activateWindow()
-                obj.setWindowFlags(obj.windowFlags() & ~Qt.WindowStaysOnTopHint)
-                obj.show()
+            if method in ("show", "raise") and isinstance(obj, QWidget):
+                window = obj.window() if method == "raise" else obj
+                if window.isMinimized():
+                    # Preserve maximized/full-screen state when restoring a minimized window.
+                    window.setWindowState(window.windowState() & ~Qt.WindowMinimized)
+                if not window.isVisible():
+                    window.show()
+                if method == "raise":
+                    # Changing window flags hides/recreates native windows. Request activation
+                    # without that workaround; the window manager/compositor decides focus.
+                    window.raise_()
+                    window.activateWindow()
                 res = None
             else:
                 target_obj, method_obj = self._resolve_rpc_target(obj, method)
@@ -319,8 +306,14 @@ class RPCServer:
             return self._launch_dock_area(*args, **kwargs)
         if method == "system.shutdown":
             return self._shutdown_gui_server()
+        if method == "system.get_display_info":
+            return get_display_info()
         if method == "system.list_capabilities":
-            return {"system.launch_dock_area": True, "system.shutdown": True}
+            return {
+                "system.launch_dock_area": True,
+                "system.shutdown": True,
+                "system.get_display_info": True,
+            }
         raise ValueError(f"Unknown system RPC method: {method}")
 
     @staticmethod

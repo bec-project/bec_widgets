@@ -416,7 +416,8 @@ class BECGuiClient(RPCBase):
 
     def show(self, wait=True) -> None:
         """
-        Show the GUI window.
+        Show GUI windows without explicitly requesting focus.
+        Already-visible windows are left unchanged; minimized windows are restored.
         If the GUI server is not running, it will be started.
 
         Args:
@@ -432,7 +433,8 @@ class BECGuiClient(RPCBase):
 
     def raise_window(self, wait: bool = True) -> None:
         """
-        Bring GUI windows to the front.
+        Show GUI windows and request that the desktop brings them to the front.
+        The window manager/compositor may reject the focus request.
         If the GUI server is not running, it will be started.
 
         Args:
@@ -441,6 +443,19 @@ class BECGuiClient(RPCBase):
         if self._check_if_server_is_alive():
             return self._raise_all()
         return self._start(wait=wait)
+
+    def get_display_info(self) -> dict:
+        """Return display diagnostics from the running GUI server process.
+
+        Includes the actual Qt platform plugin, Qt paths, selected environment variables,
+        and window visibility/focus state. Desktop environment variables are hints, not
+        authoritative identification of a Wayland compositor. Does not start the GUI.
+
+        Returns:
+            dict: GUI server display diagnostics, suitable for ``pprint`` or JSON export.
+        """
+        with wait_for_server(self):
+            return self.launcher._run_rpc("system.get_display_info")
 
     def change_theme(self, theme: Literal["light", "dark"] | None = None) -> None:
         """
@@ -730,7 +745,7 @@ class BECGuiClient(RPCBase):
         if self.launcher and len(self._top_level) == 0:
             self.launcher._run_rpc("show")  # pylint: disable=protected-access
         for window in self._top_level.values():
-            window.raise_window()
+            window._run_rpc("show")
 
     def _show_all(self):
         with wait_for_server(self):

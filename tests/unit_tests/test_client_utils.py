@@ -135,6 +135,56 @@ def _no_wait_for_server(_client):
     yield
 
 
+@pytest.mark.parametrize("method, action", [("show", "show"), ("raise_window", "raise")])
+@pytest.mark.parametrize("window_names", [(), ("bec", "flomni")])
+def test_client_show_and_raise_use_distinct_actions(method, action, window_names):
+    gui = BECGuiClient()
+    windows = {name: mock.MagicMock() for name in window_names}
+    gui._top_level = windows
+    launcher = mock.MagicMock()
+    with (
+        mock.patch.object(BECGuiClient, "launcher", new_callable=mock.PropertyMock) as prop,
+        mock.patch("bec_widgets.cli.client_utils.wait_for_server", _no_wait_for_server),
+        mock.patch.object(gui, "_check_if_server_is_alive", return_value=True),
+    ):
+        prop.return_value = launcher
+        getattr(gui, method)()
+    if not windows:
+        launcher._run_rpc.assert_called_once_with(action)
+    else:
+        launcher._run_rpc.assert_not_called()
+        for window in windows.values():
+            if action == "show":
+                window._run_rpc.assert_called_once_with("show")
+                window.raise_window.assert_not_called()
+            else:
+                window.raise_window.assert_called_once_with()
+
+
+def test_client_display_info_comes_from_server_without_starting_gui():
+    gui = BECGuiClient()
+    with (
+        mock.patch.object(BECGuiClient, "launcher", new_callable=mock.PropertyMock) as prop,
+        mock.patch("bec_widgets.cli.client_utils.wait_for_server", _no_wait_for_server),
+        mock.patch.object(gui, "_start") as start,
+    ):
+        prop.return_value._run_rpc.return_value = {"qt_platform": "wayland"}
+        assert gui.get_display_info() == {"qt_platform": "wayland"}
+        prop.return_value._run_rpc.assert_called_once_with("system.get_display_info")
+    start.assert_not_called()
+
+
+def test_client_display_info_fails_without_running_server():
+    gui = BECGuiClient()
+    with (
+        mock.patch.object(gui, "_gui_is_alive", return_value=False),
+        mock.patch.object(gui, "_start") as start,
+        pytest.raises(RuntimeError, match="GUI is not alive"),
+    ):
+        gui.get_display_info()
+    start.assert_not_called()
+
+
 @pytest.mark.parametrize("theme", ["light", "dark"])
 def test_client_utils_apply_theme_explicit(theme):
     gui = BECGuiClient()

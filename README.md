@@ -99,6 +99,37 @@ active devices, topics)—so your UI can be heavily automated.
 
 ![rpc_opti](https://github.com/user-attachments/assets/666be7fb-9a0d-44c2-8d44-2f9d1dae4497)
 
+#### Window visibility and display diagnostics
+
+`gui.show()` shows hidden windows and restores minimized windows. Repeating it leaves visible
+windows unchanged. Use `gui.raise_window()` or `gui.flomni.raise_window()` to additionally request
+foreground activation. Activation is subject to the window manager/compositor's focus policy,
+particularly on Wayland; a Redis RPC is not a local mouse or keyboard event.
+
+To inspect the **running GUI server process**, from the BEC IPython client:
+
+```python
+from pprint import pprint
+
+pprint(gui.get_display_info())
+```
+
+The report includes the loaded Qt platform (`wayland`, `xcb` for X11/XWayland, or `cocoa` on macOS),
+Qt version and plugin search paths, Python executable, selected inherited environment variables,
+screens, and window visibility/focus state. `XDG_CURRENT_DESKTOP` and `DESKTOP_SESSION` are desktop
+hints, not authoritative compositor identification. The session can be Wayland while Qt uses `xcb`.
+Qt settings or plugin paths inherited from a shell or another application's launcher appear in the
+environment section. Diagnostics do not start the GUI or change its settings.
+
+After updating this code, restart both the BEC client and its GUI server before testing. On the
+affected console, compare the report before and after repeated `gui.show()` and `gui.raise_window()`
+calls. `visible=True` with `active=False` means Qt considers the window shown but without keyboard
+focus; it does not prove the window is unobscured or on the current workspace.
+
+For an XWayland comparison on a Linux desktop with XWayland available, start a fresh session with
+`QT_QPA_PLATFORM=xcb bec --session flomni` and verify that `qt_platform` is `xcb`. This sets the backend
+for that invocation only. For plugin-loading details, start with `QT_DEBUG_PLUGINS=1 bec --session flomni`.
+
 ### 4. Rapid development (extensible by design)
 
 Build new widgets fast: Inherit from `BECWidget`, list your RPC methods in `USER_ACCESS`, and use `bec_dispatcher` to

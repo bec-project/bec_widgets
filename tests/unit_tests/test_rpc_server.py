@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from bec_lib.service_config import ServiceConfig
+from qtpy.QtCore import QEvent, QObject, Qt
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.applications import companion_app as companion_app_module
@@ -92,7 +93,92 @@ def test_rpc_server_system_capabilities_include_shutdown(rpc_server):
     assert rpc_server.run_system_rpc("system.list_capabilities", [], {}) == {
         "system.launch_dock_area": True,
         "system.shutdown": True,
+        "system.get_display_info": True,
     }
+
+
+class WindowEvents(QObject):
+    def __init__(self, widget):
+        super().__init__(widget)
+        self.hide_events = 0
+        widget.installEventFilter(self)
+
+    def eventFilter(self, watched, event):
+        if event.type() == QEvent.Hide:
+            self.hide_events += 1
+        return False
+
+
+@pytest.mark.parametrize("method", ["show", "raise"])
+@pytest.mark.parametrize("stay_on_top", [False, True])
+def test_repeated_show_and_raise_do_not_hide_visible_window(
+    rpc_server, dummy_widget, qapp, method, stay_on_top
+):
+    dummy_widget.setWindowFlag(Qt.WindowStaysOnTopHint, stay_on_top)
+    dummy_widget.show()
+    qapp.processEvents()
+    flags = dummy_widget.windowFlags()
+    events = WindowEvents(dummy_widget)
+
+    for _ in range(3):
+        rpc_server.run_rpc(dummy_widget, method, [], {})
+        qapp.processEvents()
+        assert dummy_widget.isVisible()
+        assert dummy_widget.windowFlags() == flags
+    assert events.hide_events == 0
+
+
+def test_show_visible_window_does_not_request_activation(rpc_server, dummy_widget):
+    dummy_widget.show()
+    with (
+        patch.object(dummy_widget, "raise_") as raise_window,
+        patch.object(dummy_widget, "activateWindow") as activate_window,
+        patch.object(dummy_widget, "show") as show_window,
+        patch.object(dummy_widget, "setWindowState") as set_state,
+    ):
+        rpc_server.run_rpc(dummy_widget, "show", [], {})
+    raise_window.assert_not_called()
+    activate_window.assert_not_called()
+    show_window.assert_not_called()
+    set_state.assert_not_called()
+
+
+@pytest.mark.parametrize("method", ["show", "raise"])
+def test_show_and_raise_restore_hidden_window(rpc_server, dummy_widget, method):
+    dummy_widget.hide()
+    rpc_server.run_rpc(dummy_widget, method, [], {})
+    assert dummy_widget.isVisible()
+
+
+@pytest.mark.parametrize("method", ["show", "raise"])
+@pytest.mark.parametrize("state", [Qt.WindowNoState, Qt.WindowMaximized, Qt.WindowFullScreen])
+def test_show_and_raise_restore_minimized_window_state(rpc_server, dummy_widget, method, state):
+    dummy_widget.setWindowState(state | Qt.WindowMinimized)
+    dummy_widget.show()
+    assert dummy_widget.isMinimized()
+
+    rpc_server.run_rpc(dummy_widget, method, [], {})
+
+    assert dummy_widget.isVisible()
+    assert not dummy_widget.isMinimized()
+    assert dummy_widget.windowState() & (Qt.WindowMaximized | Qt.WindowFullScreen) == state
+
+
+def test_raise_requests_activation_after_showing_window(rpc_server, dummy_widget):
+    dummy_widget.hide()
+    visible_during_activation = []
+    with patch.object(
+        dummy_widget,
+        "activateWindow",
+        side_effect=lambda: visible_during_activation.append(dummy_widget.isVisible()),
+    ):
+        rpc_server.run_rpc(dummy_widget, "raise", [], {})
+    assert visible_during_activation == [True]
+
+
+def test_display_info_is_available_through_system_rpc(rpc_server, qapp):
+    info = rpc_server.run_system_rpc("system.get_display_info", [], {})
+    assert info["qt_platform"] == qapp.platformName()
 
 
 def test_rpc_server_system_shutdown_requests_gui_server_shutdown(rpc_server, qapp):
