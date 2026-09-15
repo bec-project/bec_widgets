@@ -18,6 +18,7 @@ from redis.exceptions import RedisError
 from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
 from bec_widgets.utils.container_utils import WidgetContainerUtils
+from bec_widgets.utils.display_info import get_display_info
 from bec_widgets.utils.error_popups import ErrorPopupUtility
 from bec_widgets.utils.rpc_logging import elapsed_seconds, format_elapsed
 from bec_widgets.utils.rpc_register import RPCRegister
@@ -27,7 +28,6 @@ from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib import messages
-    from qtpy.QtCore import QObject
 else:
     messages = lazy_import("bec_lib.messages")
 logger = bec_logger.logger
@@ -234,32 +234,8 @@ class RPCServer:
         # Run with rpc registry broadcast, but only once
         with RPCRegister.delayed_broadcast():
             logger.debug(f"Running RPC instruction: {method} with args: {args}, kwargs: {kwargs}")
-            if method == "raise" and hasattr(
-                obj, "setWindowState"
-            ):  # special case for raising windows, should work even if minimized
-                # this is a special case for raising windows for gnome on Red Hat (RHEL) 9 systems where changing focus is suppressed by default
-                # The procedure is as follows:
-                # 1. Get the current window state to check if the window is minimized and remove minimized flag
-                # 2. Then in order to force gnome to raise the window, we set the window to stay on top temporarily
-                #    and call raise_() and activateWindow()
-                #    This forces gnome to raise the window even if focus stealing is prevented
-                # 3. Flag for stay on top is removed again to restore the original window state
-                # 4. Finally, we call show() to ensure the window is visible
-
-                state = getattr(obj, "windowState", lambda: Qt.WindowNoState)()
-                target_state = state | Qt.WindowActive
-                if state & Qt.WindowMinimized:
-                    target_state &= ~Qt.WindowMinimized
-                obj.setWindowState(target_state)
-                if hasattr(obj, "showNormal") and state & Qt.WindowMinimized:
-                    obj.showNormal()
-                if hasattr(obj, "raise_"):
-                    obj.setWindowFlags(obj.windowFlags() | Qt.WindowStaysOnTopHint)
-                    obj.raise_()
-                if hasattr(obj, "activateWindow"):
-                    obj.activateWindow()
-                obj.setWindowFlags(obj.windowFlags() & ~Qt.WindowStaysOnTopHint)
-                obj.show()
+            if method == "raise" and isinstance(obj, QWidget):
+                self._raise_window(obj.window())
                 res = None
             else:
                 target_obj, method_obj = self._resolve_rpc_target(obj, method)
@@ -273,6 +249,44 @@ class RPCServer:
                 else:
                     res = method_obj(*args, **kwargs)
         return res
+
+    @staticmethod
+    def _raise_window(window: QWidget) -> None:
+        """Restore a window and request focus using its loaded Qt platform backend."""
+        if window.isVisible() and window.isActiveWindow() and not window.isMinimized():
+            return
+
+        state = window.windowState() & ~Qt.WindowMinimized
+        platform = QApplication.platformName()
+        if platform == "xcb":
+            # Keep the GNOME/RHEL X11 workaround that also works through XWayland.
+            # Never run it on native Wayland: flag changes hide/recreate the surface.
+            flags = window.windowFlags()
+            window.setWindowState(state | Qt.WindowActive)
+            try:
+                window.setWindowFlags(flags | Qt.WindowStaysOnTopHint)
+                window.raise_()
+                window.activateWindow()
+            finally:
+                # Preserve intentional always-on-top flags as well as all other flags.
+                window.setWindowFlags(flags)
+                window.show()
+            return
+
+        if platform.startswith("wayland") and window.windowHandle() is not None:
+            # Qt 6.11/GNOME 40 can visually alternate when hide/show reuses a Wayland surface.
+            # Release native resources, keeping the QWidget instances and their BEC connections.
+            # Include previously hidden windows: plain show can reuse the affected surface too.
+            screen = window.screen()
+            window.hide()
+            window.destroy()
+            window.setScreen(screen)
+        if window.windowState() != state:
+            window.setWindowState(state)
+        if not window.isVisible():
+            window.show()
+        window.raise_()
+        window.activateWindow()
 
     def _resolve_rpc_target(self, obj, method: str) -> tuple[object, object]:
         """
@@ -319,8 +333,14 @@ class RPCServer:
             return self._launch_dock_area(*args, **kwargs)
         if method == "system.shutdown":
             return self._shutdown_gui_server()
+        if method == "system.get_display_info":
+            return get_display_info()
         if method == "system.list_capabilities":
-            return {"system.launch_dock_area": True, "system.shutdown": True}
+            return {
+                "system.launch_dock_area": True,
+                "system.shutdown": True,
+                "system.get_display_info": True,
+            }
         raise ValueError(f"Unknown system RPC method: {method}")
 
     @staticmethod
