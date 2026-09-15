@@ -18,6 +18,7 @@ from typing import Literal
 from uuid import uuid4
 
 import pyqtgraph as pg
+import shiboken6
 from bec_lib.alarm_handler import Alarms  # external enum
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
@@ -734,6 +735,15 @@ class NotificationCentre(QScrollArea):
         toast.notification_id = notification_id
         broker = BECNotificationBroker()
         toast.closed.connect(lambda nid=notification_id: broker.notification_closed.emit(nid))
+        # Once a toast auto-expires it is no longer live, so drop it from the broker's
+        # replay store. Wired here so BOTH creation paths are covered: live posts and
+        # toasts recreated by _replay_active_notifications — otherwise a replayed toast
+        # that expires would leave the entry behind and every future NotificationCentre
+        # would replay it again. MAJOR alarms use lifetime_ms=0 and never emit
+        # 'expired', so they correctly stay in history until explicitly closed.
+        toast.expired.connect(
+            lambda nid=notification_id: broker._active_notifications.pop(nid, None)
+        )
         toast.closed.connect(lambda: self._hide_notification(toast))
         toast.expired.connect(lambda t=toast: self._handle_expire(t))
         toast.expanded.connect(self._adjust_height)
@@ -1029,13 +1039,26 @@ class BECNotificationBroker(BECConnector, QObject):
     notification_closed = QtCore.Signal(str)
 
     def __new__(cls, *args, **kwargs):
+        # If a previous instance's C++ object was destroyed (e.g. deleted together with a
+        # parent window) the cached Python wrapper is stale: rebuild instead of handing back
+        # a dead broker whose signals raise RuntimeError and whose subscriptions are gone.
+        if cls._instance is not None and not shiboken6.isValid(cls._instance):
+            cls._instance = None
+            cls._initialized = False
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
     def __init__(self, parent=None, gui_id: str = None, client=None, **kwargs):
-        if self._initialized:
+        # Re-run init only for a genuinely fresh (or revived) instance. A live, already
+        # initialized singleton short-circuits; a stale wrapper never reaches here because
+        # __new__ rebuilds it and resets _initialized.
+        if self._initialized and shiboken6.isValid(self):
             return
+        # The broker is an application-wide singleton and must outlive every window. Ignore
+        # the caller-supplied parent (which may be a WA_DeleteOnClose window) and anchor it
+        # to the QApplication so closing a window never destroys the broker.
+        parent = QApplication.instance()
         super().__init__(parent=parent, gui_id=gui_id, client=client, **kwargs)
         self._err_util = self.error_utility
         # listen to incoming alarms and scan status
@@ -1116,8 +1139,10 @@ class BECNotificationBroker(BECConnector, QObject):
             "traceback": detailed_trace,
             "lifetime_ms": lifetime,
         }
+        # close broadcasting and expiry pruning are wired inside add_notification,
+        # covering live and replayed toasts alike — no per-toast hookup needed here
         for centre in centres:
-            toast = centre.add_notification(
+            centre.add_notification(
                 title=title,
                 body=body_text,
                 traceback=detailed_trace,
@@ -1125,8 +1150,6 @@ class BECNotificationBroker(BECConnector, QObject):
                 lifetime_ms=lifetime,
                 notification_id=notification_id,
             )
-            # broadcast close events (expiry is handled locally to keep history)
-            toast.closed.connect(lambda nid=notification_id: self.notification_closed.emit(nid))
 
     @SafeSlot(dict, dict)
     def on_scan_status(self, msg: dict, meta: dict) -> None:
@@ -1167,9 +1190,21 @@ class BECNotificationBroker(BECConnector, QObject):
     def reset_singleton(cls):
         """
         Reset the singleton instance of the BECNotificationBroker.
+
+        Because the broker is now parented to the QApplication it no longer dies with a
+        window, so resetting the class-level references alone would leak the live QObject
+        (and its dispatcher subscriptions) into the next incarnation. Tear the existing
+        instance down first: disconnect its slots and delete its C++ object.
         """
+        inst = cls._instance
         cls._instance = None
         cls._initialized = False
+        if inst is not None and shiboken6.isValid(inst):
+            try:
+                inst.cleanup()
+            except Exception as exc:  # pragma: no cover - defensive teardown
+                logger.warning(f"Error during BECNotificationBroker cleanup on reset: {exc}")
+            shiboken6.delete(inst)
 
     def cleanup(self):
         """Disconnect from the notification signal."""
