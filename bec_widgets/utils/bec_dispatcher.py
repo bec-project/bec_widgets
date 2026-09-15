@@ -259,36 +259,59 @@ class BECDispatcher:
     def disconnect_slot(
         self,
         slot: Callable,
-        topics: EndpointInfo | str | list[EndpointInfo] | list[str],
+        topics: EndpointInfo | str | list[EndpointInfo] | list[str] | None = None,
         cb_info: dict | None = None,
     ):
         """
-        Disconnect a slot from a topic.
+        Disconnect a slot from topics.
+
+        Among the wrappers matching the callback (and ``cb_info``, when given), every
+        wrapper subscribed to any of the requested topics is released from exactly those
+        topics — a topic list spanning several registrations of the same slot releases
+        all of them. Without ``topics``, the slot is disconnected from everything it is
+        subscribed to. If none of the wrappers is subscribed to the requested topics,
+        nothing is released and a warning names the actual subscriptions — a blind
+        unregister on the wrong wrapper would silently no-op.
 
         Args:
             slot(Callable): The slot to disconnect
-            topics EndpointInfo | str | list[EndpointInfo] | list[str]: A topic or list of topics to unsub from.
+            topics(EndpointInfo | str | list[EndpointInfo] | list[str] | None): A topic or
+                list of topics to unsub from. None disconnects the slot from all its topics.
             cb_info(dict | None): When the same slot was registered multiple times with
                 different cb_info payloads (e.g. per-signal async subscriptions), pass the
-                payload to select the exact registration; without it the first wrapper
-                matching the callback is used.
+                payload to narrow the candidate registrations before the topic match.
         """
-        # find the right slot to disconnect from ;
         # slot callbacks are wrapped in QtThreadSafeCallback objects,
         # but the slot we receive here is the original callable
-        for connected_slot in self._registered_slots.values():
-            if connected_slot.cb != slot:
-                continue
-            if cb_info is not None and connected_slot.cb_info != cb_info:
-                continue
-            break
-        else:
+        candidates = [
+            connected_slot
+            for connected_slot in list(self._registered_slots.values())
+            if connected_slot.cb == slot and (cb_info is None or connected_slot.cb_info == cb_info)
+        ]
+        if topics is None:
+            for connected_slot in candidates:
+                self._release_slot(connected_slot)
             return
-        self.client.connector.unregister(topics, cb=connected_slot)
         topics_str, _ = self.client.connector.extract_raw_endpoints_from_info(topics)
-        self._registered_slots[connected_slot].topics.difference_update(set(topics_str))
-        if not self._registered_slots[connected_slot].topics:
-            del self._registered_slots[connected_slot]
+        requested = set(topics_str)
+        matched = False
+        for connected_slot in candidates:
+            overlap = connected_slot.topics & requested
+            if not overlap:
+                continue
+            matched = True
+            # unregister only what this wrapper actually holds; the same requested list
+            # may span several wrappers of the same callback
+            self.client.connector.unregister(list(overlap), cb=connected_slot)
+            connected_slot.topics.difference_update(overlap)
+            if not connected_slot.topics:
+                self._registered_slots.pop(connected_slot, None)
+        if not matched and candidates:
+            logger.warning(
+                f"disconnect_slot({slot!r}): no registration matches topics "
+                f"{sorted(requested)}; the slot is subscribed to "
+                f"{sorted(set().union(*(s.topics for s in candidates)))}. Nothing released."
+            )
 
     def disconnect_topics(self, topics: str | list):
         """
