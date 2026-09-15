@@ -111,6 +111,7 @@ def mock_client(*_, **__):
         patch("bec_lib.client.Scans"),
         patch("bec_lib.client.ScanManager"),
         patch("bec_lib.bec_service.BECAccess"),
+        patch("bec_lib.client.BECClient.load_high_level_interface"),
     ):
         client = BECClient(
             config=service_config.ServiceConfig(config={"redis": {"host": "localhost", "port": 1}}),
