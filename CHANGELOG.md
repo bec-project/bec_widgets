@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.37.1 (2026-09-15)
+
+### Bug Fixes
+
+- **signal combobox**: Update devices from main thread
+  ([`00c2fda`](https://github.com/bec-project/bec_widgets/commit/00c2fdaadbb6c28292c405c396391b72e32be5b8))
+
+
 ## v3.37.0 (2026-09-07)
 
 ### Bug Fixes
