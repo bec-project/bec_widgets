@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from bec_lib.scan_history import ScanHistory
+from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QComboBox, QVBoxLayout
 
 from bec_widgets.widgets.plots.waveform.settings.curve_settings.curve_setting import CurveSetting
@@ -82,6 +83,40 @@ def test_curve_setting_accept_changes(curve_setting_fixture, qtbot):
     assert wf.x_mode == "index"
     # Check that the manager send_curve_json was called
     send_spy.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "style, label, expected_pen",
+    [
+        ("none", "No line", Qt.NoPen),
+        ("solid", "solid", Qt.SolidLine),
+        ("dash", "dash", Qt.DashLine),
+        ("dot", "dot", Qt.DotLine),
+        ("dashdot", "dashdot", Qt.DashDotLine),
+    ],
+)
+def test_curve_setting_style_round_trip(curve_setting_fixture, style, label, expected_pen):
+    """Applying and restoring curve styles preserves the selection and rendered pen."""
+    settings, wf = curve_setting_fixture
+    wf.plot("bpm4i")
+    settings.refresh()
+    row = settings.curve_manager.all_items[0]
+    row.style_combo.setCurrentText(label)
+    settings.accept_changes()
+
+    serialized = wf.curve_json
+    assert json.loads(serialized)[0]["pen_style"] == style
+    wf.curve_json = serialized
+    curve = wf.curves[0]
+    curve.setData([1, 2, 3], [4, 5, 6])
+    assert curve.curve.opts["pen"].style() == expected_pen
+    assert curve.scatter.isVisible()
+    assert curve.scatter.opts["symbol"] == "o"
+
+    settings.refresh()
+    restored_row = settings.curve_manager.all_items[0]
+    assert restored_row.style_combo.currentText() == label
+    assert restored_row.style_combo.currentData() == style
 
 
 def test_curve_setting_switch_device_mode(curve_setting_fixture, qtbot):
