@@ -1056,6 +1056,7 @@ class Curve(RPCBase):
         Args:
             pen_style(Literal["solid", "dash", "dot", "dashdot", "none"]): Style of the pen.
                 Use "none" to display markers without connecting lines.
+                During automatic downsampling, "none" uses a 1 px solid line without markers.
         """
 
     @rpc_call

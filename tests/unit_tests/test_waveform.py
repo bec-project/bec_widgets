@@ -1262,10 +1262,10 @@ def test_curve_no_line_style_preserves_markers(qtbot, mocked_client):
     np.testing.assert_array_equal(curve.scatter.getData(), [[2, 3, 4], [5, 6, 7]])
 
 
-@pytest.mark.parametrize("data_length", [500, 1500])
+@pytest.mark.parametrize("data_length", [1000, 1001])
 @pytest.mark.parametrize("symbol", [None, "d"])
-def test_curve_no_line_style_keeps_async_markers(qtbot, mocked_client, data_length, symbol):
-    """Async data retain markers, including when automatic styling previously hid them."""
+def test_curve_no_line_style_async_downsampling(qtbot, mocked_client, data_length, symbol):
+    """No-line curves fall back to a thin line without markers above the async limit."""
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     curve = wf.plot(
         x=[1, 2, 3],
@@ -1280,12 +1280,67 @@ def test_curve_no_line_style_keeps_async_markers(qtbot, mocked_client, data_leng
     wf._auto_adjust_async_curve_settings(curve, data_length)
     curve.setData(np.arange(data_length), np.arange(data_length))
 
+    assert curve.config.pen_style == "none"
+    assert curve.config.pen_width == 3
+    if data_length > 1000:
+        assert curve.curve.opts["pen"].style() == Qt.SolidLine
+        assert curve.curve.opts["pen"].widthF() == 1
+        assert not curve.scatter.isVisible()
+        return
     assert curve.curve.opts["pen"].style() == Qt.NoPen
     assert curve.scatter.isVisible()
     assert curve.config.symbol == (symbol or "o")
     assert curve.scatter.opts["symbol"] == (symbol or "o")
     assert curve.scatter.opts["size"] == 12
     assert curve.scatter.opts["brush"].color().name() == "#654321"
+
+
+def test_curve_no_line_downsampling_style_updates_and_restore(qtbot, mocked_client):
+    """Appearance updates keep the fallback, and smaller data restore the saved markers."""
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    curve = wf.plot(x=np.arange(1500), y=np.arange(1500))
+    wf._auto_adjust_async_curve_settings(curve, 1500)
+    curve.set_pen_style("none")
+    assert curve.curve.opts["pen"].style() == Qt.SolidLine
+    assert curve.curve.opts["pen"].widthF() == 1
+    assert not curve.scatter.isVisible()
+
+    curve.set_color("#123456")
+    curve.set_pen_width(7)
+    curve.set_symbol("d")
+    curve.set_symbol_color("#654321")
+    curve.set_symbol_size(12)
+    assert curve.curve.opts["pen"].style() == Qt.SolidLine
+    assert curve.curve.opts["pen"].widthF() == 1
+    assert curve.curve.opts["pen"].color().name() == "#123456"
+    assert not curve.scatter.isVisible()
+    assert curve.config.pen_style == "none"
+    assert curve.config.pen_width == 7
+    assert curve.config.symbol == "d"
+
+    wf._auto_adjust_async_curve_settings(curve, 1000)
+    curve.setData(np.arange(1000), np.arange(1000))
+    assert not curve.opts["autoDownsample"]
+    assert curve.curve.opts["pen"].style() == Qt.NoPen
+    assert curve.config.pen_width == 7
+    assert curve.scatter.isVisible()
+    assert curve.scatter.opts["symbol"] == "d"
+    assert curve.scatter.opts["size"] == 12
+    assert curve.scatter.opts["brush"].color().name() == "#654321"
+
+
+def test_curve_no_line_after_named_style_downsampling_ends(qtbot, mocked_client):
+    """Selecting no line after a named style leaves downsampling does not keep the fallback."""
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    curve = wf.plot(x=np.arange(1500), y=np.arange(1500))
+    wf._auto_adjust_async_curve_settings(curve, 1500)
+    wf._auto_adjust_async_curve_settings(curve, 1000)
+    curve.setData(np.arange(1000), np.arange(1000))
+    curve.set_pen_style("none")
+
+    assert not curve.opts["autoDownsample"]
+    assert curve.curve.opts["pen"].style() == Qt.NoPen
+    assert curve.scatter.isVisible()
 
 
 def test_curve_no_line_style_restores_existing_styles(qtbot, mocked_client):
