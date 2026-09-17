@@ -11,7 +11,7 @@ import pytest
 from bec_lib import messages
 from bec_lib.scan_items import ScanItem
 from pyqtgraph.graphicsItems.DateAxisItem import DateAxisItem
-from qtpy.QtCore import QTimer
+from qtpy.QtCore import Qt, QTimer
 from qtpy.QtWidgets import QApplication, QCheckBox, QDialog, QDialogButtonBox, QDoubleSpinBox
 
 from bec_widgets.widgets.plots.plot_base import UIMode
@@ -1237,6 +1237,79 @@ def test_curve_set_appearance_methods(qtbot, mocked_client):
     assert c.config.symbol_size == 10
     assert c.config.pen_width == 3
     assert c.config.pen_style == "dashdot"
+
+
+def test_curve_no_line_style_preserves_markers(qtbot, mocked_client):
+    """Disabling the connecting line preserves markers across appearance and data updates."""
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    curve = wf.plot(x=[1, 2, 3], y=[4, 5, 6], symbol="d")
+    curve.set_pen_style("none")
+    assert curve.opts["pen"].style() == Qt.NoPen
+
+    curve.set_color("#123456")
+    curve.set_symbol_color("#654321")
+    curve.set_symbol_size(12)
+    curve.set_pen_width(5)
+    curve.set_data([2, 3, 4], [5, 6, 7])
+
+    assert curve.config.pen_style == "none"
+    assert curve.curve.opts["pen"].style() == Qt.NoPen
+    assert curve.opts["pen"].color().name() == "#123456"
+    assert curve.scatter.isVisible()
+    assert curve.scatter.opts["symbol"] == "d"
+    assert curve.scatter.opts["size"] == 12
+    assert curve.scatter.opts["brush"].color().name() == "#654321"
+    np.testing.assert_array_equal(curve.scatter.getData(), [[2, 3, 4], [5, 6, 7]])
+
+
+@pytest.mark.parametrize("data_length", [500, 1500])
+@pytest.mark.parametrize("symbol", [None, "d"])
+def test_curve_no_line_style_keeps_async_markers(qtbot, mocked_client, data_length, symbol):
+    """Async data retain markers, including when automatic styling previously hid them."""
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    curve = wf.plot(
+        x=[1, 2, 3],
+        y=[4, 5, 6],
+        pen_style="none",
+        pen_width=3,
+        symbol=symbol,
+        symbol_color="#654321",
+        symbol_size=12,
+    )
+
+    wf._auto_adjust_async_curve_settings(curve, data_length)
+    curve.setData(np.arange(data_length), np.arange(data_length))
+
+    assert curve.curve.opts["pen"].style() == Qt.NoPen
+    assert curve.scatter.isVisible()
+    assert curve.config.symbol == (symbol or "o")
+    assert curve.scatter.opts["symbol"] == (symbol or "o")
+    assert curve.scatter.opts["size"] == 12
+    assert curve.scatter.opts["brush"].color().name() == "#654321"
+
+
+def test_curve_no_line_style_restores_existing_styles(qtbot, mocked_client):
+    """The no-line style is reversible, and legacy null styles still draw solid lines."""
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    curve = wf.plot(x=[1, 2, 3], y=[4, 5, 6], pen_style="none")
+    assert curve.curve.opts["pen"].style() == Qt.NoPen
+
+    for style, expected in (
+        ("solid", Qt.SolidLine),
+        ("dash", Qt.DashLine),
+        ("dot", Qt.DotLine),
+        ("dashdot", Qt.DashDotLine),
+    ):
+        curve.set_pen_style(style)
+        assert curve.curve.opts["pen"].style() == expected
+        assert curve.curve.isVisible()
+        curve.set(pen_style="none")
+        assert curve.curve.opts["pen"].style() == Qt.NoPen
+
+    config = curve.config.model_dump()
+    config["pen_style"] = None
+    curve.apply_config(config)
+    assert curve.curve.opts["pen"].style() == Qt.SolidLine
 
 
 def test_curve_set_custom_data(qtbot, mocked_client):

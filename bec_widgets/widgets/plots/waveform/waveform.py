@@ -1938,7 +1938,7 @@ class Waveform(PlotBase):
         Curve items, by deactivating the symbol and activating downsampling auto, method='mean',
         if the data length exceeds N points. If the data length is less than N points, the
         symbol will be activated and downsampling will be deactivated. Maximum points will be
-        5x the limit.
+        5x the limit. Curves without a connecting line retain their markers at any length.
 
         Args:
             curve(Curve): The curve to adjust.
@@ -1949,15 +1949,19 @@ class Waveform(PlotBase):
         if limit <= 1:
             logger.warning("Limit must be greater than 1.")
             return
+        if curve.config.pen_style == "none" and curve.config.symbol is None:
+            curve.set_symbol("o")
+            curve.apply_config()
         if data_length > limit:
-            if curve.config.symbol is not None:
+            if curve.config.pen_style != "none" and curve.config.symbol is not None:
                 curve.set_symbol(None)
             if curve.config.pen_width > 3:
                 curve.set_pen_width(3)
             curve.setDownsampling(ds=None, auto=True, method=method)
             curve.setClipToView(True)
         elif data_length <= limit:
-            curve.set_symbol("o")
+            if curve.config.pen_style != "none":
+                curve.set_symbol("o")
             curve.set_pen_width(4)
             curve.setDownsampling(ds=1, auto=None, method=method)
             curve.setClipToView(True)

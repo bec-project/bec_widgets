@@ -41,8 +41,8 @@ class CurveConfig(ConnectionConfig):
     )
     symbol_size: int | None = Field(7, description="The size of the symbol of the curve.")
     pen_width: int | None = Field(4, description="The width of the pen of the curve.")
-    pen_style: Literal["solid", "dash", "dot", "dashdot"] | None = Field(
-        "solid", description="The style of the pen of the curve."
+    pen_style: Literal["solid", "dash", "dot", "dashdot", "none"] | None = Field(
+        "solid", description="The style of the curve's connecting line; 'none' disables the line."
     )
     source: Literal["device", "dap", "custom", "history"] = Field(
         "custom", description="The source of the curve."
@@ -134,6 +134,7 @@ class Curve(BECConnector, pg.PlotDataItem):
             "dash": QtCore.Qt.DashLine,
             "dot": QtCore.Qt.DotLine,
             "dashdot": QtCore.Qt.DashDotLine,
+            "none": QtCore.Qt.NoPen,
         }
         pen_style = pen_style_map.get(self.config.pen_style, QtCore.Qt.SolidLine)
 
@@ -238,7 +239,8 @@ class Curve(BECConnector, pg.PlotDataItem):
             - symbol_color: str
             - symbol_size: int
             - pen_width: int
-            - pen_style: Literal["solid", "dash", "dot", "dashdot"]
+            - pen_style: Literal["solid", "dash", "dot", "dashdot", "none"]
+              Use "none" to display markers without connecting lines.
         """
 
         # Mapping of keywords to setter methods
@@ -310,12 +312,13 @@ class Curve(BECConnector, pg.PlotDataItem):
         self.config.pen_width = pen_width
         self.apply_config()
 
-    def set_pen_style(self, pen_style: Literal["solid", "dash", "dot", "dashdot"]):
+    def set_pen_style(self, pen_style: Literal["solid", "dash", "dot", "dashdot", "none"]) -> None:
         """
         Change the pen style of the curve.
 
         Args:
-            pen_style(Literal["solid", "dash", "dot", "dashdot"]): Style of the pen.
+            pen_style(Literal["solid", "dash", "dot", "dashdot", "none"]): Style of the pen.
+                Use "none" to display markers without connecting lines.
         """
         self.config.pen_style = pen_style
         self.apply_config()
