@@ -1,88 +1,26 @@
 """
-Shared bodies of the autouse fixtures of the bec_widgets unit tests.
-
-The ``*_fixture`` generators are meant to be wrapped in local fixtures, so that plugin repositories
-can run their widget tests against the same mocked BEC client and leak checks, e.g.::
-
-    @pytest.fixture(autouse=True)
-    def bec_dispatcher(threads_check):
-        yield from bec_widgets.tests.utils.bec_dispatcher_fixture()
+Helpers for testing BEC widgets against a mocked BEC client. The fixtures built on top of them are
+in :mod:`bec_widgets.tests.fixtures`.
 """
 
-from unittest import mock
+import json
+import time
 from unittest.mock import patch
 
 import fakeredis
-from bec_lib import service_config
+import h5py
+from bec_lib import messages, service_config
 from bec_lib.client import BECClient
-from bec_qthemes import apply_theme
-from bec_qthemes._theme import Theme
-from pytestqt.exceptions import TimeoutError as QtBotTimeoutError
+from bec_lib.messages import _StoredDataInfo
 from qtpy.QtCore import QEvent, QEventLoop
-from qtpy.QtWidgets import QApplication
 
 from bec_widgets.tests.fake_devices import DEVICES, DMMock
-from bec_widgets.utils import bec_dispatcher as bec_dispatcher_module
-from bec_widgets.utils import error_popups
 from bec_widgets.utils.bec_dispatcher import QtRedisConnector
-from bec_widgets.utils.rpc_register import RPCRegister
 
 
 def process_all_deferred_deletes(qapp):
     qapp.sendPostedEvents(None, QEvent.DeferredDelete)
     qapp.processEvents(QEventLoop.AllEvents)
-
-
-def qapplication_fixture(qtbot, request, testable_qtimer_class):
-    """
-    Reset the application to the light theme, then check after the test that all timers are
-    stopped and all top-level widgets are closed. The checks are skipped for failed tests, which
-    requires a ``pytest_runtest_makereport`` hook that stores ``item.stash["failed"]``.
-    """
-    qapp = QApplication.instance()
-    process_all_deferred_deletes(qapp)
-
-    if (
-        not hasattr(qapp, "theme")
-        or not isinstance(qapp.theme, Theme)
-        or qapp.theme.theme != "light"
-    ):
-        apply_theme("light")
-        qapp.processEvents()
-
-    yield
-
-    # Imported here so that the test session can select the ophyd control layer before ophyd loads
-    from ophyd._dummy_shim import _dispatcher
-
-    from bec_widgets.widgets.editors.bec_console.bec_console import _bec_console_registry
-
-    # stop pyepics dispatcher for leaking tests
-    _dispatcher.stop()
-    _bec_console_registry.clear()
-    process_all_deferred_deletes(qapp)
-    # if the test failed, we don't want to check for open widgets as
-    # it simply pollutes the output
-    if request.node.stash._storage.get("failed"):
-        print("Test failed, skipping cleanup checks")
-        return
-    bec_dispatcher = bec_dispatcher_module.BECDispatcher()
-    bec_dispatcher.stop_cli_server()
-
-    testable_qtimer_class.check_all_stopped(qtbot)
-    qapp.processEvents()
-    if hasattr(qapp, "os_listener") and qapp.os_listener:
-        qapp.removeEventFilter(qapp.os_listener)
-    try:
-        qtbot.waitUntil(lambda: qapp.topLevelWidgets() == [])
-    except QtBotTimeoutError as exc:
-        raise TimeoutError(f"Failed to close all widgets: {qapp.topLevelWidgets()}") from exc
-
-
-def rpc_register_fixture():
-    """Provide the RPCRegister singleton and reset it after the test."""
-    yield RPCRegister()
-    RPCRegister.reset_singleton()
 
 
 _REDIS_CONN: QtRedisConnector | None = None
@@ -113,25 +51,98 @@ def mock_client(*_, **__):
     return client
 
 
-def bec_dispatcher_fixture():
+def create_widget(qtbot, widget, *args, **kwargs):
     """
-    Provide a BECDispatcher backed by :func:`mock_client` and tear it down after the test. The
-    wrapping fixture should depend on bec_lib's ``threads_check`` so that the thread check runs
-    after the client is shut down.
+    Create a widget and add it to the qtbot for testing. This is a helper function that
+    should be used in all tests that require a widget to be created.
+
+    Args:
+        qtbot (fixture): pytest-qt fixture
+        widget (QWidget): widget class to be created
+        *args: positional arguments for the widget
+        **kwargs: keyword arguments for the widget
+
+    Returns:
+        QWidget: the created widget
     """
-    with mock.patch.object(bec_dispatcher_module, "BECClient", mock_client):
-        bec_dispatcher = bec_dispatcher_module.BECDispatcher()
-    yield bec_dispatcher
-    bec_dispatcher.disconnect_all()
-    # clean BEC client
-    bec_dispatcher.client.shutdown()
-    # stop the cli server
-    bec_dispatcher.stop_cli_server()
-    # reinitialize singleton for next test
-    bec_dispatcher_module.BECDispatcher.reset_singleton()
+    widget = widget(*args, **kwargs)
+    qtbot.addWidget(widget)
+    qtbot.waitExposed(widget)
+    return widget
 
 
-def clean_singleton_fixture():
-    """Drop the error popup singleton before the test."""
-    error_popups._popup_utility_instance = None
-    yield
+def create_history_file(file_path, data: dict, metadata: dict) -> messages.ScanHistoryMessage:
+    """
+    Helper to create a history file with the given data.
+    The data should contain readout groups, e.g.
+    {
+        "baseline": {"samx": {"samx": {"value": [1, 2, 3], "timestamp": [100, 200, 300]}},
+        "monitored": {"bpm4i": {"bpm4i": {"value": [5, 6, 7], "timestamp": [101, 201, 301]}}},
+        "async": {"async_device": {"async_device": {"value": [1, 2, 3], "timestamp": [11, 21, 31]}}},
+    }
+
+    """
+
+    with h5py.File(file_path, "w") as f:
+        _metadata = f.create_group("entry/collection/metadata")
+        _metadata.create_dataset("sample_name", data="test_sample")
+        metadata_bec = f.create_group("entry/collection/metadata/bec")
+        for key, value in metadata.items():
+            if isinstance(value, dict):
+                metadata_bec.create_group(key)
+                for sub_key, sub_value in value.items():
+                    if isinstance(sub_value, list):
+                        sub_value = json.dumps(sub_value)
+                        metadata_bec[key].create_dataset(sub_key, data=sub_value)
+                    elif isinstance(sub_value, dict):
+                        for sub_sub_key, sub_sub_value in sub_value.items():
+                            sub_sub_group = metadata_bec[key].create_group(sub_key)
+                            # Handle _StoredDataInfo objects
+                            if isinstance(sub_sub_value, _StoredDataInfo):
+                                # Store the numeric shape
+                                sub_sub_group.create_dataset("shape", data=sub_sub_value.shape)
+                                # Store the dtype as a UTF-8 string
+                                dt = sub_sub_value.dtype or ""
+                                sub_sub_group.create_dataset(
+                                    "dtype", data=dt, dtype=h5py.string_dtype(encoding="utf-8")
+                                )
+                                continue
+                            if isinstance(sub_sub_value, list):
+                                json_val = json.dumps(sub_sub_value)
+                                sub_sub_group.create_dataset(sub_sub_key, data=json_val)
+                            elif isinstance(sub_sub_value, dict):
+                                for k2, v2 in sub_sub_value.items():
+                                    val = json.dumps(v2) if isinstance(v2, list) else v2
+                                    sub_sub_group.create_dataset(k2, data=val)
+                            else:
+                                sub_sub_group.create_dataset(sub_sub_key, data=sub_sub_value)
+                    else:
+                        metadata_bec[key].create_dataset(sub_key, data=sub_value)
+            else:
+                metadata_bec.create_dataset(key, data=value)
+        for group, devices in data.items():
+            readout_group = f.create_group(f"entry/collection/readout_groups/{group}")
+
+            for device, device_data in devices.items():
+                dev_group = f.create_group(f"entry/collection/devices/{device}")
+                for signal, signal_data in device_data.items():
+                    signal_group = dev_group.create_group(signal)
+                    for signal_key, signal_values in signal_data.items():
+                        signal_group.create_dataset(signal_key, data=signal_values)
+
+                readout_group[device] = h5py.SoftLink(f"/entry/collection/devices/{device}")
+    msg = messages.ScanHistoryMessage(
+        scan_id=metadata["scan_id"],
+        scan_name=metadata["scan_name"],
+        exit_status=metadata["status"],
+        file_path=file_path,
+        scan_number=metadata["scan_number"],
+        dataset_number=metadata["dataset_number"],
+        start_time=time.time(),
+        end_time=time.time(),
+        num_points=metadata["num_points"],
+        request_inputs=metadata["request_inputs"],
+        stored_data_info=metadata.get("stored_data_info"),
+        metadata={"scan_report_devices": metadata.get("scan_report_devices")},
+    )
+    return msg
