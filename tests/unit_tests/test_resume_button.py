@@ -2,9 +2,8 @@
 
 import pytest
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.control.buttons.button_resume.button_resume import ResumeButton
-
-from .client_mocks import mocked_client
 
 
 @pytest.fixture

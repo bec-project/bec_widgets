@@ -1,12 +1,22 @@
+"""
+QTimer replacement used to detect timers that are still running at the end of a test.
+
+This module deliberately imports nothing but Qt and pytest-qt: it has to be patched over
+``qtpy.QtCore.QTimer`` before any module that does ``from qtpy.QtCore import QTimer`` is imported.
+"""
+
 import traceback
 
-import pytest
-import qtpy.QtCore
 from pytestqt.exceptions import TimeoutError as QtBotTimeoutError
 from qtpy.QtCore import QTimer
 
 
 class TestableQTimer(QTimer):
+    """
+    QTimer that records every instance, so that timers left running after a test can be reported.
+    Patch it over ``qtpy.QtCore.QTimer`` before the widgets under test are imported.
+    """
+
     _instances: list[tuple[QTimer, str, str]] = []
     _current_test_name: str = ""
 
@@ -40,20 +50,3 @@ class TestableQTimer(QTimer):
                 f"Failed to stop all timers:\n{_format_timers(active_timers)}"
             ) from exc
         cls._instances = []
-
-
-# To support 'from qtpy.QtCore import QTimer' syntax we just replace this completely for the test session
-# see: https://docs.python.org/3/library/unittest.mock.html#where-to-patch
-qtpy.QtCore.QTimer = TestableQTimer
-
-
-@pytest.fixture(autouse=True)
-def _capture_test_name_in_qtimer(request):
-    TestableQTimer._current_test_name = request.node.name
-    yield
-    TestableQTimer._current_test_name = ""
-
-
-@pytest.fixture
-def testable_qtimer_class():
-    return TestableQTimer

@@ -3,13 +3,13 @@ from unittest.mock import MagicMock
 import numpy as np
 import pyqtgraph as pg
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.plots.waveform.utils.alignment_controller import (
     AlignmentContext,
     WaveformAlignmentController,
 )
 from bec_widgets.widgets.plots.waveform.utils.alignment_panel import WaveformAlignmentPanel
 
-from .client_mocks import mocked_client
 from .conftest import create_widget
 from .test_waveform import make_alignment_fit_summary
 

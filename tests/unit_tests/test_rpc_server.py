@@ -7,11 +7,10 @@ from qtpy.QtWidgets import QWidget
 
 from bec_widgets.applications import companion_app as companion_app_module
 from bec_widgets.applications.companion_app import GUIServer
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.utils import rpc_server as rpc_server_module
 from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.utils.rpc_server import RegistryNotReadyError, RPCServer, SingleshotRPCRepeat
-
-from .client_mocks import mocked_client
 
 
 class DummyWidget(BECConnector, QWidget):

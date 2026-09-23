@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 from bec_lib.endpoints import MessageEndpoints
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.progress.bec_progressbar.bec_progressbar import (
     BECProgressBar,
@@ -11,8 +12,6 @@ from bec_widgets.widgets.progress.bec_progressbar.bec_progressbar import (
 )
 from bec_widgets.widgets.progress.progress_backend import ProgressTask
 from bec_widgets.widgets.progress.scan_progressbar.scan_progressbar import ScanProgressBar
-
-from .client_mocks import mocked_client
 
 
 @pytest.fixture

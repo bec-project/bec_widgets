@@ -4,6 +4,7 @@ from bec_lib import messages
 from bec_lib.scan_data_container import ScanDataContainer
 from bec_lib.scan_items import ScanItem
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.plots.heatmap.heatmap import Heatmap
 from bec_widgets.widgets.plots.image.image import Image
 from bec_widgets.widgets.plots.motor_map.motor_map import MotorMap
@@ -13,7 +14,6 @@ from bec_widgets.widgets.plots.plot_info_label import TextOnlyLegendSample
 from bec_widgets.widgets.plots.scatter_waveform.scatter_waveform import ScatterWaveform
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
 
-from .client_mocks import mocked_client
 from .conftest import create_widget
 
 # pylint: disable=unused-import

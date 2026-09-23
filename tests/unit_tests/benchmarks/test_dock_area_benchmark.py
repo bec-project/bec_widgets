@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.containers.dock_area.dock_area import BECDockArea
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
-from tests.unit_tests.client_mocks import mocked_client
 
 
 @pytest.fixture

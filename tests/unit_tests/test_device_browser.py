@@ -6,6 +6,7 @@ from bec_lib.device import Device
 from qtpy.QtCore import QPoint, Qt
 from qtpy.QtWidgets import QTabWidget
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.services.device_browser.device_browser import DeviceBrowser
 from bec_widgets.widgets.services.device_browser.device_item.device_config_form import (
     DeviceConfigForm,
@@ -13,8 +14,6 @@ from bec_widgets.widgets.services.device_browser.device_item.device_config_form 
 from bec_widgets.widgets.services.device_browser.device_item.device_signal_display import (
     SignalDisplay,
 )
-
-from .client_mocks import mocked_client
 
 if TYPE_CHECKING:  # pragma: no cover
     from qtpy.QtWidgets import QListWidgetItem

@@ -5,11 +5,10 @@ from unittest import mock
 import pytest
 from qtpy import QtCore, QtWidgets
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.utils.help_inspector.help_inspector import HelpInspector
 from bec_widgets.utils.widget_io import WidgetHierarchy
 from bec_widgets.widgets.control.buttons.button_abort.button_abort import AbortButton
-
-from .client_mocks import mocked_client
 
 
 @pytest.fixture

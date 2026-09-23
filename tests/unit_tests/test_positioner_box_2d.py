@@ -4,9 +4,9 @@ import pytest
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.messages import VariableMessage
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox2D
 
-from .client_mocks import mocked_client
 from .conftest import create_widget
 
 

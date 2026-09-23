@@ -7,6 +7,7 @@ from bec_lib.scan_args import ScanArgument
 from pydantic import BaseModel, Field
 from qtpy.QtWidgets import QCheckBox, QLabel, QLineEdit
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.utils.forms_from_types.forms import PydanticModelForm, TypedForm
 from bec_widgets.utils.forms_from_types.items import FloatDecimalFormItem, IntFormItem, StrFormItem
 from bec_widgets.utils.forms_from_types.pydantic_widget_form import (
@@ -17,8 +18,6 @@ from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import SignalComboBox
 from bec_widgets.widgets.utility.spinbox.decimal_spinbox import BECSpinBox
-
-from .client_mocks import mocked_client
 
 # pylint: disable=no-member
 # pylint: disable=missing-function-docstring

@@ -1,8 +1,8 @@
 from unittest.mock import MagicMock
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.plots.waveform.utils.alignment_panel import WaveformAlignmentPanel
 
-from .client_mocks import mocked_client
 from .conftest import create_widget
 
 
