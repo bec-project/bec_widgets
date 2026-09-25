@@ -235,7 +235,7 @@ Install this repository editable from the checkout you are actively using. If yo
 clone or git worktree, reinstall from that location so the environment does not silently point at a
 different checkout.
 
-CI currently tests Python 3.11, 3.12, and 3.13.
+CI currently tests Python 3.11, 3.12, 3.13, and 3.14.
 
 ## Platform Notes
 
