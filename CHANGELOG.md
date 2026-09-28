@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.37.2 (2026-09-28)
+
+### Bug Fixes
+
+- **dependencies**: Update version constraints BEC
+  ([`92f31f8`](https://github.com/bec-project/bec_widgets/commit/92f31f8a304d2f82af1a398738112632d6dfd8b1))
+
+
 ## v3.37.1 (2026-09-15)
 
 ### Bug Fixes
