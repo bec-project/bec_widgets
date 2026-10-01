@@ -91,26 +91,26 @@ def test_positioner_box_on_stop(positioner_box):
 
 def test_positioner_box_setpoint_change(positioner_box):
     """Test positioner box setpoint change"""
-    with mock.patch.object(positioner_box.dev["samx"], "move") as mock_move:
+    with mock.patch.object(positioner_box.scans, "mv") as mock_mv:
         positioner_box.ui.setpoint.setText("100")
         positioner_box.on_setpoint_change()
-        mock_move.assert_called_once_with(100, relative=False)
+        mock_mv.assert_called_once_with(positioner_box.dev["samx"], 100, relative=False)
 
 
 def test_positioner_box_on_tweak_right(positioner_box):
     """Test tweak right button"""
-    with mock.patch.object(positioner_box.dev["samx"], "move") as mock_move:
+    with mock.patch.object(positioner_box.scans, "mv") as mock_mv:
         positioner_box.ui.step_size.setValue(0.1)
         positioner_box.on_tweak_right()
-        mock_move.assert_called_once_with(0.1, relative=True)
+        mock_mv.assert_called_once_with(positioner_box.dev["samx"], 0.1, relative=True)
 
 
 def test_positioner_box_on_tweak_left(positioner_box):
     """Test tweak left button"""
-    with mock.patch.object(positioner_box.dev["samx"], "move") as mock_move:
+    with mock.patch.object(positioner_box.scans, "mv") as mock_mv:
         positioner_box.ui.step_size.setValue(0.1)
         positioner_box.on_tweak_left()
-        mock_move.assert_called_once_with(-0.1, relative=True)
+        mock_mv.assert_called_once_with(positioner_box.dev["samx"], -0.1, relative=True)
 
 
 def test_positioner_box_setpoint_out_of_range(positioner_box):

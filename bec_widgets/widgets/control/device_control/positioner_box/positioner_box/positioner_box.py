@@ -223,20 +223,20 @@ class PositionerBox(PositionerBoxBase):
         """Tweak motor right"""
         setpoint = self._get_setpoint()
         if setpoint is None:
-            self.dev[self.device].move(self.step_size, relative=True)
+            self.scans.mv(self.dev[self.device], self.step_size, relative=True)
             return
         target = setpoint + self.step_size
-        self.dev[self.device].move(target, relative=False)
+        self.scans.mv(self.dev[self.device], target, relative=False)
 
     @SafeSlot()
     def on_tweak_left(self):
         """Tweak motor left"""
         setpoint = self._get_setpoint()
         if setpoint is None:
-            self.dev[self.device].move(-self.step_size, relative=True)
+            self.scans.mv(self.dev[self.device], -self.step_size, relative=True)
             return
         target = setpoint - self.step_size
-        self.dev[self.device].move(target, relative=False)
+        self.scans.mv(self.dev[self.device], target, relative=False)
 
     def _get_setpoint(self) -> float | None:
         """Get the setpoint of the motor"""
@@ -255,7 +255,7 @@ class PositionerBox(PositionerBoxBase):
         """Change the setpoint for the motor"""
         self.ui.setpoint.clearFocus()
         setpoint = self.ui.setpoint.text()
-        self.dev[self.device].move(float(setpoint), relative=False)
+        self.scans.mv(self.dev[self.device], float(setpoint), relative=False)
         self.ui.tweak_left.setToolTip(f"Tweak left by {self.step_size}")
         self.ui.tweak_right.setToolTip(f"Tweak right by {self.step_size}")
 

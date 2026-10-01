@@ -50,34 +50,26 @@ def test_positioner_box_2d(positioner_box_2d):
 
 def test_positioner_box_move_hor_does_not_affect_ver(positioner_box_2d):
     """Test that moving one positioner doesn't affect the other"""
-    with (
-        mock.patch.object(positioner_box_2d.dev["samx"], "move") as mock_move_hor,
-        mock.patch.object(positioner_box_2d.dev["samy"], "move") as mock_move_ver,
-    ):
+    with mock.patch.object(positioner_box_2d.scans, "mv") as mock_mv:
         positioner_box_2d.ui.step_size_hor.setValue(0.1)
         positioner_box_2d.on_tweak_inc_hor()
-        mock_move_hor.assert_called_once_with(0.01, relative=True)
-        mock_move_ver.assert_not_called()
-    with (
-        mock.patch.object(positioner_box_2d.dev["samx"], "move") as mock_move_hor,
-        mock.patch.object(positioner_box_2d.dev["samy"], "move") as mock_move_ver,
-    ):
+        mock_mv.assert_called_once_with(positioner_box_2d.dev["samx"], 0.01, relative=True)
+    with mock.patch.object(positioner_box_2d.scans, "mv") as mock_mv:
         positioner_box_2d.ui.step_size_ver.setValue(0.1)
         positioner_box_2d.on_step_dec_ver()
-        mock_move_ver.assert_called_once_with(-0.1, relative=True)
-        mock_move_hor.assert_not_called()
+        mock_mv.assert_called_once_with(positioner_box_2d.dev["samy"], -0.1, relative=True)
 
 
 def test_positioner_box_setpoint_changes(positioner_box_2d: PositionerBox2D):
     """Test positioner box setpoint change"""
-    with mock.patch.object(positioner_box_2d.dev["samx"], "move") as mock_move:
+    with mock.patch.object(positioner_box_2d.scans, "mv") as mock_mv:
         positioner_box_2d.ui.setpoint_hor.setText("100")
         positioner_box_2d.on_setpoint_change_hor()
-        mock_move.assert_called_once_with(100, relative=False)
-    with mock.patch.object(positioner_box_2d.dev["samy"], "move") as mock_move:
+        mock_mv.assert_called_once_with(positioner_box_2d.dev["samx"], 100, relative=False)
+    with mock.patch.object(positioner_box_2d.scans, "mv") as mock_mv:
         positioner_box_2d.ui.setpoint_ver.setText("100")
         positioner_box_2d.on_setpoint_change_ver()
-        mock_move.assert_called_once_with(100, relative=False)
+        mock_mv.assert_called_once_with(positioner_box_2d.dev["samy"], 100, relative=False)
 
 
 def test_positioner_box_2d_on_stop(positioner_box_2d: PositionerBox2D):
