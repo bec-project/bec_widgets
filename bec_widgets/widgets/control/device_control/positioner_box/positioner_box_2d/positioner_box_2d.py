@@ -474,56 +474,56 @@ class PositionerBox2D(PositionerBoxBase):
     @SafeSlot()
     def on_tweak_inc_hor(self):
         """Tweak device a up"""
-        self.dev[self.device_hor].move(self.step_size_hor / 10, relative=True)
+        self.scans.mv(self.dev[self.device_hor], self.step_size_hor / 10, relative=True)
 
     @SafeSlot()
     def on_tweak_dec_hor(self):
         """Tweak device a down"""
-        self.dev[self.device_hor].move(-self.step_size_hor / 10, relative=True)
+        self.scans.mv(self.dev[self.device_hor], -self.step_size_hor / 10, relative=True)
 
     @SafeSlot()
     def on_step_inc_hor(self):
         """Tweak device a up"""
-        self.dev[self.device_hor].move(self.step_size_hor, relative=True)
+        self.scans.mv(self.dev[self.device_hor], self.step_size_hor, relative=True)
 
     @SafeSlot()
     def on_step_dec_hor(self):
         """Tweak device a down"""
-        self.dev[self.device_hor].move(-self.step_size_hor, relative=True)
+        self.scans.mv(self.dev[self.device_hor], -self.step_size_hor, relative=True)
 
     @SafeSlot()
     def on_tweak_inc_ver(self):
         """Tweak device a up"""
-        self.dev[self.device_ver].move(self.step_size_ver / 10, relative=True)
+        self.scans.mv(self.dev[self.device_ver], self.step_size_ver / 10, relative=True)
 
     @SafeSlot()
     def on_tweak_dec_ver(self):
         """Tweak device b down"""
-        self.dev[self.device_ver].move(-self.step_size_ver / 10, relative=True)
+        self.scans.mv(self.dev[self.device_ver], -self.step_size_ver / 10, relative=True)
 
     @SafeSlot()
     def on_step_inc_ver(self):
         """Tweak device b up"""
-        self.dev[self.device_ver].move(self.step_size_ver, relative=True)
+        self.scans.mv(self.dev[self.device_ver], self.step_size_ver, relative=True)
 
     @SafeSlot()
     def on_step_dec_ver(self):
         """Tweak device a down"""
-        self.dev[self.device_ver].move(-self.step_size_ver, relative=True)
+        self.scans.mv(self.dev[self.device_ver], -self.step_size_ver, relative=True)
 
     @SafeSlot()
     def on_setpoint_change_hor(self):
         """Change the setpoint for device a"""
         self.ui.setpoint_hor.clearFocus()
         setpoint = self.ui.setpoint_hor.text()
-        self.dev[self.device_hor].move(float(setpoint), relative=False)
+        self.scans.mv(self.dev[self.device_hor], float(setpoint), relative=False)
 
     @SafeSlot()
     def on_setpoint_change_ver(self):
         """Change the setpoint for device b"""
         self.ui.setpoint_ver.clearFocus()
         setpoint = self.ui.setpoint_ver.text()
-        self.dev[self.device_ver].move(float(setpoint), relative=False)
+        self.scans.mv(self.dev[self.device_ver], float(setpoint), relative=False)
 
 
 if __name__ == "__main__":  # pragma: no cover
