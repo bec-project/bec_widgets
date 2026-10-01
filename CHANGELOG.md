@@ -1,6 +1,65 @@
 # CHANGELOG
 
 
+## v3.37.3 (2026-10-01)
+
+### Bug Fixes
+
+- **positioner_box**: Move via scans.mv instead of deprecated Positioner.move
+  ([`0487c5d`](https://github.com/bec-project/bec_widgets/commit/0487c5d3e232a150984917da56c434ff499dd3a0))
+
+### Build System
+
+- Bump pyside6_qtermwidget to 0.6.6.11.1 for python 3.14 support
+  ([`3e9eea4`](https://github.com/bec-project/bec_widgets/commit/3e9eea4d2dfd9482163c54a6ca16b2d450379504))
+
+- **deps**: Update isort requirement from <9.0,>=5.13 to >=5.13,<10.0
+  ([`3025dd6`](https://github.com/bec-project/bec_widgets/commit/3025dd666d4dd7c0a632179b7bc8e80a1e0a92e2))
+
+Updates the requirements on [isort](https://github.com/PyCQA/isort) to permit the latest version. -
+  [Release notes](https://github.com/PyCQA/isort/releases) -
+  [Changelog](https://github.com/PyCQA/isort/blob/main/CHANGELOG.md) -
+  [Commits](https://github.com/PyCQA/isort/compare/5.13.0...9.0.1)
+
+--- updated-dependencies: - dependency-name: isort dependency-version: 9.0.1
+
+dependency-type: direct:production ...
+
+Signed-off-by: dependabot[bot] <support@github.com>
+
+- **deps**: Update python-slugify requirement from ~=8.0 to >=8,<10
+  ([`86f550a`](https://github.com/bec-project/bec_widgets/commit/86f550aa4159faafd986f486cd142c30acc8c8ca))
+
+Updates the requirements on [python-slugify](https://github.com/un33k/python-slugify) to permit the
+  latest version. - [Release notes](https://github.com/un33k/python-slugify/releases) -
+  [Changelog](https://github.com/un33k/python-slugify/blob/master/CHANGELOG.md) -
+  [Commits](https://github.com/un33k/python-slugify/compare/v8.0.0...v9.0.0)
+
+--- updated-dependencies: - dependency-name: python-slugify dependency-version: 9.0.0
+
+dependency-type: direct:production ...
+
+Signed-off-by: dependabot[bot] <support@github.com>
+
+### Continuous Integration
+
+- Add Python 3.14 to the test matrix
+  ([`6292bd9`](https://github.com/bec-project/bec_widgets/commit/6292bd91d4b19204e0f0acdfdeb779a00052fe68))
+
+### Documentation
+
+- Add python 3.14 to the readme badge
+  ([`4be2271`](https://github.com/bec-project/bec_widgets/commit/4be2271f0ef230fb5e9842965fabc90323f5776d))
+
+### Testing
+
+- **e2e**: Drop legacy scans removed in bec v4 from expected scans
+  ([`06dcc85`](https://github.com/bec-project/bec_widgets/commit/06dcc857003958bc597e6e9dd09e243120b80dc1))
+
+- **e2e**: Plot SimWaveform AsyncSignal data in async plotting test
+  ([`fcd3051`](https://github.com/bec-project/bec_widgets/commit/fcd30512fed6e36c68e4f774acd3a344136be9ee))
+
+
 ## v3.37.2 (2026-09-28)
 
 ### Bug Fixes
