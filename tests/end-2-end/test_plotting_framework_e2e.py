@@ -134,7 +134,7 @@ def test_async_plotting(qtbot, bec_client_lib, connected_client_gui_obj):
     dev.waveform.async_update.set("add").wait()
     dev.waveform.waveform_shape.set(10000).wait()
     wf = dock_area.new("Waveform")
-    curve = wf.plot(device_y="waveform")
+    curve = wf.plot(device_y="waveform", signal_y="waveform_data")
 
     status = scans.line_scan(dev.samx, -5, 5, steps=5, exp_time=0.05, relative=False)
     status.wait()
@@ -153,7 +153,7 @@ def test_async_plotting(qtbot, bec_client_lib, connected_client_gui_obj):
     x_data, y_data = curve.get_data()
     assert np.array_equal(x_data, np.linspace(0, len(y_data) - 1, len(y_data)))
     assert np.array_equal(
-        y_data, last_scan_data.devices.waveform.get("waveform_waveform", {}).read().get("value", [])
+        y_data, last_scan_data.devices.waveform.get("waveform_data", {}).read().get("value", [])
     )
 
 
