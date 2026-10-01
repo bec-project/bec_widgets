@@ -35,7 +35,7 @@ Start here when orienting yourself:
 - `bec_widgets/utils/error_popups.py` — `SafeSlot` and user-visible exception handling
 - `bec_widgets/utils/generate_cli.py` — generated RPC and Designer code entry point
 - `bec_widgets/utils/bec_plugin_helper.py` — plugin discovery and entry points
-- `tests/unit_tests/conftest.py` — shared widget fixtures and `create_widget(...)`
+- `bec_widgets/tests/fixtures.py` — shared widget test fixtures, also imported by plugin repos
 - `pyproject.toml` — scripts, tooling, and dependency source of truth
 
 ## Repo Layout
@@ -84,8 +84,8 @@ If you change:
   when the visual change is intentional
 - `bec_widgets/utils/bec_dispatcher.py`, `bec_widget.py`, or shared plumbing used by many widgets: run
   the relevant focused tests plus the broader affected package test scope before finishing
-- test behavior or a flaky widget test: check `tests/unit_tests/conftest.py` and `bec_widgets/tests/`
-  for reusable fixtures and helpers before adding new ones
+- test behavior or a flaky widget test: check `bec_widgets/tests/` for reusable fixtures and helpers
+  before adding new ones
 - docs, examples, or commands only: no broad GUI or e2e run is required unless commands or runnable
   examples changed
 
@@ -155,11 +155,17 @@ Run the smallest relevant test target first. For substantial UI plumbing changes
 changes, or work that affects many widgets, run the broader affected package suite before finishing.
 
 Unit tests are the default. CI runs them with `--random-order`, so local validation should do the same
-when practical. Create widgets with `create_widget(...)` from `tests/unit_tests/conftest.py`. It
-registers the widget with `qtbot` so it is closed at test end; the autouse conftest fixtures handle the
-rest of the teardown (dispatcher disconnect, singleton resets) and fail the test if any top-level
-widget is left open. Before adding a new fixture, check for reusable fixtures in
-`tests/unit_tests/conftest.py` and helpers in `bec_widgets/tests/utils.py`.
+when practical. Create widgets with `create_widget(...)` from `bec_widgets/tests/utils.py`. It
+registers the widget with `qtbot` so it is closed at test end; the autouse fixtures handle the rest of
+the teardown (dispatcher disconnect, singleton resets) and fail the test if any top-level widget is
+left open or a timer is still running.
+
+The fixtures live in the package so plugin repositories get the same test bed:
+`bec_widgets/tests/fixtures.py` holds all of them (autouse fixtures, `mocked_client`,
+`mocked_client_with_dap`, scan history fixtures), `client_mocks.py` and `fake_devices.py` the mocked
+client and fake devices, `utils.py` plain helpers. `tests/unit_tests/conftest.py` only star-imports
+`bec_widgets.tests.fixtures`, exactly as a plugin's widget-test conftest does, so add new shared
+fixtures there rather than to the conftest.
 
 Mock BEC, Redis, and hardware in unit tests. Reuse existing helpers such as `FakeDevice`,
 `FakePositioner`, `DMMock`, and the shared autouse fixtures rather than rolling your own.

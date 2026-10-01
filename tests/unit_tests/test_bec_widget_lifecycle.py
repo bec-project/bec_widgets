@@ -4,10 +4,9 @@ from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtCore import QEvent, QObject
 from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.rpc_register import RPCRegister
-
-from .client_mocks import mocked_client
 
 
 class LifecycleWidget(BECWidget, QWidget):

@@ -4,13 +4,13 @@ import pytest
 from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtCore import QPointF, Qt
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.plots.image.bec_histogram_lut_item import (
     BECColorBarItem,
     BECHistogramLUTItem,
 )
 from bec_widgets.widgets.plots.image.image import Image
 from bec_widgets.widgets.plots.image.image_processor import ImageProcessor, ProcessingConfig
-from tests.unit_tests.client_mocks import mocked_client
 from tests.unit_tests.conftest import create_widget
 
 ##################################################

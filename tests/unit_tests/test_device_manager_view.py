@@ -30,6 +30,7 @@ from bec_widgets.applications.views.device_manager_view.device_manager_view impo
     DeviceManagerView,
     DeviceManagerWidget,
 )
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.widgets.control.device_manager.components import (
     DeviceTable,
@@ -42,8 +43,6 @@ from bec_widgets.widgets.control.device_manager.components.ophyd_validation.ophy
     ConnectionStatus,
     OphydValidation,
 )
-
-from .client_mocks import mocked_client
 
 
 @pytest.fixture

@@ -3,13 +3,12 @@ from unittest import mock
 import pytest
 from bec_lib.device import ReadoutPriority
 
-from bec_widgets.tests.utils import FakeDevice
+from bec_widgets.tests.client_mocks import mocked_client
+from bec_widgets.tests.fake_devices import FakeDevice
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import (
     BECDeviceFilter,
     DeviceComboBox,
 )
-
-from .client_mocks import mocked_client
 
 
 @pytest.fixture

@@ -2,13 +2,13 @@ from unittest import mock
 
 from bec_lib.device import Positioner, ReadoutPriority
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import (
     BECDeviceFilter,
     DeviceComboBox,
     DeviceInputConfig,
 )
 
-from .client_mocks import mocked_client
 from .conftest import create_widget
 
 
