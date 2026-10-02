@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import threading
 from types import SimpleNamespace
 from unittest import mock
 from unittest.mock import MagicMock
@@ -1083,15 +1084,12 @@ def test_on_async_readback_add_update(qtbot, mocked_client):
     ############# Test add ################
 
     msg = {"signals": {"async_device": {"value": [100, 200], "timestamp": [1001, 1002]}}}
-    metadata = {"async_update": {"max_shape": [None], "type": "add"}}
+    metadata = {
+        "cb_info": {"scan_id": wf.scan_id},
+        "async_update": {"max_shape": [None], "type": "add"},
+    }
 
-    cb_info_ret = {"scan_id": wf.scan_id}
-
-    def ret_sender():
-        return SimpleNamespace(cb_info={"scan_id": wf.scan_id})
-
-    with mock.patch.object(wf, "sender", side_effect=ret_sender):
-        wf.on_async_readback(msg, metadata, _override_slot_params={"verify_sender": False})
+    wf.on_async_readback(msg, metadata)
 
     x_data, y_data = c.get_data()
     assert len(x_data) == 5
@@ -1102,9 +1100,11 @@ def test_on_async_readback_add_update(qtbot, mocked_client):
 
     # instruction='replace'
     msg2 = {"signals": {"async_device": {"value": [999], "timestamp": [555]}}}
-    metadata2 = {"async_update": {"max_shape": [None], "type": "replace"}}
-    with mock.patch.object(wf, "sender", side_effect=ret_sender):
-        wf.on_async_readback(msg2, metadata2, _override_slot_params={"verify_sender": False})
+    metadata2 = {
+        "cb_info": {"scan_id": wf.scan_id},
+        "async_update": {"max_shape": [None], "type": "replace"},
+    }
+    wf.on_async_readback(msg2, metadata2)
     x_data2, y_data2 = c.get_data()
     np.testing.assert_array_equal(x_data2, [0])
 
@@ -1117,10 +1117,10 @@ def test_on_async_readback_add_update(qtbot, mocked_client):
     for ii in range(10):
         msg = {"signals": {"async_device": {"value": [100], "timestamp": [1001]}}}
         metadata = {
-            "async_update": {"max_shape": [None, waveform_shape], "index": 0, "type": "add_slice"}
+            "cb_info": {"scan_id": wf.scan_id},
+            "async_update": {"max_shape": [None, waveform_shape], "index": 0, "type": "add_slice"},
         }
-        with mock.patch.object(wf, "sender", side_effect=ret_sender):
-            wf.on_async_readback(msg, metadata, _override_slot_params={"verify_sender": False})
+        wf.on_async_readback(msg, metadata)
 
     # Old data should be deleted since the slice_index did not match
     x_data, y_data = c.get_data()
@@ -1145,10 +1145,10 @@ def test_on_async_readback_add_update(qtbot, mocked_client):
             }
         }
         metadata = {
-            "async_update": {"max_shape": [None, waveform_shape], "index": 0, "type": "add_slice"}
+            "cb_info": {"scan_id": wf.scan_id},
+            "async_update": {"max_shape": [None, waveform_shape], "index": 0, "type": "add_slice"},
         }
-        with mock.patch.object(wf, "sender", side_effect=ret_sender):
-            wf.on_async_readback(msg, metadata, _override_slot_params={"verify_sender": False})
+        wf.on_async_readback(msg, metadata)
     x_data, y_data = c.get_data()
     assert len(y_data) == waveform_shape
     assert len(x_data) == waveform_shape
@@ -1168,9 +1168,8 @@ def test_on_async_readback_add_update(qtbot, mocked_client):
                 }
             }
         }
-        metadata = {"async_update": {"type": "replace"}}
-        with mock.patch.object(wf, "sender", side_effect=ret_sender):
-            wf.on_async_readback(msg, metadata, _override_slot_params={"verify_sender": False})
+        metadata = {"cb_info": {"scan_id": wf.scan_id}, "async_update": {"type": "replace"}}
+        wf.on_async_readback(msg, metadata)
 
     x_data, y_data = c.get_data()
     assert np.array_equal(y_data, np.array(range(waveform_shape)))
@@ -1178,6 +1177,49 @@ def test_on_async_readback_add_update(qtbot, mocked_client):
     assert c.opts["symbol"] == "o"
     y_displayed, x_displayed = c.getData()
     assert len(y_displayed) == waveform_shape
+
+
+def test_on_async_readback_through_dispatcher(qtbot, mocked_client):
+    """Queued relay delivery updates async curves without a Qt sender context."""
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.scan_id = "async-test"
+    wf.scan_item = create_dummy_scan_item(scan_id=wf.scan_id)
+    wf.x_axis_mode["name"] = "index"
+    curve = wf.plot(arg1="async_device")
+    qtbot.wait(50)
+    curve.setData([0], [0])
+    wrapper = next(
+        slot
+        for slot in wf.bec_dispatcher._registered_slots.values()
+        if slot.cb == wf.on_async_readback and slot.cb_info == {"scan_id": wf.scan_id}
+    )
+    msg = {"signals": {"async_device": {"value": [123, 456]}}}
+    metadata = {"async_update": {"type": "replace"}}
+    thread = threading.Thread(target=wrapper, args=(msg, metadata))
+    thread.start()
+    thread.join(timeout=5)
+    assert not thread.is_alive()
+    np.testing.assert_array_equal(curve.get_data()[1], [0])
+
+    qtbot.waitUntil(lambda: len(curve.get_data()[1]) == 2)
+    np.testing.assert_array_equal(curve.get_data()[1], [123, 456])
+
+
+@pytest.mark.parametrize("cb_info", [None, {}, {"scan_id": "old-scan"}])
+def test_on_async_readback_ignores_missing_or_stale_context(qtbot, mocked_client, cb_info):
+    """Missing subscription context and messages for an old scan do not update curves."""
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.scan_id = "current-scan"
+    wf.scan_item = create_dummy_scan_item(scan_id=wf.scan_id)
+    curve = wf.plot(arg1="async_device")
+    msg = {"signals": {"async_device": {"value": [123]}}}
+    metadata = {"async_update": {"type": "replace"}}
+    if cb_info is not None:
+        metadata["cb_info"] = cb_info
+
+    with mock.patch.object(curve, "setData") as set_data:
+        wf.on_async_readback(msg, metadata)
+        set_data.assert_not_called()
 
 
 def test_get_x_data(qtbot, mocked_client, monkeypatch):
