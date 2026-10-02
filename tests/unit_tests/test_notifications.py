@@ -364,3 +364,94 @@ def test_broker_posts_notification(qtbot, centre, mocked_client):
     assert "Error occurred. See details." in toast.body
     assert toast.kind == SeverityKind.MAJOR
     assert toast._lifetime == 0
+
+
+def test_broker_survives_parent_window_destruction(qtbot, mocked_client):
+    """The broker is an app-wide singleton; closing the window that first created it must
+    not destroy it, or every later window gets a dead wrapper and notifications stop."""
+    import shiboken6
+    from qtpy.QtCore import QEvent, QEventLoop, Qt
+    from qtpy.QtWidgets import QApplication, QMainWindow
+
+    w1 = QMainWindow()
+    w1.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
+    qtbot.addWidget(w1)
+    b1 = BECNotificationBroker(parent=w1, client=mocked_client)
+    assert b1.parent() is QApplication.instance()
+
+    w1.close()
+    qapp = QApplication.instance()
+    qapp.sendPostedEvents(None, QEvent.DeferredDelete)
+    qapp.processEvents(QEventLoop.AllEvents)
+
+    assert shiboken6.isValid(b1)  # broker outlived the window
+    b2 = BECNotificationBroker(parent=None, client=mocked_client)
+    assert b2 is b1 and shiboken6.isValid(b2)
+    b2.notification_closed.emit("x")  # must not raise RuntimeError
+    BECNotificationBroker.reset_singleton()
+
+
+def test_broker_revives_after_hard_destroy(qtbot, mocked_client):
+    """If the broker's C++ object is destroyed anyway, the next construction rebuilds a
+    fresh, re-subscribed instance instead of returning the dead wrapper."""
+    import shiboken6
+
+    b1 = BECNotificationBroker(parent=None, client=mocked_client)
+    shiboken6.delete(b1)
+    assert not shiboken6.isValid(b1)
+
+    b2 = BECNotificationBroker(parent=None, client=mocked_client)
+    assert b2 is not b1 and shiboken6.isValid(b2)
+    b2.notification_closed.emit("y")  # re-subscribed, no RuntimeError
+    BECNotificationBroker.reset_singleton()
+
+
+def test_active_notifications_dropped_on_expiry(qtbot, centre, mocked_client):
+    """Auto-expiring (non-MAJOR) notifications must not linger in the replay store; MAJOR
+    alarms (lifetime 0, never expire) stay in history until explicitly closed."""
+    qtbot.wait(20)  # let the centre's replay singleShot fire on an EMPTY store first
+    broker = BECNotificationBroker(client=mocked_client)
+    broker._err_util = ErrorPopupUtility()
+
+    broker.post_notification({"alarm_type": "W", "msg": "m", "severity": 0}, meta={})
+    qtbot.wait(50)
+    assert len(broker._active_notifications) == 1
+    nid = next(iter(broker._active_notifications))
+    assert len(centre.toasts) == 1  # no replay duplicate
+    centre.toasts[0].expired.emit()  # simulate auto-expiry
+    qtbot.wait(10)
+    assert nid not in broker._active_notifications
+
+    broker.post_notification({"alarm_type": "E", "msg": "m", "severity": 2}, meta={})
+    qtbot.wait(50)
+    major_nid = next(iter(broker._active_notifications))
+    assert broker._active_notifications[major_nid]["lifetime_ms"] == 0
+    BECNotificationBroker.reset_singleton()
+
+
+def test_replayed_toast_expiry_prunes_replay_store(qtbot, mocked_client):
+    """A toast recreated by a NEW centre's replay must also prune the broker's replay
+    store on expiry — not only toasts created live by post_notification."""
+    broker = BECNotificationBroker(client=mocked_client)
+    broker._err_util = ErrorPopupUtility()
+
+    # post with no centre open: the entry is stored for future centres
+    broker.post_notification({"alarm_type": "W", "msg": "m", "severity": 0}, meta={})
+    assert len(broker._active_notifications) == 1
+    nid = next(iter(broker._active_notifications))
+
+    # a new centre replays the stored notification
+    parent = QtWidgets.QWidget()
+    parent.resize(600, 400)
+    ctr = NotificationCentre(parent=parent, fixed_width=300, margin=8)
+    layout = QtWidgets.QVBoxLayout(parent)
+    layout.addWidget(ctr)
+    qtbot.addWidget(parent)
+    qtbot.waitUntil(lambda: len(ctr.toasts) == 1, timeout=2000)
+
+    # expiring the REPLAYED toast must remove the entry from the broker store
+    ctr.toasts[0].expired.emit()
+    qtbot.wait(10)
+    assert nid not in broker._active_notifications
+
+    BECNotificationBroker.reset_singleton()
