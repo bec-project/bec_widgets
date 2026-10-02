@@ -282,8 +282,10 @@ class CurveRow(QTreeWidgetItem):
 
         # Style in col 5
         self.style_combo = QComboBox()
-        self.style_combo.addItems(["solid", "dash", "dot", "dashdot"])
-        idx = self.style_combo.findText(self.config.pen_style)
+        for style in ("solid", "dash", "dot", "dashdot"):
+            self.style_combo.addItem(style, style)
+        self.style_combo.addItem("No line", "none")
+        idx = self.style_combo.findData(self.config.pen_style)
         if idx >= 0:
             self.style_combo.setCurrentIndex(idx)
         self.tree.setItemWidget(self, 5, self.style_combo)
@@ -495,7 +497,7 @@ class CurveRow(QTreeWidgetItem):
         # Common style fields
         self.config.color = self.color_button.color
         self.config.symbol_color = self.color_button.color
-        self.config.pen_style = self.style_combo.currentText()
+        self.config.pen_style = self.style_combo.currentData()
         self.config.pen_width = self.width_spin.value()
         self.config.symbol_size = self.symbol_spin.value()
 

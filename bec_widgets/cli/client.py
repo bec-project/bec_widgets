@@ -974,7 +974,8 @@ class Curve(RPCBase):
             - symbol_color: str
             - symbol_size: int
             - pen_width: int
-            - pen_style: Literal["solid", "dash", "dot", "dashdot"]
+            - pen_style: Literal["solid", "dash", "dot", "dashdot", "none"]
+              Use "none" to display markers without connecting lines.
         """
 
     @rpc_call
@@ -1046,12 +1047,16 @@ class Curve(RPCBase):
         """
 
     @rpc_call
-    def set_pen_style(self, pen_style: "Literal['solid', 'dash', 'dot', 'dashdot']"):
+    def set_pen_style(
+        self, pen_style: "Literal['solid', 'dash', 'dot', 'dashdot', 'none']"
+    ) -> "None":
         """
         Change the pen style of the curve.
 
         Args:
-            pen_style(Literal["solid", "dash", "dot", "dashdot"]): Style of the pen.
+            pen_style(Literal["solid", "dash", "dot", "dashdot", "none"]): Style of the pen.
+                Use "none" to display markers without connecting lines.
+                During automatic downsampling, "none" uses a 1 px solid line without markers.
         """
 
     @rpc_call
