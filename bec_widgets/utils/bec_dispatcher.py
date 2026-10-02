@@ -85,7 +85,8 @@ class QtThreadSafeCallback(QObject):
 
         Args:
             cb (Callable): The callback function to be wrapped.
-            cb_info (dict, optional): Additional information about the callback. Defaults to None.
+            cb_info (dict, optional): Subscription context delivered as ``metadata["cb_info"]``.
+                Defaults to None.
             owner (object, optional): Lifetime anchor for non-method callables. Ignored for
                 bound methods (their ``__self__`` is the owner). Defaults to None.
         """
@@ -147,6 +148,8 @@ class QtThreadSafeCallback(QObject):
         # the receiver alive while its callback runs.
         callback = self.cb_ref()
         if callback is not None:
+            if self.cb_info is not None:
+                metadata = {**metadata, "cb_info": dict(self.cb_info)}
             callback(msg_content, metadata)
 
     def __call__(self, msg_content, metadata):
@@ -259,7 +262,8 @@ class BECDispatcher:
             slot (Callable): A slot method/function that accepts two inputs: content and metadata of
                 the corresponding pub/sub message
             topics EndpointInfo | str | list[EndpointInfo] | list[str]: A topic or list of topics that can typically be acquired via bec_lib.MessageEndpoints
-            cb_info (dict | None): A dictionary containing information about the callback. Defaults to None.
+            cb_info (dict | None): Subscription context delivered as ``metadata["cb_info"]``.
+                Defaults to None. Callbacks must use this context rather than ``QObject.sender()``.
             owner (object | None): Lifetime anchor for non-method callables (lambdas, partials,
                 module functions): the subscription is released when the owner is cleaned up or
                 destroyed. Bound methods already carry their owner and ignore this. Defaults to None.

@@ -368,6 +368,49 @@ def test_qthreadsafe_callback_delivers_live_receiver_on_gui_thread(qapp):
     assert calls == [({"value": 1}, {"source": "worker"}, qapp.thread())]
 
 
+def test_qthreadsafe_callback_delivers_subscription_context_to_qobject(qapp):
+    """QObject slots receive subscription context without relying on a Qt sender."""
+    from bec_widgets.utils.error_popups import SafeSlot
+
+    calls = []
+
+    class Receiver(QObject):
+        @SafeSlot(dict, dict)
+        def receive(self, content, metadata):
+            calls.append((content, metadata, QThread.currentThread()))
+
+    receiver = Receiver()
+    wrapper = QtThreadSafeCallback(receiver.receive, cb_info={"scan_id": "scan-1"})
+    _queue_callback(wrapper)
+    assert calls == []
+    qapp.processEvents()
+
+    assert calls == [
+        ({"value": 1}, {"source": "worker", "cb_info": {"scan_id": "scan-1"}}, qapp.thread())
+    ]
+
+
+def test_qthreadsafe_callback_subscription_context_is_not_shared():
+    """A callback cannot mutate shared message metadata or another subscription's context."""
+    received = []
+
+    def callback(_content, metadata):
+        received.append(metadata["cb_info"]["scan_id"])
+        metadata["cb_info"]["scan_id"] = "changed"
+        metadata["source"] = "changed"
+
+    first = QtThreadSafeCallback(callback, cb_info={"scan_id": "scan-1"})
+    second = QtThreadSafeCallback(callback, cb_info={"scan_id": "scan-2"})
+    metadata = {"source": "worker", "cb_info": {"scan_id": "message-context"}}
+    first({}, metadata)
+    second({}, metadata)
+
+    assert received == ["scan-1", "scan-2"]
+    assert metadata == {"source": "worker", "cb_info": {"scan_id": "message-context"}}
+    assert first.cb_info == {"scan_id": "scan-1"}
+    assert second.cb_info == {"scan_id": "scan-2"}
+
+
 @pytest.mark.parametrize(
     "disconnect", ["disconnect_owner", "disconnect_slot", "disconnect_topics", "disconnect_all"]
 )

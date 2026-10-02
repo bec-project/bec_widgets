@@ -238,7 +238,7 @@ class BecLogsQueue(BECConnector, QObject):
         BecLogsQueue._instance = None
         self.deleteLater()
 
-    @SafeSlot(verify_sender=True)
+    @SafeSlot()
     def _process_incoming_log_msg(self, msg: dict, _metadata: dict):
         try:
             _msg = LogMessage(**msg)
@@ -248,7 +248,7 @@ class BecLogsQueue(BECConnector, QObject):
                 return
             logger.warning(f"Error in LogPanel incoming message callback: {e}")
 
-    @SafeSlot(verify_sender=True)
+    @SafeSlot()
     def _proc_update(self):
         if self._paused:
             self.buffered.emit(len(self._incoming))

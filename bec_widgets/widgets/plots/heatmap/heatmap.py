@@ -671,7 +671,7 @@ class Heatmap(ImageBase):
             QTimer.singleShot(100, self.update_plot)
             QTimer.singleShot(300, self.update_plot)
 
-    @SafeSlot(verify_sender=True)
+    @SafeSlot()
     def update_plot(self, _=None) -> None:
         """
         Update the plot with the current data.
