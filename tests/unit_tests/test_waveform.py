@@ -370,6 +370,34 @@ def test_update_sync_curves(monkeypatch, qtbot, mocked_client):
     np.testing.assert_array_equal(recorded.get("y"), [5, 6, 7])
 
 
+def test_x_mode_accepts_a_device_without_default_signal(qtbot, mocked_client, monkeypatch):
+    """A device exposing only AsyncMultiSignal sub-signals has no default x signal: it can
+    still be chosen as x device, the signal follows through signal_x."""
+    from bec_lib.device import ReadoutPriority
+
+    from bec_widgets.tests.utils import FakeDevice
+
+    gauss = FakeDevice("gauss", readout_priority=ReadoutPriority.ASYNC)
+    gauss._info["signals"] = {
+        f"data.{name}": {
+            "component_name": "data",
+            "signal_class": "AsyncMultiSignal",
+            "obj_name": f"gauss_data_{name}",
+            "storage_name": "gauss_data",
+        }
+        for name in ("x", "intensity")
+    }
+    monkeypatch.setitem(mocked_client.device_manager.devices, "gauss", gauss)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    refreshed = []
+    monkeypatch.setattr(wf, "_refresh_history_curves", lambda: refreshed.append(True))
+    wf.x_mode = "gauss"  # SafeProperty would swallow (and log) a validation error
+    assert refreshed, "x_mode setter aborted after the signal validation"
+    assert wf.x_axis_mode["name"] == "gauss" and wf.x_axis_mode["entry"] is None
+    wf.signal_x = "gauss_data_x"
+    assert wf.x_axis_mode["entry"] == "gauss_data_x"
+
+
 def test_update_async_curves(monkeypatch, qtbot, mocked_client):
     """
     Test that update_async_curves retrieves live data correctly and calls setData on async curves.
