@@ -357,7 +357,7 @@ def test_heatmap_update_plot_no_scan_item(heatmap_widget):
         color_map="viridis",
     )
     with mock.patch.object(heatmap_widget.main_image, "setImage") as mock_set_image:
-        heatmap_widget.update_plot(_override_slot_params={"verify_sender": False})
+        heatmap_widget.update_plot()
         mock_set_image.assert_not_called()
 
 
@@ -383,7 +383,7 @@ def test_heatmap_update_plot(heatmap_widget):
         request_inputs={"arg_bundle": ["samx", -5, 5, 10, "samy", -5, 5, 10], "kwargs": {}},
     )
     with mock.patch.object(heatmap_widget.main_image, "setImage") as mock_set_image:
-        heatmap_widget.update_plot(_override_slot_params={"verify_sender": False})
+        heatmap_widget.update_plot()
         img = mock_set_image.mock_calls[0].args[0]
         assert img.shape == (10, 10)
 
@@ -399,7 +399,7 @@ def test_heatmap_update_plot_without_status_message(heatmap_widget):
     heatmap_widget.scan_item = create_dummy_scan_item()
     heatmap_widget.scan_item.status_message = None
     with mock.patch.object(heatmap_widget.main_image, "setImage") as mock_set_image:
-        heatmap_widget.update_plot(_override_slot_params={"verify_sender": False})
+        heatmap_widget.update_plot()
         mock_set_image.assert_not_called()
 
 
@@ -422,7 +422,7 @@ def test_heatmap_update_plot_no_img_data(heatmap_widget):
     )
     with mock.patch.object(heatmap_widget, "get_image_data", return_value=None):
         with mock.patch.object(heatmap_widget.main_image, "setImage") as mock_set_image:
-            heatmap_widget.update_plot(_override_slot_params={"verify_sender": False})
+            heatmap_widget.update_plot()
             mock_set_image.assert_not_called()
 
 

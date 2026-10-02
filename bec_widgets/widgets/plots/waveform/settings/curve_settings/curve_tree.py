@@ -332,7 +332,7 @@ class CurveRow(QTreeWidgetItem):
             self._update_composite_button_text()
         dialog.deleteLater()
 
-    @SafeSlot(str, verify_sender=True)
+    @SafeSlot(str)
     def _on_color_changed(self, new_color: str):
         """
         Update configuration when the color button emits a change.

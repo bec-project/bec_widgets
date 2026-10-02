@@ -19,6 +19,7 @@ from bec_lib.service_config import ServiceConfig
 from qtpy.QtCore import QObject
 from qtpy.QtCore import Signal as pyqtSignal
 
+from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.rpc_logging import elapsed_seconds, format_elapsed
 from bec_widgets.utils.serialization import register_serializer_extension
 
@@ -72,6 +73,8 @@ class QtThreadSafeCallback(QObject):
     the owning widget alive. Non-method callables (lambdas, partials, module functions)
     have no owning object whose lifetime could be tracked, so they are kept alive by the
     wrapper itself; pass ``owner=`` to ``connect_slot`` to bind their lifetime to a widget.
+    Create the wrapper on the GUI thread: queued messages are delivered to its Qt slot,
+    which resolves the callback only when delivery occurs.
     """
 
     cb_signal = pyqtSignal(dict, dict)
@@ -82,7 +85,8 @@ class QtThreadSafeCallback(QObject):
 
         Args:
             cb (Callable): The callback function to be wrapped.
-            cb_info (dict, optional): Additional information about the callback. Defaults to None.
+            cb_info (dict, optional): Subscription context delivered as ``metadata["cb_info"]``.
+                Defaults to None.
             owner (object, optional): Lifetime anchor for non-method callables. Ignored for
                 bound methods (their ``__self__`` is the owner). Defaults to None.
         """
@@ -101,7 +105,8 @@ class QtThreadSafeCallback(QObject):
             self.cb_owner = louie.saferef.safe_ref(owner) if owner is not None else None
             self._strong_cb = cb
         self.cb_ref = louie.saferef.safe_ref(cb)
-        self.cb_signal.connect(cb)
+        self._active = True
+        self.cb_signal.connect(self._deliver)
         self.topics = set()
 
     @property
@@ -120,9 +125,35 @@ class QtThreadSafeCallback(QObject):
             return False
         return self.cb_ref == other.cb_ref and self.cb_info == other.cb_info
 
+    def invalidate(self) -> None:
+        """Suppress pending deliveries and release any strongly held callback."""
+        self._active = False
+        self._strong_cb = None
+
+    @SafeSlot(dict, dict)
+    def _deliver(self, msg_content: dict, metadata: dict) -> None:
+        """Resolve and retain a live callback for the duration of this delivery."""
+        if not self._active:
+            return
+        owner = self.cb_owner() if self.cb_owner is not None else None
+        if self.cb_owner is not None and owner is None:
+            return
+        if isinstance(owner, QObject) and not shiboken6.isValid(owner):
+            return
+        if owner is not None and getattr(owner, "_destroyed", False):
+            return
+
+        # Never connect Qt directly to a plain Python receiver's bound method: a
+        # queued invocation can outlive that receiver. Resolving here also holds
+        # the receiver alive while its callback runs.
+        callback = self.cb_ref()
+        if callback is not None:
+            if self.cb_info is not None:
+                metadata = {**metadata, "cb_info": dict(self.cb_info)}
+            callback(msg_content, metadata)
+
     def __call__(self, msg_content, metadata):
-        if self.cb_ref() is None:
-            # callback has been deleted
+        if not self._active:
             return
         self.cb_signal.emit(msg_content, metadata)
 
@@ -231,7 +262,8 @@ class BECDispatcher:
             slot (Callable): A slot method/function that accepts two inputs: content and metadata of
                 the corresponding pub/sub message
             topics EndpointInfo | str | list[EndpointInfo] | list[str]: A topic or list of topics that can typically be acquired via bec_lib.MessageEndpoints
-            cb_info (dict | None): A dictionary containing information about the callback. Defaults to None.
+            cb_info (dict | None): Subscription context delivered as ``metadata["cb_info"]``.
+                Defaults to None. Callbacks must use this context rather than ``QObject.sender()``.
             owner (object | None): Lifetime anchor for non-method callables (lambdas, partials,
                 module functions): the subscription is released when the owner is cleaned up or
                 destroyed. Bound methods already carry their owner and ignore this. Defaults to None.
@@ -284,11 +316,12 @@ class BECDispatcher:
             break
         else:
             return
-        self.client.connector.unregister(topics, cb=connected_slot)
         topics_str, _ = self.client.connector.extract_raw_endpoints_from_info(topics)
-        self._registered_slots[connected_slot].topics.difference_update(set(topics_str))
-        if not self._registered_slots[connected_slot].topics:
-            del self._registered_slots[connected_slot]
+        if not connected_slot.topics.difference(topics_str):
+            self._release_slot(connected_slot)
+        else:
+            self.client.connector.unregister(topics, cb=connected_slot)
+            connected_slot.topics.difference_update(topics_str)
 
     def disconnect_topics(self, topics: str | list):
         """
@@ -297,16 +330,17 @@ class BECDispatcher:
         Args:
             topics(Union[str, list]): The topic(s) to disconnect from
         """
-        self.client.connector.unregister(topics)
         topics_str, _ = self.client.connector.extract_raw_endpoints_from_info(topics)
 
         remove_slots = []
-        for connected_slot in self._registered_slots.values():
-            connected_slot.topics.difference_update(set(topics_str))
-
-            if not connected_slot.topics:
+        for connected_slot in list(self._registered_slots.values()):
+            if not connected_slot.topics.difference(topics_str):
+                connected_slot.invalidate()
                 remove_slots.append(connected_slot)
 
+        self.client.connector.unregister(topics)
+        for connected_slot in self._registered_slots.values():
+            connected_slot.topics.difference_update(topics_str)
         for connected_slot in remove_slots:
             self._registered_slots.pop(connected_slot, None)
 
@@ -354,6 +388,7 @@ class BECDispatcher:
 
     def _release_slot(self, qt_slot: QtThreadSafeCallback) -> None:
         """Unregister all topics of a slot wrapper and drop it from the registry."""
+        qt_slot.invalidate()
         topics = list(qt_slot.topics)
         if topics:
             self.client.connector.unregister(topics, cb=qt_slot)

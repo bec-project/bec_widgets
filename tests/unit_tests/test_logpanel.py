@@ -133,8 +133,7 @@ def test_log_panel_update(qtbot, log_panel: LogPanel):
             },
         )
     )
-    # emit through the timer: _proc_update verifies its sender and skips plain calls
-    log_panel._model.log_queue._update_timer.timeout.emit()
+    log_panel._model.log_queue._proc_update()
     qtbot.waitUntil(lambda: log_panel._model.rowCount() == 4, timeout=500)
 
 
@@ -154,12 +153,32 @@ def make_log_msg(i: int, log_type: str = "info", service: str = "ScanServer") ->
     )
 
 
+def test_log_panel_ingests_queued_dispatcher_message(qtbot, log_panel: LogPanel):
+    """Log ingestion works through the relay without a Qt sender context."""
+    import threading
+
+    queue = log_panel._model.log_queue
+    queue._update_timer.stop()
+    wrapper = next(
+        slot
+        for slot in queue.bec_dispatcher._registered_slots.values()
+        if slot.cb == queue._process_incoming_log_msg
+    )
+    thread = threading.Thread(target=wrapper, args=(make_log_msg(1).model_dump(), {}))
+    thread.start()
+    thread.join(timeout=5)
+    assert not thread.is_alive()
+    assert len(queue._incoming) == 0
+
+    qtbot.waitUntil(lambda: len(queue._incoming) == 1)
+    queue._proc_update()
+    assert log_panel._model.rowCount() == 4
+
+
 def _feed(log_panel: LogPanel, messages: list[LogMessage]):
     queue = log_panel._model.log_queue
     queue._incoming.extend(messages)
-    # emit through the timer so _proc_update's verify_sender check passes (a plain
-    # method call is skipped with "Sender is None")
-    queue._update_timer.timeout.emit()
+    queue._proc_update()
 
 
 def _patched_const(monkeypatch, **overrides):
