@@ -1172,3 +1172,24 @@ def test_heatmap_settings_scan_index_syncs_with_widget(heatmap_widget, qtbot, sc
 
     heatmap_widget.heatmap_dialog.reject()
     qtbot.waitUntil(lambda: heatmap_widget.heatmap_dialog is None)
+
+
+def test_heatmap_cleanup_detaches_update_proxy(qtbot, mocked_client):
+    """
+    A plot update still queued in proxy_update_sync when the Heatmap is cleaned up, or
+    requested afterwards, must not reach update_plot, which could otherwise restart the
+    interpolation thread that cleanup() has just stopped.
+    """
+    with mock.patch.object(Heatmap, "update_plot") as update_plot:
+        widget = Heatmap(client=mocked_client)
+        qtbot.addWidget(widget)
+        qtbot.waitExposed(widget)
+        qtbot.wait(100)  # let anything queued during construction drain
+        update_plot.reset_mock()
+
+        widget.sync_signal_update.emit()  # queued in the proxy
+        widget.close()  # closeEvent -> cleanup()
+        widget.sync_signal_update.emit()  # requested after cleanup
+
+        qtbot.wait(300)
+        update_plot.assert_not_called()

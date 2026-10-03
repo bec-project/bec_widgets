@@ -747,6 +747,8 @@ class ScatterWaveform(PlotBase):
         """
         Cleanup the widget and disconnect all signals.
         """
+        # Detach the update proxy first, so no queued update reaches the torn-down curve.
+        self.proxy_update_sync.disconnect()
         if self.scatter_dialog is not None:
             self.scatter_dialog.close()
             self.scatter_dialog.deleteLater()

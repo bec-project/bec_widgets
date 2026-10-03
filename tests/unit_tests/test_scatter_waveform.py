@@ -663,3 +663,22 @@ def test_z_gradient_flat_and_empty_z(qtbot, mocked_client):
     assert curve._make_z_gradient(float("nan"), "plasma") is None
     mixed = curve._make_z_gradient([float("nan"), 1.0, 2.0], "plasma")
     assert mixed is not None and len(mixed) == 3
+
+
+def test_scatter_waveform_cleanup_detaches_update_proxy(qtbot, mocked_client):
+    """
+    A curve update still queued in proxy_update_sync when the ScatterWaveform is cleaned
+    up, or requested afterwards, must not reach update_sync_curves after cleanup() has
+    removed the main curve.
+    """
+    with patch.object(ScatterWaveform, "update_sync_curves") as update_sync_curves:
+        swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+        qtbot.wait(100)  # let anything queued during construction drain
+        update_sync_curves.reset_mock()
+
+        swf.sync_signal_update.emit()  # queued in the proxy
+        swf.close()  # closeEvent -> cleanup()
+        swf.sync_signal_update.emit()  # requested after cleanup
+
+        qtbot.wait(200)
+        update_sync_curves.assert_not_called()
