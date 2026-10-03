@@ -6,7 +6,7 @@ from typing import Any, Callable, Literal, Mapping, Sequence, cast
 
 from bec_lib import bec_logger
 from bec_qthemes import material_icon
-from qtpy.QtCore import QByteArray, QSettings, QSize, Qt, QTimer
+from qtpy.QtCore import QByteArray, QEvent, QObject, QSettings, QSize, Qt, QTimer
 from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QApplication, QDialog, QVBoxLayout, QWidget
 from shiboken6 import isValid
@@ -37,6 +37,60 @@ class DockSettingsDialog(QDialog):
         layout = QVBoxLayout(self)
         self.prop_editor = PropertyEditor(target, self, show_only_bec=True)
         layout.addWidget(self.prop_editor)
+
+
+class _ResizeWatcher(QObject):
+    """
+    One-shot event filter that runs a callback after the watched widget was resized.
+
+    Used to defer work that needs real geometry (e.g. splitter ratios) without polling the
+    event loop. The watcher is parented to the watched widget, so it dies with it.
+    """
+
+    def __init__(self, target: QWidget, callback: Callable[[], None]):
+        super().__init__(target)
+        self._callback = callback
+        target.installEventFilter(self)
+
+    @classmethod
+    def watch(cls, target: QWidget, callback: Callable[[], None]) -> _ResizeWatcher:
+        """
+        Run ``callback`` once after ``target`` is next resized, replacing a pending watcher.
+
+        Args:
+            target(QWidget): Widget to watch.
+            callback(Callable[[], None]): Called (deferred, bound to ``target``) after the resize.
+
+        Returns:
+            _ResizeWatcher: The new watcher.
+        """
+        cls.cancel_pending(target)
+        return cls(target, callback)
+
+    @classmethod
+    def cancel_pending(cls, target: QWidget) -> None:
+        """
+        Cancel every watcher still waiting for a resize of ``target``.
+
+        Args:
+            target(QWidget): Widget whose pending watchers are cancelled.
+        """
+        for pending in target.findChildren(cls, options=Qt.FindChildOption.FindDirectChildrenOnly):
+            pending.cancel()
+
+    def cancel(self) -> None:
+        """Stop watching and schedule the watcher for deletion."""
+        target = self.parent()
+        if target is not None:
+            target.removeEventFilter(self)
+        self.deleteLater()
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        if event.type() == QEvent.Type.Resize:
+            self.cancel()
+            # Deferred so the widget finishes its own resize handling first.
+            QTimer.singleShot(0, watched, self._callback)
+        return False
 
 
 class DockAreaWidget(BECWidget, QWidget):
@@ -690,6 +744,10 @@ class DockAreaWidget(BECWidget, QWidget):
         """
         Apply weight ratios to a splitter once geometry is available.
 
+        The deferred callback is bound to the splitter as context object, so Qt drops it
+        if the splitter is deleted (e.g. by ADS while the layout changes) before it runs.
+        While the splitter has no usable size, the ratios wait for its next resize.
+
         Args:
             splitter(QtAds.CDockSplitter): Target splitter.
             weights(Sequence[float] | Mapping[int | str, float] | None): Weight specification.
@@ -711,7 +769,10 @@ class DockAreaWidget(BECWidget, QWidget):
                 splitter.width() if orientation == Qt.Orientation.Horizontal else splitter.height()
             )
             if total_px <= count:
-                QTimer.singleShot(0, apply)
+                # No usable geometry yet (e.g. the dock area is collapsed to zero size). Retry
+                # when the splitter is resized instead of re-arming a 0 ms timer, which would
+                # busy-poll the event loop for as long as the splitter stays empty.
+                _ResizeWatcher.watch(splitter, apply)
                 return
 
             total = sum(ratios)
@@ -726,7 +787,9 @@ class DockAreaWidget(BECWidget, QWidget):
             for i, weight in enumerate(ratios):
                 splitter.setStretchFactor(i, max(1, int(round(weight * 100))))
 
-        QTimer.singleShot(0, apply)
+        # A retry still waiting for an earlier request's resize must not overwrite these ratios.
+        _ResizeWatcher.cancel_pending(splitter)
+        QTimer.singleShot(0, splitter, apply)
 
     def _normalize_override_keys(
         self,
@@ -1001,8 +1064,11 @@ class DockAreaWidget(BECWidget, QWidget):
             return
 
         def schedule(next_attempt: int):
+            # Bound to the dock: Qt drops the retry if the dock is deleted before it fires.
             QTimer.singleShot(
-                50, lambda: self._apply_floating_state_to_dock(dock, state, attempt=next_attempt)
+                50,
+                dock,
+                lambda: self._apply_floating_state_to_dock(dock, state, attempt=next_attempt),
             )
 
         container = dock.floatingDockContainer()
