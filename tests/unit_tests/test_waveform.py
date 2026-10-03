@@ -342,6 +342,112 @@ def test_curve_json_setter_ignores_custom(qtbot, mocked_client):
     assert curves[0].name() == "device_curve"
 
 
+def test_curve_json_round_trip_keeps_custom_curves(qtbot, mocked_client_with_dap):
+    """
+    Regression for #1302: custom curves cannot be serialized, so setting curve_json keeps the
+    existing ones (same curve, configuration and data) while it replaces the serialized curves,
+    including the DAP curves fitted to custom curves.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    wf.plot(arg1="bpm4i")
+    custom = wf.plot(x=[1, 2, 3], y=[4, 5, 6], label="custom", color="#ff0000", pen_width=2)
+    wf.add_dap_curve(device_label="custom", dap_name="GaussianModel", dap_oversample=2)
+    custom_config = custom.config.model_dump()
+    json_str = wf.curve_json
+    assert [cfg["label"] for cfg in json.loads(json_str)] == ["bpm4i-bpm4i", "custom-GaussianModel"]
+
+    wf.curve_json = json_str
+
+    assert custom in wf.curves
+    assert custom.config.model_dump() == custom_config
+    x_data, y_data = custom.get_data()
+    assert list(x_data) == [1, 2, 3]
+    assert list(y_data) == [4, 5, 6]
+    assert sorted(c.name() for c in wf.curves) == ["bpm4i-bpm4i", "custom", "custom-GaussianModel"]
+    assert wf.get_curve("custom-GaussianModel").dap_oversample == 2
+
+    # A JSON without the device curve replaces it, the custom curve stays.
+    wf.curve_json = "[]"
+    assert wf.curves == [custom]
+    assert wf._dap_curves == []
+
+
+def test_curve_json_rejects_label_of_kept_custom_curve(qtbot, mocked_client):
+    """
+    A serialized curve that would reuse the label of a kept custom curve is rejected before
+    any curve is removed, so the plot is not left half-loaded.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    device_curve = wf.plot(arg1="bpm3a")
+    custom = wf.plot(x=[1, 2, 3], y=[4, 5, 6], label="bpm4i-bpm4i")
+    clashing = {
+        "widget_class": "Curve",
+        "label": "bpm4i-bpm4i",
+        "source": "device",
+        "signal": {"device": "bpm4i", "signal": "bpm4i"},
+    }
+
+    wf.curve_json = json.dumps([clashing])  # SafeProperty logs the error
+
+    assert wf.curves == [device_curve, custom]
+
+
+@pytest.mark.parametrize("label", ["history_alias", None], ids=["aliased", "omitted"])
+def test_curve_json_rejects_generated_history_label_of_kept_custom_curve(
+    qtbot, mocked_client, scan_history_factory, label
+):
+    """
+    History curves are relabelled '<device>-<signal>-scan-<N>' when they are added, so the
+    clash check must use that label, not the one in the JSON, and still fail before any curve
+    is removed.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    inject_scan_history(wf, scan_history_factory, ("hist1", 1))
+    device_curve = wf.plot(arg1="bpm3a")
+    custom = wf.plot(x=[1, 2, 3], y=[4, 5, 6], label="bpm4i-bpm4i-scan-1")
+    history = {
+        "widget_class": "Curve",
+        "label": label,
+        "source": "history",
+        "scan_id": "hist1",
+        "signal": {"device": "bpm4i", "signal": "bpm4i"},
+    }
+
+    wf.curve_json = json.dumps([history])  # SafeProperty logs the error
+
+    assert wf.curves == [device_curve, custom]
+
+
+def test_curve_json_rejects_payload_before_removing_curves(
+    qtbot, mocked_client, scan_history_factory
+):
+    """
+    Entries that cannot be added (a history scan that is not in the history, or two entries
+    with the same label) are rejected before any existing curve is removed.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    inject_scan_history(wf, scan_history_factory, ("hist1", 1))
+    device_curve = wf.plot(arg1="bpm3a")
+    missing_scan = {
+        "widget_class": "Curve",
+        "source": "history",
+        "scan_id": "not-in-history",
+        "signal": {"device": "bpm4i", "signal": "bpm4i"},
+    }
+    device = {
+        "widget_class": "Curve",
+        "label": "bpm4i-bpm4i",
+        "source": "device",
+        "signal": {"device": "bpm4i", "signal": "bpm4i"},
+    }
+
+    wf.curve_json = json.dumps([device, missing_scan])
+    assert wf.curves == [device_curve]
+
+    wf.curve_json = json.dumps([device, device])
+    assert wf.curves == [device_curve]
+
+
 ##################################################
 # Waveform widget scan logic tests
 ##################################################

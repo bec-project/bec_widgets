@@ -796,15 +796,46 @@ class Waveform(PlotBase):
     def curve_json(self, json_data: str):
         """
         Load curves from a JSON string and add them to the plot, omitting custom source curves.
+
+        The serialized curves replace all device, history and DAP curves. Custom curves hold
+        data that cannot be serialized, so the existing ones are kept unchanged (configuration
+        and data) and custom entries in the JSON are not loaded. The JSON is rejected before
+        any curve is removed if one of its curves is invalid, refers to a scan that is not in
+        the history, or would get a label that a kept custom curve or another entry already uses.
         """
         try:
             curve_configs = json.loads(json_data)
-            self.clear_all()
+            custom_labels = {c.name() for c in self.curves if c.config.source == "custom"}
+            # Build and check every serialized curve before anything is removed, so a curve
+            # that cannot be added does not leave the plot half-loaded
+            configs = []
             for cfg_dict in curve_configs:
                 if cfg_dict.get("source") == "custom":
-                    logger.warning(f"Custom source curve '{cfg_dict['label']}' not loaded.")
+                    if cfg_dict.get("label") not in custom_labels:
+                        logger.warning(f"Custom source curve '{cfg_dict.get('label')}' not loaded.")
                     continue
                 config = CurveConfig(**cfg_dict)
+                if config.source == "history":
+                    self._resolve_history_config(config)
+                configs.append(config)
+            labels = [config.label for config in configs if config.label]
+            taken = custom_labels & set(labels)
+            if taken:
+                raise ValueError(f"Labels {sorted(taken)} are already used by custom curves.")
+            duplicates = {label for label in labels if labels.count(label) > 1}
+            if duplicates:
+                raise ValueError(f"Labels {sorted(duplicates)} are used by more than one curve.")
+            # Like clear_all, but keep custom curves and their colors (remove_curve recolors)
+            self._dap_curves = []
+            self._history_curves = []
+            self._sync_curves = []
+            self._async_curves = []
+            for curve in self.curves:
+                if curve.name() not in custom_labels:
+                    self._remove_curve_by_name(curve.name())
+            if self.crosshair is not None:
+                self.crosshair.clear_markers()
+            for config in configs:
                 self._add_curve(config=config)
             self._refresh_alignment_state(force_readback=self._alignment_panel_visible)
             self._refresh_dap_signals()
@@ -1124,21 +1155,9 @@ class Waveform(PlotBase):
         """
         scan_item: ScanDataContainer | None = None
         if config.source == "history":
-            scan_item = self.get_history_scan_item(
-                scan_id=config.scan_id, scan_index=config.scan_number
-            )
-            if scan_item is None:
-                raise ValueError(
-                    f"Could not find scan item for history curve '{config.label}' with scan_id='{config.scan_id}' and scan_number='{config.scan_number}'."
-                )
-
-            config.scan_id = scan_item.metadata["bec"]["scan_id"]
-            config.scan_number = scan_item.metadata["bec"]["scan_number"]
+            scan_item = self._resolve_history_config(config)
 
         label = config.label
-        if config.source == "history":
-            label = f"{config.signal.device}-{config.signal.signal}-scan-{config.scan_number}"
-            config.label = label
         if not label:
             # Fallback label
             label = WidgetContainerUtils.generate_unique_name(
@@ -1185,6 +1204,33 @@ class Waveform(PlotBase):
         self._refresh_alignment_state()
 
         return curve
+
+    def _resolve_history_config(self, config: CurveConfig) -> ScanDataContainer:
+        """
+        Resolve the scan of a history curve config and set its scan_id, scan_number and label.
+
+        History curves are always labelled '<device>-<signal>-scan-<scan_number>'.
+
+        Args:
+            config (CurveConfig): Config of a history curve; updated in place.
+
+        Returns:
+            ScanDataContainer: The scan item the curve reads its data from.
+
+        Raises:
+            ValueError: If the scan is not found in the scan history.
+        """
+        scan_item = self.get_history_scan_item(
+            scan_id=config.scan_id, scan_index=config.scan_number
+        )
+        if scan_item is None:
+            raise ValueError(
+                f"Could not find scan item for history curve '{config.label}' with scan_id='{config.scan_id}' and scan_number='{config.scan_number}'."
+            )
+        config.scan_id = scan_item.metadata["bec"]["scan_id"]
+        config.scan_number = scan_item.metadata["bec"]["scan_number"]
+        config.label = f"{config.signal.device}-{config.signal.signal}-scan-{config.scan_number}"
+        return scan_item
 
     def _add_curve_object(
         self, name: str, config: CurveConfig, scan_item: ScanDataContainer | None = None
