@@ -1632,6 +1632,8 @@ class Heatmap(ImageBase):
         self.main_image.transpose = enable
 
     def cleanup(self):
+        # Detach the update proxy first, so no queued update restarts the interpolation thread.
+        self.proxy_update_sync.disconnect()
         self._finish_interpolation_thread()
         if self.scan_history_dialog is not None:
             self.scan_history_dialog.reject()

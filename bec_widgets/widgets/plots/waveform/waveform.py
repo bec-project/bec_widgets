@@ -2719,6 +2719,10 @@ class Waveform(PlotBase):
         """
         Cleanup the widget by disconnecting signals and closing dialogs.
         """
+        # Detach all update proxies first, so no queued update is delivered into the widget
+        # while (or after) it is torn down. disconnect() also blocks pending emissions.
+        self.proxy_update_sync.disconnect()
+        self.proxy_update_async.disconnect()
         self.proxy_dap_request.cleanup()
         if self._alignment_controller is not None:
             self._alignment_controller.cleanup()

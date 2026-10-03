@@ -32,6 +32,7 @@ class BECSignalProxy(SignalProxy):
         super().__init__(*args, rateLimit=rateLimit, **kwargs)
         self._blocking = False
         self._pending = False
+        self._cleaned_up = False
         self.old_args = None
         self.new_args = None
 
@@ -55,6 +56,8 @@ class BECSignalProxy(SignalProxy):
 
     def signalReceived(self, *args):
         """Receive signal, store the args and call signalReceived from the parent class if not blocked"""
+        if self._cleaned_up:
+            return
         self.new_args = args
         if self.blocked is True:
             self._pending = True
@@ -70,6 +73,8 @@ class BECSignalProxy(SignalProxy):
         """
         Unblock the proxy and replay emissions that arrived while it was blocked.
         """
+        if self._cleaned_up:
+            return
         if self.blocked:
             self._timer.stop()
             self.blocked = False
@@ -89,8 +94,23 @@ class BECSignalProxy(SignalProxy):
 
     def cleanup(self):
         """
-        Cleanup the proxy by stopping the timer and disconnecting the timeout signal.
+        Cleanup the proxy so that nothing is delivered to the slot afterwards.
+
+        Disconnects the proxy from its source signal and blocks it (pg.SignalProxy.disconnect),
+        stops the delivery timer inherited from pg.SignalProxy, drops any queued or pending
+        emission and stops and deletes the auto-unblock timer. Calling it again is a no-op.
         """
+        if self._cleaned_up:
+            return
+        self._cleaned_up = True
+        # Called explicitly: on subclasses of SignalProxy, PySide6 resolves self.disconnect
+        # to the built-in QObject.disconnect instead of SignalProxy.disconnect.
+        SignalProxy.disconnect(self)
+        self.timer.stop()
+        self.args = None
+        self._pending = False
+        self.old_args = None
+        self.new_args = None
         self._timer.stop()
         self._timer.timeout.disconnect(self._timeout_unblock)
         self._timer.deleteLater()

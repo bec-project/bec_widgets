@@ -179,3 +179,45 @@ def test_bec_signal_proxy_still_drops_identical_args_on_unblock(qtbot):
     assert len(calls) == 1  # unchanged args are not replayed
     assert proxy.blocked is False
     proxy.cleanup()
+
+
+def test_bec_signal_proxy_cleanup_drops_queued_emission(qtbot):
+    """An emission that is still queued in the delivery timer inherited from
+    pg.SignalProxy when cleanup() runs must never reach the slot."""
+    from qtpy.QtCore import QObject, Signal
+
+    class _Src(QObject):
+        sig = Signal()
+
+    src = _Src()
+    calls = []
+    proxy = BECSignalProxy(src.sig, rateLimit=25, slot=lambda *_: calls.append(1), timeout=10.0)
+
+    src.sig.emit()  # queued: the inherited delivery timer forwards it on the next tick
+    assert calls == []
+    proxy.cleanup()
+
+    qtbot.wait(150)
+    assert calls == []
+
+
+def test_bec_signal_proxy_ignores_source_after_cleanup(qtbot):
+    """After cleanup() the proxy is detached from its source signal: later emissions are
+    neither forwarded to the slot nor touch the deleted auto-unblock watchdog."""
+    from qtpy.QtCore import QObject, Signal
+
+    class _Src(QObject):
+        sig = Signal()
+
+    src = _Src()
+    calls = []
+    proxy = BECSignalProxy(src.sig, rateLimit=25, slot=lambda *_: calls.append(1), timeout=10.0)
+    proxy.cleanup()
+    qtbot.wait(20)  # let the watchdog's deleteLater run
+
+    src.sig.emit()
+    proxy.unblock_proxy()
+    qtbot.wait(150)
+    assert calls == []
+    assert proxy.blocked is False
+    proxy.cleanup()  # a second cleanup is a no-op

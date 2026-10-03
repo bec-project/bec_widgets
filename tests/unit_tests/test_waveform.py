@@ -611,6 +611,73 @@ def test_request_dap_releases_proxy_when_nothing_published(
     qtbot.waitUntil(lambda: wf.proxy_dap_request.blocked is False, timeout=3000)
 
 
+@pytest.fixture
+def waveform_with_proxy_slot_spies(qtbot, mocked_client):
+    """
+    Waveform whose three proxy-driven slots are replaced by spies before construction, so
+    the signal proxies connect to the spies. Yields the widget and a dict of the spies.
+    """
+    with (
+        mock.patch.object(Waveform, "update_sync_curves") as sync_slot,
+        mock.patch.object(Waveform, "update_async_curves") as async_slot,
+        mock.patch.object(Waveform, "request_dap") as dap_slot,
+    ):
+        wf = create_widget(qtbot, Waveform, client=mocked_client)
+        qtbot.wait(100)  # let anything queued during construction drain
+        slots = {"sync": sync_slot, "async": async_slot, "dap": dap_slot}
+        for slot in slots.values():
+            slot.reset_mock()
+        assert wf.proxy_dap_request.blocked is False
+        yield wf, slots
+
+
+def test_waveform_cleanup_drops_queued_proxy_updates(qtbot, waveform_with_proxy_slot_spies):
+    """
+    Updates still queued in the sync, async and DAP signal proxies when the Waveform is
+    cleaned up must not be delivered into the torn-down widget afterwards.
+    """
+    wf, slots = waveform_with_proxy_slot_spies
+
+    wf.sync_signal_update.emit()
+    wf.async_signal_update.emit()
+    wf.request_dap_update.emit()
+    assert all(slot.call_count == 0 for slot in slots.values())  # all three are queued
+
+    wf.close()  # closeEvent -> cleanup() while the updates are pending
+
+    qtbot.wait(200)
+    assert {name: slot.call_count for name, slot in slots.items()} == {
+        "sync": 0,
+        "async": 0,
+        "dap": 0,
+    }
+
+
+def test_waveform_cleanup_detaches_proxies_from_update_signals(
+    qtbot, waveform_with_proxy_slot_spies
+):
+    """
+    After cleanup() the update signals must no longer reach the widget through the signal
+    proxies.
+    """
+    wf, slots = waveform_with_proxy_slot_spies
+
+    wf.close()  # closeEvent -> cleanup()
+    qtbot.wait(50)
+
+    wf.sync_signal_update.emit()
+    wf.async_signal_update.emit()
+    wf.request_dap_update.emit()
+    wf.unblock_dap_proxy.emit()
+
+    qtbot.wait(200)
+    assert {name: slot.call_count for name, slot in slots.items()} == {
+        "sync": 0,
+        "async": 0,
+        "dap": 0,
+    }
+
+
 def test_request_dap_always_resubmits_device_parent(qtbot, mocked_client_with_dap, monkeypatch):
     """
     DAP curves attached to device curves keep the resubmit-on-every-update behavior,
