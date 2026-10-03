@@ -5,7 +5,12 @@ import pytest
 from bec_lib.scan_history import ScanHistory
 from qtpy.QtWidgets import QComboBox, QVBoxLayout
 
-from bec_widgets.tests.client_mocks import dap_plugin_message, mocked_client, mocked_client_with_dap
+from bec_widgets.tests.client_mocks import (
+    dap_plugin_message,
+    inject_scan_history,
+    mocked_client,
+    mocked_client_with_dap,
+)
 from bec_widgets.widgets.plots.waveform.settings.curve_settings.curve_setting import CurveSetting
 from bec_widgets.widgets.plots.waveform.settings.curve_settings.curve_tree import CurveTree
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
@@ -470,3 +475,70 @@ def test_export_data_history_curve(curve_tree_fixture, scan_history_factory):
     assert exported["scan_number"] == 2
     assert exported["scan_id"] == "hid2"
     assert exported["label"] == "bpm4i-bpm4i-scan-2"
+
+
+##################################################
+# Staging of edits (issue #1314)
+##################################################
+
+
+@pytest.fixture
+def history_curve_setting(qtbot, mocked_client, scan_history_factory):
+    """
+    A Waveform showing one history curve of scan 1 (two scans in history) and a CurveSetting
+    targeting it.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    history_msgs = inject_scan_history(wf, scan_history_factory, ("hist1", 1), ("hist2", 2))
+    # The scan index combobox lists scans by number, so register those as well.
+    for msg in history_msgs:
+        wf.client.history._scan_numbers.append(msg.scan_number)
+    wf.x_mode = "index"
+    history_curve = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist1")
+    curve_setting = create_widget(qtbot, CurveSetting, parent=None, target_widget=wf)
+    curve_setting.mode_combo.setCurrentText("index")
+    return curve_setting, wf, history_curve
+
+
+def test_switch_history_curve_to_live_keeps_history_refresh_working(history_curve_setting):
+    """
+    Regression for #1314: switching a history curve to 'live' and applying must not leave a
+    device-source curve behind in the Waveform's history tracking. Previously the settings row
+    edited the live curve's config in place, so the removed history curve turned into a
+    device curve that the next history refresh tried to fill, raising
+    "Source device do not allow custom data setting."
+    """
+    curve_setting, wf, history_curve = history_curve_setting
+    row = curve_setting.curve_manager.tree.topLevelItem(0)
+    assert row.scan_index_combo.scan_id == "hist1"
+
+    row.scan_index_combo.set_scan_id(None)  # select 'live'
+    curve_setting.accept_changes()
+
+    # The next history refresh (x-axis change, Apply again, ...) must not raise.
+    wf._refresh_history_curves()
+
+    assert [curve.config.source for curve in wf.curves] == ["device"]
+    assert wf._history_curves == []
+    # The removed history curve kept its own configuration.
+    assert history_curve.config.source == "history"
+    assert history_curve.config.scan_id == "hist1"
+
+
+def test_curve_settings_edits_do_not_touch_live_curve_config(history_curve_setting):
+    """
+    Edits in the curve tree are staged on a copy of each curve's config: changing the color,
+    renormalizing colors or exporting the rows must leave the plotted curve untouched until
+    the Waveform applies the exported configuration (also #1304, Cancel keeps color edits).
+    """
+    curve_setting, wf, history_curve = history_curve_setting
+    curve_manager = curve_setting.curve_manager
+    original_config = history_curve.config.model_dump()
+
+    row = curve_manager.tree.topLevelItem(0)
+    curve_manager.renormalize_colors()
+    row.color_button.set_color("#123456")
+    row.scan_index_combo.set_scan_id(None)  # select 'live'
+    curve_manager.export_all_curves()
+
+    assert history_curve.config.model_dump() == original_config

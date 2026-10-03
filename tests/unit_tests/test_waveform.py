@@ -1892,6 +1892,63 @@ def test_history_curve_x_modes_post_plot(qtbot, mocked_client, scan_history_fact
     assert c.config.current_x_mode == mode
 
 
+@pytest.mark.parametrize("removal", ["remove_curve", "clear_all"])
+def test_removed_history_curve_leaves_history_tracking(
+    qtbot, mocked_client, scan_history_factory, removal
+):
+    """
+    Regression for #1314: a removed history curve must not stay in the list of curves
+    refreshed from the scan history.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    inject_scan_history(wf, scan_history_factory, ("hist1", 1))
+    wf.x_mode = "index"
+    c = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist1")
+    assert wf._history_curves == [c]
+
+    if removal == "remove_curve":
+        wf.remove_curve(c.name())
+    else:
+        wf.clear_all()
+
+    assert wf._history_curves == []
+
+
+def test_history_refresh_skips_curve_that_is_no_longer_history(
+    qtbot, mocked_client, scan_history_factory
+):
+    """
+    Regression for #1314: a curve whose source is no longer 'history' is dropped from the
+    history refresh instead of raising "Source device do not allow custom data setting."
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    inject_scan_history(wf, scan_history_factory, ("hist1", 1))
+    wf.x_mode = "index"
+    c = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist1")
+    c.config.source = "device"
+    c.config.scan_id = None
+    c.config.scan_number = None
+
+    wf._refresh_history_curves()
+
+    assert wf._history_curves == []
+
+
+def test_removed_dap_curve_leaves_dap_tracking(qtbot, mocked_client_with_dap):
+    """
+    Removing a device curve also removes its DAP child; neither may stay tracked as a DAP curve.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    wf.plot(arg1="bpm4i", label="bpm4i-bpm4i")
+    dap_curve = wf.add_dap_curve(device_label="bpm4i-bpm4i", dap_name="GaussianModel")
+    assert wf._dap_curves == [dap_curve]
+
+    wf.remove_curve("bpm4i-bpm4i")
+
+    assert wf.curves == []
+    assert wf._dap_curves == []
+
+
 def test_history_curve_incompatible_x_mode_hides_curve(qtbot, mocked_client, scan_history_factory):
     """
     Test that setting an x_mode not present in stored data hides the history curve.

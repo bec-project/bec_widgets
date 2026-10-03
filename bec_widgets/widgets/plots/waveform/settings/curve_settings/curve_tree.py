@@ -737,7 +737,11 @@ class CurveTree(BECWidget, QWidget):
             self.tree.collapseItem(item)
 
     def refresh_from_waveform(self):
-        """Clear the tree and rebuild from the waveform's existing curves if any, else add sample rows."""
+        """Clear the tree and rebuild from the waveform's existing curves if any, else add sample rows.
+
+        Each row works on a deep copy of its curve's config, so edits stay staged in the tree
+        and only reach the waveform through :meth:`send_curve_json`.
+        """
         if self.waveform is None:
             return
         self.tree.clear()
@@ -746,10 +750,20 @@ class CurveTree(BECWidget, QWidget):
         top_curves = [c for c in self.waveform.curves if c.config.source in ("device", "history")]
         dap_curves = [c for c in self.waveform.curves if c.config.source == "dap"]
         for dev in top_curves:
-            dr = CurveRow(self.tree, parent_item=None, config=dev.config, device_manager=self.dev)
+            dr = CurveRow(
+                self.tree,
+                parent_item=None,
+                config=dev.config.model_copy(deep=True),
+                device_manager=self.dev,
+            )
             for dap in dap_curves:
                 if dap.config.parent_label == dev.config.label:
-                    CurveRow(self.tree, parent_item=dr, config=dap.config, device_manager=self.dev)
+                    CurveRow(
+                        self.tree,
+                        parent_item=dr,
+                        config=dap.config.model_copy(deep=True),
+                        device_manager=self.dev,
+                    )
 
     def cleanup(self):
         """Cleanup the widget."""
