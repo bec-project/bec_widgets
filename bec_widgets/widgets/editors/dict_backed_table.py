@@ -28,7 +28,8 @@ class DictBackedTableModel(QAbstractTableModel):
         Args:
             data (list[list[str]]): list of key-value pairs to initialise with"""
         super().__init__()
-        self._data: list[list[str]] = data
+        # copy, so that rows are never added or removed behind the model's back
+        self._data: list[list[str]] = [list(row) for row in data]
         self._default = _NOT_SET
         self._disallowed_keys: list[str] = []
 
@@ -70,10 +71,13 @@ class DictBackedTableModel(QAbstractTableModel):
         return False
 
     def replaceData(self, data: dict):
-        self.delete_rows(list(range(len(self._data))))
-        self.resetInternalData()
+        """Replace the whole content of the table.
+
+        Args:
+            data (dict): key-value pairs to display instead of the current rows."""
+        self.beginResetModel()
         self._data = [[str(k), str(v)] for k, v in data.items()]
-        self.dataChanged.emit(self.index(0, 0), self.index(len(self._data), 1))
+        self.endResetModel()
 
     def update_disallowed_keys(self, keys: list[str]):
         """Set the list of keys which may not be used.
@@ -89,21 +93,23 @@ class DictBackedTableModel(QAbstractTableModel):
     def _other_keys(self, row: int):
         return [r[0] for r in self._data[:row] + self._data[row + 1 :]]
 
-    def flags(self, _):
+    def flags(self, index):
+        if not index.isValid():
+            return Qt.ItemFlag.NoItemFlags
         return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
 
-    def insertRows(self, row, number, index):
-        """We only support adding one at a time for now"""
-        if row != self.rowCount() or number != 1:
+    def insertRows(self, row, number, index=QModelIndex()):
+        """We only support appending one row at a time for now"""
+        if index.isValid() or row != self.rowCount() or number != 1:
             return False
-        self.beginInsertRows(QModelIndex(), 0, 0)
+        self.beginInsertRows(QModelIndex(), row, row)
         self._data.append(["", ""])
         self.endInsertRows()
         return True
 
-    def removeRows(self, row, number, index):
+    def removeRows(self, row, number, index=QModelIndex()):
         """This can only be consecutive, so instead of trying to be clever, only support removing one at a time"""
-        if number != 1:
+        if index.isValid() or number != 1 or not 0 <= row < self.rowCount():
             return False
         self.beginRemoveRows(QModelIndex(), row, row)
         del self._data[row]
@@ -112,14 +118,17 @@ class DictBackedTableModel(QAbstractTableModel):
 
     @SafeSlot()
     def add_row(self):
+        """Append an empty row; views are notified through rowsInserted."""
         self.insertRow(self.rowCount())
-        self.dataChanged.emit(self.index(self.rowCount(), 0), self.index(self.rowCount(), 1), 0)
 
     @SafeSlot(list)
     def delete_rows(self, rows: list[int]):
+        """Remove the given rows; views are notified through rowsRemoved.
+
+        Args:
+            rows (list[int]): indices of the rows to remove."""
         # delete from the end so indices stay correct
-        for row in sorted(rows, reverse=True):
-            self.dataChanged.emit(self.index(row, 0), self.index(row, 1), 0)
+        for row in sorted(set(rows), reverse=True):
             self.removeRows(row, 1, QModelIndex())
 
     def set_default(self, value: dict | None):
@@ -191,7 +200,16 @@ class DictBackedTable(QWidget):
         self._remove_button.clicked.connect(self.delete_selected_rows)
         self.delete_rows.connect(self._table_model.delete_rows)
 
-        self._table_model.dataChanged.connect(lambda *_: self.data_changed.emit(self.dump_dict()))
+        # structural changes do not emit dataChanged, so listen for them separately
+        self._table_model.dataChanged.connect(self._emit_data_changed)
+        self._table_model.rowsInserted.connect(self._emit_data_changed)
+        self._table_model.rowsRemoved.connect(self._emit_data_changed)
+        self._table_model.modelReset.connect(self._emit_data_changed)
+
+    @SafeSlot()
+    def _emit_data_changed(self, *_):
+        """Emit data_changed with the table content after any edit, insertion, removal or reset."""
+        self.data_changed.emit(self.dump_dict())
 
     def set_default(self, value: dict | None):
         self._table_model.set_default(value)
