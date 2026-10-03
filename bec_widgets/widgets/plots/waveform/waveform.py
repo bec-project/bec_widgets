@@ -148,7 +148,8 @@ class Waveform(PlotBase):
         self._async_curves = []
         # Async streams already subscribed in the current scan. Keyed by
         # (device, stream) (stream is None for the old per-device endpoint); the value
-        # is the list of signal entries that share that single subscription.
+        # holds the signal entries that share that single subscription ("signals") and the
+        # exact "endpoint" and "cb_info" it was registered with.
         self._async_streams_setup: dict = {}
         self._history_curves = []
         self._slice_index = None
@@ -1656,25 +1657,40 @@ class Waveform(PlotBase):
             self.update_scan_info_from_source(self.scan_item)
             self._slice_index = None  # Reset the slice index
             self._update_curve_visibility()
-            self._mode = self._categorise_device_curves()
-
-            # First trigger to sync and async data. Async curve subscriptions
-            # were already set up by _categorise_device_curves above (it calls
-            # _setup_async_curve per async curve for live scans); repeating it
-            # here cleared each curve's data a second time and re-attempted
-            # the stream registration for every new scan.
-            if self._mode == "sync":
-                self.sync_signal_update.emit()
-                logger.info("Scan status: Sync mode")
-            elif self._mode == "async":
-                self.async_signal_update.emit()
-                logger.info("Scan status: Async mode")
-            else:
-                self.sync_signal_update.emit()
-                self.async_signal_update.emit()
-                logger.info("Scan status: Mixed mode")
-                logger.warning("Mixed mode - integrity of x axis cannot be guaranteed.")
+            self._start_scan_updates()
+        elif self.scan_item is None:
+            # The first status of this scan arrived before its ScanItem existed, so the curves
+            # could not be categorised and no live async subscription was set up. Do it as
+            # soon as the ScanItem is available, although the scan ID did not change.
+            self.scan_item = self.queue.scan_storage.find_scan_by_ID(self.scan_id)
+            if self.scan_item is not None:
+                self.update_scan_info_from_source(self.scan_item)
+                self._start_scan_updates()
         self.setup_dap_for_scan()
+
+    def _start_scan_updates(self):
+        """
+        Categorise the device curves for the current scan, which also sets up the live async
+        subscriptions, and trigger the first sync and async updates.
+        """
+        self._mode = self._categorise_device_curves()
+
+        # First trigger to sync and async data. Async curve subscriptions
+        # were already set up by _categorise_device_curves above (it calls
+        # _setup_async_curve per async curve for live scans); repeating it
+        # here cleared each curve's data a second time and re-attempted
+        # the stream registration for every new scan.
+        if self._mode == "sync":
+            self.sync_signal_update.emit()
+            logger.info("Scan status: Sync mode")
+        elif self._mode == "async":
+            self.async_signal_update.emit()
+            logger.info("Scan status: Async mode")
+        else:
+            self.sync_signal_update.emit()
+            self.async_signal_update.emit()
+            logger.info("Scan status: Mixed mode")
+            logger.warning("Mixed mode - integrity of x axis cannot be guaranteed.")
 
     @SafeSlot(dict, dict)
     def on_scan_progress(self, msg: dict, meta: dict):
@@ -1842,7 +1858,6 @@ class Waveform(PlotBase):
         if async_signal_found:
             stream_key = (name, stream)  # AsyncMultiSignal sub-signals share `stream`
             new_endpoint = MessageEndpoints.device_async_signal(self.scan_id, name, stream)
-            old_endpoint = MessageEndpoints.device_async_signal(self.old_scan_id, name, stream)
             legacy_endpoint = False
         else:
             # No BEC async signal (AsyncSignal/AsyncMultiSignal/DynamicSignal) was found
@@ -1850,7 +1865,6 @@ class Waveform(PlotBase):
             # device_async_readback endpoint.
             stream_key = (name, None)  # old endpoint is keyed by device only
             new_endpoint = MessageEndpoints.device_async_readback(self.scan_id, name)
-            old_endpoint = MessageEndpoints.device_async_readback(self.old_scan_id, name)
             legacy_endpoint = True
 
         endpoint_str = getattr(new_endpoint, "endpoint", new_endpoint)
@@ -1858,9 +1872,9 @@ class Waveform(PlotBase):
         shared = self._async_streams_setup.get(stream_key)
         if shared is not None:
             # Another curve already subscribed to this exact stream this scan.
-            shared.append(signal)
+            shared["signals"].append(signal)
             logger.info(
-                f"Async signals {shared} share a single subscription on endpoint "
+                f"Async signals {shared['signals']} share a single subscription on endpoint "
                 f"'{endpoint_str}'; reusing it instead of subscribing again."
             )
             return
@@ -1875,12 +1889,65 @@ class Waveform(PlotBase):
         #         "waveform widget will be removed in a future release."
         #     )
 
-        self._async_streams_setup[stream_key] = [signal]
-        self.bec_dispatcher.disconnect_slot(self.on_async_readback, old_endpoint)
+        # Record the exact endpoint and subscription context next to the subscribers: the
+        # subscription is released with them (_release_async_streams), whatever scan_id holds by
+        # then, and on_async_readback matches readbacks to the curves of this stream.
+        cb_info = {"scan_id": self.scan_id, "device": name, "stream": stream_key[1]}
+        self._async_streams_setup[stream_key] = {
+            "signals": [signal],
+            "endpoint": new_endpoint,
+            "cb_info": cb_info,
+        }
         self.bec_dispatcher.connect_slot(
-            self.on_async_readback, new_endpoint, from_start=True, cb_info={"scan_id": self.scan_id}
+            self.on_async_readback, new_endpoint, from_start=True, cb_info=dict(cb_info)
         )
         logger.info(f"Setup async curve {name} (signal '{signal}', endpoint '{endpoint_str}')")
+
+    def _release_async_streams(self, streams: dict) -> None:
+        """
+        Disconnect async stream subscriptions that the current curve categorisation no longer
+        uses, e.g. those of the previous scan or of a live scan after switching to history.
+
+        Each subscription is released with the exact endpoint and cb_info it was registered
+        with, so it is found regardless of the scan IDs tracked by the widget by now.
+
+        Args:
+            streams(dict): Previous ``_async_streams_setup`` records.
+        """
+        for stream_key, stream in streams.items():
+            current = self._async_streams_setup.get(stream_key)
+            if current is not None and current["cb_info"] == stream["cb_info"]:
+                continue  # the same subscription is still in use
+            self.bec_dispatcher.disconnect_slot(
+                self.on_async_readback, stream["endpoint"], cb_info=stream["cb_info"]
+            )
+
+    def _async_stream_curves(self, cb_info: dict) -> list[Curve]:
+        """
+        Get the async curves fed by the subscription described by cb_info.
+
+        Devices can expose signals with the same entry name, so curves are matched by device
+        and stream, not only by the signal entries of the readback.
+
+        Args:
+            cb_info(dict): Subscription context set up by _setup_async_curve.
+
+        Returns:
+            list[Curve]: The curves of the stream; all async curves if cb_info carries no
+                device, in which case the readback is matched by signal entry only.
+        """
+        device = cb_info.get("device")
+        if device is None:
+            return self._async_curves
+        stream = self._async_streams_setup.get((device, cb_info.get("stream")))
+        if stream is None:
+            return []  # the stream is no longer subscribed
+        return [
+            curve
+            for curve in self._async_curves
+            if curve.config.signal.device == device
+            and curve.config.signal.signal in stream["signals"]
+        ]
 
     @SafeSlot(dict, dict)
     def on_async_readback(self, msg, metadata):
@@ -1899,14 +1966,15 @@ class Waveform(PlotBase):
 
         Args:
             msg(dict): Message with the async data.
-            metadata(dict): Message metadata, including the subscription's scan ID in ``cb_info``.
+            metadata(dict): Message metadata. ``metadata["cb_info"]`` is the subscription
+                context set up by _setup_async_curve (scan ID, device and stream).
         """
         cb_info = metadata.get("cb_info")
         if not isinstance(cb_info, dict):
-            logger.info("Async readback has no subscription context.")
+            logger.info("Async readback has no subscription context, ignoring it.")
             return
-        scan_id = cb_info.get("scan_id")
-        if scan_id != self.scan_id:
+        if cb_info.get("scan_id") != self.scan_id:
+            # A late readback of a previous scan must not overwrite the current scan's data
             logger.info("Scan ID mismatch, ignoring async readback.")
             return
 
@@ -1916,7 +1984,7 @@ class Waveform(PlotBase):
             return
         max_shape = metadata.get("async_update", {}).get("max_shape", [])
         plot_mode = self.x_axis_mode["name"]
-        for curve in self._async_curves:
+        for curve in self._async_stream_curves(cb_info):
             x_data = None  # Reset x_data
             y_data = None  # Reset y_data
             # Get the curve data
@@ -2437,6 +2505,7 @@ class Waveform(PlotBase):
         # Reset sync/async curve lists
         self._async_curves.clear()
         self._sync_curves.clear()
+        previous_async_streams = self._async_streams_setup
         self._async_streams_setup = {}
         found_async = False
         found_sync = False
@@ -2465,6 +2534,9 @@ class Waveform(PlotBase):
                     "device not found in readout priority list."
                 )
                 continue
+        # Subscriptions of the previous source that were not set up again (another scan, a
+        # history scan, removed curves) would keep feeding stale readbacks; release them.
+        self._release_async_streams(previous_async_streams)
         # Determine the mode of the scan
         if found_async and found_sync:
             mode = "mixed"
