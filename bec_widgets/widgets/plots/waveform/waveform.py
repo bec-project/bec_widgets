@@ -1346,7 +1346,14 @@ class Waveform(PlotBase):
         return curve
 
     def _refresh_history_curves(self):
-        for curve in self._history_curves:
+        """
+        Reload the data of all history curves from their scans, e.g. after an x-axis change.
+
+        Curves whose source is no longer 'history' are dropped from the history tracking
+        instead of being filled with scan data they do not accept.
+        """
+        self._history_curves = [c for c in self._history_curves if c.config.source == "history"]
+        for curve in list(self._history_curves):
             scan_item = self.get_history_scan_item(
                 scan_id=curve.config.scan_id, scan_index=curve.config.scan_number
             )
@@ -1432,6 +1439,7 @@ class Waveform(PlotBase):
         """
         curve_list = self.curves
         self._dap_curves = []
+        self._history_curves = []
         self._sync_curves = []
         self._async_curves = []
         for curve in curve_list:
@@ -1517,6 +1525,12 @@ class Waveform(PlotBase):
             MessageEndpoints.device_async_readback(self.scan_id, curve.name()),
         )
         curve.rpc_register.remove_rpc(curve)
+
+        # Stop tracking the removed curve, so history refreshes and DAP requests skip it
+        if curve in self._history_curves:
+            self._history_curves.remove(curve)
+        if curve in self._dap_curves:
+            self._dap_curves.remove(curve)
 
         # Remove itself from the DAP summary only for side panels
         if (
