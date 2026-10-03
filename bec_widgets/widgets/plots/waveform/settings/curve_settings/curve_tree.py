@@ -486,7 +486,20 @@ class CurveRow(QTreeWidgetItem):
                 new_dap = (
                     [selected_model, *composite_models] if composite_models else selected_model
                 )
-            self.config.signal = DeviceSignal(device=device, signal=signal, dap=new_dap)
+            # Keep the DAP settings the tree does not edit. Fit parameter overrides belong to
+            # the selected model, so they only carry over while the model is unchanged.
+            old_signal = self.config.signal
+            dap_oversample = old_signal.dap_oversample if old_signal is not None else 1
+            dap_parameters = None
+            if old_signal is not None and old_signal.dap == new_dap:
+                dap_parameters = old_signal.dap_parameters
+            self.config.signal = DeviceSignal(
+                device=device,
+                signal=signal,
+                dap=new_dap,
+                dap_oversample=dap_oversample,
+                dap_parameters=dap_parameters,
+            )
             self.config.source = "dap"
             self.config.parent_label = parent_conf.label
             label_suffix = "+".join(new_dap) if isinstance(new_dap, list) else new_dap
@@ -699,10 +712,22 @@ class CurveTree(BECWidget, QWidget):
         return new_row
 
     def send_curve_json(self):
-        """Send the current tree's config as JSON to the waveform, updating wavefrom.color_palette as well."""
-        if self.waveform is not None:
+        """Send the tree's config as JSON to the waveform, applying a changed color palette too.
+
+        Custom curves are not listed in the tree; the waveform keeps them when it loads the JSON,
+        and the DAP curves fitted to them are passed through unchanged.
+        """
+        if self.waveform is not None and self.waveform.color_palette != self.color_palette:
+            # The palette setter recolors every curve, so only apply an actual change
             self.waveform.color_palette = self.color_palette
         data = self.export_all_curves()
+        if self.waveform is not None:
+            custom_labels = {c.name() for c in self.waveform.curves if c.config.source == "custom"}
+            data.extend(
+                c.config.model_dump()
+                for c in self.waveform.curves
+                if c.config.source == "dap" and c.config.parent_label in custom_labels
+            )
         json_data = json.dumps(data, indent=2)
         if self.waveform is not None:
             self.waveform.curve_json = json_data

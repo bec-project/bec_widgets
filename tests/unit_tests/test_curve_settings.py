@@ -542,3 +542,91 @@ def test_curve_settings_edits_do_not_touch_live_curve_config(history_curve_setti
     curve_manager.export_all_curves()
 
     assert history_curve.config.model_dump() == original_config
+
+
+##################################################
+# Apply keeps custom curves and DAP settings (issues #1302, #1303)
+##################################################
+
+
+def test_apply_keeps_custom_curves(qtbot, mocked_client_with_dap):
+    """
+    Regression for #1302: custom curves are not listed in the curve tree, but applying the
+    curve settings must keep them with their configuration, their data and their DAP fit.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    wf.plot(arg1="bpm4i")
+    custom = wf.plot(
+        x=[1, 2, 3],
+        y=[4, 5, 6],
+        label="custom",
+        color="#ff0000",
+        pen_width=2,
+        pen_style="dash",
+        dap="GaussianModel",
+    )
+    custom_config = custom.config.model_dump()
+    curve_setting = create_widget(qtbot, CurveSetting, parent=None, target_widget=wf)
+
+    curve_setting.accept_changes()
+
+    assert custom in wf.curves
+    assert custom.config.model_dump() == custom_config
+    x_data, y_data = custom.get_data()
+    assert list(x_data) == [1, 2, 3]
+    assert list(y_data) == [4, 5, 6]
+    assert sorted(c.name() for c in wf.curves) == ["bpm4i-bpm4i", "custom", "custom-GaussianModel"]
+    custom_dap = wf.get_curve("custom-GaussianModel")
+    assert custom_dap.config.parent_label == "custom"
+    assert custom_dap in wf._dap_curves
+
+
+def test_apply_keeps_dap_oversample_and_parameters(qtbot, mocked_client_with_dap):
+    """
+    Regression for #1303: applying an unrelated change in the curve settings must keep the
+    oversampling factor and the fit parameter overrides of a DAP curve.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    wf.plot(arg1="bpm4i")
+    wf.add_dap_curve(
+        device_label="bpm4i-bpm4i",
+        dap_name="GaussianModel",
+        dap_oversample=3,
+        dap_parameters={"amplitude": 1.0},
+    )
+    dap_parameters = wf.get_curve("bpm4i-bpm4i-GaussianModel").config.signal.dap_parameters
+    assert dap_parameters
+    curve_setting = create_widget(qtbot, CurveSetting, parent=None, target_widget=wf)
+
+    dap_row = curve_setting.curve_manager.tree.topLevelItem(0).child(0)
+    dap_row.color_button.set_color("#123456")  # an unrelated change
+    curve_setting.accept_changes()
+
+    dap_curve = wf.get_curve("bpm4i-bpm4i-GaussianModel")
+    assert dap_curve.config.color == "#123456"
+    assert dap_curve.dap_oversample == 3
+    assert dap_curve.config.signal.dap_parameters == dap_parameters
+
+
+def test_dap_model_change_drops_parameters_but_keeps_oversample(qtbot, mocked_client_with_dap):
+    """
+    Fit parameter overrides belong to the selected model, so choosing another model drops them;
+    the oversampling factor does not depend on the model and is kept.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    wf.plot(arg1="bpm4i")
+    wf.add_dap_curve(
+        device_label="bpm4i-bpm4i",
+        dap_name="GaussianModel",
+        dap_oversample=3,
+        dap_parameters={"amplitude": 1.0},
+    )
+    curve_tree = create_widget(qtbot, CurveTree, parent=None, waveform=wf)
+    dap_row = curve_tree.tree.topLevelItem(0).child(0)
+
+    dap_row.dap_combo.fit_model_combobox.setCurrentText("LorentzModel")
+    exported = dap_row.export_data()
+
+    assert exported["signal"]["dap"] == "LorentzModel"
+    assert exported["signal"]["dap_oversample"] == 3
+    assert exported["signal"]["dap_parameters"] is None
