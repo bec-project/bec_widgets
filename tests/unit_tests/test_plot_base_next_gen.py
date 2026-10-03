@@ -792,3 +792,20 @@ def test_limits_accept_fractional_values(qtbot, mocked_client):
     pb.y_limits = (-1.75, 3.5)
     assert (pb.x_limits.x(), pb.x_limits.y()) == (0.5, 9.25)
     assert (pb.y_limits.x(), pb.y_limits.y()) == (-1.75, 3.5)
+
+
+def test_call_later_skips_callback_once_widget_is_closed(qtbot, mocked_client):
+    """
+    PlotBase._call_later runs the deferred callback while the widget is open and skips it
+    when the widget has been closed (cleaned up) before the delay elapsed.
+    """
+    open_pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    closed_pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    calls = []
+
+    open_pb._call_later(10, lambda: calls.append("open"))
+    closed_pb._call_later(10, lambda: calls.append("closed"))
+    closed_pb.close()  # closeEvent -> cleanup() before the callback is due
+
+    qtbot.wait(100)
+    assert calls == ["open"]

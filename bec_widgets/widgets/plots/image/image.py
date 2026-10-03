@@ -7,7 +7,6 @@ import numpy as np
 from bec_lib import bec_logger
 from bec_lib.endpoints import MessageEndpoints
 from pydantic import BaseModel, Field, field_validator
-from qtpy.QtCore import QTimer
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
@@ -172,12 +171,12 @@ class Image(ImageBase):
             ]
         )
 
-        QTimer.singleShot(0, self._adjust_and_connect)
+        self._call_later(0, self._adjust_and_connect)
 
     def _adjust_and_connect(self):
         """
         Sync the device selection toolbar with current properties.
-        Has to be done with QTimer.singleShot to ensure the UI is fully initialized, needed for testing.
+        Has to be deferred to the event loop to ensure the UI is fully initialized, needed for testing.
 
         Note: DeviceComboBox and SignalComboBox auto-populate themselves, no manual population needed.
         """

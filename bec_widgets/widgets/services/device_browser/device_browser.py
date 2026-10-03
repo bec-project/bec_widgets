@@ -199,6 +199,8 @@ class DeviceBrowser(BECWidget, QWidget):
             self._config_helper.save_current_session(file_path)
 
     def cleanup(self):
+        # Detach the filter proxy first, so no queued filter change reaches the closed browser.
+        self.proxy_device_update.disconnect()
         super().cleanup()
         self.bec_dispatcher.client.callbacks.remove(self._scan_status_callback_id)
         self.bec_dispatcher.client.callbacks.remove(self._device_update_callback_id)

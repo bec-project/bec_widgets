@@ -1,3 +1,5 @@
+from unittest import mock
+
 import numpy as np
 import pyqtgraph as pg
 import pytest
@@ -1676,3 +1678,25 @@ def test_layer_accessors_safe_after_teardown(qtbot, mocked_client):
     view.autorange_mode = "max"
     view._sync_autorange_switch()
     view._sync_colorbar_levels()
+
+
+def test_deferred_toolbar_sync_skipped_after_close(qtbot, mocked_client):
+    """
+    The toolbar sync that __init__ defers to the event loop must not run into an Image
+    that was closed (cleaned up) before the event loop got to it.
+    """
+    with mock.patch.object(Image, "_sync_device_selection") as sync_device_selection:
+        view = Image(client=mocked_client)
+        qtbot.addWidget(view)
+        view.close()  # closeEvent -> cleanup() before the deferred sync ran
+
+        qtbot.wait(100)
+        sync_device_selection.assert_not_called()
+
+
+def test_deferred_toolbar_sync_runs_while_open(qtbot, mocked_client):
+    """The toolbar sync deferred from __init__ still runs once for an open Image."""
+    with mock.patch.object(Image, "_sync_device_selection") as sync_device_selection:
+        create_widget(qtbot, Image, client=mocked_client)
+
+        qtbot.waitUntil(lambda: sync_device_selection.call_count == 1, timeout=1000)
