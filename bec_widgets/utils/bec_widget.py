@@ -9,9 +9,16 @@ from typing import TYPE_CHECKING
 
 import shiboken6
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import QBuffer, QByteArray, QIODevice, QObject, Qt, QTimer
+from qtpy.QtCore import SIGNAL, SLOT, QBuffer, QByteArray, QIODevice, QObject, Qt, QTimer
 from qtpy.QtGui import QFont, QPixmap
-from qtpy.QtWidgets import QApplication, QFileDialog, QLabel, QVBoxLayout, QWidget
+from qtpy.QtWidgets import (
+    QAbstractItemView,
+    QApplication,
+    QFileDialog,
+    QLabel,
+    QVBoxLayout,
+    QWidget,
+)
 
 import bec_widgets.widgets.containers.qt_ads as QtAds
 from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
@@ -55,6 +62,35 @@ def _forget_destroyed_widget(gui_id: str, *_args) -> None:
             dispatcher.cleanup_dead_slots()
         except Exception as exc:
             logger.warning(f"Dead-slot sweep for destroyed widget {gui_id} failed: {exc}")
+
+
+def _forget_in_item_view_on_destroy(widget: QObject) -> None:
+    """
+    Make the item view that holds ``widget`` as a cell widget drop it when it is destroyed.
+
+    Item views keep raw pointers to the widgets placed in their cells with setCellWidget,
+    setItemWidget or setIndexWidget, and only track the destruction of editors their delegate
+    created. Deleting such a cell widget directly (e.g. from the cleanup of a BEC ancestor)
+    leaves a dangling pointer behind, and the next layout pass of the view
+    (QAbstractItemView::updateEditorGeometries) crashes. This makes the same
+    destroyed -> editorDestroyed connection Qt makes for delegate editors, so the view
+    forgets the widget as soon as it is destroyed, by whatever path.
+    """
+    if not isinstance(widget, QWidget) or not shiboken6.isValid(widget):
+        return
+    viewport = widget.parentWidget()
+    view = viewport.parentWidget() if viewport is not None else None
+    if not isinstance(view, QAbstractItemView) or view.viewport() is not viewport:
+        return
+    # String-based on purpose: editorDestroyed is a protected C++ slot, and the call must stay
+    # in C++ because it happens while the widget is being destroyed.
+    QObject.connect(
+        widget,
+        SIGNAL("destroyed(QObject*)"),
+        view,
+        SLOT("editorDestroyed(QObject*)"),
+        Qt.ConnectionType.UniqueConnection,
+    )
 
 
 class BECWidget(BECConnector):
@@ -428,6 +464,9 @@ class BECWidget(BECConnector):
         theme_connection = getattr(self, "_theme_connection", None)
         if theme_connection is not None:
             theme_connection.invalidate()
+        # A BEC widget living in a table/tree/list cell is deleted after cleanup (by a BEC
+        # ancestor or deleteLater); the owning item view must not keep a dangling pointer.
+        _forget_in_item_view_on_destroy(self)
         with RPCRegister.delayed_broadcast():
             # All widgets need to call super().cleanup() in their cleanup method
             logger.info(f"Registry cleanup for widget {self.__class__.__name__}")
@@ -487,6 +526,8 @@ class BECWidget(BECConnector):
                 self.cleanup()
             except Exception:
                 logger.exception(f"Cleanup on deleteLater failed for {self.__class__.__name__}")
+        # Also when cleanup failed early: the item view holding this widget must forget it.
+        _forget_in_item_view_on_destroy(self)
         super().deleteLater()  # pylint: disable=no-member
 
     def closeEvent(self, event):
