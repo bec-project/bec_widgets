@@ -1,17 +1,19 @@
 """Unit tests for device_manager_components module."""
 
+import time
 from threading import Event
 from typing import Generator
 from unittest import mock
 
 import pytest
+import shiboken6
 import yaml
 from bec_lib.atlas_models import Device as DeviceModel
 from ophyd_devices.interfaces.device_config_templates.ophyd_templates import (
     OPHYD_DEVICE_TEMPLATES,
     EpicsMotorDeviceConfigTemplate,
 )
-from ophyd_devices.utils.static_device_test import TestResult
+from ophyd_devices.utils.static_device_test import StaticDeviceTest, TestResult
 from qtpy import QtCore, QtGui, QtWidgets
 
 from bec_widgets.tests.client_mocks import mocked_client
@@ -1314,6 +1316,122 @@ class TestOphydValidation:
                     assert blocker.args[1] == config_status
                     assert blocker.args[2] == connection_status
                     assert blocker.args[3] == msg
+
+    ####################
+    ### Teardown
+    ####################
+
+    def test_thread_pool_manager_shutdown_drops_queued_and_running_tests(
+        self, thread_pool_manager, qtbot
+    ):
+        """shutdown() stops polling, cancels queued and running tests and drops late results."""
+        manager: ThreadPoolManager = thread_pool_manager._pool_manager
+        manager.pool.setMaxThreadCount(1)
+        running_test, queued_test = mock.MagicMock(), mock.MagicMock()
+        manager.submit(device_name="running_device", device_test=running_test)
+        manager.submit(device_name="queued_device", device_test=queued_test)
+        manager.start_polling()
+        with mock.patch.object(manager.pool, "start"):
+            manager._process_queue()
+        assert manager.get_active_tests() == ["running_device"]
+        assert manager.get_scheduled_tests() == ["queued_device"]
+
+        manager.shutdown()
+
+        assert not manager._timer.isActive()
+        assert manager.get_active_tests() == []
+        assert manager.get_scheduled_tests() == []
+        for device_test in (running_test, queued_test):
+            device_test.cancel.assert_called_once()
+            device_test.signals.device_validated.disconnect.assert_called_once_with()
+            device_test.signals.device_validation_started.disconnect.assert_called_once_with()
+        # Results that were already on their way and new submissions are dropped
+        with (
+            qtbot.assertNotEmitted(manager.device_validated),
+            qtbot.assertNotEmitted(manager.device_validation_started),
+        ):
+            manager._emit_device_validation_started("running_device")
+            manager._emit_device_validated({"name": "running_device"}, 1, 1, "late result")
+        late_test = mock.MagicMock()
+        manager.submit(device_name="late_device", device_test=late_test)
+        late_test.cancel.assert_called_once()
+        assert manager.get_scheduled_tests() == []
+
+    def test_ophyd_validation_close_mid_run_stops_queue_without_blocking(
+        self, mocked_client, qtbot
+    ):
+        """
+        Closing the widget while device tests run must not start the queued tests, and deleting
+        it must not block the GUI thread until the running tests (which cannot be interrupted)
+        return. Their results are dropped and the thread pool is deleted once idle.
+        """
+        release = Event()
+        started = []
+
+        def blocking_test(tester, connect=False, force_connect=False, timeout_per_device=30):
+            name = next(iter(tester.config))
+            started.append(name)
+            release.wait(timeout=3)
+            return [TestResult(name=name, success=False, message="", config_is_valid=True)]
+
+        configs = [
+            {"name": f"dev_{i}", "deviceClass": "ophyd.Signal", "enabled": True} for i in range(6)
+        ]
+        with (
+            mock.patch.object(StaticDeviceTest, "run_with_list_output", blocking_test),
+            mock.patch.object(OphydValidation, "_is_device_in_redis_session", return_value=False),
+        ):
+            widget = OphydValidation(client=mocked_client)
+            manager = widget.thread_pool_manager
+            pool = manager.pool
+            n_workers = pool.maxThreadCount()
+            results = []
+            widget.validation_completed.connect(lambda *args: results.append(args))
+            try:
+                widget.change_device_configs(configs, added=True)
+                qtbot.waitUntil(lambda: len(started) == n_workers)
+
+                widget.close()
+                observed = {
+                    "poll_timer_active": manager._timer.isActive(),
+                    "queued_after_close": manager.get_scheduled_tests(),
+                }
+                qtbot.wait(300)
+                start = time.monotonic()
+                widget.deleteLater()
+                QtWidgets.QApplication.sendPostedEvents(None, QtCore.QEvent.DeferredDelete)
+                delete_s = time.monotonic() - start
+            finally:
+                release.set()
+            qtbot.waitUntil(lambda: not shiboken6.isValid(pool), timeout=5000)
+        observed.update(
+            {"delete_blocked": delete_s >= 1.0, "started": len(started), "results": results}
+        )
+        assert observed == {
+            "poll_timer_active": False,
+            "queued_after_close": [],
+            "delete_blocked": False,
+            "started": n_workers,
+            "results": [],
+        }, f"deleting the widget took {delete_s:.2f} s"
+        del widget
+
+    def test_ophyd_validation_deferred_submit_dropped_when_deleted(self, mocked_client, qtbot):
+        """A test submission still pending in the event loop must not run on a deleted widget."""
+        with (
+            mock.patch.object(OphydValidation, "_is_device_in_redis_session", return_value=False),
+            mock.patch.object(OphydValidation, "_submit_test") as mock_submit_test,
+        ):
+            widget = OphydValidation(client=mocked_client)
+            widget.change_device_configs(
+                [{"name": "dev_0", "deviceClass": "ophyd.Signal", "enabled": True}], added=True
+            )
+            widget.close()
+            widget.deleteLater()
+            QtWidgets.QApplication.sendPostedEvents(None, QtCore.QEvent.DeferredDelete)
+            qtbot.wait(50)
+            mock_submit_test.assert_not_called()
+        del widget
 
 
 class TestDeviceConfigTemplate:
