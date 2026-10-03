@@ -977,6 +977,14 @@ class Crosshair(QObject):
         self.clear_markers()
 
     def cleanup(self):
+        # The plot's scene outlives the crosshair: detach from its mouse signals first, so
+        # no mouse move queued in the rate-limiting proxy, and no click, reaches it afterwards.
+        if self.proxy is not None:  # None once an earlier cleanup() detached it
+            self.proxy.disconnect()
+            self.proxy = None
+            scene = self.plot_item.scene()
+            if scene is not None:
+                scene.sigMouseClicked.disconnect(self.mouse_clicked)
         self.reset()
         self.clear_pin()
         self.plot_item.removeItem(self.v_line)

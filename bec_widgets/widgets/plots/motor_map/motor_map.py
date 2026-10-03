@@ -854,6 +854,20 @@ class MotorMap(PlotBase):
         data = {"x": self._buffer["x"], "y": self._buffer["y"]}
         return data
 
+    ################################################################################
+    # Cleanup
+    ################################################################################
+    def cleanup(self):
+        """
+        Cleanup the widget by detaching the plot update proxy and closing the settings popup.
+        """
+        # Detach the update proxy first, so no queued update reaches the closed plot.
+        self.proxy_update_plot.disconnect()
+        if self.motor_map_settings is not None:
+            self.motor_map_settings.reject()
+            self.motor_map_settings = None
+        super().cleanup()
+
 
 class DemoApp(QMainWindow):  # pragma: no cover
     def __init__(self):

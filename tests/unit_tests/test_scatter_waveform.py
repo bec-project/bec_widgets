@@ -682,3 +682,37 @@ def test_scatter_waveform_cleanup_detaches_update_proxy(qtbot, mocked_client):
 
         qtbot.wait(200)
         update_sync_curves.assert_not_called()
+
+
+def test_scatter_waveform_scan_done_runs_delayed_sync_refreshes(qtbot, mocked_client):
+    """
+    A finished scan triggers one proxied sync update plus the two delayed final refreshes
+    (100 ms and 300 ms) while the ScatterWaveform is open.
+    """
+    with patch.object(ScatterWaveform, "update_sync_curves") as update_sync_curves:
+        swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+        qtbot.wait(100)  # let anything queued during construction drain
+        update_sync_curves.reset_mock()
+
+        swf.on_scan_progress({"done": True}, {})
+
+        qtbot.waitUntil(lambda: update_sync_curves.call_count == 3, timeout=2000)
+        qtbot.wait(100)
+        assert update_sync_curves.call_count == 3
+
+
+def test_scatter_waveform_scan_done_refreshes_skipped_after_cleanup(qtbot, mocked_client):
+    """
+    The delayed final refreshes scheduled when a scan is done must not run into a
+    ScatterWaveform that has been closed (cleaned up) before they fire.
+    """
+    with patch.object(ScatterWaveform, "update_sync_curves") as update_sync_curves:
+        swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+        qtbot.wait(100)  # let anything queued during construction drain
+        update_sync_curves.reset_mock()
+
+        swf.on_scan_progress({"done": True}, {})  # schedules the refreshes in 100 ms and 300 ms
+        swf.close()  # closeEvent -> cleanup() before they fire
+
+        qtbot.wait(450)
+        update_sync_curves.assert_not_called()

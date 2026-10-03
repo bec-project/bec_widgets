@@ -5,7 +5,7 @@ import pyqtgraph as pg
 from bec_lib import bec_logger
 from bec_lib.endpoints import MessageEndpoints
 from pydantic import Field, ValidationError, field_validator
-from qtpy.QtCore import QTimer, Signal
+from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QHBoxLayout, QMainWindow, QWidget
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
@@ -335,8 +335,9 @@ class ScatterWaveform(PlotBase):
         self.sync_signal_update.emit()
         status = msg.get("done")
         if status:
-            QTimer.singleShot(100, self.update_sync_curves)
-            QTimer.singleShot(300, self.update_sync_curves)
+            # Final refreshes for late scan data; skipped if the widget is closed meanwhile.
+            self._call_later(100, self.update_sync_curves)
+            self._call_later(300, self.update_sync_curves)
 
     @SafeSlot()
     def update_sync_curves(self, _=None):

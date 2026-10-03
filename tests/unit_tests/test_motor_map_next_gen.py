@@ -1,3 +1,6 @@
+from unittest import mock
+
+import shiboken6
 from qtpy.QtTest import QSignalSpy
 
 from bec_widgets.tests.client_mocks import mocked_client
@@ -380,3 +383,41 @@ def test_motor_map_settings_dialog(qtbot, mocked_client):
     mm.motor_map_settings.close()
     qtbot.wait(200)
     assert mm.motor_map_settings is None
+
+
+def test_motor_map_cleanup_detaches_update_proxy(qtbot, mocked_client):
+    """
+    A plot update still queued in proxy_update_plot when the MotorMap is cleaned up, or
+    requested afterwards, must not reach _update_plot of the closed widget.
+    """
+    with mock.patch.object(MotorMap, "_update_plot") as update_plot:
+        mm = create_widget(qtbot, MotorMap, client=mocked_client)
+        qtbot.wait(100)  # let anything queued during construction drain
+        update_plot.reset_mock()
+
+        mm.update_signal.emit()  # queued in the proxy
+        mm.close()  # closeEvent -> cleanup()
+        mm.update_signal.emit()  # requested after cleanup
+
+        qtbot.wait(200)
+        update_plot.assert_not_called()
+
+
+def test_motor_map_cleanup_closes_settings_popup(qtbot, mocked_client):
+    """
+    Closing the MotorMap must also close its settings popup instead of leaving it open
+    on top of the removed widget.
+    """
+    mm = create_widget(qtbot, MotorMap, client=mocked_client, popups=True)
+    mm.map(device_x="samx", device_y="samy")
+    mm.show_motor_map_settings()
+    dialog = mm.motor_map_settings
+    assert dialog.isVisible()
+
+    mm.close()  # closeEvent -> cleanup()
+    try:
+        assert mm.motor_map_settings is None
+        assert not dialog.isVisible()
+    finally:
+        if shiboken6.isValid(dialog) and dialog.isVisible():
+            dialog.reject()  # keep a failure on main from leaking the popup into later tests

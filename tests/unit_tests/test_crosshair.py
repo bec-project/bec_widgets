@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import pyqtgraph as pg
 import pytest
@@ -643,3 +645,38 @@ def test_reset_preserves_pin_cleanup_removes_it(image_widget_with_crosshair):
     crosshair.cleanup()
     assert crosshair.pinned_point is None
     assert crosshair.pinned_pos is None
+
+
+def test_cleanup_detaches_crosshair_from_scene_mouse_signals(qtbot, plot_widget_with_crosshair):
+    """
+    The plot's scene outlives the crosshair. After cleanup() neither mouse moves (through
+    the rate-limited SignalProxy) nor clicks on the scene may reach the crosshair, e.g.
+    re-creating a pin on the plot after teardown.
+    """
+    crosshair, plot_item = plot_widget_with_crosshair
+    scene = plot_item.scene()
+    scene_pos = plot_item.vb.mapViewToScene(QPointF(2, 5))
+    moved, clicked = [], []
+    crosshair.positionChanged.connect(moved.append)
+    crosshair.positionClicked.connect(clicked.append)
+
+    # Sanity check: while active, both scene signals reach the crosshair.
+    scene.sigMouseMoved.emit(scene_pos)
+    scene.sigMouseClicked.emit(_FakeClickEvent(scene_pos))
+    qtbot.waitUntil(lambda: bool(moved and clicked), timeout=1000)
+    assert crosshair.pinned_point is not None
+
+    crosshair.cleanup()
+    moved.clear()
+    clicked.clear()
+    scene.sigMouseMoved.emit(scene_pos)
+    scene.sigMouseClicked.emit(_FakeClickEvent(scene_pos))
+    qtbot.wait(100)  # well past the proxy's 60 Hz rate limit
+
+    assert moved == []
+    assert clicked == []
+    assert crosshair.pinned_point is None
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)  # e.g. libpyside "Failed to disconnect"
+        crosshair.cleanup()  # a second cleanup() leaves the scene connections alone

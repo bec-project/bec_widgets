@@ -678,6 +678,34 @@ def test_waveform_cleanup_detaches_proxies_from_update_signals(
     }
 
 
+def test_waveform_scan_done_runs_delayed_sync_refreshes(qtbot, waveform_with_proxy_slot_spies):
+    """
+    A finished scan triggers one proxied sync update plus the two delayed final refreshes
+    (100 ms and 300 ms) while the Waveform is open.
+    """
+    wf, slots = waveform_with_proxy_slot_spies
+
+    wf.on_scan_progress({"done": True}, {})
+
+    qtbot.waitUntil(lambda: slots["sync"].call_count == 3, timeout=2000)
+    qtbot.wait(100)
+    assert slots["sync"].call_count == 3
+
+
+def test_waveform_scan_done_refreshes_skipped_after_cleanup(qtbot, waveform_with_proxy_slot_spies):
+    """
+    The delayed final refreshes scheduled when a scan is done must not run into a Waveform
+    that has been closed (cleaned up) before they fire.
+    """
+    wf, slots = waveform_with_proxy_slot_spies
+
+    wf.on_scan_progress({"done": True}, {})  # schedules the refreshes in 100 ms and 300 ms
+    wf.close()  # closeEvent -> cleanup() before they fire
+
+    qtbot.wait(450)
+    assert slots["sync"].call_count == 0
+
+
 def test_request_dap_always_resubmits_device_parent(qtbot, mocked_client_with_dap, monkeypatch):
     """
     DAP curves attached to device curves keep the resubmit-on-every-update behavior,

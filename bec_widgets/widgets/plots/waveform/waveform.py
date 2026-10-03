@@ -1629,8 +1629,9 @@ class Waveform(PlotBase):
         self.sync_signal_update.emit()
         self._scan_done = msg.get("done")
         if self._scan_done:
-            QTimer.singleShot(100, self.update_sync_curves)
-            QTimer.singleShot(300, self.update_sync_curves)
+            # Final refreshes for late scan data; skipped if the widget is closed meanwhile.
+            self._call_later(100, self.update_sync_curves)
+            self._call_later(300, self.update_sync_curves)
 
     def _fetch_scan_data_and_access(self) -> tuple[dict, str] | tuple[None, None]:
         """

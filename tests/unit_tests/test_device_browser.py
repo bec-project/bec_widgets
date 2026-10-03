@@ -181,3 +181,16 @@ def test_signal_display_omitted_not_added(mocked_client, qtbot):
 
     qtbot.addWidget(signal_display)
     assert signal_display._content_layout.itemAt(1).widget() is None
+
+
+def test_device_browser_cleanup_detaches_filter_proxy(device_browser: DeviceBrowser, qtbot):
+    """
+    After cleanup() the rate-limited filter proxy must no longer forward filter_input
+    changes to update_device_list of the closed browser.
+    """
+    with mock.patch.object(device_browser.dev_list, "update_filter") as update_filter:
+        device_browser.close()  # closeEvent -> cleanup()
+        device_browser.ui.filter_input.setText("samx")
+
+        qtbot.wait(600)
+        update_filter.assert_not_called()
