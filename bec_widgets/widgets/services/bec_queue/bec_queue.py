@@ -12,6 +12,7 @@ from qtpy.QtWidgets import QHeaderView, QLabel, QTableWidget, QTableWidgetItem, 
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.toolbars.actions import WidgetAction
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
@@ -264,15 +265,21 @@ class BECQueue(BECWidget, QWidget):
             scan_type (str): The scan type.
             status (str): The status.
             tooltip (str): Optional tooltip to display (pretty-printed user metadata).
-            abort_request_id (str):  request id to abort.
+            abort_request_id (str): Request id to abort. Rows without one, such as the
+                empty-queue placeholder, get no abort button.
         """
-        abort_button = self._create_abort_button(abort_request_id)
-        abort_button.button.clicked.connect(self.delete_selected_row)
-
         self.table.setItem(index, 0, self.format_item(scan_number, tooltip=tooltip))
         self.table.setItem(index, 1, self.format_item(scan_name, tooltip=tooltip))
         self.table.setItem(index, 2, self.format_item(scan_type, tooltip=tooltip))
         self.table.setItem(index, 3, self.format_item(status, status=True, tooltip=tooltip))
+
+        if not abort_request_id:
+            # Nothing to target. Never fall back to request_id=None: AbortButton treats it as
+            # "abort the current request", which would hit a scan this row does not show.
+            self.table.removeCellWidget(index, 4)
+            return
+        abort_button = self._create_abort_button(abort_request_id)
+        abort_button.button.clicked.connect(self.delete_selected_row)
         self.table.setCellWidget(index, 4, abort_button)
 
     def _create_abort_button(self, request_id: str) -> AbortButton:
@@ -300,13 +307,39 @@ class BECQueue(BECWidget, QWidget):
 
         return abort_button
 
+    @SafeSlot()
     def delete_selected_row(self):
+        """
+        Remove the table row whose abort button was clicked.
 
-        button = self.sender()
-        row = self.table.indexAt(button.pos()).row()
-        self.table.removeRow(row)
-        button.close()
-        button.deleteLater()
+        The signal is emitted by the inner button of an AbortButton cell widget, whose position is
+        relative to that cell widget and cannot be mapped to a table row. The row is therefore
+        resolved by looking up which row holds the clicked AbortButton. Removing the row also
+        deletes its cell widget.
+        """
+        abort_button = self._find_abort_button(self.sender())
+        if abort_button is None:
+            return
+        for row in range(self.table.rowCount()):
+            if self.table.cellWidget(row, 4) is abort_button:
+                self.table.removeRow(row)
+                return
+
+    @staticmethod
+    def _find_abort_button(widget: QWidget | None) -> AbortButton | None:
+        """
+        Return the AbortButton that contains the given widget.
+
+        Args:
+            widget(QWidget | None): The widget that emitted the signal, typically the inner button
+                of an AbortButton.
+
+        Returns:
+            AbortButton | None: The enclosing AbortButton, or None if there is none.
+        """
+        while widget is not None and not isinstance(widget, AbortButton):
+            widget = widget.parent()
+        return widget
 
     def reset_content(self):
         """
