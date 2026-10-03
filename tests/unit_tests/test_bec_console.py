@@ -2,7 +2,7 @@ from unittest import mock
 
 import pytest
 import shiboken6
-from qtpy.QtCore import QEvent, QEventLoop, Qt
+from qtpy.QtCore import SIGNAL, QEvent, QEventLoop, QObject, Qt, Signal
 from qtpy.QtGui import QHideEvent, QShowEvent
 from qtpy.QtTest import QTest
 from qtpy.QtWidgets import QApplication, QWidget
@@ -118,6 +118,89 @@ def test_bec_console_registry_cleanup(console_widget: BecConsole):
     assert terminal_id in _bec_console_registry._terminal_registry
     _bec_console_registry.unregister(console_widget)
     assert terminal_id not in _bec_console_registry._terminal_registry
+
+
+class _FakeApp(QObject):
+    """Stand-in for the QApplication: its aboutToQuit can be emitted without quitting the
+    real test application, whose other aboutToQuit handlers would tear down shared state."""
+
+    aboutToQuit = Signal()
+
+
+class _StubConsole:
+    """Minimal console exposing only what BecConsoleRegistry.register reads."""
+
+    def __init__(self, console_id: str, terminal_id: str):
+        self.console_id = console_id
+        self.terminal_id = terminal_id
+        self.persist_terminal_session = False
+        self.default_zoom_level = 0
+
+
+def _about_to_quit_receivers(app: QObject) -> int:
+    return app.receivers(SIGNAL("aboutToQuit()"))
+
+
+def _patch_app_instance(app: QObject):
+    """Make the bec_console module (only) see ``app`` as the running application."""
+    return mock.patch.object(bec_console_module, "QApplication", **{"instance.return_value": app})
+
+
+def test_bec_console_registry_clears_terminals_on_about_to_quit(qtbot):
+    fake_app = _FakeApp()
+    registry = bec_console_module.BecConsoleRegistry()
+    consoles = [
+        _StubConsole("quit_console_1", "quit_t1"),
+        _StubConsole("quit_console_2", "quit_t2"),
+    ]
+    try:
+        with _patch_app_instance(fake_app):
+            for console in consoles:
+                registry.register(console)
+        terminals = [registry.get_terminal("quit_t1"), registry.get_terminal("quit_t2")]
+        assert all(term is not None for term in terminals)
+
+        fake_app.aboutToQuit.emit()
+
+        assert registry._terminal_registry == {}
+        process_deferred_deletes()
+        assert not any(shiboken6.isValid(term) for term in terminals)
+        # registering twice must not wire the cleanup twice
+        assert _about_to_quit_receivers(fake_app) == 1
+    finally:
+        registry.clear()
+        process_deferred_deletes()
+        fake_app.deleteLater()
+
+
+def test_bec_console_registry_reconnects_cleanup_for_new_app(qtbot):
+    """The once-only guard is per application: a new application instance gets wired too."""
+    registry = bec_console_module.BecConsoleRegistry()
+    old_app, new_app = _FakeApp(), _FakeApp()
+    try:
+        for app in (old_app, new_app):
+            with _patch_app_instance(app):
+                registry._connect_app_cleanup()
+                registry._connect_app_cleanup()
+            assert _about_to_quit_receivers(app) == 1
+    finally:
+        old_app.deleteLater()
+        new_app.deleteLater()
+        process_deferred_deletes()
+
+
+def test_bec_console_registry_cleanup_connected_once_to_real_app(qtbot):
+    app = QApplication.instance()
+    registry = bec_console_module.BecConsoleRegistry()
+    before = _about_to_quit_receivers(app)
+    try:
+        registry._connect_app_cleanup()
+        registry._connect_app_cleanup()
+        assert _about_to_quit_receivers(app) == before + 1
+    finally:
+        # never emit the real aboutToQuit here; just drop our connection again
+        if _about_to_quit_receivers(app) > before:
+            app.aboutToQuit.disconnect(registry.clear)
 
 
 def test_bec_shell_initialization(qtbot):

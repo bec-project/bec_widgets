@@ -3,11 +3,11 @@ from __future__ import annotations
 import enum
 from dataclasses import dataclass, field
 from uuid import uuid4
-from weakref import WeakValueDictionary
+from weakref import WeakValueDictionary, ref
 
 import shiboken6
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import Qt, Signal
+from qtpy.QtCore import QCoreApplication, Qt, Signal
 from qtpy.QtGui import QMouseEvent
 from qtpy.QtWidgets import (
     QApplication,
@@ -65,16 +65,27 @@ class BecConsoleRegistry:
         """
         self._consoles: WeakValueDictionary[str, BecConsole] = WeakValueDictionary()
         self._terminal_registry: dict[str, _TerminalOwnerInfo] = {}
+        self._cleanup_app: ref[QCoreApplication] | None = None
 
     @staticmethod
     def _is_valid_qobject(obj: object | None) -> bool:
         return obj is not None and shiboken6.isValid(obj)
 
     def _connect_app_cleanup(self) -> None:
+        """
+        Clear the registry when the running application is about to quit.
+
+        The connection is made at most once per application instance. ``UniqueConnection``
+        cannot be used for that: Qt only supports it for slots of a QObject, and the registry is a
+        plain Python object, so such a connection is silently rejected.
+        """
         app = QApplication.instance()
         if app is None:
             return
-        app.aboutToQuit.connect(self.clear, Qt.ConnectionType.UniqueConnection)
+        if self._cleanup_app is not None and self._cleanup_app() is app:
+            return
+        app.aboutToQuit.connect(self.clear)
+        self._cleanup_app = ref(app)
 
     @staticmethod
     def _apply_zoom_step(term: BecTerminal, direction: int) -> bool:
