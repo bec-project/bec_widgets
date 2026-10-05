@@ -1,6 +1,29 @@
 # CHANGELOG
 
 
+## v3.37.4 (2026-10-05)
+
+### Bug Fixes
+
+- **dispatcher**: Add dispatcher relay
+  ([`bd0a231`](https://github.com/bec-project/bec_widgets/commit/bd0a23186395b92c25d3dfd960099e55bd99c804))
+
+- **dispatcher**: Remove sender verification from SafeSlot
+  ([`efc65bd`](https://github.com/bec-project/bec_widgets/commit/efc65bdf07f60a5b0ccbdcc13e1ed8fc014c913b))
+
+Keep receiver lifetime checks in dispatcher invalidation and relay delivery. Deliver subscription
+  context through metadata so waveform async updates and log ingestion work without
+  QObject.sender(). Reject stale scan updates.
+
+Add regression coverage for queued delivery, subscription context isolation, and waveform and
+  logpanel updates through the dispatcher relay.
+
+### Build System
+
+- **bec**: Allow v4 release
+  ([`719b06b`](https://github.com/bec-project/bec_widgets/commit/719b06b8c77a539ec3b1b14ee01369085b507438))
+
+
 ## v3.37.3 (2026-10-01)
 
 ### Bug Fixes
