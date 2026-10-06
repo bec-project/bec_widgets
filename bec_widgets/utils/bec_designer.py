@@ -4,11 +4,13 @@ import os
 import site
 import sys
 import sysconfig
+import warnings
 from pathlib import Path
 
 from bec_qthemes import material_icon
 from qtpy import PYSIDE6
 from qtpy.QtGui import QIcon
+from qtpy.QtWidgets import QApplication
 
 from bec_widgets.utils.bec_plugin_helper import user_widget_plugin
 
@@ -25,6 +27,47 @@ if PYSIDE6:
 import bec_widgets
 
 
+def _install_designer_cleanup() -> None:
+    """Release pyqtgraph's application callbacks before Designer finalizes Python.
+
+    Designer owns the QApplication in C++; its style hints outlive the embedded
+    interpreter. A Python callback left connected there can crash on destruction.
+    Install this only through Designer's icon entry point, preserving normal apps
+    and keeping theme updates active until Designer quits.
+    """
+    app = QApplication.instance()
+    if app is None or getattr(app, "_bec_designer_cleanup_installed", False):
+        return
+
+    def cleanup():
+        # This callback must also be released while Python is still initialized.
+        app.aboutToQuit.disconnect(cleanup)
+        app._bec_designer_cleanup_installed = False
+        pg_qt = sys.modules.get("pyqtgraph.Qt")
+        if pg_qt is None or getattr(pg_qt, "QAPP", None) is not app:
+            return
+        callbacks = (
+            (app.styleHints().colorSchemeChanged, "_onColorSchemeChange"),
+            (app.paletteChanged, "_onPaletteChange"),
+        )
+        for signal, name in callbacks:
+            callback = getattr(pg_qt, name, None)
+            if callback is None:
+                continue
+            # pyqtgraph selects one of these callbacks depending on the Qt version.
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", message=".*Failed to disconnect", category=RuntimeWarning
+                )
+                try:
+                    signal.disconnect(callback)
+                except (RuntimeError, TypeError):
+                    pass
+
+    app.aboutToQuit.connect(cleanup)
+    app._bec_designer_cleanup_installed = True
+
+
 def designer_material_icon(icon_name: str) -> QIcon:
     """
     Create a QIcon for the BECDesigner with the given material icon name.
@@ -35,6 +78,7 @@ def designer_material_icon(icon_name: str) -> QIcon:
     Returns:
         QIcon: The QIcon for the material icon.
     """
+    _install_designer_cleanup()
     return QIcon(material_icon(icon_name, filled=True, convert_to_pixmap=True))
 
 
