@@ -111,8 +111,9 @@ class BECWidget(BECConnector):
     def _connect_to_theme_change(self):
         """Connect to the theme change signal."""
         qapp = QApplication.instance()
+        self._theme_connection = None
         if hasattr(qapp, "theme"):
-            SafeConnect(self, qapp.theme.theme_changed, self._update_theme)
+            self._theme_connection = SafeConnect(self, qapp.theme.theme_changed, self._update_theme)
 
     @SafeSlot(str)
     @SafeSlot()
@@ -402,6 +403,9 @@ class BECWidget(BECConnector):
 
     def cleanup(self):
         """Cleanup the widget."""
+        theme_connection = getattr(self, "_theme_connection", None)
+        if theme_connection is not None:
+            theme_connection.invalidate()
         with RPCRegister.delayed_broadcast():
             # All widgets need to call super().cleanup() in their cleanup method
             logger.info(f"Registry cleanup for widget {self.__class__.__name__}")

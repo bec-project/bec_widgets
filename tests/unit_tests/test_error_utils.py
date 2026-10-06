@@ -1,8 +1,9 @@
 from unittest.mock import patch
 
 import pytest
+import shiboken6
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import QObject, Signal
+from qtpy.QtCore import QObject, Qt, Signal
 from qtpy.QtWidgets import QMessageBox
 
 from bec_widgets.utils.error_popups import ErrorPopupUtility, ExampleWidget, SafeProperty, SafeSlot
@@ -241,6 +242,45 @@ def test_safe_connect_removes_stale_connection(qtbot):
     assert emitter.str_signal.disconnect(wrapper) is False
 
     emitter.deleteLater()
+
+
+def test_safe_connect_invalidated_before_queued_delivery(qtbot):
+    """An inactive subscription must not deliver an already queued signal."""
+    from bec_widgets.utils.error_popups import SafeConnect
+
+    emitter = _ArgSignalEmitter()
+    receiver = _SafeConnectReceiver()
+    wrapper = SafeConnect(receiver, emitter.str_signal, receiver.on_value)
+    emitter.str_signal.disconnect(wrapper)
+    emitter.str_signal.connect(wrapper, Qt.ConnectionType.QueuedConnection)
+
+    emitter.str_signal.emit("queued")
+    assert receiver.calls == []
+    wrapper.invalidate()
+    qtbot.wait(10)
+    assert shiboken6.isValid(receiver)
+    assert receiver.calls == []
+    # Also cover direct calls retained by code outside the Qt connection.
+    wrapper("direct")
+    assert receiver.calls == []
+    receiver.deleteLater()
+    emitter.deleteLater()
+
+
+def test_safe_connect_destruction_only_invalidates():
+    """Destruction blocks delivery without disconnecting signals in the destructor."""
+    from bec_widgets.utils.error_popups import SafeConnect
+
+    emitter = _ArgSignalEmitter()
+    receiver = _SafeConnectReceiver()
+    wrapper = SafeConnect(receiver, emitter.str_signal, receiver.on_value)
+    with patch.object(wrapper, "_disconnect") as disconnect:
+        shiboken6.delete(receiver)
+        assert not wrapper._active
+        disconnect.assert_not_called()
+    emitter.str_signal.emit("after-death")
+    assert not wrapper._connected
+    shiboken6.delete(emitter)
 
 
 def test_safe_slot_override_params_apply_to_single_call():

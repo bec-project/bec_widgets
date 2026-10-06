@@ -45,6 +45,21 @@ def test_close_runs_cleanup_once(qtbot, mocked_client):
     _flush_deferred_deletes(qtbot)
 
 
+def test_cleanup_invalidates_theme_subscription_while_widget_is_valid(qtbot, mocked_client):
+    widget = LifecycleWidget(client=mocked_client)
+    connection = widget._theme_connection
+    assert connection._active
+
+    widget.cleanup()
+    assert shiboken6.isValid(widget)
+    assert not widget._destroyed
+    assert not connection._active
+
+    widget.close()
+    widget.deleteLater()
+    _flush_deferred_deletes(qtbot)
+
+
 def test_delete_later_without_close_runs_cleanup(qtbot, mocked_client):
     widget = LifecycleWidget(client=mocked_client)
     gui_id = widget.gui_id

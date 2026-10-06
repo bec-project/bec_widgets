@@ -192,13 +192,55 @@ def SafeProperty(
     return decorator
 
 
+class _SafeConnection:
+    """Weak receiver wrapper with explicit invalidation for pending deliveries."""
+
+    def __init__(self, instance, signal, slot):
+        self._active = True
+        self._connected = True
+        self._instance = safe_ref(instance)
+        self._slot = safe_ref(slot)
+        self._signal = signal
+
+    def invalidate(self, *_args) -> None:
+        """Block deliveries without touching Qt during receiver destruction."""
+        self._active = False
+
+    def _disconnect(self) -> None:
+        if not self._connected:
+            return
+        self._connected = False
+        try:
+            self._signal.disconnect(self)
+        except (RuntimeError, TypeError):
+            pass
+
+    def __call__(self, *args):
+        if not self._active:
+            self._disconnect()
+            return
+        instance = self._instance()
+        slot = self._slot()
+        if (
+            instance is None
+            or slot is None
+            or getattr(instance, "_destroyed", False)
+            or not shiboken6.isValid(instance)
+        ):
+            self.invalidate()
+            self._disconnect()
+            return
+        slot(*args)
+
+
 def SafeConnect(instance, signal, slot):  # pylint: disable=invalid-name
     """
     Method to safely handle Qt signal-slot connections. The python object is only forwarded
     as a weak reference to avoid stale objects. Once the instance or slot has been garbage
     collected, marked as destroyed, or its C++ object deleted, the connection removes itself
     from the signal on the next emission, so long-lived signals (e.g. theme_changed) do not
-    accumulate dead wrappers.
+    accumulate dead wrappers. Receiver destruction first marks the wrapper inactive without
+    disconnecting Qt signals in destructor context.
 
     Args:
         instance: The instance to connect.
@@ -206,38 +248,17 @@ def SafeConnect(instance, signal, slot):  # pylint: disable=invalid-name
         slot: The slot to connect.
 
     Returns:
-        Callable: The wrapper connected to the signal. It can be passed to
+        Callable: The wrapper connected to the signal. Its ``invalidate()`` method blocks
+            pending deliveries at cleanup start. It can also be passed to
             ``signal.disconnect`` for explicit early disconnection.
 
     Example:
         >>> SafeConnect(self, qapp.theme.theme_changed, self._update_theme)
 
     """
-    weak_instance = safe_ref(instance)
-    weak_slot = safe_ref(slot)
-
-    def safe_slot(*connect_args):
-        instance_ = weak_instance()
-        slot_func = weak_slot()
-
-        # Instance or slot garbage collected, instance cleaned up, or C++ side
-        # deleted: remove this stale connection from the signal.
-        if (
-            instance_ is None
-            or slot_func is None
-            or getattr(instance_, "_destroyed", False)
-            or not shiboken6.isValid(instance_)
-        ):
-            try:
-                signal.disconnect(safe_slot)
-            except (RuntimeError, TypeError):
-                # Signal owner already gone or connection already removed.
-                pass
-            return
-
-        slot_func(*connect_args)
-
+    safe_slot = _SafeConnection(instance, signal, slot)
     signal.connect(safe_slot)
+    instance.destroyed.connect(safe_slot.invalidate)
     return safe_slot
 
 
