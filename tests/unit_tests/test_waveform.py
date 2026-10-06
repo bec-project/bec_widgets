@@ -755,7 +755,7 @@ def test_async_readback_updates_only_curves_of_its_device(
     from bec_lib.device import ReadoutPriority
     from bec_lib.endpoints import MessageEndpoints
 
-    from bec_widgets.tests.utils import FakeDevice
+    from bec_widgets.tests.fake_devices import FakeDevice
 
     for name in ("async_a", "async_b"):
         device = FakeDevice(name, readout_priority=ReadoutPriority.ASYNC)
