@@ -28,6 +28,9 @@ from bec_widgets.utils import bec_dispatcher as bec_dispatcher_module
 from bec_widgets.utils import error_popups
 from bec_widgets.utils.bec_dispatcher import QtRedisConnector
 from bec_widgets.utils.rpc_register import RPCRegister
+from bec_widgets.widgets.containers.main_window.addons.notification_center.notification_banner import (
+    BECNotificationBroker,
+)
 
 # Patch to set default RAISE_ERROR_DEFAULT to True for tests
 # This means that by default, error popups will raise exceptions during tests
@@ -133,6 +136,13 @@ def bec_dispatcher(threads_check):  # pylint: disable=unused-argument
     bec_dispatcher.stop_cli_server()
     # reinitialize singleton for next test
     bec_dispatcher_module.BECDispatcher.reset_singleton()
+
+
+@pytest.fixture(autouse=True)
+def notification_broker_reset(bec_dispatcher):  # pylint: disable=unused-argument
+    """Tear down the app-wide notification broker before the dispatcher it is bound to."""
+    yield
+    BECNotificationBroker.reset_singleton()
 
 
 @pytest.fixture(autouse=True)
