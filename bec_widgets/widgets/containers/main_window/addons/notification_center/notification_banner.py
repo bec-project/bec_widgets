@@ -734,9 +734,9 @@ class NotificationCentre(QScrollArea):
         # tag with shared ID and hook closures to the singleton broker
         toast.notification_id = notification_id
         # resolve the broker when the toast closes, not now: reset_singleton() may have
-        # replaced it in between, and a captured instance would be a deleted QObject
+        # replaced or removed it in between, and a captured instance would be a deleted QObject
         toast.closed.connect(
-            lambda nid=notification_id: BECNotificationBroker().notification_closed.emit(nid)
+            lambda nid=notification_id: BECNotificationBroker.broadcast_closed(nid)
         )
         toast.closed.connect(lambda: self._hide_notification(toast))
         toast.expired.connect(lambda t=toast: self._handle_expire(t))
@@ -1027,8 +1027,9 @@ class BECNotificationBroker(BECConnector, QObject):
 
     RPC = False
 
-    # Upper bound for the replay store. Expired toasts stay in every centre's history, so
-    # new centres replay them (soft-hidden) too; the oldest entries are dropped beyond this.
+    # Upper bound for non-MAJOR entries in the replay store. Expired toasts stay in every
+    # centre's history, so new centres replay them (soft-hidden) too; the oldest of them are
+    # dropped beyond this. MAJOR alarms are not counted and stay until they are closed.
     MAX_REPLAY_NOTIFICATIONS = 100
 
     _instance: BECNotificationBroker | None = None
@@ -1140,9 +1141,7 @@ class BECNotificationBroker(BECConnector, QObject):
             "traceback": detailed_trace,
             "lifetime_ms": lifetime,
         }
-        # keep the replay store bounded: drop the oldest entries (dicts keep insertion order)
-        while len(self._active_notifications) > self.MAX_REPLAY_NOTIFICATIONS:
-            self._active_notifications.pop(next(iter(self._active_notifications)))
+        self._trim_replay_store()
         # close broadcasting is wired inside add_notification, covering live and
         # replayed toasts alike — no per-toast hookup needed here
         for centre in centres:
@@ -1189,6 +1188,28 @@ class BECNotificationBroker(BECConnector, QObject):
             return SeverityKind[Alarms(severity).name]  # e.g. WARNING → SeverityKind.WARNING
         except (ValueError, KeyError):
             return SeverityKind.WARNING
+
+    def _trim_replay_store(self) -> None:
+        """Drop the oldest non-MAJOR entries beyond MAX_REPLAY_NOTIFICATIONS (dicts keep
+        insertion order). Unacknowledged MAJOR alarms are never evicted."""
+        evictable = [
+            nid
+            for nid, params in self._active_notifications.items()
+            if params["kind"] != SeverityKind.MAJOR
+        ]
+        for nid in evictable[: max(0, len(evictable) - self.MAX_REPLAY_NOTIFICATIONS)]:
+            del self._active_notifications[nid]
+
+    @classmethod
+    def broadcast_closed(cls, notification_id: str) -> None:
+        """
+        Propagate a toast close to every centre through the live broker, if there is one.
+        Never constructs a broker: after reset_singleton() a closing toast must not bring
+        one (and its dispatcher subscriptions) back.
+        """
+        inst = cls._instance
+        if inst is not None and shiboken6.isValid(inst):
+            inst.notification_closed.emit(notification_id)
 
     @classmethod
     def reset_singleton(cls):

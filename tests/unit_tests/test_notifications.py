@@ -507,3 +507,39 @@ def test_replay_store_is_bounded(broker, monkeypatch):
 
     titles = [entry["title"] for entry in broker._active_notifications.values()]
     assert titles == ["W2", "W3", "W4"]
+
+
+def test_toast_close_after_reset_does_not_recreate_broker(qtbot, mocked_client):
+    """Closing a toast after reset_singleton() must not construct a new broker (and new
+    dispatcher subscriptions); the toast is still removed from its own centre."""
+    try:
+        BECNotificationBroker(client=mocked_client)
+        ctr = _make_centre(qtbot)
+        qtbot.wait(20)
+        ctr.add_notification(
+            title="t", body="b", kind=SeverityKind.MAJOR, lifetime_ms=0, notification_id="nid"
+        )
+
+        BECNotificationBroker.reset_singleton()
+        ctr.toasts[0].closed.emit()
+        qtbot.waitUntil(lambda: ctr.toasts == [], timeout=2000)
+        assert BECNotificationBroker._instance is None
+    finally:
+        BECNotificationBroker.reset_singleton()
+
+
+def test_replay_cap_keeps_unacknowledged_major(qtbot, broker, monkeypatch):
+    """The cap only evicts non-MAJOR entries: an open MAJOR alarm is still replayed into a
+    centre opened after more than MAX_REPLAY_NOTIFICATIONS newer notifications."""
+    monkeypatch.setattr(BECNotificationBroker, "MAX_REPLAY_NOTIFICATIONS", 3)
+
+    broker.post_notification({"alarm_type": "MAJOR", "msg": "m", "severity": 2}, meta={})
+    for i in range(5):
+        broker.post_notification({"alarm_type": f"W{i}", "msg": "m", "severity": 0}, meta={})
+
+    titles = [entry["title"] for entry in broker._active_notifications.values()]
+    assert titles == ["MAJOR", "W2", "W3", "W4"]
+
+    ctr = _make_centre(qtbot)
+    qtbot.waitUntil(lambda: len(ctr.toasts) == 4, timeout=2000)
+    assert [t.kind for t in ctr.toasts].count(SeverityKind.MAJOR) == 1
