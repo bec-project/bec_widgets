@@ -1,6 +1,39 @@
 # CHANGELOG
 
 
+## v3.37.5 (2026-10-06)
+
+### Bug Fixes
+
+- **notifications**: Bound broker replay store, hide broker from RPC, survive reset
+  ([`e508cdd`](https://github.com/bec-project/bec_widgets/commit/e508cdd5d2577789aeabe8ecfc333009f19cb8ba))
+
+- **notifications**: Keep BECNotificationBroker singleton alive app-wide and prune expired replay
+  entries
+  ([`b57c72f`](https://github.com/bec-project/bec_widgets/commit/b57c72f5ebed859fc0de7d5ee53f52119b46244c))
+
+- **notifications**: Keep open MAJOR alarms in the replay store and never recreate the broker on
+  toast close
+  ([`6f9c687`](https://github.com/bec-project/bec_widgets/commit/6f9c687c6fc94824b7c8d4a31c1f6c3c9611fa7b))
+
+- **notifications**: Wire toast close broadcasting once in add_notification
+  ([`1016240`](https://github.com/bec-project/bec_widgets/commit/10162409e0270eb905b4211e11c227500be7e8fc))
+
+### Build System
+
+- **deps**: Require bec_qthemes>=1.3.7
+  ([`4dca9a3`](https://github.com/bec-project/bec_widgets/commit/4dca9a39089f47c7564ecf71847aff52e02da4ce))
+
+### Testing
+
+- **icons**: Guard against the material icon segfault in cyclic garbage
+  ([`b61f57c`](https://github.com/bec-project/bec_widgets/commit/b61f57c2e0aab7350e4ea45aa2aa3b577a6264a0))
+
+Runs the device manager's icon caches through cyclic garbage collection in a child process. It
+  segfaults (SIGSEGV in the QIcon destructor) with bec_qthemes releases that lack the icon engine
+  ownership fix, and passes once bec_widgets requires a fixed bec_qthemes.
+
+
 ## v3.37.4 (2026-10-05)
 
 ### Bug Fixes
