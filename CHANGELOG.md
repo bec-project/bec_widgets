@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v3.38.0 (2026-10-06)
+
+### Bug Fixes
+
+- **tests**: Client_mocks moved inside the package, imports for tests adjusted
+  ([`d4eb7cb`](https://github.com/bec-project/bec_widgets/commit/d4eb7cbb51a400a763e26313ab3918712a4801ad))
+
+### Features
+
+- **tests**: Ship widget test fixtures importable by plugin repositories
+  ([`7262291`](https://github.com/bec-project/bec_widgets/commit/7262291818fdfff32a99a1e14eae142db56707f6))
+
+### Refactoring
+
+- **tests**: Utils changed to fake_devices
+  ([`4ae5514`](https://github.com/bec-project/bec_widgets/commit/4ae55143a3611389cb20bb053fb7c1fe280ee121))
+
+
 ## v3.37.5 (2026-10-06)
 
 ### Bug Fixes
