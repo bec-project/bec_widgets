@@ -733,16 +733,10 @@ class NotificationCentre(QScrollArea):
         )
         # tag with shared ID and hook closures to the singleton broker
         toast.notification_id = notification_id
-        broker = BECNotificationBroker()
-        toast.closed.connect(lambda nid=notification_id: broker.notification_closed.emit(nid))
-        # Once a toast auto-expires it is no longer live, so drop it from the broker's
-        # replay store. Wired here so BOTH creation paths are covered: live posts and
-        # toasts recreated by _replay_active_notifications — otherwise a replayed toast
-        # that expires would leave the entry behind and every future NotificationCentre
-        # would replay it again. MAJOR alarms use lifetime_ms=0 and never emit
-        # 'expired', so they correctly stay in history until explicitly closed.
-        toast.expired.connect(
-            lambda nid=notification_id: broker._active_notifications.pop(nid, None)
+        # resolve the broker when the toast closes, not now: reset_singleton() may have
+        # replaced it in between, and a captured instance would be a deleted QObject
+        toast.closed.connect(
+            lambda nid=notification_id: BECNotificationBroker().notification_closed.emit(nid)
         )
         toast.closed.connect(lambda: self._hide_notification(toast))
         toast.expired.connect(lambda t=toast: self._handle_expire(t))
@@ -1033,6 +1027,10 @@ class BECNotificationBroker(BECConnector, QObject):
 
     RPC = False
 
+    # Upper bound for the replay store. Expired toasts stay in every centre's history, so
+    # new centres replay them (soft-hidden) too; the oldest entries are dropped beyond this.
+    MAX_REPLAY_NOTIFICATIONS = 100
+
     _instance: BECNotificationBroker | None = None
     _initialized: bool = False
 
@@ -1059,6 +1057,9 @@ class BECNotificationBroker(BECConnector, QObject):
         # the caller-supplied parent (which may be a WA_DeleteOnClose window) and anchor it
         # to the QApplication so closing a window never destroys the broker.
         parent = QApplication.instance()
+        # Internal plumbing, never addressed over RPC: keep it out of the RPC registry so the
+        # launcher does not report it as a connection without a top-level window.
+        kwargs["rpc_exposed"] = False
         super().__init__(parent=parent, gui_id=gui_id, client=client, **kwargs)
         self._err_util = self.error_utility
         # listen to incoming alarms and scan status
@@ -1139,8 +1140,11 @@ class BECNotificationBroker(BECConnector, QObject):
             "traceback": detailed_trace,
             "lifetime_ms": lifetime,
         }
-        # close broadcasting and expiry pruning are wired inside add_notification,
-        # covering live and replayed toasts alike — no per-toast hookup needed here
+        # keep the replay store bounded: drop the oldest entries (dicts keep insertion order)
+        while len(self._active_notifications) > self.MAX_REPLAY_NOTIFICATIONS:
+            self._active_notifications.pop(next(iter(self._active_notifications)))
+        # close broadcasting is wired inside add_notification, covering live and
+        # replayed toasts alike — no per-toast hookup needed here
         for centre in centres:
             centre.add_notification(
                 title=title,

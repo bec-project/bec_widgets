@@ -366,6 +366,28 @@ def test_broker_posts_notification(qtbot, centre, mocked_client):
     assert toast._lifetime == 0
 
 
+@pytest.fixture
+def broker(mocked_client):
+    """The broker singleton, always torn down after the test (even if an assert fails)."""
+    brk = BECNotificationBroker(client=mocked_client)
+    brk._err_util = ErrorPopupUtility()
+    yield brk
+    BECNotificationBroker.reset_singleton()
+
+
+def _make_centre(qtbot) -> NotificationCentre:
+    """A NotificationCentre in its own parent widget, as a newly opened window would have."""
+    parent = QtWidgets.QWidget()
+    parent.resize(600, 400)
+    ctr = NotificationCentre(parent=parent, fixed_width=300, margin=8)
+    layout = QtWidgets.QVBoxLayout(parent)
+    layout.addWidget(ctr)
+    # qtbot only keeps a weak reference; hold the parent so GC doesn't delete the centre
+    ctr._test_parent_ref = parent  # type: ignore[attr-defined]
+    qtbot.addWidget(parent)
+    return ctr
+
+
 def test_broker_survives_parent_window_destruction(qtbot, mocked_client):
     """The broker is an app-wide singleton; closing the window that first created it must
     not destroy it, or every later window gets a dead wrapper and notifications stop."""
@@ -376,19 +398,21 @@ def test_broker_survives_parent_window_destruction(qtbot, mocked_client):
     w1 = QMainWindow()
     w1.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
     qtbot.addWidget(w1)
-    b1 = BECNotificationBroker(parent=w1, client=mocked_client)
-    assert b1.parent() is QApplication.instance()
+    try:
+        b1 = BECNotificationBroker(parent=w1, client=mocked_client)
+        assert b1.parent() is QApplication.instance()
 
-    w1.close()
-    qapp = QApplication.instance()
-    qapp.sendPostedEvents(None, QEvent.DeferredDelete)
-    qapp.processEvents(QEventLoop.AllEvents)
+        w1.close()
+        qapp = QApplication.instance()
+        qapp.sendPostedEvents(None, QEvent.DeferredDelete)
+        qapp.processEvents(QEventLoop.AllEvents)
 
-    assert shiboken6.isValid(b1)  # broker outlived the window
-    b2 = BECNotificationBroker(parent=None, client=mocked_client)
-    assert b2 is b1 and shiboken6.isValid(b2)
-    b2.notification_closed.emit("x")  # must not raise RuntimeError
-    BECNotificationBroker.reset_singleton()
+        assert shiboken6.isValid(b1)  # broker outlived the window
+        b2 = BECNotificationBroker(parent=None, client=mocked_client)
+        assert b2 is b1 and shiboken6.isValid(b2)
+        b2.notification_closed.emit("x")  # must not raise RuntimeError
+    finally:
+        BECNotificationBroker.reset_singleton()
 
 
 def test_broker_revives_after_hard_destroy(qtbot, mocked_client):
@@ -396,62 +420,90 @@ def test_broker_revives_after_hard_destroy(qtbot, mocked_client):
     fresh, re-subscribed instance instead of returning the dead wrapper."""
     import shiboken6
 
-    b1 = BECNotificationBroker(parent=None, client=mocked_client)
-    shiboken6.delete(b1)
-    assert not shiboken6.isValid(b1)
+    try:
+        b1 = BECNotificationBroker(parent=None, client=mocked_client)
+        shiboken6.delete(b1)
+        assert not shiboken6.isValid(b1)
 
-    b2 = BECNotificationBroker(parent=None, client=mocked_client)
-    assert b2 is not b1 and shiboken6.isValid(b2)
-    b2.notification_closed.emit("y")  # re-subscribed, no RuntimeError
-    BECNotificationBroker.reset_singleton()
+        b2 = BECNotificationBroker(parent=None, client=mocked_client)
+        assert b2 is not b1 and shiboken6.isValid(b2)
+        b2.notification_closed.emit("y")  # re-subscribed, no RuntimeError
+    finally:
+        BECNotificationBroker.reset_singleton()
 
 
-def test_active_notifications_dropped_on_expiry(qtbot, centre, mocked_client):
-    """Auto-expiring (non-MAJOR) notifications must not linger in the replay store; MAJOR
-    alarms (lifetime 0, never expire) stay in history until explicitly closed."""
-    qtbot.wait(20)  # let the centre's replay singleShot fire on an EMPTY store first
-    broker = BECNotificationBroker(client=mocked_client)
-    broker._err_util = ErrorPopupUtility()
+def test_broker_is_not_registered_for_rpc(broker):
+    """The broker is internal plumbing: it must stay out of the RPC registry, otherwise the
+    launcher reports it as a connection without a top-level window once all windows close."""
+    from bec_widgets.utils.rpc_register import RPCRegister
+
+    assert broker not in RPCRegister().list_all_connections().values()
+
+
+def test_expired_notification_is_replayed_into_new_centre(qtbot, broker):
+    """Expiry only soft-hides a toast (it stays in the centre's history), so a centre opened
+    later must replay it too and show the same history as the centres already open."""
+    ctr_a = _make_centre(qtbot)
+    qtbot.wait(20)  # let ctr_a's replay singleShot fire on an EMPTY store first
 
     broker.post_notification({"alarm_type": "W", "msg": "m", "severity": 0}, meta={})
-    qtbot.wait(50)
-    assert len(broker._active_notifications) == 1
-    nid = next(iter(broker._active_notifications))
-    assert len(centre.toasts) == 1  # no replay duplicate
-    centre.toasts[0].expired.emit()  # simulate auto-expiry
+    qtbot.waitUntil(lambda: len(ctr_a.toasts) == 1, timeout=2000)
+    nid = ctr_a.toasts[0].notification_id
+    ctr_a.toasts[0].expired.emit()  # simulate auto-expiry
     qtbot.wait(10)
-    assert nid not in broker._active_notifications
+    assert len(ctr_a.toasts) == 1  # still in history, only hidden
+    assert nid in broker._active_notifications
+
+    ctr_b = _make_centre(qtbot)  # e.g. a window opened after the toast expired
+    qtbot.waitUntil(lambda: len(ctr_b.toasts) == 1, timeout=2000)
+    assert ctr_b.toasts[0].notification_id == nid
+    assert not ctr_b.toasts[0].isVisible()  # replayed as history, not popped up again
+
+
+def test_closed_notification_is_not_replayed(qtbot, broker):
+    """Closing a toast removes it everywhere, including the replay store."""
+    ctr_a = _make_centre(qtbot)
+    qtbot.wait(20)
 
     broker.post_notification({"alarm_type": "E", "msg": "m", "severity": 2}, meta={})
-    qtbot.wait(50)
-    major_nid = next(iter(broker._active_notifications))
-    assert broker._active_notifications[major_nid]["lifetime_ms"] == 0
-    BECNotificationBroker.reset_singleton()
-
-
-def test_replayed_toast_expiry_prunes_replay_store(qtbot, mocked_client):
-    """A toast recreated by a NEW centre's replay must also prune the broker's replay
-    store on expiry — not only toasts created live by post_notification."""
-    broker = BECNotificationBroker(client=mocked_client)
-    broker._err_util = ErrorPopupUtility()
-
-    # post with no centre open: the entry is stored for future centres
-    broker.post_notification({"alarm_type": "W", "msg": "m", "severity": 0}, meta={})
-    assert len(broker._active_notifications) == 1
-    nid = next(iter(broker._active_notifications))
-
-    # a new centre replays the stored notification
-    parent = QtWidgets.QWidget()
-    parent.resize(600, 400)
-    ctr = NotificationCentre(parent=parent, fixed_width=300, margin=8)
-    layout = QtWidgets.QVBoxLayout(parent)
-    layout.addWidget(ctr)
-    qtbot.addWidget(parent)
-    qtbot.waitUntil(lambda: len(ctr.toasts) == 1, timeout=2000)
-
-    # expiring the REPLAYED toast must remove the entry from the broker store
-    ctr.toasts[0].expired.emit()
+    qtbot.waitUntil(lambda: len(ctr_a.toasts) == 1, timeout=2000)
+    ctr_a.toasts[0].closed.emit()
     qtbot.wait(10)
-    assert nid not in broker._active_notifications
+    assert broker._active_notifications == {}
 
-    BECNotificationBroker.reset_singleton()
+    ctr_b = _make_centre(qtbot)
+    qtbot.wait(50)
+    assert ctr_b.toasts == []
+
+
+def test_close_after_reset_reaches_all_centres(qtbot, mocked_client):
+    """A toast created before reset_singleton() must broadcast its close through the new
+    broker; a captured old broker would be deleted and raise 'Signal source has been deleted'."""
+    try:
+        BECNotificationBroker(client=mocked_client)
+        ctr_a = _make_centre(qtbot)
+        ctr_b = _make_centre(qtbot)
+        qtbot.wait(20)
+        for ctr in (ctr_a, ctr_b):
+            ctr.add_notification(
+                title="t", body="b", kind=SeverityKind.MAJOR, lifetime_ms=0, notification_id="nid"
+            )
+
+        BECNotificationBroker.reset_singleton()
+        BECNotificationBroker(client=mocked_client)
+
+        ctr_a.toasts[0].closed.emit()
+        qtbot.waitUntil(lambda: ctr_a.toasts == [] and ctr_b.toasts == [], timeout=2000)
+    finally:
+        BECNotificationBroker.reset_singleton()
+
+
+def test_replay_store_is_bounded(broker, monkeypatch):
+    """The replay store keeps only the newest MAX_REPLAY_NOTIFICATIONS entries."""
+    monkeypatch.setattr(BECNotificationBroker, "MAX_REPLAY_NOTIFICATIONS", 3)
+
+    for i in range(5):
+        broker.post_notification({"alarm_type": f"W{i}", "msg": "m", "severity": 0}, meta={})
+
+    titles = [entry["title"] for entry in broker._active_notifications.values()]
+    assert titles == ["W2", "W3", "W4"]
