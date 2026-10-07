@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v3.38.1 (2026-10-07)
+
+### Bug Fixes
+
+- **designer**: Release pyqtgraph theme callbacks before shutdown
+  ([`ed145cc`](https://github.com/bec-project/bec_widgets/commit/ed145cc6d69d586901bcc4659cea444b32e7a081))
+
+- **theme**: Invalidate widget theme connections during cleanup
+  ([`a03f868`](https://github.com/bec-project/bec_widgets/commit/a03f868af7e0788ebb4ac21a4c92c4e8b631f891))
+
+
 ## v3.38.0 (2026-10-06)
 
 ### Bug Fixes
