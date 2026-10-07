@@ -61,7 +61,6 @@ class ScanControl(BECWidget, QWidget):
     PLUGIN = True
     ICON_NAME = "tune"
     ARG_BOX_POSITION: int = 2
-    SUPPORTED_SCAN_BASE_CLASSES = {"ScanBase", "SyncFlyScanBase", "AsyncFlyScanBase", "ScanBaseV4"}
     RECENT_SCAN_HISTORY_COUNT = 50
     MAX_HISTORY_LOOKBACK = 500
     LAST_SCAN_FETCH_TIMEOUT_MS = 30_000
@@ -264,8 +263,7 @@ class ScanControl(BECWidget, QWidget):
         return [
             scan_name
             for scan_name, scan_info in getattr(self, "available_scans", {}).items()
-            if scan_info.get("base_class") in self.SUPPORTED_SCAN_BASE_CLASSES
-            and self._scan_info_adapter.has_scan_ui_config(scan_info)
+            if self._scan_info_adapter.has_scan_ui_config(scan_info)
             and not scan_name.startswith("_")
         ]
 

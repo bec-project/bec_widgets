@@ -1,4 +1,5 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
+from copy import deepcopy
 from threading import Event, get_ident
 from types import SimpleNamespace
 from unittest.mock import MagicMock, call, patch
@@ -380,6 +381,39 @@ def test_allowed_scans_override_support_filter(scan_control):
     assert items == ["not_supported_scan_class", "line_scan"]
 
 
+def test_scan_discovery_and_selection_without_base_class(qtbot, mocked_client):
+    scans = deepcopy(available_scans_message.resource)
+    for scan_info in scans.values():
+        scan_info.pop("base_class", None)
+    scans["_hidden_scan"] = deepcopy(scans["line_scan"])
+    scans["unsupported_input_scan"] = deepcopy(scans["line_scan"])
+    scans["unsupported_input_scan"]["gui_config"]["arg_group"]["inputs"][0]["type"] = {
+        "Generic": {"origin": "list", "args": ["float"]}
+    }
+    mocked_client.connector.set_and_publish(
+        MessageEndpoints.available_scans(), AvailableResourceMessage(resource=scans)
+    )
+
+    widget = ScanControl(client=mocked_client)
+    qtbot.addWidget(widget)
+
+    assert widget.allowed_scans == ["line_scan", "grid_scan"]
+    assert widget.current_scan == "line_scan"
+    assert len(widget.arg_box.widgets) == 3
+
+    widget.comboBox_scan_selection.setCurrentText("grid_scan")
+
+    assert widget.current_scan == "grid_scan"
+    assert len(widget.arg_box.widgets) == 8
+
+    # Explicit filters still override hidden-name and UI support checks and keep order.
+    widget.allowed_scans = ["_hidden_scan", "line_scan", "not_supported_scan_class", "missing"]
+    assert [
+        widget.comboBox_scan_selection.itemText(index)
+        for index in range(widget.comboBox_scan_selection.count())
+    ] == ["_hidden_scan", "line_scan", "not_supported_scan_class"]
+
+
 def test_filter_change_saves_current_scan_parameters(scan_control):
     assert scan_control.current_scan == "line_scan"
 
@@ -579,7 +613,6 @@ def test_scan_selector_settings_properties_are_profile_safe(scan_control):
 def test_scan_control_uses_gui_visibility_and_signature(qtbot, mocked_client):
     scan_info = {
         "class": "AnnotatedScan",
-        "base_class": "ScanBase",
         "arg_input": {
             "device": "DeviceBase",
             "start": {
