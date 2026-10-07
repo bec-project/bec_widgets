@@ -792,6 +792,79 @@ def test_async_readback_updates_only_curves_of_its_device(
     np.testing.assert_array_equal(curve_b.get_data()[1], [7, 8])
 
 
+@pytest.mark.parametrize("change", ["remove_dap_curve", "remove_history_curve", "add_curve"])
+def test_curve_changes_mid_scan_keep_live_async_stream_and_data(
+    qtbot, mocked_client_with_dap, monkeypatch, scan_history_factory, change
+):
+    """
+    DAP and history curves share the DeviceSignal of their live counterpart. Adding or removing
+    such a curve (or any other curve) during a live scan re-categorises the curves; the live
+    async stream must stay subscribed without being registered again, and the live curve must
+    keep the data it already received.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    live = wf.plot(arg1="bpm4i")
+    inject_scan_history(wf, scan_history_factory, ("hist-1", 1))
+    scan_item = create_dummy_scan_item(scan_id="scan-1")
+    # bpm4i is read out asynchronously in this scan
+    scan_item.status_message.info["readout_priority"] = {"monitored": [], "async": ["bpm4i"]}
+    monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: scan_item)
+    wf.on_scan_status({"scan_id": "scan-1", "status": "open"}, {})
+    endpoint = _async_readback_endpoint("scan-1", "bpm4i")
+    [(_, subscription)] = _async_readback_subscriptions(wf)
+    _deliver_async_readback(wf, endpoint, {"bpm4i": [1, 2, 3]}, update_type="add")
+
+    connector = wf.client.connector
+    register_spy = mock.patch.object(connector, "register", wraps=connector.register)
+    unregister_spy = mock.patch.object(connector, "unregister", wraps=connector.unregister)
+    with register_spy as register, unregister_spy as unregister:
+        if change == "remove_dap_curve":
+            # The fit request is not under test (it cannot serialise the mocked scan item)
+            monkeypatch.setattr(wf, "request_dap", lambda *args, **kwargs: None)
+            dap_curve = wf.add_dap_curve(device_label=live.name(), dap_name="GaussianModel")
+            wf.remove_curve(dap_curve.name())
+        elif change == "remove_history_curve":
+            history_curve = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist-1")
+            wf.remove_curve(history_curve.name())
+        else:
+            wf.plot(arg1="samx")
+        live_stream_calls = [
+            call
+            for call in register.call_args_list + unregister.call_args_list
+            if getattr(call.args[0], "endpoint", call.args[0]) == endpoint
+        ]
+
+    assert live_stream_calls == []
+    assert _async_readback_subscriptions(wf) == [(endpoint, subscription)]
+    np.testing.assert_array_equal(live.get_data()[1], [1, 2, 3])
+    _deliver_async_readback(wf, endpoint, {"bpm4i": [4]}, update_type="add")
+    np.testing.assert_array_equal(live.get_data()[1], [1, 2, 3, 4])
+
+
+def test_removing_curve_named_like_its_device_keeps_shared_async_stream(
+    qtbot, mocked_client, monkeypatch
+):
+    """
+    Removing one of two curves fed by the same async stream must keep the stream subscribed for
+    the other one, also when the removed curve's label equals the device name (which is what
+    the old per-curve disconnect derived the endpoint from).
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.plot(arg1="async_device", label="async_device")
+    remaining = wf.plot(arg1="async_device", label="async_device_copy")
+    scan_item = create_dummy_scan_item(scan_id="scan-1")
+    monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: scan_item)
+    wf.on_scan_status({"scan_id": "scan-1", "status": "open"}, {})
+    endpoint = _async_readback_endpoint("scan-1", "async_device")
+    _deliver_async_readback(wf, endpoint, {"async_device": [1, 2]}, update_type="add")
+
+    wf.remove_curve("async_device")
+
+    assert _async_readback_endpoints(wf) == [endpoint]
+    _deliver_async_readback(wf, endpoint, {"async_device": [3]}, update_type="add")
+    np.testing.assert_array_equal(remaining.get_data()[1], [1, 2, 3])
+
+
 def test_request_dap_skips_unchanged_static_parent(qtbot, mocked_client_with_dap, monkeypatch):
     """
     DAP curves whose parent is a static custom curve must not be resubmitted by
