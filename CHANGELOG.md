@@ -1,6 +1,28 @@
 # CHANGELOG
 
 
+## v3.39.1 (2026-10-07)
+
+### Bug Fixes
+
+- **plots**: Drop deferred timers of closed plot widgets
+  ([`a1f3730`](https://github.com/bec-project/bec_widgets/commit/a1f3730c60650ad5b9dc76f979adca0578bbd3f3))
+
+- **plots**: Stop signal proxies after cleanup
+  ([`9296575`](https://github.com/bec-project/bec_widgets/commit/929657538ab98e9339425201948316e210ef7e20))
+
+- **widgets**: Skip deferred single shots of closed widgets
+  ([`87b33bc`](https://github.com/bec-project/bec_widgets/commit/87b33bc35574ae2bcc5230d178757ca0a14277de))
+
+- **widgets**: Stop queued delivery timers of signal proxies on cleanup
+  ([`63d1369`](https://github.com/bec-project/bec_widgets/commit/63d136917e0d11389d8492ba27462c15aae6a664))
+
+### Refactoring
+
+- **widgets**: Move _call_later from PlotBase to BECWidget
+  ([`fd8707d`](https://github.com/bec-project/bec_widgets/commit/fd8707d7f56f02a0321f6d454ba7ebd6251a8644))
+
+
 ## v3.39.0 (2026-10-07)
 
 ### Bug Fixes
