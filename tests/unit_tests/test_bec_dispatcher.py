@@ -652,3 +652,27 @@ def test_qthreadsafe_callback_checks_lambda_owner_at_delivery(qapp, teardown):
 
     qapp.processEvents()
     assert calls == []
+
+
+@pytest.mark.parametrize("topics", [["span-a", "span-b"], None], ids=["topic-list", "no-topics"])
+def test_dispatcher_disconnect_slot_spanning_wrappers_cancels_queued_deliveries(
+    bec_dispatcher, qapp, topics
+):
+    # disconnect_slot may release several wrappers of the same callback at once (a topic list
+    # spanning registrations, or no topics at all); every fully emptied wrapper must be
+    # invalidated so deliveries that are already queued for it are dropped.
+    callback = mock.Mock(spec=[])
+    bec_dispatcher.connect_slot(callback, "span-a", cb_info={"scan": "a"})
+    bec_dispatcher.connect_slot(callback, "span-b", cb_info={"scan": "b"})
+    wrappers = [slot for slot in bec_dispatcher._registered_slots if slot.cb is callback]
+    assert len(wrappers) == 2
+    for wrapper in wrappers:
+        _queue_callback(wrapper)
+
+    bec_dispatcher.disconnect_slot(callback, topics)
+
+    for wrapper in wrappers:
+        _queue_callback(wrapper)  # in-flight emissions after the release
+    qapp.processEvents()
+    callback.assert_not_called()
+    assert not any(slot.cb is callback for slot in bec_dispatcher._registered_slots)
