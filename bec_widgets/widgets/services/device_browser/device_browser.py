@@ -12,6 +12,7 @@ from pyqtgraph import SignalProxy
 from qtpy.QtCore import QThreadPool, Signal
 from qtpy.QtWidgets import QFileDialog, QListWidget, QToolButton, QVBoxLayout, QWidget
 
+from bec_widgets.utils.bec_signal_proxy import cleanup_signal_proxy
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.list_of_expandable_frames import ListOfExpandableFrames
@@ -199,8 +200,8 @@ class DeviceBrowser(BECWidget, QWidget):
             self._config_helper.save_current_session(file_path)
 
     def cleanup(self):
-        # Detach the filter proxy first, so no queued filter change reaches the closed browser.
-        self.proxy_device_update.disconnect()
+        # Stop the filter proxy first, so no queued filter change reaches the closed browser.
+        cleanup_signal_proxy(self.proxy_device_update)
         super().cleanup()
         self.bec_dispatcher.client.callbacks.remove(self._scan_status_callback_id)
         self.bec_dispatcher.client.callbacks.remove(self._device_update_callback_id)

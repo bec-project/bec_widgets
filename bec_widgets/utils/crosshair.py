@@ -9,6 +9,7 @@ from qtpy.QtCore import QObject, QPointF, Qt, Signal
 from qtpy.QtGui import QCursor, QTransform
 from qtpy.QtWidgets import QApplication, QMenu
 
+from bec_widgets.utils.bec_signal_proxy import cleanup_signal_proxy
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.widgets.plots.image.image_item import ImageItem
 
@@ -980,7 +981,7 @@ class Crosshair(QObject):
         # The plot's scene outlives the crosshair: detach from its mouse signals first, so
         # no mouse move queued in the rate-limiting proxy, and no click, reaches it afterwards.
         if self.proxy is not None:  # None once an earlier cleanup() detached it
-            self.proxy.disconnect()
+            cleanup_signal_proxy(self.proxy)
             self.proxy = None
             scene = self.plot_item.scene()
             if scene is not None:

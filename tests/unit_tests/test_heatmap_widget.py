@@ -1187,12 +1187,16 @@ def test_heatmap_cleanup_detaches_update_proxy(qtbot, mocked_client):
         qtbot.wait(100)  # let anything queued during construction drain
         update_plot.reset_mock()
 
+        proxy = widget.proxy_update_sync
         widget.sync_signal_update.emit()  # queued in the proxy
+        assert proxy.timer.timer.isActive()  # pg's ThreadsafeTimer wraps a QTimer
         widget.close()  # closeEvent -> cleanup()
         widget.sync_signal_update.emit()  # requested after cleanup
 
         qtbot.wait(300)
         update_plot.assert_not_called()
+        assert not proxy.timer.timer.isActive()
+        assert proxy.args is None
 
 
 def test_heatmap_scan_done_refreshes_skipped_after_close(qtbot, mocked_client):

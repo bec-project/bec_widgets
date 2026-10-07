@@ -10,6 +10,25 @@ from qtpy.QtCore import QTimer, Signal
 from bec_widgets.utils.error_popups import SafeSlot
 
 
+def cleanup_signal_proxy(proxy: SignalProxy) -> None:
+    """
+    Stop a pyqtgraph SignalProxy for good, so nothing is delivered to its slot afterwards.
+
+    pg.SignalProxy.disconnect() only detaches the source signal and blocks the proxy. An
+    emission that is already queued keeps the repeating delivery timer running, because flush()
+    returns before stopping the timer once the proxy is blocked. This also stops that timer and
+    drops the queued arguments. Calling it again is a no-op.
+
+    Args:
+        proxy(SignalProxy): The proxy to stop.
+    """
+    # Called explicitly: on subclasses of SignalProxy, PySide6 resolves proxy.disconnect
+    # to the built-in QObject.disconnect instead of SignalProxy.disconnect.
+    SignalProxy.disconnect(proxy)
+    proxy.timer.stop()
+    proxy.args = None
+
+
 class BECSignalProxy(SignalProxy):
     """
     Thin wrapper around the SignalProxy class to allow signal calls to be blocked,
@@ -96,18 +115,13 @@ class BECSignalProxy(SignalProxy):
         """
         Cleanup the proxy so that nothing is delivered to the slot afterwards.
 
-        Disconnects the proxy from its source signal and blocks it (pg.SignalProxy.disconnect),
-        stops the delivery timer inherited from pg.SignalProxy, drops any queued or pending
-        emission and stops and deletes the auto-unblock timer. Calling it again is a no-op.
+        Stops the pg.SignalProxy part (see cleanup_signal_proxy), drops any pending emission
+        and stops and deletes the auto-unblock timer. Calling it again is a no-op.
         """
         if self._cleaned_up:
             return
         self._cleaned_up = True
-        # Called explicitly: on subclasses of SignalProxy, PySide6 resolves self.disconnect
-        # to the built-in QObject.disconnect instead of SignalProxy.disconnect.
-        SignalProxy.disconnect(self)
-        self.timer.stop()
-        self.args = None
+        cleanup_signal_proxy(self)
         self._pending = False
         self.old_args = None
         self.new_args = None

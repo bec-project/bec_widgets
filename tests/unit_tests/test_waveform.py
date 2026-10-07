@@ -638,10 +638,13 @@ def test_waveform_cleanup_drops_queued_proxy_updates(qtbot, waveform_with_proxy_
     """
     wf, slots = waveform_with_proxy_slot_spies
 
+    proxies = [wf.proxy_update_sync, wf.proxy_update_async, wf.proxy_dap_request]
     wf.sync_signal_update.emit()
     wf.async_signal_update.emit()
     wf.request_dap_update.emit()
     assert all(slot.call_count == 0 for slot in slots.values())  # all three are queued
+    # pg's ThreadsafeTimer wraps a QTimer: the delivery timers are running
+    assert all(proxy.timer.timer.isActive() for proxy in proxies)
 
     wf.close()  # closeEvent -> cleanup() while the updates are pending
 
@@ -651,6 +654,9 @@ def test_waveform_cleanup_drops_queued_proxy_updates(qtbot, waveform_with_proxy_
         "async": 0,
         "dap": 0,
     }
+    # The delivery timers are stopped and the queued updates dropped, not just blocked.
+    assert not any(proxy.timer.timer.isActive() for proxy in proxies)
+    assert all(proxy.args is None for proxy in proxies)
 
 
 def test_waveform_cleanup_detaches_proxies_from_update_signals(

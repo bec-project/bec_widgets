@@ -9,6 +9,7 @@ from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QHBoxLayout, QMainWindow, QWidget
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
+from bec_widgets.utils.bec_signal_proxy import cleanup_signal_proxy
 from bec_widgets.utils.colors import Colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.settings_dialog import SettingsDialog
@@ -748,8 +749,8 @@ class ScatterWaveform(PlotBase):
         """
         Cleanup the widget and disconnect all signals.
         """
-        # Detach the update proxy first, so no queued update reaches the torn-down curve.
-        self.proxy_update_sync.disconnect()
+        # Stop the update proxy first, so no queued update reaches the torn-down curve.
+        cleanup_signal_proxy(self.proxy_update_sync)
         if self.scatter_dialog is not None:
             self.scatter_dialog.close()
             self.scatter_dialog.deleteLater()

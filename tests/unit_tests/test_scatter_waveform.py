@@ -676,12 +676,16 @@ def test_scatter_waveform_cleanup_detaches_update_proxy(qtbot, mocked_client):
         qtbot.wait(100)  # let anything queued during construction drain
         update_sync_curves.reset_mock()
 
+        proxy = swf.proxy_update_sync
         swf.sync_signal_update.emit()  # queued in the proxy
+        assert proxy.timer.timer.isActive()  # pg's ThreadsafeTimer wraps a QTimer
         swf.close()  # closeEvent -> cleanup()
         swf.sync_signal_update.emit()  # requested after cleanup
 
         qtbot.wait(200)
         update_sync_curves.assert_not_called()
+        assert not proxy.timer.timer.isActive()
+        assert proxy.args is None
 
 
 def test_scatter_waveform_scan_done_runs_delayed_sync_refreshes(qtbot, mocked_client):

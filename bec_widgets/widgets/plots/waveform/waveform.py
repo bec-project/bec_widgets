@@ -27,7 +27,7 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
-from bec_widgets.utils.bec_signal_proxy import BECSignalProxy
+from bec_widgets.utils.bec_signal_proxy import BECSignalProxy, cleanup_signal_proxy
 from bec_widgets.utils.colors import Colors, apply_theme
 from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
@@ -2719,10 +2719,10 @@ class Waveform(PlotBase):
         """
         Cleanup the widget by disconnecting signals and closing dialogs.
         """
-        # Detach all update proxies first, so no queued update is delivered into the widget
-        # while (or after) it is torn down. disconnect() also blocks pending emissions.
-        self.proxy_update_sync.disconnect()
-        self.proxy_update_async.disconnect()
+        # Stop all update proxies first, so no queued update is delivered into the widget
+        # while (or after) it is torn down.
+        cleanup_signal_proxy(self.proxy_update_sync)
+        cleanup_signal_proxy(self.proxy_update_async)
         self.proxy_dap_request.cleanup()
         if self._alignment_controller is not None:
             self._alignment_controller.cleanup()

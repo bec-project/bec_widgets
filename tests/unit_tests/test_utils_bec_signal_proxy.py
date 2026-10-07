@@ -4,7 +4,7 @@ import pyqtgraph as pg
 import pytest
 
 from bec_widgets.tests.client_mocks import mocked_client
-from bec_widgets.utils.bec_signal_proxy import BECSignalProxy
+from bec_widgets.utils.bec_signal_proxy import BECSignalProxy, cleanup_signal_proxy
 from bec_widgets.widgets.dap.dap_combo_box.dap_combo_box import DapComboBox
 
 from .conftest import create_widget
@@ -195,10 +195,14 @@ def test_bec_signal_proxy_cleanup_drops_queued_emission(qtbot):
 
     src.sig.emit()  # queued: the inherited delivery timer forwards it on the next tick
     assert calls == []
+    assert proxy.timer.timer.isActive()  # pg's ThreadsafeTimer wraps a QTimer
     proxy.cleanup()
+    assert not proxy.timer.timer.isActive()
+    assert proxy.args is None
 
     qtbot.wait(150)
     assert calls == []
+    assert not proxy.timer.timer.isActive()
 
 
 def test_bec_signal_proxy_ignores_source_after_cleanup(qtbot):
@@ -221,3 +225,35 @@ def test_bec_signal_proxy_ignores_source_after_cleanup(qtbot):
     assert calls == []
     assert proxy.blocked is False
     proxy.cleanup()  # a second cleanup is a no-op
+
+
+def test_cleanup_signal_proxy_stops_queued_delivery(qtbot):
+    """
+    pg.SignalProxy.disconnect() alone keeps the repeating delivery timer of a queued emission
+    running; cleanup_signal_proxy also stops it, drops the queued arguments and detaches the
+    source, so nothing reaches the slot afterwards.
+    """
+    from qtpy.QtCore import QObject, Signal
+
+    class _Src(QObject):
+        sig = Signal()
+
+    src = _Src()
+    calls, ticks = [], []
+    proxy = pg.SignalProxy(src.sig, rateLimit=25, slot=lambda *_: calls.append(1))
+    proxy.timer.timeout.connect(lambda: ticks.append(1))
+
+    src.sig.emit()  # queued: the delivery timer forwards it on the next tick
+    assert proxy.args is not None
+    assert proxy.timer.timer.isActive()  # pg's ThreadsafeTimer wraps a QTimer
+
+    cleanup_signal_proxy(proxy)
+    assert not proxy.timer.timer.isActive()
+    assert proxy.args is None
+
+    src.sig.emit()  # detached from the source
+    qtbot.wait(100)
+    assert calls == []
+    assert ticks == []
+    assert not proxy.timer.timer.isActive()
+    cleanup_signal_proxy(proxy)  # a second call is a no-op
