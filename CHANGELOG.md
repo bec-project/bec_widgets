@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v3.39.0 (2026-10-07)
+
+### Bug Fixes
+
+- **dispatcher**: Select the wrapper subscribed to the requested topic on disconnect
+  ([`ff4c3ac`](https://github.com/bec-project/bec_widgets/commit/ff4c3acbef4be46418ce9ec272ba977009e97dee))
+
+### Features
+
+- **dispatcher**: Optional topics in disconnect_slot and release across all matching wrappers
+  ([`65776d5`](https://github.com/bec-project/bec_widgets/commit/65776d5627a5464439441f9f16957165c0d87e93))
+
+### Testing
+
+- **dispatcher**: Cancel queued deliveries when disconnect_slot releases several wrappers
+  ([`5c91eb0`](https://github.com/bec-project/bec_widgets/commit/5c91eb03a7f5b5c2c45f4ab65d9dab5673ec6079))
+
+
 ## v3.38.1 (2026-10-07)
 
 ### Bug Fixes
