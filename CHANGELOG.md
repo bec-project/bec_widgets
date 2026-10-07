@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.39.2 (2026-10-07)
+
+### Bug Fixes
+
+- **bec_console**: Clear the console registry when the application quits
+  ([`07614a0`](https://github.com/bec-project/bec_widgets/commit/07614a0bbe51b1af83bce316c2d22e7de25567c9))
+
+
 ## v3.39.1 (2026-10-07)
 
 ### Bug Fixes
