@@ -311,8 +311,11 @@ class DeviceFormDialog(QtWidgets.QDialog):
         # this is relevant for the _wait_dialog exec which opens a modal dialog during validation
         # and therefore must not have the signal emitted immediately in the same event loop iteration.
         # Otherwise, the callback may be scheduled before the dialog is shown resulting in a deadlock.
+        # Bound to the validation widget: Qt drops the call if it is deleted before it runs.
         QtCore.QTimer.singleShot(
-            0, lambda: ophyd_validation.change_device_configs([config], True, False)
+            0,
+            ophyd_validation,
+            lambda: ophyd_validation.change_device_configs([config], True, False),
         )
         return ophyd_validation
 

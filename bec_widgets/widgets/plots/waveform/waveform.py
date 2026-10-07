@@ -12,7 +12,7 @@ from bec_lib.lmfit_serializer import serialize_lmfit_params, serialize_param_obj
 from bec_lib.scan_data_container import ScanDataContainer
 from bec_lib.utils.import_utils import lazy_import
 from pydantic import Field, ValidationError, field_validator
-from qtpy.QtCore import Qt, QTimer, Signal
+from qtpy.QtCore import Qt, Signal
 from qtpy.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -1180,9 +1180,8 @@ class Waveform(PlotBase):
         if config.source == "history":
             self._history_curves.append(curve)
 
-        QTimer.singleShot(
-            150, self.auto_range
-        )  # autorange with a delay to ensure the plot is updated
+        # Autorange with a delay to ensure the plot is updated; skipped if the widget is closed.
+        self._call_later(150, self.auto_range)
         self._refresh_alignment_state()
 
         return curve

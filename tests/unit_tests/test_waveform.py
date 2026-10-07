@@ -706,6 +706,27 @@ def test_waveform_scan_done_refreshes_skipped_after_cleanup(qtbot, waveform_with
     assert slots["sync"].call_count == 0
 
 
+def test_waveform_add_curve_autorange_skipped_after_close(qtbot, mocked_client):
+    """
+    Adding a curve schedules a delayed auto-range: it runs while the Waveform is open and is
+    skipped once the Waveform has been closed (cleaned up) before the delay elapsed.
+    """
+    open_wf = create_widget(qtbot, Waveform, client=mocked_client)
+    closed_wf = create_widget(qtbot, Waveform, client=mocked_client)
+    with (
+        mock.patch.object(open_wf, "auto_range") as open_auto_range,
+        mock.patch.object(closed_wf, "auto_range") as closed_auto_range,
+    ):
+        open_wf.plot(x=[1, 2, 3], y=[4, 5, 6], label="open_curve")
+        closed_wf.plot(x=[1, 2, 3], y=[4, 5, 6], label="closed_curve")
+        calls_before_close = closed_auto_range.call_count
+        closed_wf.close()  # closeEvent -> cleanup() before the auto-range is due
+
+        qtbot.waitUntil(lambda: open_auto_range.call_count > 0, timeout=1000)
+        qtbot.wait(250)
+        assert closed_auto_range.call_count == calls_before_close
+
+
 def test_request_dap_always_resubmits_device_parent(qtbot, mocked_client_with_dap, monkeypatch):
     """
     DAP curves attached to device curves keep the resubmit-on-every-update behavior,

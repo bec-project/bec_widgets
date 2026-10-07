@@ -308,6 +308,21 @@ class TestDeviceManagerViewDialogs:
                 mock_create_dialog.assert_not_called()
                 mock_create_validation.assert_not_called()
 
+    def test_device_form_validation_start_dropped_with_validation_widget(
+        self, device_form_dialog: DeviceFormDialog, qtbot
+    ):
+        """
+        The dialog starts the ophyd validation from the event loop; the deferred start is
+        bound to the validation widget, so it is dropped if that widget is deleted first.
+        """
+        with mock.patch.object(OphydValidation, "change_device_configs") as change_configs:
+            validation = device_form_dialog._create_and_run_ophyd_validation({"name": "dev"})
+            validation.deleteLater()
+            QtWidgets.QApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
+
+            qtbot.wait(50)
+            change_configs.assert_not_called()
+
     def test_device_status_item(self, device_config: dict, qtbot):
         """Test the DeviceStatusItem widget."""
         item = DeviceStatusItem(device_config=device_config, config_status=0, connection_status=0)

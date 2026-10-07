@@ -874,7 +874,7 @@ class LogPanel(BECWidget, QWidget):
         # defer: when the current row moves because of a buffer trim, this signal fires
         # while the trimmed rows are still present - only after the update settles can we
         # tell a user-driven move from the selection model relocating a removed row
-        QTimer.singleShot(0, self._sync_detail_to_selection)
+        self._call_later(0, self._sync_detail_to_selection)
 
     @SafeSlot()
     def _sync_detail_to_selection(self):
