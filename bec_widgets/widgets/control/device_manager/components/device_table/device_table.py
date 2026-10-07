@@ -547,7 +547,7 @@ class DeviceTable(BECWidget, QtWidgets.QWidget):
         self.search_controls.addLayout(self.search_layout)
         self.search_controls.addSpacing(20)  # Add some space between the search box and toggle
         self.search_controls.addLayout(self.fuzzy_layout)
-        QtCore.QTimer.singleShot(0, lambda: self.fuzzy_is_disabled.stateChanged.emit(0))
+        self._call_later(0, lambda: self.fuzzy_is_disabled.stateChanged.emit(0))
 
     # -------------------------------------------------------------------------
     # Row Management, internal methods.

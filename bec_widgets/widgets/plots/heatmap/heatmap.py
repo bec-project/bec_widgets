@@ -11,7 +11,7 @@ from bec_lib.endpoints import MessageEndpoints
 from bec_lib.utils.import_utils import lazy_import_from
 from bec_qthemes import material_icon
 from pydantic import BaseModel, Field, field_validator
-from qtpy.QtCore import QObject, Qt, QThread, QTimer, Signal
+from qtpy.QtCore import QObject, Qt, QThread, Signal
 from qtpy.QtGui import QTransform
 from qtpy.QtWidgets import QDialog, QPushButton, QVBoxLayout
 from toolz import partition
@@ -668,8 +668,9 @@ class Heatmap(ImageBase):
         self.sync_signal_update.emit()
         status = msg.get("done")
         if status:
-            QTimer.singleShot(100, self.update_plot)
-            QTimer.singleShot(300, self.update_plot)
+            # Final refreshes for late scan data; skipped if the widget is closed meanwhile.
+            self._call_later(100, self.update_plot)
+            self._call_later(300, self.update_plot)
 
     @SafeSlot()
     def update_plot(self, _=None) -> None:

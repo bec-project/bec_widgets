@@ -1193,3 +1193,32 @@ def test_heatmap_cleanup_detaches_update_proxy(qtbot, mocked_client):
 
         qtbot.wait(300)
         update_plot.assert_not_called()
+
+
+def test_heatmap_scan_done_refreshes_skipped_after_close(qtbot, mocked_client):
+    """
+    A finished scan schedules two delayed final refreshes: they run while the Heatmap is open
+    and are skipped once it has been closed (cleaned up) before they fire.
+    """
+    with mock.patch.object(Heatmap, "update_plot") as update_plot:
+        open_hm = Heatmap(client=mocked_client)
+        qtbot.addWidget(open_hm)
+        qtbot.waitExposed(open_hm)
+        qtbot.wait(100)  # let anything queued during construction drain
+        update_plot.reset_mock()
+
+        open_hm.on_scan_progress({"done": True}, {})
+        # one proxied update plus the 100 ms and 300 ms refreshes
+        qtbot.waitUntil(lambda: update_plot.call_count == 3, timeout=2000)
+
+        closed_hm = Heatmap(client=mocked_client)
+        qtbot.addWidget(closed_hm)
+        qtbot.waitExposed(closed_hm)
+        qtbot.wait(100)
+        update_plot.reset_mock()
+
+        closed_hm.on_scan_progress({"done": True}, {})  # schedules the refreshes
+        closed_hm.close()  # closeEvent -> cleanup() before they fire
+
+        qtbot.wait(450)
+        update_plot.assert_not_called()

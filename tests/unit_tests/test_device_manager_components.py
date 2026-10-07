@@ -685,6 +685,21 @@ class TestDeviceTable:
         assert len(selected_configs) == 1
         assert list(selected_configs[0].keys())[0] in ["motor_x", "detector_main"]
 
+    def test_initial_fuzzy_sync_skipped_when_closed_first(self, qtbot, mocked_client):
+        """
+        The table defers its initial fuzzy-search sync to the event loop: it runs for an open
+        table and is skipped for a table closed before the event loop gets to it.
+        """
+        with mock.patch.object(DeviceTable, "_state_change_fuzzy_search") as fuzzy_sync:
+            open_table = DeviceTable(client=mocked_client)
+            closed_table = DeviceTable(client=mocked_client)
+            qtbot.addWidget(open_table)
+            qtbot.addWidget(closed_table)
+            closed_table.close()  # closeEvent -> cleanup() before the deferred sync runs
+
+            qtbot.wait(50)
+            fuzzy_sync.assert_called_once_with(0)
+
 
 class TestOphydValidation:
     """

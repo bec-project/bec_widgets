@@ -559,6 +559,25 @@ def test_log_panel_font_size_property(qtbot, log_panel: LogPanel):
     assert log_panel._table.columnWidth(0) == default_level_width
 
 
+def test_log_panel_deferred_detail_sync_skipped_after_close(qtbot, log_panel: LogPanel):
+    """
+    A current-row change defers the detail-pane sync to the event loop: it runs while the
+    panel is open and is skipped once the panel has been closed before it is due.
+    """
+    log_panel._table.setCurrentIndex(log_panel._proxy.index(1, 0))
+    log_panel._show_details()
+    assert not log_panel._detail.isHidden()
+    with patch.object(log_panel, "_sync_detail_to_selection") as sync_detail:
+        log_panel._on_current_row_changed()
+        qtbot.waitUntil(lambda: sync_detail.call_count == 1, timeout=500)
+
+        log_panel._on_current_row_changed()
+        log_panel.close()  # closeEvent -> cleanup() before the deferred sync runs
+
+        qtbot.wait(50)
+        assert sync_detail.call_count == 1
+
+
 def test_log_panel_custom_range_dialog_prefills_active_bounds(qtbot, log_panel: LogPanel):
     toolbar = log_panel._toolbar
     toolbar._apply_time_preset("Last 5 min", 300)
