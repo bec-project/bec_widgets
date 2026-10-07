@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import os
 import tempfile
+from collections.abc import Callable
 from datetime import datetime
 from functools import partial
 from typing import TYPE_CHECKING
 
 import shiboken6
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import QBuffer, QByteArray, QIODevice, QObject, Qt
+from qtpy.QtCore import QBuffer, QByteArray, QIODevice, QObject, Qt, QTimer
 from qtpy.QtGui import QFont, QPixmap
 from qtpy.QtWidgets import QApplication, QFileDialog, QLabel, QVBoxLayout, QWidget
 
@@ -127,6 +128,27 @@ class BECWidget(BECConnector):
                 theme = "dark"
         self._update_overlay_theme(theme)
         self.apply_theme(theme)
+
+    def _call_later(self, msec: int, callback: Callable[[], object]) -> None:
+        """
+        Call ``callback`` once after ``msec`` milliseconds, but only while the widget is in use.
+
+        Use this instead of a bare ``QTimer.singleShot`` for deferred work that touches the
+        widget: the timer is bound to the widget, so the call is dropped if the widget is
+        deleted first, and it is skipped if the widget has been closed (cleaned up) but not
+        yet deleted.
+
+        Args:
+            msec(int): Delay in milliseconds.
+            callback(Callable[[], object]): Called without arguments.
+        """
+
+        def _call_unless_cleaned_up():
+            if self._destroyed:
+                return
+            callback()
+
+        QTimer.singleShot(msec, self, _call_unless_cleaned_up)
 
     def create_busy_state_widget(self) -> QWidget:
         """
