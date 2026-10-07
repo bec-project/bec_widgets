@@ -243,3 +243,46 @@ def test_parent_destruction_purges_dead_dispatcher_slots(qtbot, mocked_client, b
     for slot in bec_dispatcher._registered_slots.values():
         owner = getattr(slot.cb, "__self__", None)
         assert not isinstance(owner, QObject) or shiboken6.isValid(owner)
+
+
+def test_call_later_runs_only_while_widget_is_open(qtbot, mocked_client):
+    """
+    _call_later runs the callback while the widget is open and skips it once the widget has
+    been closed (cleaned up) or deleted before the delay elapsed.
+    """
+    open_widget = LifecycleWidget(client=mocked_client)
+    closed_widget = LifecycleWidget(client=mocked_client)
+    deleted_widget = LifecycleWidget(client=mocked_client)
+    calls = []
+
+    open_widget._call_later(10, lambda: calls.append("open"))
+    closed_widget._call_later(10, lambda: calls.append("closed"))
+    deleted_widget._call_later(10, lambda: calls.append("deleted"))
+    closed_widget.close()  # closeEvent -> cleanup() before the callback is due
+    deleted_widget.deleteLater()
+    _flush_deferred_deletes(qtbot)
+
+    qtbot.wait(100)
+    assert calls == ["open"]
+
+    for widget in (open_widget, closed_widget):
+        widget.close()
+        widget.deleteLater()
+    _flush_deferred_deletes(qtbot)
+
+
+def test_call_later_dropped_when_parent_destruction_deletes_widget(qtbot, mocked_client):
+    """
+    Destroying a plain parent deletes the BECWidget child without a close event, so the
+    cleaned-up flag is never set; the timer is bound to the widget and Qt drops the call.
+    """
+    parent = QWidget()
+    child = LifecycleWidget(parent=parent, client=mocked_client)
+    calls = []
+
+    child._call_later(10, lambda: calls.append("child"))
+    parent.deleteLater()
+    _flush_deferred_deletes(qtbot)
+
+    qtbot.wait(100)
+    assert calls == []

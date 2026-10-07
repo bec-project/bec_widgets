@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Iterable, Mapping
 from enum import Enum
 from typing import Literal, TypeAlias
 
@@ -9,7 +9,7 @@ import pyqtgraph as pg
 from bec_lib import bec_logger
 from bec_lib.scan_data_container import ScanDataContainer
 from bec_lib.scan_items import ScanItem
-from qtpy.QtCore import QPoint, QPointF, Qt, QTimer, Signal
+from qtpy.QtCore import QPoint, QPointF, Qt, Signal
 from qtpy.QtWidgets import QHBoxLayout, QLabel, QMainWindow, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
@@ -1374,27 +1374,6 @@ class PlotBase(BECWidget, QWidget):
         if self.crosshair is not None:
             self.crosshair.clear_markers()
             self.crosshair.update_markers()
-
-    def _call_later(self, msec: int, callback: Callable[[], object]) -> None:
-        """
-        Call ``callback`` once after ``msec`` milliseconds, but only while the widget is in use.
-
-        Use this instead of a bare ``QTimer.singleShot`` for deferred work that touches the
-        widget: the timer is bound to the widget, so the call is dropped if the widget is
-        deleted first, and it is skipped if the widget has been closed (cleaned up) but not
-        yet deleted.
-
-        Args:
-            msec(int): Delay in milliseconds.
-            callback(Callable[[], object]): Called without arguments.
-        """
-
-        def _call_unless_cleaned_up():
-            if self._destroyed:
-                return
-            callback()
-
-        QTimer.singleShot(msec, self, _call_unless_cleaned_up)
 
     def cleanup(self):
         self.toolbar.cleanup()
