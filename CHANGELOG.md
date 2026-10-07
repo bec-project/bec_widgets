@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.39.3 (2026-10-07)
+
+### Bug Fixes
+
+- **bec_widget**: Release cell widgets from item views on cleanup
+  ([`edac5c2`](https://github.com/bec-project/bec_widgets/commit/edac5c262ce7f8400e0cd5eb2f60bce9454cb944))
+
+
 ## v3.39.2 (2026-10-07)
 
 ### Bug Fixes
