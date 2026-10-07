@@ -666,7 +666,12 @@ def test_cleanup_detaches_crosshair_from_scene_mouse_signals(qtbot, plot_widget_
     qtbot.waitUntil(lambda: bool(moved and clicked), timeout=1000)
     assert crosshair.pinned_point is not None
 
+    proxy = crosshair.proxy
+    scene.sigMouseMoved.emit(scene_pos)  # queued in the rate-limiting proxy
+    assert proxy.timer.timer.isActive()  # pg's ThreadsafeTimer wraps a QTimer
     crosshair.cleanup()
+    assert not proxy.timer.timer.isActive()
+    assert proxy.args is None
     moved.clear()
     clicked.clear()
     scene.sigMouseMoved.emit(scene_pos)

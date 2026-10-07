@@ -395,12 +395,16 @@ def test_motor_map_cleanup_detaches_update_proxy(qtbot, mocked_client):
         qtbot.wait(100)  # let anything queued during construction drain
         update_plot.reset_mock()
 
+        proxy = mm.proxy_update_plot
         mm.update_signal.emit()  # queued in the proxy
+        assert proxy.timer.timer.isActive()  # pg's ThreadsafeTimer wraps a QTimer
         mm.close()  # closeEvent -> cleanup()
         mm.update_signal.emit()  # requested after cleanup
 
         qtbot.wait(200)
         update_plot.assert_not_called()
+        assert not proxy.timer.timer.isActive()
+        assert proxy.args is None
 
 
 def test_motor_map_cleanup_closes_settings_popup(qtbot, mocked_client):

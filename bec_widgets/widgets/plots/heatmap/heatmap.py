@@ -17,6 +17,7 @@ from qtpy.QtWidgets import QDialog, QPushButton, QVBoxLayout
 from toolz import partition
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
+from bec_widgets.utils.bec_signal_proxy import cleanup_signal_proxy
 from bec_widgets.utils.colors import Colors, get_accent_colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.settings_dialog import SettingsDialog
@@ -1633,8 +1634,8 @@ class Heatmap(ImageBase):
         self.main_image.transpose = enable
 
     def cleanup(self):
-        # Detach the update proxy first, so no queued update restarts the interpolation thread.
-        self.proxy_update_sync.disconnect()
+        # Stop the update proxy first, so no queued update restarts the interpolation thread.
+        cleanup_signal_proxy(self.proxy_update_sync)
         self._finish_interpolation_thread()
         if self.scan_history_dialog is not None:
             self.scan_history_dialog.reject()

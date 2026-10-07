@@ -11,6 +11,7 @@ from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QHBoxLayout, QMainWindow, QWidget
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
+from bec_widgets.utils.bec_signal_proxy import cleanup_signal_proxy
 from bec_widgets.utils.colors import Colors, apply_theme
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.settings_dialog import SettingsDialog
@@ -861,8 +862,8 @@ class MotorMap(PlotBase):
         """
         Cleanup the widget by detaching the plot update proxy and closing the settings popup.
         """
-        # Detach the update proxy first, so no queued update reaches the closed plot.
-        self.proxy_update_plot.disconnect()
+        # Stop the update proxy first, so no queued update reaches the closed plot.
+        cleanup_signal_proxy(self.proxy_update_plot)
         if self.motor_map_settings is not None:
             self.motor_map_settings.reject()
             self.motor_map_settings = None

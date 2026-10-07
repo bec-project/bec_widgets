@@ -185,12 +185,17 @@ def test_signal_display_omitted_not_added(mocked_client, qtbot):
 
 def test_device_browser_cleanup_detaches_filter_proxy(device_browser: DeviceBrowser, qtbot):
     """
-    After cleanup() the rate-limited filter proxy must no longer forward filter_input
-    changes to update_device_list of the closed browser.
+    A filter change still queued in the rate-limited filter proxy when the browser is
+    cleaned up, or made afterwards, must not reach update_device_list of the closed browser.
     """
+    proxy = device_browser.proxy_device_update
     with mock.patch.object(device_browser.dev_list, "update_filter") as update_filter:
+        device_browser.ui.filter_input.setText("sam")  # queued in the proxy
+        assert proxy.timer.timer.isActive()  # pg's ThreadsafeTimer wraps a QTimer
         device_browser.close()  # closeEvent -> cleanup()
-        device_browser.ui.filter_input.setText("samx")
+        device_browser.ui.filter_input.setText("samx")  # changed after cleanup
 
         qtbot.wait(600)
         update_filter.assert_not_called()
+        assert not proxy.timer.timer.isActive()
+        assert proxy.args is None
