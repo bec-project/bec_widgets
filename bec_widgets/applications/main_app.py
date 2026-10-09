@@ -13,6 +13,10 @@ from bec_widgets.applications.views.developer_view.developer_view import Develop
 from bec_widgets.applications.views.device_manager_view.device_manager_view import DeviceManagerView
 from bec_widgets.applications.views.dock_area_view.dock_area_view import DockAreaView
 from bec_widgets.applications.views.view import ViewBase, WaveformViewInline, WaveformViewPopup
+from bec_widgets.applications.views.welcome_view.welcome_view import (
+    WelcomeView,
+    welcome_view_requested,
+)
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.guided_tour import GuidedTour
 from bec_widgets.utils.launcher_ready import notify_launcher_ready
@@ -87,6 +91,17 @@ class BECMainApp(BECMainWindow):
         self.admin_view = AdminView(self)
         startup_profiler.mark("AdminView")
 
+        self.welcome_view = None
+        welcome_direction = welcome_view_requested()
+        if welcome_direction is not None:
+            self.welcome_view = WelcomeView(self, direction=welcome_direction)
+            self.add_view(
+                icon="home",
+                title="Home",
+                view_id="welcome",
+                widget=self.welcome_view,
+                mini_text="Home",
+            )
         self.add_view(icon="widgets", title="Dock Area", widget=self.dock_area, mini_text="Docks")
         self.add_view(
             icon="display_settings",
@@ -133,7 +148,7 @@ class BECMainApp(BECMainWindow):
                 mini_text="Stack",
             )
 
-        self.set_current("dock_area")
+        self.set_current("welcome" if self.welcome_view is not None else "dock_area")
         self.sidebar.add_dark_mode_item()
 
         # Add guided tour to Help menu
