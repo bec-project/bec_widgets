@@ -24,6 +24,11 @@ from bec_widgets.utils.screen_utils import (
 )
 from bec_widgets.widgets.containers.dock_area.profile_utils import is_experimental_features_enabled
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
+from bec_widgets.widgets.utility.command_palette.command_palette import SHORTCUTS, CommandPalette
+from bec_widgets.widgets.utility.command_palette.palette_sources import (
+    main_app_commands,
+    menu_commands,
+)
 
 startup_profiler.mark("module imports")
 
@@ -69,6 +74,9 @@ class BECMainApp(BECMainWindow):
         self.guided_tour = GuidedTour(self)
         self._setup_guided_tour()
         startup_profiler.mark("guided tour")
+
+        self._setup_command_palette()
+        startup_profiler.mark("command palette")
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -391,7 +399,41 @@ class BECMainApp(BECMainWindow):
             tour_action.setShortcut("F1")  # Add keyboard shortcut
             help_menu.addAction(tour_action)
 
+    def _setup_command_palette(self):
+        """Create the Ctrl+K command palette and its entry in the View menu."""
+        self._command_palette_action = QAction("Command Palette…", self)
+        self._command_palette_action.setIcon(material_icon("search"))
+        self._command_palette_action.setShortcuts(list(SHORTCUTS))
+        self.command_palette = CommandPalette(
+            self,
+            sources=[
+                lambda: main_app_commands(self),
+                lambda: menu_commands(self.menuBar(), skip=[self._command_palette_action]),
+            ],
+        )
+        self._command_palette_action.triggered.connect(self.command_palette.toggle)
+        for action in self.menuBar().actions():
+            if action.text() == "View" and action.menu() is not None:
+                view_menu = action.menu()
+                first = view_menu.actions()[0] if view_menu.actions() else None
+                view_menu.insertAction(first, self._command_palette_action)
+                view_menu.insertSeparator(first)
+                break
+        else:
+            self.addAction(self._command_palette_action)
+
+    def open_command_palette(self, text: str = "") -> None:
+        """
+        Open the command palette.
+
+        Args:
+            text(str): Initial search text; start it with ``>``, ``+``, ``@`` or ``#`` to search
+                only actions, widgets, devices or workspaces.
+        """
+        self.command_palette.open_palette(text)
+
     def cleanup(self):
+        self.command_palette.cleanup()
         for view_id, idx in self._view_index.items():
             view = self.stack.widget(idx)
             view.close()

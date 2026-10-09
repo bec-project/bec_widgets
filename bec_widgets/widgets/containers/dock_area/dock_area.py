@@ -351,9 +351,14 @@ class BECDockArea(DockAreaWidget):
     # Toolbar Setup
     ################################################################################
 
-    def _setup_toolbar(self):
-        self.toolbar = ModularToolBar(parent=self)
+    @staticmethod
+    def widget_catalog() -> dict[str, dict[str, tuple[str, str, str]]]:
+        """Widgets offered by the toolbar, grouped as in its "Add ..." menus.
 
+        Returns:
+            dict[str, dict[str, tuple[str, str, str]]]: Group label mapped to
+            ``{action_id: (icon_name, label, widget_type)}``.
+        """
         plot_actions = {
             "waveform": (widget_icons["Waveform"], "Waveform", "Waveform"),
             "scatter_waveform": (
@@ -398,6 +403,19 @@ class BECDockArea(DockAreaWidget):
                 "BeamlineStateManager",
             ),
         }
+
+        catalog = {"Plots": plot_actions, "Device Control": device_actions, "Utils": util_actions}
+        plugin_actions = _plugin_toolbar_actions()
+        if plugin_actions:
+            catalog["Plugins"] = plugin_actions
+        return catalog
+
+    def _setup_toolbar(self):
+        self.toolbar = ModularToolBar(parent=self)
+        catalog = self.widget_catalog()
+        plot_actions = catalog["Plots"]
+        device_actions = catalog["Device Control"]
+        util_actions = catalog["Utils"]
 
         # Create expandable menu actions (original behavior)
         def _build_menu(key: str, label: str, mapping: dict[str, tuple[str, str, str]]):
