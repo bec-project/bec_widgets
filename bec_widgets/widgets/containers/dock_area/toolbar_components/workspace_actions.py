@@ -123,27 +123,43 @@ class ProfileComboBox(QComboBox):
             self.blockSignals(was_blocked)
 
 
-def workspace_bundle(components: ToolbarComponents, enable_tools: bool = True) -> ToolbarBundle:
+def workspace_bundle(
+    components: ToolbarComponents, enable_tools: bool = True, reworked: bool = False
+) -> ToolbarBundle:
     """
     Creates a workspace toolbar bundle for BECDockArea.
 
     Args:
         components (ToolbarComponents): The components to be added to the bundle.
         enable_tools(bool): If True, show the workspace management tools; otherwise, only show the profile combo.
+        reworked(bool): Use the icons and labels of the reworked profile windows.
 
     Returns:
         ToolbarBundle: The workspace toolbar bundle.
     """
     # Workspace combo
+    labels = {
+        "save": ("save", "Save Current Workspace"),
+        "restore": ("undo", "Restore Baseline Profile"),
+        "manage": ("manage_accounts", "Manage"),
+    }
+    if reworked:
+        labels = {
+            "save": ("save", "Save profile…"),
+            "restore": ("history", "Revert to saved layout…"),
+            "manage": ("folder_open", "Profile library"),
+        }
     combo = ProfileComboBox(parent=components.toolbar)
     combo.setVisible(enable_tools)
+    if reworked:
+        combo.setToolTip("Profiles shown in the toolbar list. Open the library for all profiles.")
     components.add_safe("workspace_combo", WidgetAction(widget=combo, adjust_size=False))
 
     components.add_safe(
         "save_workspace",
         MaterialIconAction(
-            icon_name="save",
-            tooltip="Save Current Workspace",
+            icon_name=labels["save"][0],
+            tooltip=labels["save"][1],
             checkable=False,
             parent=components.toolbar,
         ),
@@ -153,8 +169,8 @@ def workspace_bundle(components: ToolbarComponents, enable_tools: bool = True) -
     components.add_safe(
         "reset_baseline_workspace",
         MaterialIconAction(
-            icon_name="undo",
-            tooltip="Restore Baseline Profile",
+            icon_name=labels["restore"][0],
+            tooltip=labels["restore"][1],
             checkable=False,
             parent=components.toolbar,
         ),
@@ -164,7 +180,10 @@ def workspace_bundle(components: ToolbarComponents, enable_tools: bool = True) -
     components.add_safe(
         "manage_workspaces",
         MaterialIconAction(
-            icon_name="manage_accounts", tooltip="Manage", checkable=True, parent=components.toolbar
+            icon_name=labels["manage"][0],
+            tooltip=labels["manage"][1],
+            checkable=True,
+            parent=components.toolbar,
         ),
     )
     components.get_action("manage_workspaces").action.setVisible(enable_tools)

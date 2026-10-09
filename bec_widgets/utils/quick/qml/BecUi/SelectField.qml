@@ -5,6 +5,7 @@ import QtQuick.Controls.Basic
 ComboBox {
     id: root
     property bool invalid: false
+    property string placeholder: ""
 
     implicitHeight: 32
     implicitWidth: 140
@@ -22,6 +23,8 @@ ComboBox {
         rightPadding: 4
         text: root.editable ? root.editText : root.displayText
         readOnly: !root.editable
+        placeholderText: root.placeholder
+        placeholderTextColor: theme.fgSubtle
         enabled: root.enabled
         color: theme.fg
         selectionColor: theme.primary

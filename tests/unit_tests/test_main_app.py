@@ -151,7 +151,8 @@ def test_view_switch_method_switches_to_target(app_with_spies, qtbot):
 
 def test_view_content_widget_is_hidden_from_namespace(app_with_spies):
     app, _, _, _ = app_with_spies
-    assert app.dock_area.content is app.dock_area.dock_area
+    assert app.dock_area.content is app.dock_area.workspaces
+    assert app.dock_area.dock_area is app.dock_area.workspaces.current_dock_area()
 
 
 def test_developer_view_is_experimental_by_default(monkeypatch, tmp_path, qtbot, mocked_client):
@@ -305,3 +306,15 @@ def test_guided_tour_can_start_and_stop(app_with_spies, qtbot):
 
     # Check that tour is stopped
     assert not app.guided_tour._active
+
+
+def test_dock_area_view_rpc_targets_current_workspace_tab(app_with_spies):
+    app, _, _, _ = app_with_spies
+    view = app.dock_area
+    first = view.dock_area
+    view.workspaces.new_workspace()
+    second = getattr(view, type(view).RPC_CONTENT_ATTR)
+    assert second is view.workspaces.current_dock_area()
+    assert second is not first
+    view.workspaces.setCurrentIndex(0)
+    assert getattr(view, type(view).RPC_CONTENT_ATTR) is first

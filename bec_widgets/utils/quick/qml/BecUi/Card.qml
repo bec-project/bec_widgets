@@ -10,6 +10,8 @@ Rectangle {
     property alias headerExtras: extras.data
     property int padding: 12
     property alias spacing: column.spacing
+    // Let the content column take the remaining height, e.g. for a list that fills the card.
+    property bool fillContent: false
 
     color: theme.card
     radius: 10
@@ -47,6 +49,7 @@ Rectangle {
         ColumnLayout {
             id: column
             Layout.fillWidth: true
+            Layout.fillHeight: root.fillContent
             spacing: 8
         }
     }
