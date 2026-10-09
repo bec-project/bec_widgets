@@ -11,7 +11,7 @@ process); its failures are collected from the Qt log.
 # pylint: disable=protected-access
 
 import pytest
-from qtpy.QtCore import QItemSelectionModel, QSortFilterProxyModel, Qt
+from qtpy.QtCore import SIGNAL, QItemSelectionModel, QSortFilterProxyModel, Qt
 from qtpy.QtTest import QAbstractItemModelTester
 
 from bec_widgets.tests.utils import create_widget
@@ -185,3 +185,35 @@ def test_scan_metadata_form_drops_deleted_extra_row(qtbot):
     assert received, "deleting a row must re-validate the form"
     assert "k1" not in received[-1]
     assert received[-1]["k2"] == "v2"
+
+
+def test_values_are_not_checked_against_keys(table):
+    model = table._table_model
+    table.update_disallowed_keys(["forbidden"])
+
+    # a value may repeat another row's key or a disallowed key
+    assert model.setData(model.index(0, 1), "key2", Qt.ItemDataRole.EditRole)
+    assert model.setData(model.index(1, 1), "forbidden", Qt.ItemDataRole.EditRole)
+    # keys still have to be unique and allowed
+    assert not model.setData(model.index(0, 0), "key2", Qt.ItemDataRole.EditRole)
+    assert not model.setData(model.index(0, 0), "forbidden", Qt.ItemDataRole.EditRole)
+    assert table.dump_dict() == {"key1": "key2", "key2": "forbidden", "key3": "value3"}
+
+
+def _scale_receivers(widget) -> int:
+    return widget.receivers(SIGNAL("data_changed(QVariantMap)"))
+
+
+@pytest.mark.parametrize("autoscale", [True, False])
+def test_autoscale_connects_scale_to_data_once(qtbot, autoscale, recwarn):
+    table = create_widget(qtbot, DictBackedTable, autoscale_to_data=autoscale)
+    assert _scale_receivers(table) == int(autoscale)
+
+    table.autoscale = True
+    table.autoscale = True
+    assert _scale_receivers(table) == 1
+
+    table.autoscale = False
+    table.autoscale = False
+    assert _scale_receivers(table) == 0
+    assert not [w for w in recwarn if "Failed to disconnect" in str(w.message)]

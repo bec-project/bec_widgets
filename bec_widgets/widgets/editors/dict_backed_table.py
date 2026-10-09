@@ -63,7 +63,10 @@ class DictBackedTableModel(QAbstractTableModel):
 
     def setData(self, index, value, role):
         if role == Qt.ItemDataRole.EditRole:
-            if value in self._disallowed_keys or value in self._other_keys(index.row()):
+            # only keys have to be unique and allowed, values are free
+            if index.column() == 0 and (
+                value in self._disallowed_keys or value in self._other_keys(index.row())
+            ):
                 return False
             self._data[index.row()][index.column()] = str(value)
             self.dataChanged.emit(index, index)
@@ -181,9 +184,8 @@ class DictBackedTable(QWidget):
         self._table_view.setWordWrap(False)
         self._table_view.header().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         self._table_view.header().setSectionResizeMode(5, QtWidgets.QHeaderView.Stretch)
+        self._autoscale = False
         self.autoscale = autoscale_to_data
-        if self.autoscale:
-            self.data_changed.connect(self.scale_to_data)
         self._layout.addWidget(self._table_view)
 
         self._button_holder = QWidget()
@@ -258,12 +260,14 @@ class DictBackedTable(QWidget):
 
     @autoscale.setter
     def autoscale(self, autoscale: bool):
-        self._autoscale = autoscale
-        if self._autoscale:
-            self.scale_to_data()
+        # connect or disconnect only on a change, so the slot is never connected twice
+        if autoscale and not self._autoscale:
             self.data_changed.connect(self.scale_to_data)
-        else:
+        elif self._autoscale and not autoscale:
             self.data_changed.disconnect(self.scale_to_data)
+        self._autoscale = autoscale
+        if autoscale:
+            self.scale_to_data()
 
 
 if __name__ == "__main__":  # pragma: no cover
