@@ -30,7 +30,6 @@ from qtpy.QtWidgets import (
 
 from bec_widgets.tests.client_mocks import dap_plugin_message, mocked_client, mocked_client_with_dap
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.widgets.control.buttons.button_abort.button_abort import AbortButton
 from bec_widgets.widgets.plots.waveform.settings.curve_settings.curve_tree import CurveTree
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
 from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
@@ -174,20 +173,19 @@ def test_inner_nested_view_close_releases_cell_widgets(qtbot, mocked_client):
 
 @inner_only
 def test_inner_bec_queue_close_then_relayout(qtbot, mocked_client):
+    """The queue renders its rows in QML (no cell widgets); closing must release the QML tree."""
     queue = BECQueue(client=mocked_client, refresh_upon_start=False)
     qtbot.addWidget(queue)
     qtbot.waitExposed(queue)
     queue.update_queue(_three_row_queue_content(), {})
-    assert queue.table.rowCount() == 3
-    buttons = [queue.table.cellWidget(row, 4) for row in range(3)]
-    assert all(isinstance(button, AbortButton) for button in buttons)
+    assert len(queue.controller.model.rows()) == 3
+    view = queue.view
 
     queue.close()
     _flush_deferred_deletes()
-    queue.table.updateEditorGeometries()  # SIGSEGV on the deleted abort buttons
+    queue.update_queue(_three_row_queue_content(), {})  # late message after close
 
-    assert not any(shiboken6.isValid(button) for button in buttons)
-    assert all(queue.table.cellWidget(row, 4) is None for row in range(3))
+    assert not shiboken6.isValid(view) or view.rootObject() is None
 
 
 @inner_only
