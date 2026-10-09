@@ -175,6 +175,8 @@ class ServiceRowWidget(QFrame):
         self.setObjectName("ServiceRow")
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setAttribute(Qt.WidgetAttribute.WA_Hover)
+        # keep rows at their natural height so short lists do not spread out
+        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
         self.row = None
         self.expanded = False
         self._hovered = False
