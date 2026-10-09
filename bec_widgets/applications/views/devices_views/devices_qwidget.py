@@ -11,6 +11,7 @@ from qtpy.QtCore import QAbstractTableModel, QModelIndex, QRectF, QSize, Qt, QTi
 from qtpy.QtGui import QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen
 from qtpy.QtWidgets import (
     QAbstractItemView,
+    QBoxLayout,
     QButtonGroup,
     QCheckBox,
     QComboBox,
@@ -47,6 +48,7 @@ from bec_widgets.applications.views.devices_views.devices_core import (
     DeviceBrowser,
     class_docstring,
 )
+from bec_widgets.applications.views.devices_views.staff_access import StaffAccess
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.quick.host import ThemeTokens
@@ -146,6 +148,14 @@ def clear_layout(layout) -> None:
             clear_layout(item.layout())
 
 
+def vline() -> QFrame:
+    """One-pixel vertical rule."""
+    line = QFrame()
+    line.setProperty("role", "rule")
+    line.setFixedWidth(1)
+    return line
+
+
 def hline() -> QFrame:
     """Thin separator line."""
     line = QFrame()
@@ -221,7 +231,7 @@ def view_qss(t: ThemeTokens) -> str:
             {t.border.name()}; border-radius: 7px; }}
         QFrame[role="toast"] {{ background: {t.fg.name()}; border-radius: 8px; }}
         QFrame[role="toast"] QLabel {{ color: {t.bg.name()}; font-size: 12px; }}
-        QFrame[role="toast"] QPushButton {{ color: {t.primary.lighter(140).name() if t.dark
+        QFrame[role="toast"] QPushButton {{ color: {t.primary.darker(130).name() if t.dark
             else t.primary.lighter(160).name()}; background: transparent; border: none;
             font-weight: 700; font-size: 12px; }}
         QMenu {{ background: {t.card.name()}; color: {t.fg.name()}; border: 1px solid
@@ -324,6 +334,7 @@ class Toasts(QWidget):
         row.setContentsMargins(12, 8, 8, 8)
         text = label(message)
         text.setWordWrap(True)
+        text.setMinimumWidth(280)
         text.setMaximumWidth(380)
         row.addWidget(text, 1)
         if undo:
@@ -650,11 +661,16 @@ class Sparkline(QWidget):
     def paintEvent(self, _event):  # pylint: disable=invalid-name
         if len(self.points) < 2:
             return
+        tokens = ThemeTokens()
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         lo, hi = min(self.points), max(self.points)
         span = (hi - lo) or 1.0
         w, h = self.width(), self.height()
+        painter.setPen(QPen(tokens.soft(tokens.border, 0.7), 1, Qt.PenStyle.DashLine))
+        for frac in (0.0, 0.5, 1.0):
+            y = 5 + frac * (h - 10)
+            painter.drawLine(0, int(y), w, int(y))
         path = QPainterPath()
         for i, v in enumerate(self.points):
             x = i / 89 * w
@@ -663,16 +679,112 @@ class Sparkline(QWidget):
                 path.lineTo(x, y)
             else:
                 path.moveTo(x, y)
-        painter.setPen(QPen(ThemeTokens().primary, 1.6))
+        area = QPainterPath(path)
+        area.lineTo((len(self.points) - 1) / 89 * w, h)
+        area.lineTo(0, h)
+        area.closeSubpath()
+        fill = QColor(tokens.primary)
+        fill.setAlphaF(0.12)
+        painter.fillPath(area, fill)
+        painter.setPen(QPen(tokens.primary, 1.8))
         painter.drawPath(path)
+        end = path.currentPosition()
+        painter.setBrush(tokens.primary)
+        painter.drawEllipse(end, 3, 3)
+        font = QFont()
+        font.setPixelSize(10)
+        painter.setFont(font)
+        painter.setPen(tokens.fg_subtle)
+        painter.drawText(QRectF(0, 0, w - 4, 14), Qt.AlignmentFlag.AlignRight, f"{hi:.6g}")
+        painter.drawText(QRectF(0, h - 14, w - 4, 14), Qt.AlignmentFlag.AlignRight, f"{lo:.6g}")
 
 
 # ----------------------------------------------------------------------------------- Devices view
+class DeviceRowDelegate(QStyledItemDelegate):
+    """Two-line device row: bold name over what it is, live value on the right."""
+
+    def paint(self, painter, option, index):
+        row = index.data(Qt.ItemDataRole.UserRole)
+        if row is None:
+            return
+        tokens = ThemeTokens()
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        rect = option.rect
+        if option.state & QStyle.StateFlag.State_Selected:
+            painter.fillRect(rect, tokens.soft(tokens.primary, 0.18))
+            painter.fillRect(rect.x(), rect.y(), 3, rect.height(), tokens.primary)
+        elif option.state & QStyle.StateFlag.State_MouseOver:
+            painter.fillRect(rect, tokens.hover)
+        painter.setPen(tokens.soft(tokens.border, 0.6))
+        painter.drawLine(rect.bottomLeft(), rect.bottomRight())
+        inner = QRectF(rect.adjusted(14, 6, -14, -6))
+        value_font = QFont(MONO.split(",", maxsplit=1)[0])
+        value_font.setPixelSize(12)
+        painter.setFont(value_font)
+        value_w = min(QFontMetrics(value_font).horizontalAdvance(row["valueText"]) + 4, 150)
+        painter.setPen(tokens.fg)
+        painter.drawText(
+            QRectF(inner.right() - value_w, inner.top(), value_w, inner.height()),
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
+            row["valueText"],
+        )
+        text_w = inner.width() - value_w - 12
+        name_font = QFont(MONO.split(",", maxsplit=1)[0])
+        name_font.setPixelSize(13)
+        name_font.setWeight(QFont.Weight.DemiBold)
+        painter.setFont(name_font)
+        half = inner.height() / 2
+        painter.drawText(
+            QRectF(inner.left(), inner.top(), text_w, half),
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+            QFontMetrics(name_font).elidedText(row["name"], Qt.TextElideMode.ElideRight, text_w),
+        )
+        what_font = QFont()
+        what_font.setPixelSize(11)
+        painter.setFont(what_font)
+        painter.setPen(tokens.fg_muted)
+        painter.drawText(
+            QRectF(inner.left(), inner.top() + half, text_w, half),
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+            QFontMetrics(what_font).elidedText(row["what"], Qt.TextElideMode.ElideRight, text_w),
+        )
+        painter.restore()
+
+    def sizeHint(self, option, index):  # pylint: disable=invalid-name
+        return QSize(300, 48)
+
+
+class Panel(QFrame):
+    """Bordered card with an upper-case title and an optional hint on the right."""
+
+    def __init__(self, title: str, hint: str = "", parent=None):
+        super().__init__(parent)
+        self.setProperty("role", "panel")
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(16, 12, 16, 14)
+        lay.setSpacing(8)
+        head = QHBoxLayout()
+        head.setSpacing(8)
+        self.title = label(title.upper(), "upper")
+        head.addWidget(self.title)
+        head.addStretch(1)
+        self.hint = label(hint, "faint")
+        head.addWidget(self.hint)
+        lay.addLayout(head)
+        self.body = lay
+
+
 class DevicesViewQWidget(BECWidget, QWidget):
-    """Devices for everyone: find a device, see its live value and move it (QWidget version)."""
+    """Devices for users: find any device, watch it live, move it and change its settings.
+
+    QWidget version. The list on the left is compact; the device fills the rest of the view with
+    a live panel (motor card, value and trend) next to its settings and readings.
+    """
 
     RPC = False
     PLUGIN = False
+    NARROW = 860
 
     def __init__(self, parent=None, client=None, **kwargs):
         super().__init__(parent=parent, client=client, **kwargs)
@@ -682,6 +794,8 @@ class DevicesViewQWidget(BECWidget, QWidget):
         self.browser = DeviceBrowser(self.client, self.bec_dispatcher, self)
         self.open_in_workspace = self.browser.open_in_workspace
         self._motor = None
+        self._signal_widgets: dict[str, dict] = {}
+        self._signal_device: str | None = None
         self._build()
         self.browser.changed.connect(self._sync)
         self.browser.values_changed.connect(self._sync_values)
@@ -689,135 +803,239 @@ class DevicesViewQWidget(BECWidget, QWidget):
         self.apply_theme("")
         self._sync()
 
+    # ------------------------------------------------------------------ layout
     def _build(self) -> None:
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
+        root.addWidget(self._build_bar())
+        body = QHBoxLayout()
+        body.setSpacing(0)
+        body.addWidget(self._build_list())
+        body.addWidget(vline())
+        body.addWidget(self._build_detail(), 1)
+        root.addLayout(body, 1)
+
+    def _build_bar(self) -> QWidget:
         bar = QWidget()
         bar.setProperty("pane", "bar")
         bar.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         row = QHBoxLayout(bar)
-        row.setContentsMargins(12, 8, 12, 8)
+        row.setContentsMargins(14, 8, 14, 8)
         row.setSpacing(10)
         self.title_icon = QLabel()
         row.addWidget(self.title_icon)
         title = label("Devices")
         title.setStyleSheet("font-weight: 700;")
         row.addWidget(title)
-        self.search = QLineEdit()
-        self.search.setPlaceholderText("Search devices by name, tag or description")
-        self.search.setAccessibleName("Search devices")
-        self.search.setFixedWidth(300)
-        self._debounce = QTimer(self, singleShot=True, interval=120)
-        self._debounce.timeout.connect(lambda: self.browser.set_query(self.search.text()))
-        self.search.textChanged.connect(lambda _: self._debounce.start())
-        row.addWidget(self.search)
-        self.kinds = Segmented(KINDS, self.browser.kind)
+        row.addSpacing(8)
+        counts = self.browser.kind_counts()
+        self.kinds = Segmented(
+            [(k, f"{t}  {counts.get(k, 0)}") for k, t in KINDS], self.browser.kind
+        )
         self.kinds.changed.connect(self.browser.set_kind)
         row.addWidget(self.kinds)
         row.addStretch(1)
         lock = Chip("Device setup: staff only", "neutral", "lock")
         lock.setToolTip("Adding devices and changing the session is in Device Config")
         row.addWidget(lock)
-        root.addWidget(bar)
+        return bar
 
-        body = QHBoxLayout()
-        body.setSpacing(0)
+    def _build_list(self) -> QWidget:
         left = QWidget()
         left.setProperty("pane", "card")
         left.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        left_lay = QVBoxLayout(left)
-        left_lay.setContentsMargins(0, 0, 0, 0)
-        left_lay.setSpacing(0)
-        self.shown = label("", "muted")
-        self.shown.setContentsMargins(10, 6, 10, 6)
-        left_lay.addWidget(self.shown)
-        self.model = RowsModel([("name", "Name"), ("what", "What it is"), ("valueText", "Value")])
-        self.table = make_table(self.model, {"name": 150, "valueText": 140})
+        left.setFixedWidth(360)
+        lay = QVBoxLayout(left)
+        lay.setContentsMargins(0, 10, 0, 0)
+        lay.setSpacing(6)
+        self.search = QLineEdit()
+        self.search.setPlaceholderText("Search name, tag or description")
+        self.search.setAccessibleName("Search devices")
+        self.search.setClearButtonEnabled(True)
+        self._debounce = QTimer(self, singleShot=True, interval=120)
+        self._debounce.timeout.connect(lambda: self.browser.set_query(self.search.text()))
+        self.search.textChanged.connect(lambda _: self._debounce.start())
+        search_row = QHBoxLayout()
+        search_row.setContentsMargins(12, 0, 12, 0)
+        search_row.addWidget(self.search)
+        lay.addLayout(search_row)
+        self.shown = label("", "faint")
+        self.shown.setContentsMargins(14, 2, 14, 2)
+        lay.addWidget(self.shown)
+        self.model = RowsModel([("name", "Device")])
+        self.table = make_table(self.model, {})
+        self.table.setItemDelegate(DeviceRowDelegate(self.table))
+        self.table.horizontalHeader().hide()
+        self.table.verticalHeader().setDefaultSectionSize(48)
+        self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.table.selectionModel().currentRowChanged.connect(self._on_row)
-        left_lay.addWidget(self.table, 1)
-        body.addWidget(left, 1)
-        body.addWidget(self._vline())
+        lay.addWidget(self.table, 1)
+        return left
 
+    def _build_detail(self) -> QWidget:
         self.detail = QWidget()
         self.detail.setProperty("pane", "bg")
         self.detail.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        detail_scroll = QScrollArea()
-        detail_scroll.setWidgetResizable(True)
-        detail_scroll.setWidget(self.detail)
-        outer = QHBoxLayout(self.detail)
-        outer.setContentsMargins(16, 12, 16, 12)
-        column = QWidget()
-        column.setMaximumWidth(440)
-        column.setMinimumWidth(360)
-        outer.addStretch(1)
-        outer.addWidget(column, 3)
-        outer.addStretch(1)
-        d = QVBoxLayout(column)
-        d.setContentsMargins(0, 0, 0, 0)
-        d.setSpacing(8)
-        self._column = column
-        self.head = QWidget()
-        head = QVBoxLayout(self.head)
-        head.setContentsMargins(0, 0, 0, 0)
-        head.setSpacing(4)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setWidget(self.detail)
+        d = QVBoxLayout(self.detail)
+        d.setContentsMargins(24, 18, 24, 18)
+        d.setSpacing(16)
+
+        head = QHBoxLayout()
+        head.setSpacing(12)
+        names = QVBoxLayout()
+        names.setSpacing(2)
+        title_row = QHBoxLayout()
+        title_row.setSpacing(10)
         self.d_name = label("", "title")
-        self.d_name.setStyleSheet("font-size: 15px;")
+        self.d_name.setStyleSheet("font-size: 20px;")
+        title_row.addWidget(self.d_name)
+        self.d_kind = Chip("", "neutral")
+        title_row.addWidget(self.d_kind)
+        self.d_disabled = Chip("Disabled in this session", "warn", "block")
+        title_row.addWidget(self.d_disabled)
+        title_row.addStretch(1)
+        names.addLayout(title_row)
         self.d_desc = label("", "muted")
         self.d_desc.setWordWrap(True)
-        self.d_value = label("", "big")
-        self.spark = Sparkline()
-        self.spark_note = label("last ~20 s, live", "faint")
-        for w in (self.d_name, self.d_desc, self.d_value, self.spark, self.spark_note):
-            head.addWidget(w)
-        d.addWidget(self.head)
-        self.motor_holder = QVBoxLayout()
-        d.addLayout(self.motor_holder)
-        self.action = TextButton("", "neutral", "add")
+        names.addWidget(self.d_desc)
+        head.addLayout(names, 1)
+        self.action = TextButton("", "primary", "add")
         self.action.clicked.connect(self.browser.request_open)
-        d.addWidget(self.action, 0, Qt.AlignmentFlag.AlignLeft)
-        self._signal_widgets: dict[str, dict] = {}
-        self._signal_device: str | None = None
-        self.settings_title = label("Settings", "upper")
-        self.settings_grid = self._signal_grid()
-        self.readings_title = label("Readings", "upper")
-        self.readings_grid = self._signal_grid()
-        d.addSpacing(6)
-        d.addWidget(self.settings_title)
-        d.addLayout(self.settings_grid)
-        d.addSpacing(6)
-        d.addWidget(self.readings_title)
-        d.addLayout(self.readings_grid)
-        d.addSpacing(6)
+        head.addWidget(self.action, 0, Qt.AlignmentFlag.AlignTop)
+        d.addLayout(head)
+
+        self.columns = QBoxLayout(QBoxLayout.Direction.LeftToRight)
+        self.columns.setSpacing(16)
+        left_col = QVBoxLayout()
+        left_col.setSpacing(16)
+        right_col = QVBoxLayout()
+        right_col.setSpacing(16)
+        self.columns.addLayout(left_col, 1)
+        self.columns.addLayout(right_col, 1)
+        d.addLayout(self.columns)
+
+        self.motor_holder = QVBoxLayout()
+        left_col.addLayout(self.motor_holder)
+        self.live = Panel("Live value", "last ~20 s")
+        self.d_value = label("", "big")
+        self.live.body.addWidget(self.d_value)
+        self.spark = Sparkline()
+        self.spark.setMinimumHeight(120)
+        self.spark.setMaximumWidth(16777215)
+        self.live.body.addWidget(self.spark)
+        left_col.addWidget(self.live)
+        self.about = Panel("About")
         self.facts = QGridLayout()
-        self.facts.setHorizontalSpacing(12)
-        self.facts.setVerticalSpacing(3)
+        self.facts.setHorizontalSpacing(16)
+        self.facts.setVerticalSpacing(4)
         self.facts.setColumnStretch(1, 1)
-        d.addLayout(self.facts)
+        self.about.body.addLayout(self.facts)
+        left_col.addWidget(self.about)
+        left_col.addStretch(1)
+
+        self.settings = Panel("Settings", "Applied to the device at once")
+        self.settings_grid = self._signal_grid()
+        self.settings.body.addLayout(self.settings_grid)
+        right_col.addWidget(self.settings)
+        self.readings = Panel("Readings", "live")
+        self.readings_grid = self._signal_grid()
+        self.readings.body.addLayout(self.readings_grid)
+        right_col.addWidget(self.readings)
+        right_col.addStretch(1)
+
         self.empty = label("Select a device to see it here.", "muted")
         d.addWidget(self.empty)
         d.addStretch(1)
-        body.addWidget(detail_scroll, 1)
-        root.addLayout(body, 1)
+        return scroll
 
-    @staticmethod
-    def _vline() -> QFrame:
-        line = QFrame()
-        line.setProperty("role", "rule")
-        line.setFixedWidth(1)
-        return line
-
-    def _on_row(self, current: QModelIndex, _previous: QModelIndex) -> None:
-        if current.isValid():
-            self.browser.select(self.model.rows[current.row()]["name"])
+    def resizeEvent(self, event):  # pylint: disable=invalid-name
+        super().resizeEvent(event)
+        # Width left for the two columns: view minus list, rule and the detail margins.
+        narrow = self.width() - 361 - 48 < self.NARROW
+        self.columns.setDirection(
+            QBoxLayout.Direction.TopToBottom if narrow else QBoxLayout.Direction.LeftToRight
+        )
 
     @staticmethod
     def _signal_grid() -> QGridLayout:
         grid = QGridLayout()
         grid.setHorizontalSpacing(10)
-        grid.setVerticalSpacing(4)
+        grid.setVerticalSpacing(6)
         grid.setColumnStretch(1, 1)
         return grid
+
+    # ------------------------------------------------------------------ syncing
+    def _on_row(self, current: QModelIndex, _previous: QModelIndex) -> None:
+        if current.isValid():
+            self.browser.select(self.model.rows[current.row()]["name"])
+
+    @SafeSlot()
+    def _sync(self) -> None:
+        rows = self.browser.rows()
+        self.model.set_rows(rows)
+        select_row(self.table, self.model, self.browser.selected)
+        self.shown.setText(self.browser.shown_text())
+        for key, btn in self.kinds.buttons.items():
+            btn.setChecked(key == self.browser.kind)
+        self._sync_detail()
+
+    @SafeSlot()
+    def _sync_values(self) -> None:
+        self.model.set_rows(self.browser.rows())
+        detail = self.browser.detail()
+        if detail.get("name") and detail["kind"] != "positioner":
+            self.d_value.setText(self._value_html(detail))
+            self.spark.setVisible(detail["numeric"])
+            self.live.hint.setVisible(detail["numeric"])
+        self._update_signals()
+
+    @staticmethod
+    def _value_html(detail: dict) -> str:
+        unit = detail.get("units", "")
+        return f"{detail['valueText']}<span style='font-size:15px'> {unit}</span>"
+
+    @SafeSlot()
+    def _sync_spark(self) -> None:
+        self.spark.set_points(self.browser.spark_points())
+
+    def _sync_detail(self) -> None:
+        detail = self.browser.detail()
+        has = bool(detail.get("name"))
+        self.empty.setVisible(not has)
+        for w in (self.d_name, self.d_kind, self.d_desc, self.action, self.about):
+            w.setVisible(has)
+        clear_layout(self.facts)
+        if not has:
+            self.d_disabled.hide()
+            self.live.hide()
+            self.settings.hide()
+            self.readings.hide()
+            self._show_motor(None)
+            return
+        kind = detail["kind"]
+        self._show_motor(detail["name"] if kind == "positioner" else None)
+        self.d_name.setText(detail["name"])
+        self.d_kind.set_chip(detail["kindLabel"], "neutral")
+        self.d_disabled.setVisible(not detail["enabled"])
+        self.d_desc.setText(detail["description"])
+        self.live.setVisible(kind != "positioner")
+        self.d_value.setText(self._value_html(detail))
+        self.spark.setVisible(detail["numeric"])
+        self.live.hint.setVisible(detail["numeric"])
+        self.spark.set_points(self.browser.spark_points())
+        for i, fact in enumerate(detail["facts"]):
+            self.facts.addWidget(label(fact["label"], "muted"), i, 0)
+            self.facts.addWidget(label(fact["value"]), i, 1)
+        self.action.setText(detail["actionText"])
+        self.action._icon_name = {"detector": "image", "monitor": "show_chart"}.get(kind, "add")
+        self.action.refresh_theme(ThemeTokens())
+        self._build_signals()
 
     def _build_signals(self) -> None:
         """Lay out the settings and readings of the selected device (on selection change)."""
@@ -843,7 +1061,7 @@ class DevicesViewQWidget(BECWidget, QWidget):
                 edit = QLineEdit()
                 edit.setPlaceholderText("New value")
                 edit.setAccessibleName(f"New value for {row['key']}")
-                edit.setFixedWidth(110)
+                edit.setFixedWidth(120)
                 button = TextButton("Set", "neutral")
                 key = row["key"]
                 submit = lambda _=False, k=key, e=edit: self.browser.set_signal(k, e.text())
@@ -857,8 +1075,8 @@ class DevicesViewQWidget(BECWidget, QWidget):
                 grid.addWidget(status, r + 1, 0, 1, 4)
                 widgets.update(edit=edit, status=status)
             self._signal_widgets[row["key"]] = widgets
-        self.settings_title.setVisible(counts["setting"] > 0)
-        self.readings_title.setVisible(counts["reading"] > 0)
+        self.settings.setVisible(counts["setting"] > 0)
+        self.readings.setVisible(counts["reading"] > 0)
 
     def _update_signals(self) -> None:
         """Refresh values and set results in place, keeping typed text and focus."""
@@ -883,69 +1101,6 @@ class DevicesViewQWidget(BECWidget, QWidget):
             if row["statusTone"] == "ok" and widgets["edit"].text():
                 widgets["edit"].clear()
 
-    @SafeSlot()
-    def _sync(self) -> None:
-        rows = self.browser.rows()
-        if self.browser.selected is None and rows:
-            self.browser.selected = rows[0]["name"]
-            rows = self.browser.rows()
-        self.model.set_rows(rows)
-        select_row(self.table, self.model, self.browser.selected)
-        self.shown.setText(self.browser.shown_text())
-        for key, btn in self.kinds.buttons.items():
-            btn.setChecked(key == self.browser.kind)
-        self._sync_detail()
-
-    @SafeSlot()
-    def _sync_values(self) -> None:
-        self.model.set_rows(self.browser.rows())
-        detail = self.browser.detail()
-        if detail.get("name") and detail["kind"] != "positioner":
-            self.d_value.setText(self._value_html(detail))
-        self._update_signals()
-
-    @staticmethod
-    def _value_html(detail: dict) -> str:
-        unit = detail.get("units", "")
-        return f"{detail['valueText']}<span style='font-size:14px'> {unit}</span>"
-
-    @SafeSlot()
-    def _sync_spark(self) -> None:
-        self.spark.set_points(self.browser.spark_points())
-
-    def _sync_detail(self) -> None:
-        detail = self.browser.detail()
-        has = bool(detail.get("name"))
-        self.empty.setVisible(not has)
-        self.head.setVisible(has)
-        self.action.setVisible(has)
-        clear_layout(self.facts)
-        if not has:
-            self._show_motor(None)
-            clear_layout(self.settings_grid)
-            clear_layout(self.readings_grid)
-            self.settings_title.hide()
-            self.readings_title.hide()
-            return
-        kind = detail["kind"]
-        self._show_motor(detail["name"] if kind == "positioner" else None)
-        self.d_name.setText(detail["name"])
-        self.d_desc.setText(detail["description"])
-        self.d_name.setVisible(kind != "positioner")
-        monitor = kind == "monitor"
-        self.d_value.setVisible(monitor)
-        self.spark.setVisible(monitor)
-        self.spark_note.setVisible(monitor)
-        self.d_value.setText(self._value_html(detail))
-        self.spark.set_points(self.browser.spark_points())
-        for i, fact in enumerate(detail["facts"]):
-            self.facts.addWidget(label(fact["label"], "muted"), i, 0)
-            self.facts.addWidget(label(fact["value"]), i, 1)
-        self.action.setText(detail["actionText"])
-        self.action._icon_name = {"detector": "image", "monitor": "show_chart"}.get(kind, "add")
-        self.action.set_variant("primary" if kind == "detector" else "neutral")
-        self._build_signals()
-
     def _show_motor(self, name: str | None) -> None:
         if name is None:
             if self._motor is not None:
@@ -956,7 +1111,7 @@ class DevicesViewQWidget(BECWidget, QWidget):
                 PositionerBoxQWidget,
             )
 
-            self._motor = PositionerBoxQWidget(parent=self._column, device=name, client=self.client)
+            self._motor = PositionerBoxQWidget(parent=self.detail, device=name, client=self.client)
             self._motor.hide_device_selection = True
             self._motor.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
             self.motor_holder.addWidget(self._motor)
@@ -967,7 +1122,11 @@ class DevicesViewQWidget(BECWidget, QWidget):
     @SafeSlot(str)
     def apply_theme(self, theme: str):
         tokens = ThemeTokens()
-        self.setStyleSheet(view_qss(tokens))
+        self.setStyleSheet(view_qss(tokens) + f"""
+            QFrame[role="panel"] {{ background: {tokens.card.name()};
+                border: 1px solid {tokens.border.name()}; border-radius: 8px; }}
+            QFrame[role="panel"] QLabel {{ border: none; }}
+            """)
         self.title_icon.setPixmap(material_icon("memory", size=(18, 18), color=tokens.fg_muted))
         retheme_icons(self, tokens)
         self.update()
@@ -986,6 +1145,7 @@ class DeviceConfigViewQWidget(BECWidget, QWidget):
 
     RPC = False
     PLUGIN = False
+    sign_out_requested = Signal()
 
     def __init__(self, parent=None, client=None, load_session: bool = True, **kwargs):
         super().__init__(parent=parent, client=client, **kwargs)
@@ -1020,7 +1180,7 @@ class DeviceConfigViewQWidget(BECWidget, QWidget):
         body = QHBoxLayout()
         body.setSpacing(0)
         body.addWidget(self._build_filters())
-        body.addWidget(DevicesViewQWidget._vline())
+        body.addWidget(vline())
         center = QVBoxLayout()
         center.setSpacing(0)
         center.addWidget(self._build_table(), 1)
@@ -1029,7 +1189,7 @@ class DeviceConfigViewQWidget(BECWidget, QWidget):
         center_w = QWidget()
         center_w.setLayout(center)
         body.addWidget(center_w, 1)
-        body.addWidget(DevicesViewQWidget._vline())
+        body.addWidget(vline())
         body.addWidget(self._build_inspector())
         root.addLayout(body, 1)
 
@@ -1062,6 +1222,14 @@ class DeviceConfigViewQWidget(BECWidget, QWidget):
         self.change_chip = Chip()
         row.addWidget(self.change_chip)
         row.addStretch(1)
+        self.staff_label = label("", "muted")
+        self.staff_label.hide()
+        row.addWidget(self.staff_label)
+        self.sign_out_btn = tool("Sign out", "logout", "Lock Device Config again")
+        self.sign_out_btn.clicked.connect(self.sign_out_requested)
+        self.sign_out_btn.hide()
+        row.addWidget(self.sign_out_btn)
+        row.addSpacing(6)
         self.review_btn = TextButton("Review changes", "primary", "difference")
         self.review_btn.clicked.connect(self.open_review)
         row.addWidget(self.review_btn)
@@ -1688,6 +1856,12 @@ class DeviceConfigViewQWidget(BECWidget, QWidget):
         return sheet
 
     @SafeSlot()
+    def set_staff(self, user: str) -> None:
+        """Show who is signed in (BEC Atlas) next to Review changes."""
+        self.staff_label.setText(f"Signed in as {user}" if user else "")
+        self.staff_label.setVisible(bool(user))
+        self.sign_out_btn.setVisible(bool(user))
+
     def open_review(self) -> Sheet:
         """Sheet listing every difference to the running session, with Apply."""
         sheet = Sheet(
@@ -1884,4 +2058,141 @@ class DeviceConfigViewQWidget(BECWidget, QWidget):
         self.editor.cleanup()
         if self._sheet is not None:
             self._sheet.close()
+        super().cleanup()
+
+
+# ------------------------------------------------------------------------------------ staff gate
+class DeviceConfigGateQWidget(BECWidget, QWidget):
+    """Device Config behind the BEC Atlas staff sign-in (QWidget version).
+
+    The Config view is built on the first sign-in and locks again when the view is left.
+    """
+
+    RPC = False
+    PLUGIN = False
+
+    def __init__(self, parent=None, client=None, **kwargs):
+        super().__init__(parent=parent, client=client, **kwargs)
+        self.get_bec_shortcuts()
+        self.setObjectName("ConfigRoot")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.access = StaffAccess(self.bec_dispatcher, self)
+        self.config: DeviceConfigViewQWidget | None = None
+        self.stack = QStackedWidget(self)
+        self.stack.addWidget(self._build_lock())
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.addWidget(self.stack)
+        self.access.changed.connect(self._sync)
+        self.apply_theme("")
+        self._sync()
+
+    def _build_lock(self) -> QWidget:
+        page = QWidget()
+        outer = QVBoxLayout(page)
+        outer.addStretch(1)
+        row = QHBoxLayout()
+        row.addStretch(1)
+        card = QFrame()
+        card.setProperty("role", "panel")
+        card.setFixedWidth(420)
+        form = QVBoxLayout(card)
+        form.setContentsMargins(24, 24, 24, 24)
+        form.setSpacing(12)
+        self.lock_icon = QLabel()
+        self.lock_icon.setFixedSize(44, 44)
+        self.lock_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        form.addWidget(self.lock_icon)
+        title = label("Device Config is for beamline staff")
+        title.setStyleSheet("font-size: 17px; font-weight: 700;")
+        form.addWidget(title)
+        text = label(
+            "Sign in with your BEC Atlas account to add, remove and configure devices. "
+            "Everyone can watch and operate devices in Devices.",
+            "muted",
+        )
+        text.setWordWrap(True)
+        form.addWidget(text)
+        form.addSpacing(4)
+        form.addWidget(label("User name", "fieldlabel"))
+        self.user = QLineEdit()
+        self.user.setPlaceholderText("e.g. e12345")
+        self.user.setAccessibleName("User name")
+        form.addWidget(self.user)
+        form.addWidget(label("Password", "fieldlabel"))
+        self.password = QLineEdit()
+        self.password.setEchoMode(QLineEdit.EchoMode.Password)
+        self.password.setAccessibleName("Password")
+        form.addWidget(self.password)
+        self.error = label("", "err")
+        self.error.setWordWrap(True)
+        form.addWidget(self.error)
+        foot = QHBoxLayout()
+        self.deployment = label("", "faint")
+        foot.addWidget(self.deployment, 1)
+        self.sign_in = TextButton("Sign in", "primary", "login")
+        foot.addWidget(self.sign_in)
+        form.addLayout(foot)
+        self.user.returnPressed.connect(self.password.setFocus)
+        self.password.returnPressed.connect(self._submit)
+        self.sign_in.clicked.connect(self._submit)
+        row.addWidget(card)
+        row.addStretch(1)
+        outer.addLayout(row)
+        outer.addStretch(1)
+        self.lock_page = page
+        return page
+
+    def _submit(self) -> None:
+        self.access.sign_in(self.user.text(), self.password.text())
+
+    @SafeSlot()
+    def _sync(self) -> None:
+        busy = self.access.busy
+        self.user.setEnabled(not busy)
+        self.password.setEnabled(not busy)
+        self.sign_in.setEnabled(not busy)
+        self.sign_in.setText("Signing in…" if busy else "Sign in")
+        self.error.setText(self.access.error)
+        self.error.setVisible(bool(self.access.error))
+        self.deployment.setText(
+            f"Deployment {self.access.deployment}" if self.access.deployment else ""
+        )
+        if self.access.unlocked and self.config is None:
+            self.config = DeviceConfigViewQWidget(parent=self, client=self.client)
+            self.config.sign_out_requested.connect(self.access.sign_out)
+            self.stack.addWidget(self.config)
+        if self.config is not None:
+            self.config.set_staff(self.access.user)
+        if self.access.unlocked and self.config is not None:
+            self.password.clear()
+            self.stack.setCurrentWidget(self.config)
+        else:
+            self.stack.setCurrentWidget(self.lock_page)
+
+    def hideEvent(self, event):  # pylint: disable=invalid-name
+        super().hideEvent(event)
+        if not event.spontaneous():
+            self.access.sign_out()
+
+    @SafeSlot(str)
+    def apply_theme(self, theme: str):
+        tokens = ThemeTokens()
+        self.setStyleSheet(view_qss(tokens) + f"""
+            QFrame[role="panel"] {{ background: {tokens.card.name()};
+                border: 1px solid {tokens.border.name()}; border-radius: 10px; }}
+            QFrame[role="panel"] QLabel {{ border: none; }}
+            QLabel[role="fieldlabel"] {{ font-size: 12px; font-weight: 600; }}
+            """)
+        self.lock_icon.setStyleSheet(
+            f"background: {rgba(tokens.primary, 0.14)}; border-radius: 22px; border: none;"
+        )
+        self.lock_icon.setPixmap(material_icon("lock", size=(22, 22), color=tokens.primary))
+        retheme_icons(self, tokens)
+
+    def cleanup(self):
+        self.access.cleanup()
+        if self.config is not None:
+            self.config.close()
+            self.config.deleteLater()
         super().cleanup()

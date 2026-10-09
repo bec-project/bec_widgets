@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from qtpy.QtCore import Property, QObject, QUrl, Signal, Slot
-from qtpy.QtWidgets import QFileDialog, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QFileDialog, QStackedWidget, QVBoxLayout, QWidget
 
 from bec_widgets.applications.views.devices_views.devices_core import (
     DEVICE_CLASSES,
@@ -22,6 +22,7 @@ from bec_widgets.applications.views.devices_views.devices_core import (
     DeviceBrowser,
     class_docstring,
 )
+from bec_widgets.applications.views.devices_views.staff_access import StaffAccess
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.quick import DictListModel, create_quick_widget, release_quick_widget
@@ -149,7 +150,11 @@ class DevicesBackend(QObject):
     detailName = Property(str, lambda self: self._detail.get("name", ""), notify=changed)
     kind = Property(str, lambda self: self.browser.kind, notify=changed)
     kinds = Property(
-        "QVariantList", lambda self: [{"key": k, "label": l} for k, l in KINDS], constant=True
+        "QVariantList",
+        lambda self: [
+            {"key": k, "label": f"{l}  {self.browser.kind_counts().get(k, 0)}"} for k, l in KINDS
+        ],
+        notify=changed,
     )
     shownText = Property(str, lambda self: self.browser.shown_text(), notify=changed)
     selectedIndex = Property(
@@ -236,6 +241,7 @@ class ConfigBackend(QObject):
         self._tab = "form"
         editor.changed.connect(self.refresh)
         editor.toast.connect(self.toast)
+        self._staff = ""
 
     def refresh(self) -> None:
         """Re-read everything the scene shows."""
@@ -359,6 +365,19 @@ class ConfigBackend(QObject):
 
     rows = Property(QObject, lambda self: self._rows, constant=True)
     bar = Property("QVariantMap", lambda self: self.editor.bar_state(), notify=changed)
+    staff_changed = Signal()
+    sign_out_requested = Signal()
+    staffUser = Property(str, lambda self: self._staff, notify=staff_changed)
+
+    def set_staff(self, user: str) -> None:
+        """Who is signed in through BEC Atlas ("" when locked)."""
+        self._staff = user
+        self.staff_changed.emit()
+
+    @Slot()
+    def signOut(self) -> None:  # pylint: disable=invalid-name
+        self.sign_out_requested.emit()
+
     detail = Property("QVariantMap", lambda self: self._detail, notify=detail_changed)
     facets = Property("QVariantList", lambda self: self._facets, notify=facets_changed)
     problems = Property("QVariantList", lambda self: self.editor.problems(), notify=changed)
@@ -403,6 +422,7 @@ class DeviceConfigViewQML(BECWidget, QWidget):
 
     RPC = False
     PLUGIN = False
+    sign_out_requested = Signal()
 
     def __init__(self, parent=None, client=None, load_session: bool = True, **kwargs):
         super().__init__(parent=parent, client=client, **kwargs)
@@ -418,6 +438,11 @@ class DeviceConfigViewQML(BECWidget, QWidget):
             self, QML_DIR / "DeviceConfigView.qml", {"backend": self.backend}
         )
         lay.addWidget(self.view)
+        self.backend.sign_out_requested.connect(self.sign_out_requested)
+
+    def set_staff(self, user: str) -> None:
+        """Show who is signed in (BEC Atlas) next to Review changes."""
+        self.backend.set_staff(user)
 
     def open_review(self):
         """Open the review sheet (also reachable from the session bar)."""
@@ -446,4 +471,75 @@ class DeviceConfigViewQML(BECWidget, QWidget):
     def cleanup(self):
         release_quick_widget(self.view)
         self.editor.cleanup()
+        super().cleanup()
+
+
+# ------------------------------------------------------------------------------------ staff gate
+class StaffBackend(QObject):
+    """Bridge between :class:`StaffAccess` and ``LockScreen.qml``."""
+
+    changed = Signal()
+
+    def __init__(self, access: StaffAccess, parent: QObject):
+        super().__init__(parent)
+        self.access = access
+        access.changed.connect(self.changed)
+
+    # pylint: disable=invalid-name, missing-function-docstring
+    @Slot(str, str)
+    def signIn(self, user: str, password: str) -> None:
+        self.access.sign_in(user, password)
+
+    busy = Property(bool, lambda self: self.access.busy, notify=changed)
+    error = Property(str, lambda self: self.access.error, notify=changed)
+    deployment = Property(str, lambda self: self.access.deployment, notify=changed)
+
+
+class DeviceConfigGateQML(BECWidget, QWidget):
+    """Device Config behind the BEC Atlas staff sign-in (QML version).
+
+    The Config view is built on the first sign-in and locks again when the view is left.
+    """
+
+    RPC = False
+    PLUGIN = False
+
+    def __init__(self, parent=None, client=None, **kwargs):
+        super().__init__(parent=parent, client=client, **kwargs)
+        self.get_bec_shortcuts()
+        self.access = StaffAccess(self.bec_dispatcher, self)
+        self.staff_backend = StaffBackend(self.access, self)
+        self.config: DeviceConfigViewQML | None = None
+        self.stack = QStackedWidget(self)
+        self.lock_view = create_quick_widget(
+            self, QML_DIR / "LockScreen.qml", {"backend": self.staff_backend}
+        )
+        self.stack.addWidget(self.lock_view)
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.addWidget(self.stack)
+        self.access.changed.connect(self._sync)
+
+    def _sync(self) -> None:
+        if self.access.unlocked and self.config is None:
+            self.config = DeviceConfigViewQML(parent=self, client=self.client)
+            self.config.sign_out_requested.connect(self.access.sign_out)
+            self.stack.addWidget(self.config)
+        if self.config is not None:
+            self.config.set_staff(self.access.user)
+        self.stack.setCurrentWidget(
+            self.config if self.access.unlocked and self.config else self.lock_view
+        )
+
+    def hideEvent(self, event):  # pylint: disable=invalid-name
+        super().hideEvent(event)
+        if not event.spontaneous():
+            self.access.sign_out()
+
+    def cleanup(self):
+        release_quick_widget(self.lock_view)
+        self.access.cleanup()
+        if self.config is not None:
+            self.config.close()
+            self.config.deleteLater()
         super().cleanup()

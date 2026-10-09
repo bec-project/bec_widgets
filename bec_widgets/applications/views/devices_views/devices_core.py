@@ -1149,17 +1149,21 @@ class DeviceBrowser(QObject):
         facts = [("Type", info["deviceClass"]), ("Tags", ", ".join(info["tags"]) or "—")]
         if not info["enabled"]:
             facts.append(("Enabled", "No — disabled in the session"))
+        value = self.values.get(name)
         return {
             "name": name,
             "kind": kind,
+            "kindLabel": {"positioner": "Motor", "detector": "Detector"}.get(kind, "Monitor"),
+            "enabled": info["enabled"],
+            "subtitle": " · ".join(x for x in (info["deviceClass"], ", ".join(info["tags"])) if x),
+            "numeric": isinstance(value, (int, float)) and not isinstance(value, bool),
             "description": info["description"] or info["deviceClass"],
             "valueText": format_value(self.values.get(name), info["precision"]),
             "units": info["units"],
             "facts": [{"label": k, "value": v} for k, v in facts],
-            "actionText": {
-                "positioner": f"Add {name} to the workspace",
-                "detector": "Open the live image in the workspace",
-            }.get(kind, f"Plot {name} in the workspace"),
+            "actionText": {"positioner": "Add to workspace", "detector": "Open live image"}.get(
+                kind, "Plot in workspace"
+            ),
         }
 
     def signal_rows(self) -> list[dict]:

@@ -162,14 +162,14 @@ class BECMainApp(BECMainWindow):
             return
         if flavor == "qml":
             from bec_widgets.applications.views.devices_views.devices_qml import (
-                DeviceConfigViewQML as ConfigView,
+                DeviceConfigGateQML as ConfigView,
             )
             from bec_widgets.applications.views.devices_views.devices_qml import (
                 DevicesViewQML as DevicesView,
             )
         else:
             from bec_widgets.applications.views.devices_views.devices_qwidget import (
-                DeviceConfigViewQWidget as ConfigView,
+                DeviceConfigGateQWidget as ConfigView,
             )
             from bec_widgets.applications.views.devices_views.devices_qwidget import (
                 DevicesViewQWidget as DevicesView,
@@ -178,7 +178,8 @@ class BECMainApp(BECMainWindow):
         self.devices_view.browser.open_in_workspace.connect(self._open_device_in_workspace)
         self.device_config_view = ConfigView(parent=self)
         self.add_view(icon="memory", title="Devices", widget=self.devices_view, mini_text="Devices")
-        # Adding and configuring devices is beamline staff work: it sits with Admin View.
+        # Adding and configuring devices is beamline staff work: it sits with Admin View and
+        # opens only after a BEC Atlas sign-in by an owner of this deployment.
         self.add_view(
             icon="tune",
             title="Device Config",

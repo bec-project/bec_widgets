@@ -21,10 +21,12 @@ from bec_widgets.applications.views.devices_views.devices_core import (
     signal_entries,
 )
 from bec_widgets.applications.views.devices_views.devices_qml import (
+    DeviceConfigGateQML,
     DeviceConfigViewQML,
     DevicesViewQML,
 )
 from bec_widgets.applications.views.devices_views.devices_qwidget import (
+    DeviceConfigGateQWidget,
     DeviceConfigViewQWidget,
     DevicesViewQWidget,
 )
@@ -454,3 +456,59 @@ def test_devices_view_lets_users_change_a_setting(devices_view, qtbot, sync_pool
             widgets["edit"].returnPressed.emit()
             qtbot.waitUntil(lambda: widgets["status"].text() == "Set to 3", timeout=1000)
         velocity.set.assert_called_once_with(3)
+
+
+# ------------------------------------------------------------------------------------ staff gate
+@pytest.fixture(params=[DeviceConfigGateQWidget, DeviceConfigGateQML])
+def gate(request, qtbot, mocked_client):
+    with mock.patch.object(
+        mocked_client.device_manager,
+        "_get_redis_device_config",
+        return_value=[{"name": k, **copy.deepcopy(v)} for k, v in SESSION.items()],
+    ):
+        widget = create_widget(qtbot, request.param, client=mocked_client)
+        service = widget.access.service
+        with (
+            mock.patch.object(service, "login") as login,
+            mock.patch.object(service, "logout") as logout,
+        ):
+            widget.login, widget.logout = login, logout
+            yield widget
+
+
+def test_gate_starts_locked_and_explains_missing_input(gate):
+    assert gate.config is None
+    gate.access.sign_in("", "")
+    assert gate.access.error == "Enter your user name and password."
+    gate.access.sign_in("e12345", "secret")
+    assert "no deployment" in gate.access.error
+    gate.login.assert_not_called()
+
+
+def test_gate_unlocks_for_deployment_owner_and_locks_on_sign_out(gate, qtbot):
+    gate.access.deployment = "x05la"
+    gate.access.sign_in("e12345", "secret")
+    gate.login.assert_called_once_with(username="e12345", password="secret")
+    assert gate.access.busy
+    gate.access.service.authenticated.emit({"email": "jan@psi.ch"})
+    assert gate.access.unlocked
+    assert gate.config is not None
+    assert gate.stack.currentWidget() is gate.config
+    if isinstance(gate, DeviceConfigGateQWidget):
+        assert gate.config.staff_label.text() == "Signed in as jan@psi.ch"
+    else:
+        assert gate.config.backend.staffUser == "jan@psi.ch"
+    gate.config.sign_out_requested.emit()
+    assert not gate.access.unlocked
+    gate.logout.assert_called_once()
+    assert gate.stack.currentWidget() is not gate.config
+
+
+def test_gate_shows_atlas_refusal(gate):
+    gate.access.deployment = "x05la"
+    gate.access.sign_in("e12345", "wrong")
+    gate.access.service.failed.emit("User name or password is not correct.")
+    assert not gate.access.busy
+    assert not gate.access.unlocked
+    assert gate.access.error == "User name or password is not correct."
+    assert gate.config is None

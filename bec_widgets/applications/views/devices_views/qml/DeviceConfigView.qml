@@ -17,6 +17,7 @@ Rectangle {
     function openReview() { addSheet.close(); clearSheet.close(); reviewSheet.applyMode = false; reviewSheet.open() }
     function openAdd() { addSheet.open() }
     function openClear() { clearSheet.open() }
+    function startApply() { if (root.backend.apply()) reviewSheet.applyMode = true }
     function closeSheets() { reviewSheet.close(); addSheet.close(); clearSheet.close() }
 
     color: theme.bg
@@ -77,6 +78,19 @@ Rectangle {
                         iconName: root.bar.changeCount > 0 ? "" : "check"
                     }
                     Item { Layout.fillWidth: true }
+                    Text {
+                        visible: root.backend.staffUser !== ""
+                        text: "Signed in as " + root.backend.staffUser
+                        color: theme.fgMuted
+                        font.pixelSize: 12
+                    }
+                    GhostButton {
+                        visible: root.backend.staffUser !== ""
+                        text: "Sign out"
+                        iconName: "logout"
+                        tip: "Lock Device Config again"
+                        onClicked: root.backend.signOut()
+                    }
                     TextButton {
                         text: root.bar.reviewText
                         variant: "primary"
@@ -671,7 +685,7 @@ Rectangle {
                 required property string message
                 required property bool undo
                 required property int index
-                width: Math.min(440, toastRow.implicitWidth + 24)
+                width: Math.min(460, toastRow.implicitWidth + 28)
                 height: toastRow.implicitHeight + 16
                 radius: 8
                 color: theme.fg
@@ -680,11 +694,11 @@ Rectangle {
                     anchors.fill: parent
                     anchors.margins: 8
                     anchors.leftMargin: 12
-                    Text { text: toast.message; color: theme.bg; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.maximumWidth: 380 }
+                    Text { text: toast.message; color: theme.bg; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.maximumWidth: 380; Layout.rightMargin: 8 }
                     Text {
                         visible: toast.undo
                         text: "Undo"
-                        color: Qt.lighter(theme.primary, theme.dark ? 1.4 : 1.6)
+                        color: theme.dark ? Qt.darker(theme.primary, 1.3) : Qt.lighter(theme.primary, 1.6)
                         font.pixelSize: 12
                         font.weight: Font.Bold
                         TapHandler { onTapped: { root.backend.undo(); toastModel.remove(toast.index) } }
@@ -814,7 +828,7 @@ Rectangle {
                 text: reviewSheet.review.applyText
                 variant: "primary"
                 enabled: root.backend.canApply
-                onClicked: if (root.backend.apply()) reviewSheet.applyMode = true
+                onClicked: root.startApply()
             },
             TextButton {
                 visible: reviewSheet.applyMode

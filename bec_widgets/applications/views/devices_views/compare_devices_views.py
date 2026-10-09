@@ -271,6 +271,143 @@ def screenshots(app, client, out: Path, theme: str) -> None:
         _settle(app, 200)
 
 
+class _DemoHelper:
+    """Config helper for the apply pictures: one device fails, one is still running."""
+
+    def __init__(self):
+        import threading  # pylint: disable=import-outside-toplevel
+
+        self.release = threading.Event()
+
+    def send_config_request(self, action=None, config=None, **_kwargs):
+        """Pretend to send one request; ``samx`` waits for :attr:`release`."""
+        name = next(iter(config or {}), "")
+        if name == "newmot":
+            raise RuntimeError("Cannot connect to X05LA-ES-PH:Z.VAL (no answer after 5 s)")
+        if name == "samx":
+            self.release.wait(10)
+
+
+def popups(app, client, out: Path, theme: str) -> None:
+    """Every Config popup in both new views, the staff sign-in, and today's dialogs."""
+    # pylint: disable=import-outside-toplevel, protected-access
+    from bec_qthemes import apply_theme
+
+    apply_theme(theme)
+    out.mkdir(parents=True, exist_ok=True)
+    for view in ("qml", "qwidget"):
+        widget = build(view, "config", client)
+        widget.resize(1500, 900)
+        widget.show()
+        _settle(app, 700)
+        shot = lambda tag, w=widget: w.grab().save(str(out / f"{theme}_{view}_popup_{tag}.png"))
+        sheet = widget.open_add_device()
+        _settle(app, 400)
+        grab_sheet(widget, sheet).save(str(out / f"{theme}_{view}_popup_add.png"))
+        close_sheet(widget, sheet)
+        sheet = widget.open_clear_session()
+        _settle(app, 400)
+        grab_sheet(widget, sheet).save(str(out / f"{theme}_{view}_popup_clear.png"))
+        close_sheet(widget, sheet)
+        _settle(app, 200)
+        helper = _DemoHelper()
+        widget.editor._helper = helper
+        sheet = widget.open_review()
+        _settle(app, 300)
+        if view == "qml":
+            widget.view.rootObject().startApply()
+        else:
+            widget._start_apply(sheet)
+        _settle(app, 700)
+        grab_sheet(widget, sheet).save(str(out / f"{theme}_{view}_popup_applying.png"))
+        helper.release.set()
+        _settle(app, 700)
+        grab_sheet(widget, sheet).save(str(out / f"{theme}_{view}_popup_applied.png"))
+        close_sheet(widget, sheet)
+        _settle(app, 300)
+        widget.editor.remove("bpm3a")
+        _settle(app, 400)
+        shot("toast")
+        widget.close()
+        widget.deleteLater()
+        _settle(app, 200)
+        gate_cls = _gate_class(view)
+        gate = gate_cls(client=client)
+        gate.resize(1500, 900)
+        gate.show()
+        gate.access.deployment = "x05la"
+        gate.access.error = "User name or password is not correct."
+        gate.access.changed.emit()
+        _settle(app, 500)
+        gate.grab().save(str(out / f"{theme}_{view}_popup_signin.png"))
+        gate.close()
+        gate.deleteLater()
+        _settle(app, 200)
+    _legacy_popups(app, client, out, theme)
+
+
+def _gate_class(view: str):
+    # pylint: disable=import-outside-toplevel
+    if view == "qml":
+        from bec_widgets.applications.views.devices_views.devices_qml import DeviceConfigGateQML
+
+        return DeviceConfigGateQML
+    from bec_widgets.applications.views.devices_views.devices_qwidget import DeviceConfigGateQWidget
+
+    return DeviceConfigGateQWidget
+
+
+def _legacy_popups(app, client, out: Path, theme: str) -> None:
+    """Today's Device Manager dialogs, opened the way its toolbar opens them."""
+    # pylint: disable=import-outside-toplevel, protected-access
+    from qtpy.QtWidgets import QMessageBox
+
+    from bec_widgets.applications.views.device_manager_view.device_manager_dialogs.config_choice_dialog import (
+        ConfigChoiceDialog,
+    )
+    from bec_widgets.applications.views.device_manager_view.device_manager_dialogs.device_form_dialog import (
+        DeviceFormDialog,
+    )
+    from bec_widgets.applications.views.device_manager_view.device_manager_dialogs.upload_redis_dialog import (
+        UploadRedisDialog,
+    )
+
+    legacy = build("legacy", "config", client)
+    legacy.resize(1500, 900)
+    legacy.show()
+    _settle(app, 900)
+    display = legacy.device_manager_display
+    dialogs = {}
+    add = DeviceFormDialog(parent=display, add_btn_text="Add Device")
+    dialogs["add"] = add
+    edit = DeviceFormDialog(parent=display, add_btn_text="Apply Changes")
+    samx = next(c for c in display.device_table_view.get_device_config() if c["name"] == "samx")
+    edit.set_device_config(samx)
+    dialogs["edit"] = edit
+    dialogs["upload"] = UploadRedisDialog(
+        parent=display, device_configs=display.device_table_view.get_validation_results()
+    )
+    dialogs["load_choice"] = ConfigChoiceDialog(display)
+    flush = QMessageBox(
+        QMessageBox.Icon.Question,
+        "Flush BEC Server Config",
+        "Do you really want to flush the current config in BEC Server?",
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        display,
+    )
+    dialogs["flush"] = flush
+    for tag, dialog in dialogs.items():
+        dialog.show()
+        _settle(app, 500)
+        dialog.grab().save(str(out / f"{theme}_legacy_popup_{tag}.png"))
+        dialog.close()
+        dialog.deleteLater()
+        _settle(app, 150)
+    legacy.close()
+    legacy.deleteLater()
+    _settle(app, 200)
+
+
 def grab_sheet(widget, sheet):
     """Picture of a sheet: QWidget dialogs grab themselves, QML popups are inside the view."""
     if hasattr(sheet, "grab"):
@@ -350,6 +487,7 @@ def main() -> None:
     parser.add_argument("--theme", choices=["light", "dark"], default="dark")
     parser.add_argument("--screenshots", type=Path)
     parser.add_argument("--bench", action="store_true")
+    parser.add_argument("--popups", type=Path, help="write every popup picture to this folder")
     args = parser.parse_args()
 
     os.environ.setdefault("OPHYD_CONTROL_LAYER", "dummy")
@@ -367,9 +505,12 @@ def main() -> None:
     if args.screenshots:
         for theme in ("light", "dark"):
             screenshots(app, client, args.screenshots, theme)
+    if args.popups:
+        for theme in ("light", "dark"):
+            popups(app, client, args.popups, theme)
     if args.bench:
         print(json.dumps(bench(app, client), indent=2))
-    if args.screenshots or args.bench:
+    if args.screenshots or args.bench or args.popups:
         os._exit(0)  # pylint: disable=protected-access
     widget = build(args.view, args.page, client)
     widget.resize(1500, 900)
