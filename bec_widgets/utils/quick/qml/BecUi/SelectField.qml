@@ -7,9 +7,9 @@ ComboBox {
     property bool invalid: false
     property string placeholder: ""
 
-    implicitHeight: 32
+    implicitHeight: theme.controlHeight
     implicitWidth: 140
-    font.pixelSize: 13
+    font.pixelSize: theme.fontBody
     hoverEnabled: true
     opacity: enabled ? 1.0 : 0.5
 
@@ -53,7 +53,7 @@ ComboBox {
         contentItem: Text {
             text: option.modelData === "" ? "None" : option.modelData
             color: option.modelData === "" ? theme.fgSubtle : theme.fg
-            font.pixelSize: 13
+            font.pixelSize: theme.fontBody
             elide: Text.ElideRight
             verticalAlignment: Text.AlignVCenter
         }
@@ -82,7 +82,7 @@ ComboBox {
         background: Rectangle {
             color: theme.card
             border.color: theme.border
-            radius: 8
+            radius: theme.radiusSmall + 2
         }
     }
 }

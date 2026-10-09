@@ -5,7 +5,7 @@ Rectangle {
     property bool focused: false
     property bool invalid: false
     property bool hovered: false
-    radius: 6
+    radius: theme.radiusSmall
     color: theme.field
     border.width: focused || invalid ? 2 : 1
     border.color: invalid ? theme.danger : focused ? theme.primary : hovered ? theme.fgSubtle : theme.border
