@@ -267,3 +267,43 @@ def test_open_menu_lists_saved_profiles(make_tabs):
     texts = [action.text() for action in tabs._open_menu.actions()]
     assert "New Workspace" in texts
     assert "alignment" in texts
+
+
+def test_close_button_shows_on_current_tab_only(make_tabs):
+    tabs = make_tabs()
+    tabs.new_workspace()
+    bar = tabs.tabBar()
+    assert bar.close_button_visible(1)
+    assert not bar.close_button_visible(0)
+    tabs.setCurrentIndex(0)
+    assert bar.close_button_visible(0)
+    assert not bar.close_button_visible(1)
+
+
+def test_close_button_closes_its_tab(make_tabs):
+    tabs = make_tabs()
+    _save_profile(tabs, "alignment")
+    tabs.new_workspace()
+    _save_profile(tabs, "scans")
+    button = tabs.tabBar().tabButton(1, tabs.tabBar().ButtonPosition.RightSide)
+    button.click()
+    assert tabs.workspace_names() == ["alignment"]
+
+
+def test_new_workspace_button_follows_last_tab(make_tabs, qtbot):
+    tabs = make_tabs()
+    bar = tabs.tabBar()
+    qtbot.wait(10)
+    first_x = tabs.new_workspace_button.x()
+    assert first_x >= bar.tabRect(0).right()
+    tabs.new_workspace_button.click()
+    qtbot.wait(10)
+    assert tabs.count() == 2
+    assert tabs.new_workspace_button.x() > first_x
+
+
+def test_unsaved_tab_has_dot_icon(make_tabs):
+    tabs = make_tabs()
+    assert not tabs.tabIcon(0).isNull()
+    _save_profile(tabs, "alignment")
+    assert tabs.tabIcon(0).isNull()

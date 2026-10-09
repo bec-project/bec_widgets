@@ -6,17 +6,21 @@ from typing import Any
 
 from bec_lib import bec_logger
 from bec_qthemes import material_icon
-from qtpy.QtCore import QPoint, Qt, Signal
+from qtpy.QtCore import QPoint, QSize, Qt, Signal
+from qtpy.QtGui import QColor, QIcon, QPainter, QPixmap
 from qtpy.QtWidgets import (
+    QApplication,
     QInputDialog,
     QMenu,
     QMessageBox,
+    QTabBar,
     QTabWidget,
     QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
+from bec_widgets.utils.colors import rgba, theme_color
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.widgets.containers.dock_area.dock_area import BECDockArea, StartupProfile
 from bec_widgets.widgets.containers.dock_area.profile_utils import (
@@ -30,6 +34,147 @@ from bec_widgets.widgets.containers.dock_area.profile_utils import (
 logger = bec_logger.logger
 
 UNTITLED_WORKSPACE = "Untitled"
+
+_CLOSE_ICON_SIZE = QSize(14, 14)
+_TAB_BUTTON_SIZE = QSize(22, 22)
+_TAB_BUTTON_GAP = 4
+
+
+def _dot_icon(color: QColor, diameter: int = 8) -> QIcon:
+    """Return a small filled circle used to mark unsaved workspaces."""
+    pixmap = QPixmap(diameter, diameter)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.setBrush(color)
+    painter.drawEllipse(0, 0, diameter, diameter)
+    painter.end()
+    return QIcon(pixmap)
+
+
+class WorkspaceTabBar(QTabBar):
+    """
+    Browser-style tab bar: rounded tabs, a close button that appears on hover or on the
+    current tab, and the new-workspace buttons placed right after the last tab.
+    """
+
+    close_requested = Signal(int)
+
+    def __init__(self, parent: QWidget | None = None):
+        # Set before any Qt call, since setters can already invoke the overrides below
+        self._hover_index = -1
+        self._trailing: list[QWidget] = []
+        super().__init__(parent)
+        self.setObjectName("WorkspaceTabBar")
+        self.setMouseTracking(True)
+        self.setDrawBase(False)
+        self.setExpanding(False)
+        self.setElideMode(Qt.TextElideMode.ElideRight)
+        self.setUsesScrollButtons(True)
+        self.currentChanged.connect(lambda _index: self._update_close_buttons())
+        self.tabMoved.connect(lambda *_: self._update_close_buttons())
+
+    def add_trailing_widget(self, widget: QWidget) -> None:
+        """Place *widget* after the last tab; it moves along as tabs are added or closed."""
+        widget.setParent(self)
+        self._trailing.append(widget)
+        self._position_trailing()
+        self.updateGeometry()
+
+    def _trailing_width(self) -> int:
+        return sum(w.sizeHint().width() + _TAB_BUTTON_GAP for w in self._trailing)
+
+    def sizeHint(self) -> QSize:  # pylint: disable=invalid-name
+        """Reserve room for the trailing buttons."""
+        hint = super().sizeHint()
+        return QSize(hint.width() + self._trailing_width(), hint.height())
+
+    def minimumSizeHint(self) -> QSize:  # pylint: disable=invalid-name
+        """Reserve room for the trailing buttons."""
+        hint = super().minimumSizeHint()
+        return QSize(hint.width() + self._trailing_width(), hint.height())
+
+    def _position_trailing(self) -> None:
+        if not self._trailing:
+            return
+        if self.count():
+            x = self.tabRect(self.count() - 1).right() + _TAB_BUTTON_GAP
+        else:
+            x = _TAB_BUTTON_GAP
+        x = min(x, max(0, self.width() - self._trailing_width()))
+        for widget in self._trailing:
+            size = widget.sizeHint()
+            widget.setGeometry(x, (self.height() - size.height()) // 2, size.width(), size.height())
+            widget.raise_()
+            x += size.width() + _TAB_BUTTON_GAP
+
+    def tabInserted(self, index: int) -> None:  # pylint: disable=invalid-name
+        """Give each new tab its own close button."""
+        super().tabInserted(index)
+        button = QToolButton(self)
+        button.setObjectName("WorkspaceTabCloseButton")
+        button.setAutoRaise(True)
+        button.setFixedSize(_TAB_BUTTON_SIZE)
+        button.setIconSize(_CLOSE_ICON_SIZE)
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        button.setToolTip("Close workspace")
+        button.clicked.connect(lambda _checked=False, b=button: self._on_close_clicked(b))
+        self.setTabButton(index, QTabBar.ButtonPosition.RightSide, button)
+        self._update_close_buttons()
+
+    def tabRemoved(self, index: int) -> None:  # pylint: disable=invalid-name
+        """Refresh close buttons after a tab is removed."""
+        super().tabRemoved(index)
+        self._hover_index = -1
+        self._update_close_buttons()
+
+    def tabLayoutChange(self) -> None:  # pylint: disable=invalid-name
+        """Keep the trailing buttons next to the last tab."""
+        super().tabLayoutChange()
+        self._position_trailing()
+
+    def resizeEvent(self, event) -> None:  # pylint: disable=invalid-name
+        """Keep the trailing buttons next to the last tab."""
+        super().resizeEvent(event)
+        self._position_trailing()
+
+    def mouseMoveEvent(self, event) -> None:  # pylint: disable=invalid-name
+        """Track the hovered tab to show its close button."""
+        super().mouseMoveEvent(event)
+        self._set_hover_index(self.tabAt(event.position().toPoint()))
+
+    def leaveEvent(self, event) -> None:  # pylint: disable=invalid-name
+        """Hide the hover close button when the mouse leaves."""
+        super().leaveEvent(event)
+        self._set_hover_index(-1)
+
+    def _set_hover_index(self, index: int) -> None:
+        if index != self._hover_index:
+            self._hover_index = index
+            self._update_close_buttons()
+
+    def _on_close_clicked(self, button: QToolButton) -> None:
+        for index in range(self.count()):
+            if self.tabButton(index, QTabBar.ButtonPosition.RightSide) is button:
+                self.close_requested.emit(index)
+                return
+
+    def close_button_visible(self, index: int) -> bool:
+        """Whether the close button of tab *index* is currently shown."""
+        button = self.tabButton(index, QTabBar.ButtonPosition.RightSide)
+        return button is not None and not button.icon().isNull()
+
+    def _update_close_buttons(self) -> None:
+        icon = material_icon("close", size=_CLOSE_ICON_SIZE)
+        for index in range(self.count()):
+            button = self.tabButton(index, QTabBar.ButtonPosition.RightSide)
+            if button is None:
+                continue
+            # Swap the icon rather than hiding the button so tab widths stay stable.
+            show = index in (self.currentIndex(), self._hover_index)
+            button.setIcon(icon if show else QIcon())
+            button.setEnabled(show)
 
 
 class WorkspacePage(QWidget):
@@ -88,7 +233,7 @@ class WorkspacePage(QWidget):
         return self.dock_area
 
 
-class WorkspaceTabs(QTabWidget):
+class WorkspaceTabs(QTabWidget):  # pylint: disable=too-many-instance-attributes
     """
     Tab widget hosting one :class:`BECDockArea` per workspace.
 
@@ -125,31 +270,42 @@ class WorkspaceTabs(QTabWidget):
         self._closing = False
         self._restoring = False
 
+        self.setTabBar(WorkspaceTabBar(self))
         self.setDocumentMode(True)
         self.setMovable(True)
-        self.setTabsClosable(True)
-        self.setElideMode(Qt.TextElideMode.ElideRight)
-        # Size tabs to their titles; the app theme stretches tab bars to full width by default.
-        self.tabBar().setObjectName("WorkspaceTabBar")
-        self.setStyleSheet("QTabBar#WorkspaceTabBar { qproperty-expanding: false; }")
-        self.tabCloseRequested.connect(self.close_workspace)
+        self.tabBar().close_requested.connect(self.close_workspace)
         self.currentChanged.connect(self._on_current_changed)
         self.tabBar().tabMoved.connect(lambda *_: self._persist())
         self.tabBar().tabBarDoubleClicked.connect(self._on_tab_double_clicked)
         self.tabBar().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.tabBar().customContextMenuRequested.connect(self._show_tab_menu)
 
-        self.new_workspace_button = QToolButton(self)
+        self.new_workspace_button = QToolButton()
         self.new_workspace_button.setObjectName("NewWorkspaceButton")
         self.new_workspace_button.setIcon(material_icon("add"))
         self.new_workspace_button.setAutoRaise(True)
-        self.new_workspace_button.setToolTip("New workspace (click) or open a saved one (arrow)")
-        self.new_workspace_button.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
-        self._open_menu = QMenu(self.new_workspace_button)
-        self._open_menu.aboutToShow.connect(self._populate_open_menu)
-        self.new_workspace_button.setMenu(self._open_menu)
+        self.new_workspace_button.setFixedSize(_TAB_BUTTON_SIZE)
+        self.new_workspace_button.setToolTip("New workspace")
         self.new_workspace_button.clicked.connect(self.new_workspace)
-        self.setCornerWidget(self.new_workspace_button, Qt.Corner.TopRightCorner)
+
+        self.open_workspace_button = QToolButton()
+        self.open_workspace_button.setObjectName("OpenWorkspaceButton")
+        self.open_workspace_button.setIcon(material_icon("expand_more"))
+        self.open_workspace_button.setAutoRaise(True)
+        self.open_workspace_button.setFixedSize(_TAB_BUTTON_SIZE)
+        self.open_workspace_button.setToolTip("Open a saved workspace")
+        self.open_workspace_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self._open_menu = QMenu(self.open_workspace_button)
+        self._open_menu.aboutToShow.connect(self._populate_open_menu)
+        self.open_workspace_button.setMenu(self._open_menu)
+
+        self.tabBar().add_trailing_widget(self.new_workspace_button)
+        self.tabBar().add_trailing_widget(self.open_workspace_button)
+
+        self._apply_style()
+        app = QApplication.instance()
+        if app is not None and hasattr(app, "theme"):
+            app.theme.theme_changed.connect(self._apply_style)
 
         if restore:
             self._restore_tabs()
@@ -210,7 +366,7 @@ class WorkspaceTabs(QTabWidget):
         """
         page = WorkspacePage(self, profile=profile, startup_profile=startup_profile)
         index = self.addTab(page, self._tab_title(profile))
-        self.setTabToolTip(index, self._tab_tooltip(profile))
+        self._sync_tab(page)
         if activate:
             self.setCurrentIndex(index)
             self._materialize(page)
@@ -322,6 +478,12 @@ class WorkspaceTabs(QTabWidget):
         """Persist the open tabs and close every dock area (each autosaves its profile)."""
         self._persist()
         self._closing = True
+        app = QApplication.instance()
+        if app is not None and hasattr(app, "theme"):
+            try:
+                app.theme.theme_changed.disconnect(self._apply_style)
+            except (RuntimeError, TypeError):
+                pass
         for page in self.pages():
             if page.dock_area is not None:
                 page.dock_area.close()
@@ -330,6 +492,68 @@ class WorkspaceTabs(QTabWidget):
     ################################################################################
     # Internals
     ################################################################################
+
+    @SafeSlot()
+    @SafeSlot(str)
+    def _apply_style(self, _theme: str | None = None) -> None:
+        """Style the tabs as rounded pills using the current BEC theme colours."""
+        app = QApplication.instance()
+        theme = getattr(app, "theme", None)
+        palette = self.palette()
+        fg = theme_color(theme, "FG", palette.windowText().color())
+        card = theme_color(theme, "CARD_BG", palette.base().color())
+        border = theme_color(theme, "BORDER", palette.mid().color())
+        primary = theme_color(theme, "PRIMARY", palette.highlight().color())
+        self._unsaved_icon = _dot_icon(primary)
+        self.setStyleSheet(f"""
+            QTabBar#WorkspaceTabBar {{
+                qproperty-expanding: false;
+                background: transparent;
+                border: none;
+                padding: 0px;
+                margin: 0px;
+            }}
+            QTabBar#WorkspaceTabBar::tab {{
+                background: transparent;
+                color: {rgba(fg, 170)};
+                border: 1px solid transparent;
+                border-radius: 8px;
+                padding: 4px 4px 4px 12px;
+                margin: 6px 2px 4px 2px;
+                min-width: 72px;
+                max-width: 220px;
+            }}
+            QTabBar#WorkspaceTabBar::tab:first {{
+                margin-left: 6px;
+            }}
+            QTabBar#WorkspaceTabBar::tab:hover {{
+                background: {rgba(fg, 18)};
+                color: {rgba(fg, 230)};
+            }}
+            QTabBar#WorkspaceTabBar::tab:selected {{
+                background: {card.name()};
+                border: 1px solid {border.name()};
+                color: {fg.name()};
+            }}
+            QToolButton#WorkspaceTabCloseButton,
+            QToolButton#NewWorkspaceButton,
+            QToolButton#OpenWorkspaceButton {{
+                border: none;
+                border-radius: 6px;
+                background: transparent;
+                padding: 0px;
+            }}
+            QToolButton#WorkspaceTabCloseButton:hover,
+            QToolButton#NewWorkspaceButton:hover,
+            QToolButton#OpenWorkspaceButton:hover {{
+                background: {rgba(fg, 30)};
+            }}
+            QToolButton#OpenWorkspaceButton::menu-indicator {{
+                image: none;
+            }}
+            """)
+        for page in self.pages():
+            self._sync_tab(page)
 
     def _restore_tabs(self) -> None:
         names, current = get_open_workspaces(namespace=self.profile_namespace)
@@ -401,6 +625,7 @@ class WorkspaceTabs(QTabWidget):
             return
         self.setTabText(index, self._tab_title(page.profile))
         self.setTabToolTip(index, self._tab_tooltip(page.profile))
+        self.setTabIcon(index, self._unsaved_icon if page.profile is None else QIcon())
 
     @staticmethod
     def _tab_title(profile: str | None) -> str:
