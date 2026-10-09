@@ -1,5 +1,7 @@
 from bec_widgets.applications.startup_profiler import startup_profiler  # isort: skip
 
+import os
+
 from bec_qthemes import material_icon
 from qtpy.QtCore import QTimer
 from qtpy.QtGui import QAction  # type: ignore
@@ -94,6 +96,7 @@ class BECMainApp(BECMainWindow):
             widget=self.device_manager,
             mini_text="DM",
         )
+        self._add_device_views()
         if is_experimental_features_enabled():
             self.developer_view = DeveloperView(self)
             self.add_view(
@@ -148,6 +151,47 @@ class BECMainApp(BECMainWindow):
 
     def add_dark_mode_item(self, id: str = "dark_mode", position: int | None = None):
         return self.sidebar.add_dark_mode_item(id=id, position=position)
+
+    def _add_device_views(self):
+        """Add the Devices and Config views when BEC_DEVICE_VIEWS is "qml" or "qwidget".
+
+        The Device Manager stays as it is; the two views are an opt-in preview of the split.
+        """
+        flavor = os.environ.get("BEC_DEVICE_VIEWS", "").strip().lower()
+        if flavor not in ("qml", "qwidget"):
+            return
+        if flavor == "qml":
+            from bec_widgets.applications.views.devices_views.devices_qml import (
+                DeviceConfigViewQML as ConfigView,
+            )
+            from bec_widgets.applications.views.devices_views.devices_qml import (
+                DevicesViewQML as DevicesView,
+            )
+        else:
+            from bec_widgets.applications.views.devices_views.devices_qwidget import (
+                DeviceConfigViewQWidget as ConfigView,
+            )
+            from bec_widgets.applications.views.devices_views.devices_qwidget import (
+                DevicesViewQWidget as DevicesView,
+            )
+        self.devices_view = DevicesView(parent=self)
+        self.devices_view.browser.open_in_workspace.connect(self._open_device_in_workspace)
+        self.device_config_view = ConfigView(parent=self)
+        self.add_view(icon="memory", title="Devices", widget=self.devices_view, mini_text="Devices")
+        self.add_view(
+            icon="tune", title="Device Config", widget=self.device_config_view, mini_text="Config"
+        )
+
+    def _open_device_in_workspace(self, widget_name: str, device: str):
+        """Open ``device`` in a new dock of the workspace and switch to it."""
+        widget = self.dock_area.dock_area.new(widget_name)
+        if widget_name == "PositionerBox":
+            widget.set_positioner(device)
+        elif widget_name == "Image":
+            widget.image(device=device)
+        elif widget_name == "Waveform":
+            widget.plot(device_y=device)
+        self.set_current("dock_area")
 
     def add_view(
         self,
