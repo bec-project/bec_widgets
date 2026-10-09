@@ -6,9 +6,10 @@ from unittest import mock
 from unittest.mock import MagicMock, patch
 
 import pytest
+import shiboken6
 from qtpy.QtCore import QSettings, Qt, QTimer
 from qtpy.QtGui import QPixmap
-from qtpy.QtWidgets import QDialog, QMessageBox, QToolButton, QWidget
+from qtpy.QtWidgets import QApplication, QDialog, QMessageBox, QSplitter, QToolButton, QWidget
 
 import bec_widgets.widgets.containers.dock_area.basic_dock_area as basic_dock_module
 import bec_widgets.widgets.containers.dock_area.dock_area as dock_area_module
@@ -189,6 +190,27 @@ def basic_dock_area(qtbot, mocked_client):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
+
+
+@pytest.fixture
+def collapsed_dock_area(qtbot, mocked_client):
+    """A two-column DockAreaWidget inside an outer QSplitter that collapses it to zero width."""
+    outer = QSplitter()
+    qtbot.addWidget(outer)
+    outer.addWidget(QWidget())
+    area = DockAreaWidget(parent=outer, client=mocked_client, title="Collapsed Dock Area")
+    outer.addWidget(area)
+    for name, where in (("left_panel", "left"), ("right_panel", "right")):
+        panel = QWidget(parent=area)
+        panel.setObjectName(name)
+        area.new(panel, where=where)
+    outer.resize(800, 600)
+    outer.show()
+    qtbot.waitExposed(outer)
+    root = area.dock_manager.dockContainers()[0].rootSplitter()
+    outer.setSizes([800, 0])
+    qtbot.waitUntil(lambda: root.width() == 0)
+    yield outer, area, root
 
 
 class _NamespaceProfiles:
@@ -408,6 +430,9 @@ class TestBasicDockArea:
             def setStretchFactor(self, idx, value):
                 self.stretch.append((idx, value))
 
+            def findChildren(self, *_args, **_kwargs):
+                return []
+
         splitter = DummySplitter()
 
         basic_dock_area._schedule_splitter_weights(splitter, [1, 2, 1])
@@ -488,6 +513,139 @@ class TestBasicDockArea:
             assert horizontal == [1, 1, 1]
             assert vertical == [2, 3]
             assert overrides == {(): [9], (1, 0): [5, 5]}
+
+    def test_layout_ratios_skip_splitter_deleted_before_apply(self, basic_dock_area, qtbot):
+        """Deferred ratio callbacks must skip splitters deleted before they run (#1317)."""
+        panels = {}
+        for name in ("left", "top", "bottom"):
+            panel = QWidget(parent=basic_dock_area)
+            panel.setObjectName(name)
+            panels[name] = panel
+        basic_dock_area.new(panels["left"], where="left")
+        top_dock = basic_dock_area.new(panels["top"], where="right", return_dock=True)
+        basic_dock_area.new(panels["bottom"], where="bottom", relative_to=top_dock)
+
+        root = basic_dock_area.dock_manager.dockContainers()[0].rootSplitter()
+        nested = [
+            root.widget(idx)
+            for idx in range(root.count())
+            if isinstance(root.widget(idx), basic_dock_module.QtAds.CDockSplitter)
+        ]
+        assert len(nested) == 1
+
+        basic_dock_area.set_layout_ratios(horizontal=[1, 3], vertical=[3, 1])
+        # Removing a dock from the nested column makes ADS delete that splitter right away,
+        # before the deferred ratio callbacks had a chance to run.
+        basic_dock_area.delete("bottom")
+        assert not shiboken6.isValid(nested[0])
+
+        with qtbot.captureExceptions() as exceptions:
+            qtbot.wait(50)
+
+        assert exceptions == []
+        # The surviving root splitter still receives its ratios.
+        left_px, right_px = root.sizes()
+        assert right_px > 2 * left_px
+
+    def test_splitter_weights_retry_skips_deleted_splitter(self, basic_dock_area, qtbot):
+        """A re-scheduled apply (geometry not ready yet) must not touch a deleted splitter."""
+        splitter = basic_dock_module.QtAds.CDockSplitter(Qt.Orientation.Horizontal, basic_dock_area)
+        splitter.addWidget(QWidget())
+        splitter.addWidget(QWidget())
+        splitter.resize(0, 0)  # no usable geometry -> apply() waits to be retried
+
+        basic_dock_area._schedule_splitter_weights(splitter, [1, 2])
+        QApplication.processEvents()  # first apply() runs and re-schedules
+        shiboken6.delete(splitter)
+
+        with qtbot.captureExceptions() as exceptions:
+            qtbot.wait(50)
+
+        assert exceptions == []
+
+    def test_floating_state_retry_skips_deleted_dock(self, basic_dock_area, qtbot):
+        """The floating-geometry retry must not touch a dock deleted in the meantime."""
+        panel = QWidget(parent=basic_dock_area)
+        panel.setObjectName("floating_retry")
+        dock = basic_dock_area.new(panel, return_dock=True)
+        assert dock.floatingDockContainer() is None  # docked -> a retry gets scheduled
+
+        basic_dock_area._apply_floating_state_to_dock(
+            dock, {"relative": {"x": 0.1, "y": 0.1, "w": 0.5, "h": 0.5}}
+        )
+        basic_dock_area.delete("floating_retry")
+
+        with qtbot.captureExceptions() as exceptions:
+            qtbot.wait(200)
+
+        assert not shiboken6.isValid(dock)
+        assert exceptions == []
+
+    def test_layout_ratios_wait_for_geometry_without_busy_polling(
+        self, collapsed_dock_area, qtbot, monkeypatch
+    ):
+        """A dock area laid out at zero size must not re-arm a 0 ms timer until it gets geometry.
+
+        The ratios are still applied once the area is given real space.
+        """
+        outer, area, root = collapsed_dock_area
+        single_shots = []
+        real_qtimer = basic_dock_module.QTimer
+
+        class CountingQTimer(real_qtimer):
+            @staticmethod
+            def singleShot(*args):
+                single_shots.append(args[0])
+                return real_qtimer.singleShot(*args)
+
+        monkeypatch.setattr(basic_dock_module, "QTimer", CountingQTimer)
+        area.set_layout_ratios(horizontal=[1, 3])
+        qtbot.wait(100)
+        scheduled_while_collapsed = len(single_shots)
+
+        outer.setSizes([400, 400])  # give the dock area real width again
+        qtbot.waitUntil(lambda: root.width() > 0)
+        qtbot.waitUntil(lambda: root.sizes()[1] > 2 * root.sizes()[0])
+
+        # Without geometry the callback used to re-arm itself every event-loop pass (tens of
+        # thousands of times in 100 ms); now it waits for the splitter's resize instead.
+        assert scheduled_while_collapsed <= 2
+
+    def test_layout_ratios_latest_call_wins_while_collapsed(self, collapsed_dock_area, qtbot):
+        """Repeated ratio requests on a zero-size splitter keep one pending retry, the latest."""
+        outer, area, root = collapsed_dock_area
+        area.set_layout_ratios(horizontal=[1, 3])
+        qtbot.wait(20)
+        area.set_layout_ratios(horizontal=[3, 1])
+        qtbot.wait(20)
+
+        pending = root.findChildren(
+            basic_dock_module._ResizeWatcher, options=Qt.FindChildOption.FindDirectChildrenOnly
+        )
+        assert len(pending) == 1
+
+        outer.setSizes([400, 400])
+        qtbot.waitUntil(lambda: root.width() > 0)
+        qtbot.waitUntil(lambda: root.sizes()[0] > 2 * root.sizes()[1])
+        qtbot.wait(20)
+        assert root.findChildren(basic_dock_module._ResizeWatcher) == []
+
+    def test_layout_ratios_newer_call_wins_over_pending_resize_retry(
+        self, collapsed_dock_area, qtbot
+    ):
+        """A retry waiting for a resize must not overwrite ratios requested after it."""
+        outer, area, root = collapsed_dock_area
+        area.set_layout_ratios(horizontal=[1, 3])
+        qtbot.wait(20)  # applied while collapsed -> waits for the next resize
+        area.set_layout_ratios(horizontal=[3, 1])
+        # Resizing before the newer request ran used to fire the older retry after it.
+        outer.setSizes([400, 400])
+        qtbot.waitUntil(lambda: root.width() > 0)
+        qtbot.wait(50)
+
+        left_px, right_px = root.sizes()
+        assert left_px > 2 * right_px
+        assert root.findChildren(basic_dock_module._ResizeWatcher) == []
 
     def test_first_dock_title_bar_preference_survives_second_dock(self, basic_dock_area):
         first = QWidget(parent=basic_dock_area)
