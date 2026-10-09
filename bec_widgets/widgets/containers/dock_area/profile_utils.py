@@ -1170,3 +1170,199 @@ def load_runtime_profile_screenshot(name: str, namespace: str | None = None) -> 
     if s is None:
         return None
     return _load_screenshot_from_settings(s)
+
+
+##################################################
+# Profile library helpers
+##################################################
+
+TRASH_DIR_NAME = "_trash"
+
+
+def set_profile_notes(name: str, notes: str, namespace: str | None = None) -> None:
+    """
+    Store a short free-text description of a profile in its runtime and saved copies.
+
+    Args:
+        name (str): Profile name without extension.
+        notes (str): The description; an empty string clears it.
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+    """
+    notes = (notes or "").strip()
+    targets = [open_runtime_settings(name, namespace)]
+    if not is_profile_read_only(name, namespace) and _existing_baseline_settings(name, namespace):
+        targets.append(open_baseline_settings(name, namespace))
+    for settings in targets:
+        if notes:
+            settings.setValue("profile/notes", notes)
+        else:
+            settings.remove("profile/notes")
+        settings.sync()
+
+
+def has_saved_baseline(name: str, namespace: str | None = None) -> bool:
+    """
+    Check whether a profile has a saved copy that its working copy can be reverted to.
+
+    Args:
+        name (str): Profile name without extension.
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+
+    Returns:
+        bool: ``True`` when a baseline copy exists.
+    """
+    return any(os.path.exists(path) for path in baseline_profile_candidates(name, namespace))
+
+
+def copy_profile(source: str, target: str, namespace: str | None = None) -> None:
+    """
+    Copy a stored profile under a new name, as working copy and saved copy.
+
+    The working (runtime) copy of *source* is preferred so the copy shows what the user last
+    saw. The copy is a regular user profile, even when *source* is a bundled one.
+
+    Args:
+        source (str): Name of the profile to copy.
+        target (str): Name of the new profile. It must not exist yet.
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+
+    Raises:
+        FileNotFoundError: If *source* has no stored files.
+        FileExistsError: If *target* already exists.
+    """
+    if profile_origin(target, namespace) != "unknown":
+        raise FileExistsError(f"Profile '{target}' already exists.")
+    src = next(
+        (p for p in runtime_profile_candidates(source, namespace) if os.path.exists(p)), None
+    )
+    if src is None:
+        src = next(
+            (p for p in baseline_profile_candidates(source, namespace) if os.path.exists(p)), None
+        )
+    if src is None:
+        raise FileNotFoundError(f"Profile '{source}' has no stored files.")
+    created = now_iso_utc()
+    for dst in (runtime_profile_path(target, namespace), baseline_profile_path(target, namespace)):
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        shutil.copyfile(src, dst)
+        settings = QSettings(dst, QSettings.IniFormat)
+        settings.setValue(SETTINGS_KEYS["created_at"], created)
+        settings.remove("profile/author")
+        settings.sync()
+
+
+class TrashedProfile(BaseModel):
+    """A profile moved to the profile trash; :func:`restore_trashed_profile` puts it back."""
+
+    token: str
+    name: str
+    namespace: str | None = None
+    deleted_at: str = ""
+    files: list[tuple[str, str]] = Field(default_factory=list)
+
+
+def _trash_root(namespace: str | None) -> Path:
+    ns = slugify.slugify(namespace, separator="_") if namespace else "_global"
+    return Path(_settings_profiles_root()) / TRASH_DIR_NAME / ns
+
+
+def trash_profile(name: str, namespace: str | None = None) -> TrashedProfile | None:
+    """
+    Move every writable file of a profile into the profile trash instead of deleting it.
+
+    Bundled read-only profiles cannot be trashed. The files are moved, not removed, so the
+    profile can be restored at any time with :func:`restore_trashed_profile`.
+
+    Args:
+        name (str): Profile name without extension.
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+
+    Returns:
+        TrashedProfile | None: Description of the trashed profile, or ``None`` when no
+            writable files were found or the profile is read-only.
+    """
+    if is_profile_read_only(name, namespace):
+        return None
+    sources = [
+        path
+        for path in dict.fromkeys(
+            runtime_profile_candidates(name, namespace)
+            + baseline_profile_candidates(name, namespace)
+        )
+        if os.path.exists(path)
+    ]
+    if not sources:
+        return None
+    deleted_at = now_iso_utc()
+    stamp = deleted_at.replace(":", "").replace("-", "")
+    token = f"{slugify.slugify(name, separator='_') or 'profile'}__{stamp}"
+    folder = _trash_root(namespace) / token
+    suffix = 1
+    while folder.exists():
+        suffix += 1
+        folder = _trash_root(namespace) / f"{token}_{suffix}"
+    folder.mkdir(parents=True)
+    files: list[tuple[str, str]] = []
+    for index, src in enumerate(sources):
+        dst = folder / f"{index}_{Path(src).name}"
+        shutil.move(src, dst)
+        files.append((str(dst), src))
+    entry = TrashedProfile(
+        token=folder.name, name=name, namespace=namespace, deleted_at=deleted_at, files=files
+    )
+    (folder / "trash.json").write_text(entry.model_dump_json(indent=2), encoding="utf-8")
+    if get_last_profile(namespace) == name:
+        set_last_profile(None, namespace)
+    return entry
+
+
+def list_trashed_profiles(namespace: str | None = None) -> list[TrashedProfile]:
+    """
+    List the profiles in the profile trash, most recently deleted first.
+
+    Args:
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+
+    Returns:
+        list[TrashedProfile]: Trashed profiles.
+    """
+    root = _trash_root(namespace)
+    if not root.is_dir():
+        return []
+    entries = []
+    for meta in root.glob("*/trash.json"):
+        try:
+            entries.append(TrashedProfile.model_validate_json(meta.read_text(encoding="utf-8")))
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.warning(f"Skipping unreadable trash entry {meta}: {exc}")
+    return sorted(entries, key=lambda e: e.deleted_at, reverse=True)
+
+
+def restore_trashed_profile(token: str, namespace: str | None = None) -> str:
+    """
+    Put a trashed profile back where it was.
+
+    Args:
+        token (str): The ``token`` of the :class:`TrashedProfile`.
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+
+    Returns:
+        str: The name of the restored profile.
+
+    Raises:
+        FileNotFoundError: If the trash entry does not exist.
+        FileExistsError: If a profile with the same name was created in the meantime.
+    """
+    folder = _trash_root(namespace) / token
+    meta = folder / "trash.json"
+    if not meta.exists():
+        raise FileNotFoundError(f"No trashed profile '{token}'.")
+    entry = TrashedProfile.model_validate_json(meta.read_text(encoding="utf-8"))
+    if profile_origin(entry.name, namespace) != "unknown":
+        raise FileExistsError(f"A profile named '{entry.name}' exists again.")
+    for trashed, original in entry.files:
+        os.makedirs(os.path.dirname(original), exist_ok=True)
+        shutil.move(trashed, original)
+    # The folder only holds the metadata now; keep it as a record of the restore.
+    meta.rename(folder / "restored.json")
+    return entry.name

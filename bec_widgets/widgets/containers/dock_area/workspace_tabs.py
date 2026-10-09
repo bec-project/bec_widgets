@@ -21,10 +21,16 @@ from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.widgets.containers.dock_area.dock_area import BECDockArea, StartupProfile
 from bec_widgets.widgets.containers.dock_area.profile_utils import (
     get_open_workspaces,
+    has_saved_baseline,
     is_profile_read_only,
     list_profiles,
     profile_origin,
     set_open_workspaces,
+)
+from bec_widgets.widgets.containers.dock_area.profile_ux import (
+    POLICY,
+    ask_profile_name,
+    profile_ui_mode,
 )
 
 logger = bec_logger.logger
@@ -278,7 +284,9 @@ class WorkspaceTabs(QTabWidget):
 
     @SafeSlot()
     @SafeSlot(int)
-    def rename_workspace(self, index: int | None = None, name: str | None = None) -> bool:
+    def rename_workspace(
+        self, index: int | None = None, name: str | None = None, confirm: bool = True
+    ) -> bool:
         """
         Rename the workspace of the tab at *index* (the current tab by default).
 
@@ -288,6 +296,8 @@ class WorkspaceTabs(QTabWidget):
         Args:
             index(int | None): The tab index; defaults to the current tab.
             name(str | None): The new name; when None, the user is asked for one.
+            confirm(bool): Ask before replacing an existing profile. The reworked rename
+                dialog has already asked, so it passes False.
 
         Returns:
             bool: True if the workspace now has the new name.
@@ -299,6 +309,13 @@ class WorkspaceTabs(QTabWidget):
             return False
         current = page.profile
 
+        if name is None and profile_ui_mode() != "legacy":
+            dock_area = self._materialize(page)
+            if index != self.currentIndex():
+                self.setCurrentIndex(index)
+            result = ask_profile_name(dock_area, "rename", current or "", parent=self)
+            return result is not None and page.profile == result
+
         if name is None:
             name, ok = QInputDialog.getText(
                 self, "Rename Workspace", "Workspace name:", text=current or ""
@@ -309,7 +326,9 @@ class WorkspaceTabs(QTabWidget):
         if not name or name == current:
             return False
 
-        if not self._may_rename_to(name):
+        if confirm and not self._may_rename_to(name):
+            return False
+        if not confirm and self.find_workspace(name) >= 0:
             return False
 
         dock_area = self._materialize(page)
@@ -359,6 +378,7 @@ class WorkspaceTabs(QTabWidget):
         dock_area.profile_in_use_elsewhere = lambda name, p=page: self._is_open_elsewhere(name, p)
         dock_area.profile_changed.connect(lambda _name, p=page: self._on_profile_changed(p))
         dock_area.profile_redirected.connect(self.open_workspace)
+        dock_area.workspace_host = self
         self._sync_tab(page)
         return dock_area
 
@@ -389,6 +409,8 @@ class WorkspaceTabs(QTabWidget):
         return True
 
     def _is_open_elsewhere(self, name: str, page: WorkspacePage) -> bool:
+        if not POLICY.one_tab_per_profile:
+            return False
         return any(other is not page and other.profile == name for other in self.pages())
 
     def _on_profile_changed(self, page: WorkspacePage) -> None:
@@ -455,14 +477,63 @@ class WorkspaceTabs(QTabWidget):
                 action.setCheckable(True)
                 action.setChecked(True)
                 action.setToolTip("Already open; switches to its tab")
+        if profile_ui_mode() != "legacy":
+            menu.addSeparator()
+            menu.addAction(material_icon("folder_open"), "Profile library…", self.show_library)
 
     def _show_tab_menu(self, pos: QPoint) -> None:
         index = self.tabBar().tabAt(pos)
         if index < 0:
             return
         menu = QMenu(self)
-        menu.addAction("Rename…", lambda: self.rename_workspace(index))
-        menu.addAction("Close", lambda: self.close_workspace(index))
+        if profile_ui_mode() == "legacy":
+            menu.addAction("Rename…", lambda: self.rename_workspace(index))
+            menu.addAction("Close", lambda: self.close_workspace(index))
+            menu.addSeparator()
+            menu.addAction("New Workspace", self.new_workspace)
+            menu.exec(self.tabBar().mapToGlobal(pos))
+            return
+        page = self.widget(index)
+        profile = page.profile
+        menu.addAction(material_icon("edit"), "Rename…", lambda: self.rename_workspace(index))
+        save = menu.addAction(
+            material_icon("save"), "Save as…", lambda: self._tab_flow(index, "save")
+        )
+        save.setToolTip("Save this layout under a new or existing name")
+        duplicate = menu.addAction(
+            material_icon("content_copy"),
+            "Duplicate…",
+            lambda: self._tab_flow(index, "duplicate", profile),
+        )
+        duplicate.setEnabled(profile is not None)
+        revert = menu.addAction(
+            material_icon("history"), "Revert to saved…", lambda: self._tab_revert(index)
+        )
+        revert.setEnabled(
+            profile is not None and has_saved_baseline(profile, self.profile_namespace)
+        )
         menu.addSeparator()
-        menu.addAction("New Workspace", self.new_workspace)
+        menu.addAction(material_icon("folder_open"), "Profile library…", self.show_library)
+        menu.addAction(material_icon("add"), "New Workspace", self.new_workspace)
+        menu.addSeparator()
+        menu.addAction(material_icon("close"), "Close tab", lambda: self.close_workspace(index))
         menu.exec(self.tabBar().mapToGlobal(pos))
+
+    def _tab_flow(self, index: int, mode: str, original: str | None = None) -> None:
+        if index != self.currentIndex():
+            self.setCurrentIndex(index)
+        dock_area = self._materialize(self.widget(index))
+        ask_profile_name(dock_area, mode, original or "", parent=self)
+
+    def _tab_revert(self, index: int) -> None:
+        if index != self.currentIndex():
+            self.setCurrentIndex(index)
+        dock_area = self._materialize(self.widget(index))
+        dock_area.restore_baseline_profile(show_dialog=True)
+
+    @SafeSlot()
+    def show_library(self) -> None:
+        """Open the profile library of the current workspace."""
+        dock_area = self.current_dock_area()
+        if dock_area is not None:
+            dock_area.show_workspace_manager()

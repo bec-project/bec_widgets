@@ -63,6 +63,12 @@ from bec_widgets.widgets.containers.dock_area.profile_utils import (
     set_quick_select,
     write_manifest,
 )
+from bec_widgets.widgets.containers.dock_area.profile_ux import (
+    ask_profile_name,
+    confirm_revert,
+    create_profile_library,
+    profile_ui_mode,
+)
 from bec_widgets.widgets.containers.dock_area.settings.dialogs import (
     RestoreProfileDialog,
     SaveProfileDialog,
@@ -149,6 +155,8 @@ class BECDockArea(DockAreaWidget):
         self._startup_profile = self._normalize_startup_profile(startup_profile)
         # Optional hook set by a container (e.g. workspace tabs) that hosts several dock areas
         self.profile_in_use_elsewhere: Callable[[str], bool] | None = None
+        # The WorkspaceTabs hosting this dock area, if any; used by the profile library
+        self.workspace_host = None
         super().__init__(
             parent, default_add_direction=default_add_direction, title="BEC Dock Area", **kwargs
         )
@@ -169,6 +177,7 @@ class BECDockArea(DockAreaWidget):
         # Popups
         self.save_dialog = None
         self.manage_dialog = None
+        self.manage_widget = None
 
         # Place toolbar above the dock manager provided by the base class
         self._root_layout.insertWidget(0, self.toolbar)
@@ -464,7 +473,11 @@ class BECDockArea(DockAreaWidget):
         self.toolbar.add_bundle(spacer_bundle)
 
         self.toolbar.add_bundle(
-            workspace_bundle(self.toolbar.components, enable_tools=self._profile_management_enabled)
+            workspace_bundle(
+                self.toolbar.components,
+                enable_tools=self._profile_management_enabled,
+                reworked=profile_ui_mode() != "legacy",
+            )
         )
         self.toolbar.connect_bundle(
             "workspace", WorkspaceConnection(components=self.toolbar.components, target_widget=self)
@@ -802,6 +815,10 @@ class BECDockArea(DockAreaWidget):
                 Only used when show_dialog is False; otherwise the dialog provides the value.
         """
 
+        if show_dialog and profile_ui_mode() != "legacy":
+            ask_profile_name(self, "save")
+            return
+
         namespace = self.profile_namespace
         current_profile = getattr(self, "_current_profile_name", "") or ""
 
@@ -863,10 +880,10 @@ class BECDockArea(DockAreaWidget):
         origin_before_save = profile_origin(name, namespace=namespace)
         overwrite_baseline = overwrite_existing and origin_before_save == "settings"
 
-        # Display saving placeholder in toolbar
+        # Show the new name in the toolbar right away; the stored preview screenshot shows it
         workspace_combo = self.toolbar.components.get_action("workspace_combo").widget
         workspace_combo.blockSignals(True)
-        workspace_combo.insertItem(0, f"{name}-saving")
+        workspace_combo.insertItem(0, name)
         workspace_combo.setCurrentIndex(0)
         workspace_combo.blockSignals(False)
 
@@ -1010,7 +1027,10 @@ class BECDockArea(DockAreaWidget):
             return
         namespace = self.profile_namespace
 
-        if show_dialog:
+        if show_dialog and profile_ui_mode() != "legacy":
+            if not confirm_revert(self, target):
+                return
+        elif show_dialog:
             current_pixmap = None
             if self.isVisible():
                 current_pixmap = QPixmap()
@@ -1156,6 +1176,16 @@ class BECDockArea(DockAreaWidget):
         Show the workspace manager dialog.
         """
         manage_action = self.toolbar.components.get_action("manage_workspaces").action
+        if profile_ui_mode() != "legacy":
+            if self.manage_dialog is None:
+                self.manage_widget = None
+                self.manage_dialog = create_profile_library(self)
+                self.manage_dialog.finished.connect(self._manage_dialog_closed)
+            self.manage_dialog.show()
+            self.manage_dialog.raise_()
+            self.manage_dialog.activateWindow()
+            manage_action.setChecked(True)
+            return
         if self.manage_dialog is None or not self.manage_dialog.isVisible():
             self.manage_widget = WorkSpaceManager(
                 self, target_widget=self, active_profile=self._current_profile_name
@@ -1177,8 +1207,10 @@ class BECDockArea(DockAreaWidget):
             manage_action.setChecked(True)  # keep it toggle
 
     def _manage_dialog_closed(self):
-        self.manage_widget.close()
-        self.manage_widget.deleteLater()
+        if self.manage_widget is not None:
+            self.manage_widget.close()
+            self.manage_widget.deleteLater()
+            self.manage_widget = None
         if self.manage_dialog is not None:
             self.manage_dialog.deleteLater()
             self.manage_dialog = None
