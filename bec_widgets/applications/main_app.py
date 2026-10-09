@@ -178,8 +178,13 @@ class BECMainApp(BECMainWindow):
         self.devices_view.browser.open_in_workspace.connect(self._open_device_in_workspace)
         self.device_config_view = ConfigView(parent=self)
         self.add_view(icon="memory", title="Devices", widget=self.devices_view, mini_text="Devices")
+        # Adding and configuring devices is beamline staff work: it sits with Admin View.
         self.add_view(
-            icon="tune", title="Device Config", widget=self.device_config_view, mini_text="Config"
+            icon="tune",
+            title="Device Config",
+            widget=self.device_config_view,
+            mini_text="Config",
+            from_top=False,
         )
 
     def _open_device_in_workspace(self, widget_name: str, device: str):

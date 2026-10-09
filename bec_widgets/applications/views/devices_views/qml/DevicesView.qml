@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import BecUi
+import "Tones.js" as Tones
 
 // Devices for everyone: find a device by kind and text, see it live, move motors.
 // backend: DevicesBackend.
@@ -45,11 +46,11 @@ Rectangle {
                 }
                 Item { Layout.fillWidth: true }
                 Chip {
-                    text: "Read-only configuration"
+                    text: "Device setup: staff only"
                     iconName: "lock"
                     HoverHandler { id: lockHover }
                     ToolTip.visible: lockHover.hovered
-                    ToolTip.text: "Editing the device session is in Config (staff)"
+                    ToolTip.text: "Adding devices and changing the session is in Device Config"
                 }
             }
         }
@@ -211,8 +212,105 @@ Rectangle {
                             onActiveChanged: if (active) setSource(root.backend.motorSource, { backend: root.backend.motor })
                             Component.onCompleted: if (active) setSource(root.backend.motorSource, { backend: root.backend.motor })
                         }
+                        TextButton {
+                            visible: root.backend.detailName !== ""
+                            text: root.d.actionText || ""
+                            iconName: root.d.kind === "detector" ? "image" : root.d.kind === "monitor" ? "show_chart" : "add"
+                            variant: root.d.kind === "detector" ? "primary" : "neutral"
+                            onClicked: root.backend.openInWorkspace()
+                        }
+
+                        SectionTitle { text: "Settings"; visible: root.backend.settings.count > 0 }
+                        Repeater {
+                            model: root.backend.settings
+                            delegate: ColumnLayout {
+                                id: setting
+                                required property string key
+                                required property bool settable
+                                required property string doc
+                                required property string valueText
+                                required property string statusText
+                                required property string statusTone
+                                Layout.fillWidth: true
+                                spacing: 2
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 8
+                                    Text {
+                                        text: setting.key
+                                        color: theme.fg
+                                        font.family: root.mono
+                                        font.pixelSize: 12
+                                        Layout.preferredWidth: 130
+                                        elide: Text.ElideRight
+                                        HoverHandler { id: keyHover }
+                                        ToolTip.visible: keyHover.hovered && setting.doc !== ""
+                                        ToolTip.text: setting.doc
+                                    }
+                                    Text {
+                                        text: setting.valueText
+                                        color: theme.fg
+                                        font.family: root.mono
+                                        font.pixelSize: 12
+                                        Layout.fillWidth: true
+                                        elide: Text.ElideRight
+                                    }
+                                    InputField {
+                                        id: newValue
+                                        visible: setting.settable
+                                        Layout.preferredWidth: 110
+                                        placeholderText: "New value"
+                                        Accessible.name: "New value for " + setting.key
+                                        onAccepted: root.backend.setSignal(setting.key, text)
+                                    }
+                                    TextButton {
+                                        visible: setting.settable
+                                        text: "Set"
+                                        onClicked: root.backend.setSignal(setting.key, newValue.text)
+                                    }
+                                }
+                                Text {
+                                    visible: setting.statusText !== ""
+                                    text: setting.statusText
+                                    color: Tones.color(theme, setting.statusTone)
+                                    font.pixelSize: 12
+                                    wrapMode: Text.WordWrap
+                                    Layout.fillWidth: true
+                                    onTextChanged: if (setting.statusTone === "ok") newValue.clear()
+                                }
+                            }
+                        }
+                        SectionTitle { text: "Readings"; visible: root.backend.readings.count > 0 }
+                        Repeater {
+                            model: root.backend.readings
+                            delegate: RowLayout {
+                                id: reading
+                                required property string key
+                                required property string doc
+                                required property string valueText
+                                Layout.fillWidth: true
+                                spacing: 8
+                                Text {
+                                    text: reading.key
+                                    color: theme.fg
+                                    font.family: root.mono
+                                    font.pixelSize: 12
+                                    Layout.preferredWidth: 130
+                                    elide: Text.ElideRight
+                                }
+                                Text {
+                                    text: reading.valueText
+                                    color: theme.fg
+                                    font.family: root.mono
+                                    font.pixelSize: 12
+                                    Layout.fillWidth: true
+                                    elide: Text.ElideRight
+                                }
+                            }
+                        }
                         GridLayout {
                             visible: root.backend.detailName !== ""
+                            Layout.topMargin: 10
                             columns: 2
                             columnSpacing: 12
                             rowSpacing: 3
@@ -242,13 +340,6 @@ Rectangle {
                                     Layout.fillWidth: true
                                 }
                             }
-                        }
-                        TextButton {
-                            visible: root.backend.detailName !== ""
-                            text: root.d.actionText || ""
-                            iconName: root.d.kind === "detector" ? "image" : root.d.kind === "monitor" ? "show_chart" : "add"
-                            variant: root.d.kind === "detector" ? "primary" : "neutral"
-                            onClicked: root.backend.openInWorkspace()
                         }
                     }
                 }

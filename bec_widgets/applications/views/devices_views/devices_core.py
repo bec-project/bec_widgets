@@ -957,6 +957,42 @@ def device_kind(device) -> str:
     return "monitor"
 
 
+READ_ONLY_CLASS_HINTS = ("RO", "Computed", "Async", "Preview", "Progress", "FileEvent", "Dynamic")
+MAX_READINGS = 30
+
+
+def signal_entries(device) -> list[dict]:
+    """Signals a user can see on a device: ``readings`` (hinted/normal) and ``settings`` (config).
+
+    A setting is offered for editing unless the device reports no write access or its signal
+    class is read-only (``EpicsSignalRO``, computed and async signals).
+    """
+    info = getattr(device, "_info", {}) or {}
+    device_writable = info.get("write_access") is not False
+    out = []
+    for key, sig in (info.get("signals") or {}).items():
+        kind = str(sig.get("kind_str", ""))
+        if kind not in ("hinted", "normal", "config"):
+            continue
+        cls = str(sig.get("signal_class", ""))
+        describe = sig.get("describe") or {}
+        precision = describe.get("precision")
+        out.append(
+            {
+                "key": key,
+                "obj": str(sig.get("obj_name") or key),
+                "section": "setting" if kind == "config" else "reading",
+                "settable": kind == "config"
+                and device_writable
+                and not any(h in cls for h in READ_ONLY_CLASS_HINTS),
+                "doc": str(sig.get("doc") or ""),
+                "units": str(describe.get("units") or describe.get("egu") or ""),
+                "precision": precision if isinstance(precision, int) else None,
+            }
+        )
+    return out
+
+
 def readback_value(name: str, content: dict | None) -> Any:
     """The main value of a device readback message (its own signal, else the first one)."""
     signals = (content or {}).get("signals") or {}
@@ -1016,6 +1052,10 @@ class DeviceBrowser(QObject):
         self._workers: list[QRunnable] = []
         self._visible: list[dict] = []
         self._total = 0
+        self.contents: dict[str, dict] = {}  # device -> latest readback signals
+        self.config_values: dict[str, dict] = {}  # device -> latest read_configuration signals
+        self.set_status: dict[tuple[str, str], tuple[str, str]] = {}  # (device, key) -> tone, text
+        self._config_subscribed: str | None = None
 
     # ------------------------------------------------------------------ data
     def _devices(self) -> dict:
@@ -1086,6 +1126,10 @@ class DeviceBrowser(QObject):
         out.sort(key=lambda r: (pref.get(r["name"], len(pref)), r["name"]))
         self._total = len(out)
         self._visible = out[:MAX_ROWS]
+        if self.selected is None and self._visible:
+            self.selected = self._visible[0]["name"]
+            self._visible[0]["selected"] = True
+            self._follow_config(self.selected)
         self._resubscribe([r["name"] for r in self._visible])
         return self._visible
 
@@ -1102,11 +1146,7 @@ class DeviceBrowser(QObject):
             return {"name": ""}
         info = self._info(name, device)
         kind = device_kind(device)
-        facts = [
-            ("Class", info["deviceClass"]),
-            ("Readout", info["readout"]),
-            ("Tags", ", ".join(info["tags"]) or "—"),
-        ]
+        facts = [("Type", info["deviceClass"]), ("Tags", ", ".join(info["tags"]) or "—")]
         if not info["enabled"]:
             facts.append(("Enabled", "No — disabled in the session"))
         return {
@@ -1121,6 +1161,77 @@ class DeviceBrowser(QObject):
                 "detector": "Open the live image in the workspace",
             }.get(kind, f"Plot {name} in the workspace"),
         }
+
+    def signal_rows(self) -> list[dict]:
+        """Readings and settings of the selected device with their live values.
+
+        Motors leave out readings because the positioner card already shows them.
+        """
+        name = self.selected
+        device = self._devices().get(name) if name else None
+        if device is None:
+            return []
+        positioner = device_kind(device) == "positioner"
+        live = self.contents.get(name, {})
+        conf = self.config_values.get(name, {})
+        rows, readings = [], 0
+        for entry in signal_entries(device):
+            if entry["section"] == "reading":
+                if positioner or readings >= MAX_READINGS:
+                    continue
+                readings += 1
+            source = conf if entry["section"] == "setting" else live
+            value = (source.get(entry["obj"]) or {}).get("value")
+            tone, status = self.set_status.get((name, entry["key"]), ("", ""))
+            rows.append(
+                {
+                    "key": entry["key"],
+                    "section": entry["section"],
+                    "settable": entry["settable"],
+                    "doc": entry["doc"],
+                    "valueText": format_value(value, entry["precision"], entry["units"]),
+                    "statusText": status,
+                    "statusTone": tone,
+                }
+            )
+        return rows
+
+    def set_signal(self, key: str, text: str) -> None:
+        """Set a setting of the selected device to the typed value, off the GUI thread."""
+        name = self.selected
+        device = self._devices().get(name) if name else None
+        if device is None or not text.strip():
+            return
+        entry = next((e for e in signal_entries(device) if e["key"] == key), None)
+        if entry is None or not entry["settable"]:
+            return
+        value = parse_value(text)
+        target = device
+        for part in key.split("."):
+            target = getattr(target, part)
+        self.set_status[(name, key)] = (
+            "busy",
+            f"Setting to {format_value(value, entry['precision'], entry['units'])}…",
+        )
+        self._dirty = True
+        worker = CallWorker(lambda: target.set(value))
+        worker.setAutoDelete(False)
+        shown = format_value(value, entry["precision"], entry["units"])
+        worker.signals.done.connect(
+            lambda result, n=name, k=key, t=shown: self._on_set(n, k, t, result)
+        )
+        self._workers.append(worker)
+        QThreadPool.globalInstance().start(worker)
+
+    def _on_set(self, name: str, key: str, text: str, result) -> None:
+        self._workers = [w for w in self._workers if w.signals is not self.sender()]
+        if isinstance(result, Exception):
+            message = str(result).strip().splitlines()[-1] if str(result).strip() else ""
+            self.set_status[(name, key)] = ("err", f"Not set: {message or type(result).__name__}")
+        else:
+            self.set_status[(name, key)] = ("ok", f"Set to {text}")
+        self._dirty = True
+        self._flush_values()
 
     def spark_points(self) -> list[float]:
         """Recent numeric values of the selected monitor (oldest first)."""
@@ -1144,6 +1255,7 @@ class DeviceBrowser(QObject):
         if name == self.selected:
             return
         self.selected = name
+        self._follow_config(name)
         self.spark.clear()
         value = self.values.get(name)
         if isinstance(value, (int, float)) and not isinstance(value, bool):
@@ -1162,6 +1274,57 @@ class DeviceBrowser(QObject):
         self.open_in_workspace.emit(widget, self.selected)
 
     # ------------------------------------------------------------------ live values
+    def _follow_config(self, name: str | None) -> None:
+        """Follow the configuration values (settings) of the selected device only."""
+        if self.dispatcher is None or name == self._config_subscribed:
+            return
+        if self._config_subscribed is not None:
+            self.dispatcher.disconnect_slot(
+                self.on_config, MessageEndpoints.device_read_configuration(self._config_subscribed)
+            )
+        self._config_subscribed = name
+        if name is None:
+            return
+        self.dispatcher.connect_slot(
+            self.on_config, MessageEndpoints.device_read_configuration(name)
+        )
+        connector = self.client.connector
+
+        def read():
+            out = {}
+            for key, endpoint in (
+                ("live", MessageEndpoints.device_readback(name)),
+                ("conf", MessageEndpoints.device_read_configuration(name)),
+            ):
+                msg = connector.get(endpoint)
+                if msg is not None:
+                    out[key] = (msg.content or {}).get("signals") or {}
+            return name, out
+
+        worker = CallWorker(read)
+        worker.setAutoDelete(False)
+        worker.signals.done.connect(self._on_selected_initial)
+        self._workers.append(worker)
+        QThreadPool.globalInstance().start(worker)
+
+    def _on_selected_initial(self, result) -> None:
+        self._workers = [w for w in self._workers if w.signals is not self.sender()]
+        if not isinstance(result, tuple):
+            return
+        name, out = result
+        if "live" in out:
+            self.contents.setdefault(name, out["live"])
+        if "conf" in out:
+            self.config_values.setdefault(name, out["conf"])
+        self._dirty = True
+
+    def on_config(self, content: dict, metadata: dict) -> None:
+        """Store the configuration values of the selected device."""
+        name = (metadata or {}).get("device") or self._config_subscribed
+        if name is not None:
+            self.config_values[name] = (content or {}).get("signals") or {}
+            self._dirty = True
+
     def _resubscribe(self, names: list[str]) -> None:
         if self.dispatcher is None or names == self._subscribed:
             return
@@ -1215,6 +1378,7 @@ class DeviceBrowser(QObject):
                 name = next((n for n in self._subscribed if first.startswith(f"{n}_")), first)
         if name is None:
             return
+        self.contents[name] = signals
         value = readback_value(name, content)
         self.values[name] = value
         if name == self.selected and isinstance(value, (int, float)):
@@ -1235,3 +1399,4 @@ class DeviceBrowser(QObject):
                 self.on_readback, [MessageEndpoints.device_readback(n) for n in self._subscribed]
             )
         self._subscribed = []
+        self._follow_config(None)

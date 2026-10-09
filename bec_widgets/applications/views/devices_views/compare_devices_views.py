@@ -29,6 +29,8 @@ from bec_lib.device import ReadoutPriority
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.messages import DeviceMessage, ScanStatusMessage
 
+from bec_widgets.applications.views.devices_views.devices_core import device_kind
+
 DEMO_CONFIG = Path(__file__).resolve().parents[5] / "bec" / "bec_lib" / "bec_lib" / "configs"
 
 
@@ -39,6 +41,85 @@ def _demo_config_path() -> Path:
         return Path(bec_lib.configs.__file__).parent / "demo_config.yaml"
     except ImportError:  # pragma: no cover
         return DEMO_CONFIG / "demo_config.yaml"
+
+
+class _DemoSignal:
+    """Settable demo signal: ``set`` publishes the new value as the device configuration."""
+
+    def __init__(self, connector, device: str, obj: str, values: dict):
+        self.connector = connector
+        self.device = device
+        self.obj = obj
+        self.values = values
+
+    def set(self, value):
+        """Store and publish ``value``; negative values are refused like a soft limit would."""
+        if isinstance(value, (int, float)) and value < 0:
+            raise ValueError(f"{self.obj} must be positive, got {value}")
+        self.values[self.obj] = {"value": value}
+        self.connector.set_and_publish(
+            MessageEndpoints.device_read_configuration(self.device),
+            DeviceMessage(signals=dict(self.values), metadata={}),
+        )
+
+
+def _signal(kind: str, obj: str, cls: str = "Signal", units: str = "", doc: str = "") -> dict:
+    return {
+        "kind_str": kind,
+        "component_name": obj,
+        "obj_name": obj,
+        "signal_class": cls,
+        "doc": doc,
+        "describe": {"units": units} if units else {},
+    }
+
+
+def _demo_signals(client, name: str, dev, kind: str) -> None:
+    """Give demo devices the readings and settings real ones report."""
+    connector = client.connector
+    if kind == "positioner":
+        settings = {
+            "velocity": (2.0, "mm/s", "Speed of a move"),
+            "acceleration": (0.5, "s", "Time to reach full speed"),
+            "tolerance": (0.01, "mm", "How close counts as arrived"),
+        }
+        signals = {
+            "readback": _signal("hinted", name),
+            "setpoint": _signal("normal", f"{name}_setpoint"),
+        }
+        readonly = {}
+    elif kind == "detector":
+        settings = {
+            "exp_time": (0.1, "s", "Exposure time per frame"),
+            "frames_per_trigger": (1, "", "Frames taken for each trigger"),
+        }
+        readonly = {"image_shape": ([2048, 2048], "SignalRO")}
+        signals = {
+            "image": _signal("hinted", f"{name}_image", "PreviewSignal"),
+            "progress": _signal("normal", f"{name}_progress", "ProgressSignal"),
+        }
+    else:
+        return
+    values = {}
+    for key, (value, units, doc) in settings.items():
+        obj = f"{name}_{key}"
+        signals[key] = _signal("config", obj, "Signal", units, doc)
+        values[obj] = {"value": value}
+        setattr(dev, key, _DemoSignal(connector, name, obj, values))
+    for key, (value, cls) in readonly.items():
+        obj = f"{name}_{key}"
+        signals[key] = _signal("config", obj, cls)
+        values[obj] = {"value": value}
+    # Like real devices, the container reports no write access of its own.
+    dev._info = {  # pylint: disable=protected-access
+        **(dev._info or {}),
+        "write_access": None,
+        "signals": signals,
+    }
+    connector.set_and_publish(
+        MessageEndpoints.device_read_configuration(name),
+        DeviceMessage(signals=dict(values), metadata={}),
+    )
 
 
 def fake_session():
@@ -71,10 +152,14 @@ def fake_session():
         dev._config = {"name": name, **cfg}  # pylint: disable=protected-access
         devices[name] = dev
         value = round(math.sin(i) * 5, 3) if isinstance(dev, FakePositioner) else 1000 + i * 7.5
+        signals = {name: {"value": value}}
+        if isinstance(dev, FakePositioner):
+            signals[f"{name}_setpoint"] = {"value": value}
         client.connector.set_and_publish(
-            MessageEndpoints.device_readback(name),
-            DeviceMessage(signals={name: {"value": value}}, metadata={}),
+            MessageEndpoints.device_readback(name), DeviceMessage(signals=signals, metadata={})
         )
+        kind = device_kind(dev)
+        _demo_signals(client, name, dev, kind)
     return dispatcher
 
 
@@ -152,6 +237,9 @@ def screenshots(app, client, out: Path, theme: str) -> None:
         widget.resize(1500, 900)
         widget.show()
         _settle(app, 900)
+        if view != "legacy" and page == "devices":
+            widget.browser.set_signal("velocity", "3")
+            _settle(app, 500)
         widget.grab().save(str(out / f"{theme}_{view}_{page}.png"))
         if view != "legacy" and page == "config":
             sheet = widget.open_review()
@@ -171,6 +259,13 @@ def screenshots(app, client, out: Path, theme: str) -> None:
                 )
             _settle(app, 600)
             widget.grab().save(str(out / f"{theme}_{view}_devices_monitor.png"))
+            widget.browser.set_kind("detector")
+            widget.browser.select("eiger")
+            _settle(app, 400)
+            widget.browser.set_signal("exp_time", "0,5")
+            widget.browser.set_signal("frames_per_trigger", "-2")
+            _settle(app, 600)
+            widget.grab().save(str(out / f"{theme}_{view}_devices_detector.png"))
         widget.close()
         widget.deleteLater()
         _settle(app, 200)

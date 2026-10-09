@@ -5,6 +5,7 @@ import copy
 from unittest import mock
 
 import pytest
+from bec_lib.endpoints import MessageEndpoints
 
 from bec_widgets.applications.views.devices_views import devices_core
 from bec_widgets.applications.views.devices_views.devices_core import (
@@ -17,6 +18,7 @@ from bec_widgets.applications.views.devices_views.devices_core import (
     format_value,
     parse_value,
     plan_requests,
+    signal_entries,
 )
 from bec_widgets.applications.views.devices_views.devices_qml import (
     DeviceConfigViewQML,
@@ -276,6 +278,59 @@ def test_browser_readback_and_open_request(mocked_client):
     browser.cleanup()
 
 
+def test_signal_entries_split_readings_and_settable_settings(mocked_client, monkeypatch):
+    samx = mocked_client.device_manager.devices["samx"]
+    entries = {e["key"]: e for e in signal_entries(samx)}
+    assert entries["readback"]["section"] == "reading"
+    assert entries["velocity"]["section"] == "setting"
+    assert entries["velocity"]["settable"]
+    info = copy.deepcopy(samx._info)
+    info["signals"]["velocity"]["signal_class"] = "EpicsSignalRO"
+    monkeypatch.setattr(samx, "_info", info)
+    assert not {e["key"]: e for e in signal_entries(samx)}["velocity"]["settable"]
+    info = copy.deepcopy(info)
+    info["signals"]["velocity"]["signal_class"] = "Signal"
+    info["write_access"] = False
+    monkeypatch.setattr(samx, "_info", info)
+    assert not {e["key"]: e for e in signal_entries(samx)}["velocity"]["settable"]
+
+
+def test_browser_shows_settings_values_and_sets_them(mocked_client, sync_pool):
+    browser = DeviceBrowser(mocked_client)
+    browser.select("samx")
+    browser.on_config({"signals": {"samx_velocity": {"value": 2.0}}}, {"device": "samx"})
+    rows = {r["key"]: r for r in browser.signal_rows()}
+    assert "readback" not in rows  # the positioner card shows it
+    assert rows["velocity"]["valueText"] == "2"
+    with mock.patch.object(browser._devices()["samx"], "velocity", create=True) as velocity:
+        browser.set_signal("velocity", "2,5")
+        velocity.set.assert_called_once_with(2.5)
+        row = {r["key"]: r for r in browser.signal_rows()}["velocity"]
+        assert (row["statusTone"], row["statusText"]) == ("ok", "Set to 2.5")
+        velocity.set.side_effect = RuntimeError("Velocity above limit 10")
+        browser.set_signal("velocity", "20")
+        row = {r["key"]: r for r in browser.signal_rows()}["velocity"]
+        assert row["statusTone"] == "err"
+        assert "Velocity above limit 10" in row["statusText"]
+    browser.cleanup()
+
+
+def test_browser_follows_config_of_selected_device_only(mocked_client):
+    dispatcher = mock.MagicMock()
+    browser = DeviceBrowser(mocked_client, dispatcher)
+    browser.select("samx")
+    browser.select("samy")
+    endpoints = [c.args[1] for c in dispatcher.connect_slot.call_args_list]
+    assert MessageEndpoints.device_read_configuration("samy") in endpoints
+    dispatcher.disconnect_slot.assert_any_call(
+        browser.on_config, MessageEndpoints.device_read_configuration("samx")
+    )
+    browser.cleanup()
+    dispatcher.disconnect_slot.assert_any_call(
+        browser.on_config, MessageEndpoints.device_read_configuration("samy")
+    )
+
+
 # ------------------------------------------------------------------------------------ both views
 @pytest.fixture(params=[DeviceConfigViewQWidget, DeviceConfigViewQML])
 def config_view(request, qtbot, mocked_client):
@@ -379,3 +434,23 @@ def test_main_app_adds_device_views_when_opted_in(flavor, monkeypatch, qtbot, mo
     new.assert_called_once_with("PositionerBox")
     new.return_value.set_positioner.assert_called_once_with("samx")
     assert app.stack.currentIndex() == app._view_index["Docks"]
+
+
+def test_devices_view_lets_users_change_a_setting(devices_view, qtbot, sync_pool):
+    browser = devices_view.browser
+    browser.on_config({"signals": {"samx_velocity": {"value": 2.0}}}, {"device": "samx"})
+    with mock.patch.object(browser._devices()["samx"], "velocity", create=True) as velocity:
+        if isinstance(devices_view, DevicesViewQML):
+            qtbot.waitUntil(lambda: devices_view.backend.settings.count == 1, timeout=1000)
+            devices_view.backend.setSignal("velocity", "3")
+            qtbot.waitUntil(
+                lambda: devices_view.backend.settings.items[0]["statusText"] == "Set to 3",
+                timeout=1000,
+            )
+        else:
+            qtbot.waitUntil(lambda: "velocity" in devices_view._signal_widgets, timeout=1000)
+            widgets = devices_view._signal_widgets["velocity"]
+            widgets["edit"].setText("3")
+            widgets["edit"].returnPressed.emit()
+            qtbot.waitUntil(lambda: widgets["status"].text() == "Set to 3", timeout=1000)
+        velocity.set.assert_called_once_with(3)

@@ -49,6 +49,7 @@ CONFIG_ROLES = [
     "selected",
 ]
 DEVICE_ROLES = ["name", "what", "kind", "valueText", "selected"]
+SIGNAL_ROLES = ["key", "section", "settable", "doc", "valueText", "statusText", "statusTone"]
 
 
 # ----------------------------------------------------------------------------------- Devices view
@@ -79,6 +80,9 @@ class DevicesBackend(QObject):
         self.browser = browser
         self._rows = DictListModel(DEVICE_ROLES, self)
         self._detail: dict = {}
+        self._settings = DictListModel(SIGNAL_ROLES, self)
+        self._readings = DictListModel(SIGNAL_ROLES, self)
+        self._signal_device: str | None = None
         self._motor = None
         browser.changed.connect(self.refresh)
         browser.values_changed.connect(self._refresh_values)
@@ -92,13 +96,25 @@ class DevicesBackend(QObject):
             rows = self.browser.rows()
         self._rows.set_items(rows)
         self._detail = self.browser.detail()
+        self._refresh_signals()
         self.changed.emit()
         self.values_changed.emit()
 
     def _refresh_values(self) -> None:
         self._rows.set_items(self.browser.rows())
         self._detail = self.browser.detail()
+        self._refresh_signals()
         self.values_changed.emit()
+
+    def _refresh_signals(self) -> None:
+        rows = self.browser.signal_rows()
+        if self._signal_device != self.browser.selected:
+            # New device: drop the old delegates so typed text does not carry over.
+            self._signal_device = self.browser.selected
+            self._settings.set_items([])
+            self._readings.set_items([])
+        self._settings.set_items([r for r in rows if r["section"] == "setting"])
+        self._readings.set_items([r for r in rows if r["section"] == "reading"])
 
     def set_motor(self, motor) -> None:
         """Positioner box shown for motors."""
@@ -122,8 +138,14 @@ class DevicesBackend(QObject):
     def openInWorkspace(self) -> None:
         self.browser.request_open()
 
+    @Slot(str, str)
+    def setSignal(self, key: str, text: str) -> None:
+        self.browser.set_signal(key, text)
+
     rows = Property(QObject, lambda self: self._rows, constant=True)
     detail = Property("QVariantMap", lambda self: self._detail, notify=values_changed)
+    settings = Property(QObject, lambda self: self._settings, constant=True)
+    readings = Property(QObject, lambda self: self._readings, constant=True)
     detailName = Property(str, lambda self: self._detail.get("name", ""), notify=changed)
     kind = Property(str, lambda self: self.browser.kind, notify=changed)
     kinds = Property(

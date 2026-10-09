@@ -173,6 +173,7 @@ def view_qss(t: ThemeTokens) -> str:
         QLabel[role="big"] {{ font-size: 28px; font-weight: 600; font-family: {MONO}; }}
         QLabel[role="was"] {{ color: {t.warning.name()}; font-size: 11px; }}
         QLabel[role="err"] {{ color: {t.danger.name()}; font-size: 12px; }}
+        QLabel[role="ok"] {{ color: {t.success.name()}; font-size: 12px; }}
         QLabel[role="link"] {{ color: {t.primary.name()}; font-size: 12px; }}
         QToolButton[tb="ghost"] {{ color: {t.fg.name()}; background: transparent; border: none;
             border-radius: 6px; padding: 4px 8px; font-size: 12px; }}
@@ -715,8 +716,8 @@ class DevicesViewQWidget(BECWidget, QWidget):
         self.kinds.changed.connect(self.browser.set_kind)
         row.addWidget(self.kinds)
         row.addStretch(1)
-        lock = Chip("Read-only configuration", "neutral", "lock")
-        lock.setToolTip("Editing the device session is in Config (staff)")
+        lock = Chip("Device setup: staff only", "neutral", "lock")
+        lock.setToolTip("Adding devices and changing the session is in Device Config")
         row.addWidget(lock)
         root.addWidget(bar)
 
@@ -772,14 +773,27 @@ class DevicesViewQWidget(BECWidget, QWidget):
         d.addWidget(self.head)
         self.motor_holder = QVBoxLayout()
         d.addLayout(self.motor_holder)
+        self.action = TextButton("", "neutral", "add")
+        self.action.clicked.connect(self.browser.request_open)
+        d.addWidget(self.action, 0, Qt.AlignmentFlag.AlignLeft)
+        self._signal_widgets: dict[str, dict] = {}
+        self._signal_device: str | None = None
+        self.settings_title = label("Settings", "upper")
+        self.settings_grid = self._signal_grid()
+        self.readings_title = label("Readings", "upper")
+        self.readings_grid = self._signal_grid()
+        d.addSpacing(6)
+        d.addWidget(self.settings_title)
+        d.addLayout(self.settings_grid)
+        d.addSpacing(6)
+        d.addWidget(self.readings_title)
+        d.addLayout(self.readings_grid)
+        d.addSpacing(6)
         self.facts = QGridLayout()
         self.facts.setHorizontalSpacing(12)
         self.facts.setVerticalSpacing(3)
         self.facts.setColumnStretch(1, 1)
         d.addLayout(self.facts)
-        self.action = TextButton("", "neutral", "add")
-        self.action.clicked.connect(self.browser.request_open)
-        d.addWidget(self.action, 0, Qt.AlignmentFlag.AlignLeft)
         self.empty = label("Select a device to see it here.", "muted")
         d.addWidget(self.empty)
         d.addStretch(1)
@@ -796,6 +810,78 @@ class DevicesViewQWidget(BECWidget, QWidget):
     def _on_row(self, current: QModelIndex, _previous: QModelIndex) -> None:
         if current.isValid():
             self.browser.select(self.model.rows[current.row()]["name"])
+
+    @staticmethod
+    def _signal_grid() -> QGridLayout:
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(10)
+        grid.setVerticalSpacing(4)
+        grid.setColumnStretch(1, 1)
+        return grid
+
+    def _build_signals(self) -> None:
+        """Lay out the settings and readings of the selected device (on selection change)."""
+        clear_layout(self.settings_grid)
+        clear_layout(self.readings_grid)
+        self._signal_widgets = {}
+        self._signal_device = self.browser.selected
+        counts = {"setting": 0, "reading": 0}
+        next_row = {"setting": 0, "reading": 0}
+        for row in self.browser.signal_rows():
+            grid = self.settings_grid if row["section"] == "setting" else self.readings_grid
+            r = next_row[row["section"]]
+            next_row[row["section"]] += 2 if row["settable"] else 1
+            counts[row["section"]] += 1
+            name = label(row["key"], "mono")
+            name.setToolTip(row["doc"] or row["key"])
+            value = label(row["valueText"], "mono")
+            value.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            grid.addWidget(name, r, 0)
+            grid.addWidget(value, r, 1)
+            widgets = {"value": value}
+            if row["settable"]:
+                edit = QLineEdit()
+                edit.setPlaceholderText("New value")
+                edit.setAccessibleName(f"New value for {row['key']}")
+                edit.setFixedWidth(110)
+                button = TextButton("Set", "neutral")
+                key = row["key"]
+                submit = lambda _=False, k=key, e=edit: self.browser.set_signal(k, e.text())
+                edit.returnPressed.connect(submit)
+                button.clicked.connect(submit)
+                grid.addWidget(edit, r, 2)
+                grid.addWidget(button, r, 3)
+                status = label("", "faint")
+                status.setWordWrap(True)
+                status.hide()
+                grid.addWidget(status, r + 1, 0, 1, 4)
+                widgets.update(edit=edit, status=status)
+            self._signal_widgets[row["key"]] = widgets
+        self.settings_title.setVisible(counts["setting"] > 0)
+        self.readings_title.setVisible(counts["reading"] > 0)
+
+    def _update_signals(self) -> None:
+        """Refresh values and set results in place, keeping typed text and focus."""
+        if self._signal_device != self.browser.selected:
+            self._build_signals()
+            return
+        for row in self.browser.signal_rows():
+            widgets = self._signal_widgets.get(row["key"])
+            if widgets is None:
+                continue
+            widgets["value"].setText(row["valueText"])
+            status = widgets.get("status")
+            if status is None:
+                continue
+            role = {"ok": "ok", "err": "err"}.get(row["statusTone"], "faint")
+            if status.property("role") != role:
+                status.setProperty("role", role)
+                status.style().unpolish(status)
+                status.style().polish(status)
+            status.setText(row["statusText"])
+            status.setVisible(bool(row["statusText"]))
+            if row["statusTone"] == "ok" and widgets["edit"].text():
+                widgets["edit"].clear()
 
     @SafeSlot()
     def _sync(self) -> None:
@@ -816,6 +902,7 @@ class DevicesViewQWidget(BECWidget, QWidget):
         detail = self.browser.detail()
         if detail.get("name") and detail["kind"] != "positioner":
             self.d_value.setText(self._value_html(detail))
+        self._update_signals()
 
     @staticmethod
     def _value_html(detail: dict) -> str:
@@ -835,6 +922,10 @@ class DevicesViewQWidget(BECWidget, QWidget):
         clear_layout(self.facts)
         if not has:
             self._show_motor(None)
+            clear_layout(self.settings_grid)
+            clear_layout(self.readings_grid)
+            self.settings_title.hide()
+            self.readings_title.hide()
             return
         kind = detail["kind"]
         self._show_motor(detail["name"] if kind == "positioner" else None)
@@ -853,6 +944,7 @@ class DevicesViewQWidget(BECWidget, QWidget):
         self.action.setText(detail["actionText"])
         self.action._icon_name = {"detector": "image", "monitor": "show_chart"}.get(kind, "add")
         self.action.set_variant("primary" if kind == "detector" else "neutral")
+        self._build_signals()
 
     def _show_motor(self, name: str | None) -> None:
         if name is None:
