@@ -64,9 +64,16 @@ class BECMainWindow(BECWidget, QMainWindow):
         self.setWindowTitle(window_title)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
 
-        # Notification Centre overlay
-        self.notification_centre = NotificationCentre(parent=self)  # Notification layer
-        self.notification_broker = BECNotificationBroker(parent=self)
+        # Notification Centre overlay. BEC_NOTIFICATION_UI=qml|qwidget opts into the reworked
+        # toasts and history drawer, which also replace the modal error dialogs.
+        self._notification_ui = os.environ.get("BEC_NOTIFICATION_UI", "legacy").lower()
+        self.notifications = None
+        if self._notification_ui in ("qml", "qwidget"):
+            self.notification_centre = None
+            self.notification_broker = None
+        else:
+            self.notification_centre = NotificationCentre(parent=self)  # Notification layer
+            self.notification_broker = BECNotificationBroker(parent=self)
         self._nc_margin = 16
         self._position_notification_centre()
         self._widget_hierarchy_dialog: WidgetHierarchyDialog | None = None
@@ -95,7 +102,10 @@ class BECMainWindow(BECWidget, QMainWindow):
                 during __init__ when we first install ``self._full_content``).
         """
         super().setCentralWidget(widget)
-        self.notification_centre.raise_()
+        if self.notification_centre is not None:
+            self.notification_centre.raise_()
+        if self.notifications is not None:
+            self.notifications.sync()
         self.statusBar().raise_()
 
     def resizeEvent(self, event):
@@ -104,7 +114,7 @@ class BECMainWindow(BECWidget, QMainWindow):
 
     def _position_notification_centre(self):
         """Keep the notification panel at a fixed margin top-right."""
-        if not hasattr(self, "notification_centre"):
+        if getattr(self, "notification_centre", None) is None:
             return
         margin = getattr(self, "_nc_margin", 16)  # px
         nc = self.notification_centre
@@ -158,6 +168,9 @@ class BECMainWindow(BECWidget, QMainWindow):
         """
         Add the notification indicator to the status bar and hook the signals.
         """
+        if self.notification_centre is None:
+            self._add_reworked_notifications()
+            return
         # Add the notification indicator to the status bar
         self.notification_indicator = NotificationIndicator(self)
         self.status_bar.addPermanentWidget(self.notification_indicator)
@@ -167,6 +180,20 @@ class BECMainWindow(BECWidget, QMainWindow):
         self.notification_indicator.filter_changed.connect(self.notification_centre.apply_filter)
         self.notification_indicator.show_all_requested.connect(self.notification_centre.show_all)
         self.notification_indicator.hide_all_requested.connect(self.notification_centre.hide_all)
+
+    def _add_reworked_notifications(self):
+        """Attach the reworked toasts, history drawer and bell (QML or QWidget version)."""
+        if self._notification_ui == "qml":
+            from bec_widgets.widgets.containers.main_window.addons.notification_center.notification_qml import (
+                NotificationHostQML as Host,
+            )
+        else:
+            from bec_widgets.widgets.containers.main_window.addons.notification_center.notification_qwidget import (
+                NotificationHostQWidget as Host,
+            )
+        self.notifications = Host(self, status_bar=self.status_bar, dispatcher=self.bec_dispatcher)
+        # the guided tour points at the bell
+        self.notification_indicator = self.notifications.bell
 
     ################################################################################
     # Client message status bar widget helpers
@@ -539,6 +566,9 @@ class BECMainWindow(BECWidget, QMainWindow):
         self._scan_progress_bar_full.deleteLater()
         self._scan_progress_hover.close()
         self._scan_progress_hover.deleteLater()
+        if self.notifications is not None:
+            self.notifications.cleanup()
+            self.notifications = None
         super().cleanup()
 
 

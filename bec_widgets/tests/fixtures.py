@@ -21,6 +21,7 @@ Requires ``bec_widgets[dev]`` (pytest-qt, fakeredis) and bec_lib's ``threads_che
 
 # pylint: disable=redefined-outer-name,unused-argument,wrong-import-position
 import os
+import sys
 
 # Keep ophyd on its dummy control layer, so importing it does not create a real EPICS CA context
 os.environ.setdefault("OPHYD_CONTROL_LAYER", "dummy")
@@ -159,6 +160,13 @@ def notification_broker_reset(bec_dispatcher):
     """Tear down the app-wide notification broker before the dispatcher it is bound to."""
     yield
     BECNotificationBroker.reset_singleton()
+    # the reworked notification hub is only reset if some test imported it
+    hub_module = sys.modules.get(
+        "bec_widgets.widgets.containers.main_window.addons.notification_center."
+        "notification_ux_common"
+    )
+    if hub_module is not None:
+        hub_module.NotificationHub.reset_instance()
 
 
 @pytest.fixture(autouse=True)
