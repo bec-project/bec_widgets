@@ -73,10 +73,10 @@ logger = bec_logger.logger
 RAIL_WIDTH = 48
 BUTTON_HEIGHT = 44
 PEEK_WIDTH = 480
-PINNED_WIDTH = 480
+PINNED_WIDTH = 484
 PINNED_MIN_WIDTH = 380
 PINNED_MAX_WIDTH = 600
-MAX_PINNED = 2
+MAX_PINNED = 2  # docked slots in the column; option D of the proposals would add areas
 HEADER_HEIGHT = 44
 SHADOW = 14
 HOVER_OPEN_DELAY = 280  # ms the pointer has to rest on a rail button before its panel peeks out
@@ -86,6 +86,12 @@ SLIDE_DURATION = 140
 SETTINGS_PINNED = "system_dock/pinned"
 SETTINGS_HOVER = "system_dock/hover_open"
 SETTINGS_WIDTH = "system_dock/pinned_width"
+SETTINGS_MODE = "system_dock/mode"
+SETTINGS_COLLAPSED = "system_dock/collapsed"
+SETTINGS_SPLIT = "system_dock/split"
+
+MODE_DOCKED = "docked"  # a rail click docks the panel next to the workspace, pushing it aside
+MODE_OVERLAY = "overlay"  # a rail click opens a flyout over the workspace
 
 
 @dataclass
@@ -325,7 +331,7 @@ class PanelFrame(QFrame):
         self.title.setObjectName("systemDockPanelTitle")
         self.summary = ElidingLabel(self.header)
         self.summary.setObjectName("systemDockPanelSummary")
-        self.pin_button = IconButton("push_pin", "Pin open next to the workspace", self.header)
+        self.pin_button = IconButton("push_pin", "Dock next to the workspace", self.header)
         self.pin_button.setCheckable(True)
         self.pin_button.clicked.connect(
             lambda checked: self.pin_toggled.emit(panel.panel_id, bool(checked))
@@ -354,7 +360,7 @@ class PanelFrame(QFrame):
     def set_pinned(self, pinned: bool) -> None:
         """Reflect the pinned state on the pin button."""
         self.pin_button.setChecked(pinned)
-        self.pin_button.setToolTip("Unpin" if pinned else "Pin open next to the workspace")
+        self.pin_button.setToolTip("Undock" if pinned else "Dock next to the workspace")
         self.pin_button.refresh_theme(ThemeTokens())
 
     def _update_summary(self) -> None:
@@ -408,11 +414,18 @@ class _PeekHost(QWidget):
 
 
 class SystemDock(QWidget):
-    """The rail on the right edge, with its peek panel and pinned column.
+    """The rail on the right edge, with its docked column and peek panel.
 
     The rail is this widget; put it at the right edge of the window layout. Put
     :attr:`pinned_column` between the main content and the rail, ideally in a ``QSplitter`` with
-    the content so the user can resize it. The peek panel floats over ``overlay_parent``.
+    the content so the user can resize it. Docked ("pinned") panels live in that column and push
+    the content aside; they stay open whatever the content shows. The column has
+    ``max_docked`` slots stacked in a vertical splitter.
+
+    In the default docked mode a rail click docks or undocks a panel. While the column is
+    collapsed (the arrow at the bottom of the rail, Ctrl+Shift+D) a click only peeks the panel in a
+    flyout over the content, which a click outside or Esc closes. In overlay mode every click
+    opens a flyout and the pin in the panel header docks it.
 
     Args:
         overlay_parent(QWidget): Widget the peek panel floats over, usually the central widget
@@ -420,10 +433,13 @@ class SystemDock(QWidget):
         settings(QSettings | None): Where to persist pinned panels and the hover preference.
         hover_open(bool | None): Open panels when the pointer rests on a rail button. Defaults to
             the persisted preference, or False.
+        mode(str | None): "docked" or "overlay"; defaults to the persisted preference, or docked.
+        max_docked(int): Number of docked slots in the column.
     """
 
     panel_shown = Signal(str, bool)
     pinned_changed = Signal(list)
+    collapsed_changed = Signal(bool)
 
     def __init__(
         self,
@@ -431,6 +447,8 @@ class SystemDock(QWidget):
         parent: QWidget | None = None,
         settings: QSettings | None = None,
         hover_open: bool | None = None,
+        mode: str | None = None,
+        max_docked: int = MAX_PINNED,
     ):
         super().__init__(parent or overlay_parent)
         self.setObjectName("systemDockRail")
@@ -451,11 +469,20 @@ class SystemDock(QWidget):
             hover_open = self._read_setting(SETTINGS_HOVER, False, bool)
         self._hover_open = bool(hover_open)
         self._pending_hover: str | None = None
+        if mode is None:
+            mode = self._read_setting(SETTINGS_MODE, MODE_DOCKED, str)
+        self._mode = MODE_OVERLAY if mode == MODE_OVERLAY else MODE_DOCKED
+        self.max_docked = max(1, int(max_docked))
+        self._collapsed = bool(self._read_setting(SETTINGS_COLLAPSED, False, bool))
 
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(0, 8, 0, 8)
         self._layout.setSpacing(2)
         self._layout.addStretch(1)
+        self.collapse_button = IconButton("right_panel_close", "Collapse docked panels", self)
+        self.collapse_button.setObjectName("systemDockCollapse")
+        self.collapse_button.clicked.connect(self.toggle_collapsed)
+        self._layout.addWidget(self.collapse_button, 0, Qt.AlignmentFlag.AlignHCenter)
 
         self.peek = _PeekHost(self, overlay_parent)
         self.peek.installEventFilter(self)
@@ -469,6 +496,7 @@ class SystemDock(QWidget):
         self.pinned_column.setMinimumWidth(PINNED_MIN_WIDTH)
         self.pinned_column.setMaximumWidth(PINNED_MAX_WIDTH)
         self.pinned_column.hide()
+        self.pinned_column.splitterMoved.connect(self._store_split)
 
         self._hover_timer = QTimer(self)
         self._hover_timer.setSingleShot(True)
@@ -488,6 +516,8 @@ class SystemDock(QWidget):
         self._pulse.valueChanged.connect(self._on_pulse)
         self._shortcuts: list[QShortcut] = []
         self._add_shortcut("Ctrl+Shift+P", self.toggle_pin_current)
+        self._add_shortcut("Ctrl+Shift+D", self.toggle_collapsed)
+        self._update_collapse_button()
 
         overlay_parent.installEventFilter(self)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -516,7 +546,7 @@ class SystemDock(QWidget):
         button = RailButton(panel, self)
         button.clicked.connect(lambda: self.toggle_panel(panel.panel_id))
         button.hovered.connect(self._on_button_hovered)
-        self._layout.insertWidget(self._layout.count() - 1, button)
+        self._layout.insertWidget(self._layout.count() - 2, button)
         self._buttons[panel.panel_id] = button
         panel.indicator_changed.connect(self._update_pulse)
         if shortcut:
@@ -537,8 +567,8 @@ class SystemDock(QWidget):
         line.setObjectName("systemDockDivider")
         line.setFixedSize(RAIL_WIDTH - 20, 1)
         line.setStyleSheet(f"background: {self.tokens.border.name()};")
-        self._layout.insertWidget(self._layout.count() - 1, line, 0, Qt.AlignmentFlag.AlignHCenter)
-        self._layout.insertSpacing(self._layout.count() - 1, 2)
+        self._layout.insertWidget(self._layout.count() - 2, line, 0, Qt.AlignmentFlag.AlignHCenter)
+        self._layout.insertSpacing(self._layout.count() - 2, 2)
         return line
 
     def panel(self, panel_id: str) -> SystemPanel:
@@ -574,8 +604,46 @@ class SystemDock(QWidget):
         return list(self._pinned)
 
     def is_shown(self, panel_id: str) -> bool:
-        """Whether ``panel_id`` is visible, peeked or pinned."""
-        return panel_id in self._pinned or panel_id == self._peek_id
+        """Whether ``panel_id`` is visible, peeked or docked in the expanded column."""
+        docked = panel_id in self._pinned and not self._collapsed
+        return docked or panel_id == self._peek_id
+
+    # ------------------------------------------------------------------ mode and collapse
+    @property
+    def mode(self) -> str:
+        """ "docked" when a rail click docks the panel, "overlay" when it opens a flyout."""
+        return self._mode
+
+    def set_mode(self, mode: str) -> None:
+        """Choose what a rail click does, and persist the choice."""
+        self._mode = MODE_OVERLAY if mode == MODE_OVERLAY else MODE_DOCKED
+        self._write_setting(SETTINGS_MODE, self._mode)
+
+    @property
+    def collapsed(self) -> bool:
+        """Whether the docked column is folded away; the rail and its badges stay."""
+        return self._collapsed
+
+    def set_collapsed(self, collapsed: bool) -> None:
+        """Fold the docked column away or bring it back, keeping which panels are docked."""
+        collapsed = bool(collapsed)
+        if collapsed == self._collapsed:
+            return
+        self.close_peek()
+        self._collapsed = collapsed
+        for panel_id in self._pinned:
+            self._set_shown(panel_id, not collapsed)
+        self.pinned_column.setVisible(self.isVisible() and bool(self._pinned) and not collapsed)
+        self._update_buttons()
+        self._update_collapse_button()
+        self._write_setting(SETTINGS_COLLAPSED, collapsed)
+        self.collapsed_changed.emit(collapsed)
+        if not collapsed and self._pinned:
+            self.pinned_changed.emit(list(self._pinned))
+
+    def toggle_collapsed(self) -> None:
+        """Collapse or expand the docked column (rail arrow, Ctrl+Shift+D)."""
+        self.set_collapsed(not self._collapsed)
 
     # ------------------------------------------------------------------ hover preference
     @property
@@ -591,13 +659,23 @@ class SystemDock(QWidget):
 
     # ------------------------------------------------------------------ open / close
     def toggle_panel(self, panel_id: str) -> None:
-        """Rail button click: open the panel and keep it open, or close a kept-open panel."""
+        """Rail button click: dock or undock the panel, or peek it while the column is collapsed.
+
+        In overlay mode, and while the column is collapsed, the click opens the panel in a
+        flyout and keeps it open, or closes a kept-open flyout.
+        """
         self._hover_timer.stop()
+        if not self.isVisible():
+            self.set_dock_visible(True)
+        if panel_id in self._pinned and self._collapsed:
+            self.set_collapsed(False)  # a docked panel comes back with its column
+            return
+        if self._mode == MODE_DOCKED and not self._collapsed:
+            self.set_pinned(panel_id, panel_id not in self._pinned)
+            return
         if panel_id in self._pinned:
             self._frames[panel_id].panel.content.setFocus()
             return
-        if not self.isVisible():
-            self.set_dock_visible(True)
         if self._peek_id == panel_id:
             if self._peek_sticky:
                 self.close_peek()
@@ -668,6 +746,9 @@ class SystemDock(QWidget):
     def set_pinned(self, panel_id: str, pinned: bool) -> None:
         """Pin ``panel_id`` into the column next to the content, or unpin (and close) it."""
         frame = self._frames[panel_id]
+        if pinned and self._collapsed:
+            # docking from a peek while collapsed brings the column back
+            self.set_collapsed(False)
         if pinned and panel_id not in self._pinned:
             if panel_id == self._peek_id:
                 # the frame moves from the peek into the column: the panel stays visible
@@ -677,15 +758,18 @@ class SystemDock(QWidget):
                 self._install_app_filter(False)
             else:
                 self._set_shown(panel_id, True)
-            while len(self._pinned) >= MAX_PINNED:
+            while len(self._pinned) >= self.max_docked:
                 self.set_pinned(self._pinned[0], False)
             self._pinned.append(panel_id)
             self.pinned_column.addWidget(frame)
             frame.show()
         elif not pinned and panel_id in self._pinned:
             self._pinned.remove(panel_id)
+            if panel_id == self._peek_id:
+                self.close_peek()
             self.peek.stack.addWidget(frame)
-            self._set_shown(panel_id, False)
+            if not self._collapsed:
+                self._set_shown(panel_id, False)
         else:
             frame.set_pinned(panel_id in self._pinned)
             return
@@ -693,8 +777,10 @@ class SystemDock(QWidget):
         needed = max([PINNED_MIN_WIDTH] + [self._panels[p].min_width or 0 for p in self._pinned])
         self.pinned_column.setMinimumWidth(needed)
         self.pinned_column.setMaximumWidth(max(PINNED_MAX_WIDTH, needed))
-        self.pinned_column.setVisible(bool(self._pinned))
+        self.pinned_column.setVisible(bool(self._pinned) and not self._collapsed)
+        self._restore_split()
         self._update_buttons()
+        self._update_collapse_button()
         self._write_setting(SETTINGS_PINNED, list(self._pinned))
         self.pinned_changed.emit(list(self._pinned))
 
@@ -710,16 +796,19 @@ class SystemDock(QWidget):
         if not visible:
             self.close_peek()
         self.setVisible(visible)
-        self.pinned_column.setVisible(visible and bool(self._pinned))
+        self.pinned_column.setVisible(visible and bool(self._pinned) and not self._collapsed)
 
     def restore_state(self) -> None:
-        """Pin the panels that were pinned in the last session."""
+        """Dock the panels that were docked in the last session, with their split."""
         stored = self._read_setting(SETTINGS_PINNED, [], list)
         if isinstance(stored, str):
             stored = [stored]
+        collapsed, self._collapsed = self._collapsed, False
         for panel_id in stored or []:
             if panel_id in self._panels:
                 self.set_pinned(panel_id, True)
+        if collapsed:
+            self.set_collapsed(True)
 
     @property
     def pinned_width(self) -> int:
@@ -743,6 +832,30 @@ class SystemDock(QWidget):
     def _update_buttons(self) -> None:
         for panel_id, button in self._buttons.items():
             button.set_state(self.is_shown(panel_id), panel_id in self._pinned)
+
+    def _update_collapse_button(self) -> None:
+        self.collapse_button.setVisible(bool(self._pinned) or self._collapsed)
+        if self._collapsed:
+            names = ", ".join(self._panels[p].label for p in self._pinned) or "none"
+            self.collapse_button.set_icon_name("right_panel_open")
+            self.collapse_button.setToolTip(f"Expand docked panels ({names})  ·  Ctrl+Shift+D")
+        else:
+            self.collapse_button.set_icon_name("right_panel_close")
+            self.collapse_button.setToolTip("Collapse docked panels  ·  Ctrl+Shift+D")
+        self.collapse_button.refresh_theme(self.tokens)
+
+    def _store_split(self, *_args) -> None:
+        if len(self._pinned) > 1:
+            self._write_setting(SETTINGS_SPLIT, [int(v) for v in self.pinned_column.sizes()])
+
+    def _restore_split(self) -> None:
+        stored = self._read_setting(SETTINGS_SPLIT, [], list) or []
+        try:
+            sizes = [int(v) for v in stored]
+        except (TypeError, ValueError):
+            return
+        if len(self._pinned) > 1 and len(sizes) == len(self._pinned) and all(sizes):
+            self.pinned_column.setSizes(sizes)
 
     def _peek_geometry(self) -> QRect:
         parent = self._overlay_parent
@@ -884,12 +997,19 @@ class SystemDock(QWidget):
 
     def _show_context_menu(self, pos: QPoint) -> None:
         menu = QMenu(self)
+        overlay = QAction("Open panels as flyouts over the workspace", menu)
+        overlay.setCheckable(True)
+        overlay.setChecked(self._mode == MODE_OVERLAY)
+        overlay.toggled.connect(
+            lambda checked: self.set_mode(MODE_OVERLAY if checked else MODE_DOCKED)
+        )
+        menu.addAction(overlay)
         hover = QAction("Open panels on hover", menu)
         hover.setCheckable(True)
         hover.setChecked(self._hover_open)
         hover.toggled.connect(self.set_hover_open)
         menu.addAction(hover)
-        unpin = QAction("Unpin all panels", menu)
+        unpin = QAction("Undock all panels", menu)
         unpin.setEnabled(bool(self._pinned))
         unpin.triggered.connect(lambda: [self.set_pinned(p, False) for p in list(self._pinned)])
         menu.addAction(unpin)
@@ -900,6 +1020,7 @@ class SystemDock(QWidget):
         for frame in self._frames.values():
             frame.refresh_theme(self.tokens)
         self._apply_style()
+        self._update_collapse_button()
         self.update()
         self.peek.update()
         for button in self._buttons.values():

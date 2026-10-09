@@ -75,8 +75,64 @@ def test_rail_lists_panels_in_order(window):
     assert not window.dock.hover_open  # click to open is the default
 
 
+def test_click_docks_panel_and_pushes_the_content_aside(qtbot, window):
+    dock = window.dock
+    assert dock.mode == "docked"
+    width = window.content.width()
+    qtbot.mouseClick(dock.button("alpha"), Qt.MouseButton.LeftButton)
+    assert dock.pinned == ["alpha"]
+    assert dock.peek_panel_id is None
+    assert dock.pinned_column.isVisible()
+    qtbot.waitUntil(lambda: window.content.width() < width)  # pushed aside, not covered
+    qtbot.mouseClick(dock.button("beta"), Qt.MouseButton.LeftButton)
+    assert dock.pinned == ["alpha", "beta"]
+    _press(window.content)
+    assert dock.pinned == ["alpha", "beta"]  # docked panels stay open while working elsewhere
+    qtbot.mouseClick(dock.button("alpha"), Qt.MouseButton.LeftButton)
+    assert dock.pinned == ["beta"]
+    assert not dock.is_shown("alpha")
+
+
+def test_collapse_keeps_the_docked_panels_and_peeks_the_others(qtbot, window, settings):
+    dock = window.dock
+    dock.toggle_panel("alpha")
+    assert dock.collapse_button.isVisible()
+    qtbot.keyClick(
+        window,
+        Qt.Key.Key_D,
+        Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier,
+    )
+    assert dock.collapsed
+    assert dock.pinned == ["alpha"]
+    assert not dock.pinned_column.isVisible()
+    assert not dock.is_shown("alpha")
+    assert settings.value("system_dock/collapsed") in (True, "true")
+    # while collapsed, another icon only peeks its panel over the content
+    dock.toggle_panel("beta")
+    assert dock.peek_panel_id == "beta"
+    assert dock.pinned == ["alpha"]
+    # the docked panel's icon brings the column back
+    dock.toggle_panel("alpha")
+    assert not dock.collapsed
+    assert dock.peek_panel_id is None
+    assert dock.pinned_column.isVisible()
+    assert dock.is_shown("alpha")
+
+
+def test_docking_from_a_peek_expands_the_column(window):
+    dock = window.dock
+    dock.toggle_panel("alpha")
+    dock.set_collapsed(True)
+    dock.toggle_panel("gamma")
+    dock.frame("gamma").pin_button.click()
+    assert not dock.collapsed
+    assert dock.pinned == ["alpha", "gamma"]
+    assert dock.peek_panel_id is None
+
+
 def test_click_opens_flyout_and_click_again_closes(qtbot, window):
     dock = window.dock
+    dock.set_mode("overlay")
     qtbot.mouseClick(dock.button("alpha"), Qt.MouseButton.LeftButton)
     assert dock.peek_panel_id == "alpha"
     assert dock.peek_sticky
@@ -92,6 +148,7 @@ def test_click_opens_flyout_and_click_again_closes(qtbot, window):
 
 def test_click_outside_and_escape_close_the_flyout(qtbot, window):
     dock = window.dock
+    dock.set_mode("overlay")
     dock.open_panel("alpha")
     _press(dock.frame("alpha").panel.content)
     assert dock.peek_panel_id == "alpha"  # clicks inside the flyout keep it open
@@ -152,6 +209,7 @@ def test_pin_shortcut_pins_the_open_flyout_then_unpins(window):
 
 
 def test_panel_shortcut_toggles_the_panel(qtbot, window):
+    window.dock.set_mode("overlay")
     qtbot.keyClick(
         window,
         Qt.Key.Key_A,
@@ -163,17 +221,26 @@ def test_panel_shortcut_toggles_the_panel(qtbot, window):
 
 def test_pinned_panels_are_restored(qtbot, window, settings):
     window.dock.set_pinned("gamma", True)
+    window.dock.set_pinned("beta", True)
+    window.dock.pinned_column.setSizes([200, 400])
+    window.dock._store_split()
+    window.dock.set_collapsed(True)
     other = QWidget()
     qtbot.addWidget(other)
     dock = SystemDock(other, settings=settings)
-    dock.add_panel(SystemPanel("gamma", "Gamma", "info", "Gamma", QLabel("g")))
+    for name in ("gamma", "beta"):
+        dock.add_panel(SystemPanel(name, name, "info", name, QLabel(name)))
     dock.restore_state()
-    assert dock.pinned == ["gamma"]
+    assert dock.pinned == ["gamma", "beta"]
+    assert dock.collapsed
+    top, bottom = (int(v) for v in settings.value("system_dock/split"))
+    assert top * 2 == pytest.approx(bottom, abs=2)  # the 1:2 split is remembered
     dock.cleanup()
 
 
 def test_hover_opens_only_when_enabled(qtbot, window):
     dock = window.dock
+    dock.set_mode("overlay")
     dock._on_button_hovered("alpha", True)
     qtbot.wait(400)
     assert dock.peek_panel_id is None
@@ -207,7 +274,8 @@ def test_hiding_the_dock_closes_the_flyout(window):
 
 
 @pytest.fixture
-def main_app(qtbot, mocked_client, monkeypatch):
+def main_app(qtbot, mocked_client, monkeypatch, settings):
+    monkeypatch.setattr("bec_widgets.applications.main_app._app_settings", lambda: settings)
     monkeypatch.delenv("BEC_SYSTEM_DOCK", raising=False)
     monkeypatch.delenv("BEC_NOTIFICATION_UI", raising=False)
     app = BECMainApp(client=mocked_client, anim_duration=10, system_dock="qwidget")
@@ -234,6 +302,16 @@ def test_main_app_builds_the_core_panels(main_app):
     assert not main_app._scan_progress_bar_with_separator.isVisible()
     assert not main_app.notifications.bell.isVisible()
     assert main_app.notification_indicator is dock.button("notifications")
+
+
+def test_main_app_docked_panel_stays_across_views(qtbot, main_app):
+    dock = main_app.system_dock
+    dock.toggle_panel("queue")
+    assert dock.pinned == ["queue"]
+    for index in range(main_app.stack.count()):
+        main_app.stack.setCurrentIndex(index)
+        assert dock.pinned_column.isVisible()
+    assert main_app.content_splitter.sizes()[1] >= 380
 
 
 def test_main_app_notifications_open_in_the_dock(qtbot, main_app):

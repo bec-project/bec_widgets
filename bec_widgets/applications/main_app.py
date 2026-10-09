@@ -149,12 +149,11 @@ class BECMainApp(BECMainWindow):
         startup_profiler.mark("system dock")
 
     def _add_system_dock_menu_action(self) -> None:
-        """View > System Dock toggles the whole dock (Ctrl+Shift+D)."""
+        """View > System Dock shows or hides the whole dock; Ctrl+Shift+D only collapses it."""
         for action in self.menuBar().actions():
             if action.text() == "View" and action.menu() is not None:
                 toggle = QAction("System Dock", self, checkable=True)
                 toggle.setChecked(True)
-                toggle.setShortcut("Ctrl+Shift+D")
                 toggle.toggled.connect(self.system_dock.set_dock_visible)
                 action.menu().addSeparator()
                 action.menu().addAction(toggle)
@@ -436,8 +435,9 @@ class BECMainApp(BECMainWindow):
                 widget=self.system_dock,
                 title="System Dock",
                 text="Scan progress, the queue, BEC status, beamline states and notifications "
-                "live here once for the whole app. Click an icon to open its panel, and use the "
-                "pin in the panel header to dock it next to your workspace.",
+                "live here once for the whole app. Click an icon to dock its panel next to your "
+                "workspace, where it stays open in every view. The arrow at the bottom folds the "
+                "docked panels away.",
             )
             tour_steps.append(dock_step)
 
