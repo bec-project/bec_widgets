@@ -153,7 +153,7 @@ class NotificationHostQML(NotificationHostBase):
         self.drawer.setVisible(state["drawerOpen"])
 
     def _place_views(self, *_args) -> None:
-        if self.drawer.isVisible():
+        if self.drawer.isVisible() and not self.drawer_docked:
             self.drawer.setGeometry(self.drawer_geometry())
             self.drawer.raise_()
         if self.toasts.isVisible():

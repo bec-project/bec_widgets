@@ -11,11 +11,14 @@ Rectangle {
     readonly property var st: backend.state
     readonly property var sel: st.selected || ({})
     readonly property bool hasSelection: sel.entryId !== undefined
+    // set when a container (the main app's system dock) provides the title, close and edge
+    property bool embedded: false
 
     color: theme.bg
 
     // shadow towards the content and a hairline border
     Rectangle {
+        visible: !root.embedded
         anchors.right: parent.left
         width: 8; height: parent.height
         gradient: Gradient {
@@ -24,7 +27,10 @@ Rectangle {
             GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, theme.dark ? 0.3 : 0.08) }
         }
     }
-    Rectangle { anchors.left: parent.left; width: 1; height: parent.height; color: theme.border }
+    Rectangle {
+        visible: !root.embedded
+        anchors.left: parent.left; width: 1; height: parent.height; color: theme.border
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -48,6 +54,7 @@ Rectangle {
                     spacing: 0
                     Text {
                         Layout.fillWidth: true
+                        visible: !root.embedded
                         text: "Notifications"
                         color: theme.fg
                         font.pixelSize: 15
@@ -63,7 +70,10 @@ Rectangle {
                 }
                 IconButton { iconName: "done_all"; tip: "Mark all as read"; onClicked: root.backend.markAllRead() }
                 IconButton { iconName: "clear_all"; tip: "Clear history"; onClicked: root.backend.clearHistory() }
-                IconButton { iconName: "close"; tip: "Close"; onClicked: root.backend.setDrawerOpen(false) }
+                IconButton {
+                    visible: !root.embedded
+                    iconName: "close"; tip: "Close"; onClicked: root.backend.setDrawerOpen(false)
+                }
             }
 
             Flow {

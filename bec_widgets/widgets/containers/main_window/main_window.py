@@ -55,7 +55,9 @@ class BECMainWindow(BECWidget, QMainWindow):
     SCAN_PROGRESS_WIDTH = 120  # px
     SCAN_PROGRESS_HEIGHT = 20  # px
 
-    def __init__(self, parent=None, window_title: str = "BEC", **kwargs):
+    def __init__(
+        self, parent=None, window_title: str = "BEC", notification_ui: str | None = None, **kwargs
+    ):
         super().__init__(parent=parent, **kwargs)
 
         self.app = QApplication.instance()
@@ -65,8 +67,11 @@ class BECMainWindow(BECWidget, QMainWindow):
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
 
         # Notification Centre overlay. BEC_NOTIFICATION_UI=qml|qwidget opts into the reworked
-        # toasts and history drawer, which also replace the modal error dialogs.
-        self._notification_ui = os.environ.get("BEC_NOTIFICATION_UI", "legacy").lower()
+        # toasts and history drawer, which also replace the modal error dialogs. Subclasses can
+        # choose the UI with ``notification_ui``; the environment variable still wins.
+        self._notification_ui = os.environ.get(
+            "BEC_NOTIFICATION_UI", notification_ui or "legacy"
+        ).lower()
         self.notifications = None
         if self._notification_ui in ("qml", "qwidget"):
             self.notification_centre = None

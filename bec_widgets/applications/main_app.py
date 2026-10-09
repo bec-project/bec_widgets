@@ -1,13 +1,17 @@
 from bec_widgets.applications.startup_profiler import startup_profiler  # isort: skip
 
+import os
+
+from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
-from qtpy.QtCore import QTimer
+from qtpy.QtCore import Qt, QTimer
 from qtpy.QtGui import QAction  # type: ignore
-from qtpy.QtWidgets import QApplication, QHBoxLayout, QStackedWidget, QWidget
+from qtpy.QtWidgets import QApplication, QHBoxLayout, QSplitter, QStackedWidget, QWidget
 
 from bec_widgets.applications.navigation_centre.reveal_animator import ANIMATION_DURATION
 from bec_widgets.applications.navigation_centre.side_bar import SideBar
 from bec_widgets.applications.navigation_centre.side_bar_components import NavigationItem
+from bec_widgets.applications.system_dock.system_dock import SystemDock
 from bec_widgets.applications.views.admin_view.admin_view import AdminView
 from bec_widgets.applications.views.developer_view.developer_view import DeveloperView
 from bec_widgets.applications.views.device_manager_view.device_manager_view import DeviceManagerView
@@ -22,10 +26,33 @@ from bec_widgets.utils.screen_utils import (
     available_screen_geometry,
     main_app_size_for_screen,
 )
-from bec_widgets.widgets.containers.dock_area.profile_utils import is_experimental_features_enabled
+from bec_widgets.widgets.containers.dock_area.profile_utils import (
+    _app_settings,
+    is_experimental_features_enabled,
+)
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 
 startup_profiler.mark("module imports")
+
+logger = bec_logger.logger
+
+
+def _system_dock_ui(system_dock: str | bool | None) -> str | None:
+    """Resolve which version of the system dock to build: ``qml``, ``qwidget`` or None (off).
+
+    ``BEC_SYSTEM_DOCK`` (``qml``, ``qwidget`` or ``off``) overrides the argument.
+    """
+    value = os.environ.get("BEC_SYSTEM_DOCK")
+    if value is None:
+        value = system_dock
+    if value is None or value is True:
+        return "qml"
+    if value is False:
+        return None
+    value = str(value).lower()
+    if value in ("0", "off", "false", "no", "none"):
+        return None
+    return "qwidget" if value in ("qwidget", "widgets", "qt") else "qml"
 
 
 class BECMainApp(BECMainWindow):
@@ -38,14 +65,19 @@ class BECMainApp(BECMainWindow):
         *args,
         anim_duration: int = ANIMATION_DURATION,
         show_examples: bool = False,
+        system_dock: str | bool | None = None,
         **kwargs,
     ):
+        self._system_dock_ui = _system_dock_ui(system_dock)
+        if self._system_dock_ui is not None:
+            # the dock hosts the notification history, so use the matching notification UI
+            kwargs.setdefault("notification_ui", self._system_dock_ui)
         super().__init__(parent=parent, *args, **kwargs)
         startup_profiler.mark("BEC connection + base window")
         self._show_examples = bool(show_examples)
         self._launcher_ready_notified = False
 
-        # --- Compose central UI (sidebar + stack)
+        # --- Compose central UI (sidebar + stack + system dock)
         self.sidebar = SideBar(parent=self, anim_duration=anim_duration)
         self.stack = QStackedWidget(self)
 
@@ -54,7 +86,12 @@ class BECMainApp(BECMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         layout.addWidget(self.sidebar, 0)
-        layout.addWidget(self.stack, 1)
+        self.system_dock: SystemDock | None = None
+        self.content_splitter: QSplitter | None = None
+        if self._system_dock_ui is not None:
+            self._add_system_dock(container, layout)
+        else:
+            layout.addWidget(self.stack, 1)
         self.setCentralWidget(container)
 
         # Mapping for view switching
@@ -70,8 +107,76 @@ class BECMainApp(BECMainWindow):
         self._setup_guided_tour()
         startup_profiler.mark("guided tour")
 
+    def _add_system_dock(self, container: QWidget, layout: QHBoxLayout) -> None:
+        """Right-edge dock with the single-instance core widgets, see :mod:`system_dock`."""
+        # pylint: disable=import-outside-toplevel
+        from bec_widgets.applications.system_dock.panels import build_core_panels
+
+        try:
+            settings = _app_settings()
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.warning(f"System dock settings unavailable, nothing will be persisted: {exc}")
+            settings = None
+        self.system_dock = SystemDock(container, settings=settings)
+        self.content_splitter = QSplitter(Qt.Orientation.Horizontal, container)
+        self.content_splitter.setObjectName("systemDockSplitter")
+        self.content_splitter.setChildrenCollapsible(False)
+        self.content_splitter.setHandleWidth(1)
+        self.content_splitter.addWidget(self.stack)
+        self.content_splitter.addWidget(self.system_dock.pinned_column)
+        self.content_splitter.setStretchFactor(0, 1)
+        self.content_splitter.setStretchFactor(1, 0)
+        layout.addWidget(self.content_splitter, 1)
+        layout.addWidget(self.system_dock, 0)
+
+        host = getattr(self, "notifications", None)
+        build_core_panels(
+            self.system_dock, ui=self._system_dock_ui, notification_host=host, client=self.client
+        )
+        # the rail carries the scan progress and the unread count, so the status bar copies go
+        progress = getattr(self, "_scan_progress_bar_with_separator", None)
+        if progress is not None:
+            progress.hide()
+        if host is not None:
+            host.right_inset = self.system_dock.width()
+            if host.bell is not None:
+                host.bell.hide()
+            self.notification_indicator = self.system_dock.button("notifications")
+        self._add_system_dock_menu_action()
+        self.system_dock.pinned_changed.connect(self._on_system_dock_pinned)
+        self.content_splitter.splitterMoved.connect(self._store_system_dock_width)
+        self.system_dock.restore_state()
+        startup_profiler.mark("system dock")
+
+    def _add_system_dock_menu_action(self) -> None:
+        """View > System Dock toggles the whole dock (Ctrl+Shift+D)."""
+        for action in self.menuBar().actions():
+            if action.text() == "View" and action.menu() is not None:
+                toggle = QAction("System Dock", self, checkable=True)
+                toggle.setChecked(True)
+                toggle.setShortcut("Ctrl+Shift+D")
+                toggle.toggled.connect(self.system_dock.set_dock_visible)
+                action.menu().addSeparator()
+                action.menu().addAction(toggle)
+                self._system_dock_action = toggle
+                return
+
+    def _on_system_dock_pinned(self, pinned: list) -> None:
+        if not pinned or self.content_splitter is None:
+            return
+        total = sum(self.content_splitter.sizes())
+        width = self.system_dock.pinned_width
+        if total > width:
+            self.content_splitter.setSizes([total - width, width])
+
+    def _store_system_dock_width(self, *_args) -> None:
+        if self.system_dock is not None and self.system_dock.pinned:
+            self.system_dock.store_pinned_width(self.content_splitter.sizes()[1])
+
     def showEvent(self, event):
         super().showEvent(event)
+        if self.system_dock is not None and self.system_dock.pinned:
+            QTimer.singleShot(0, lambda: self._on_system_dock_pinned(self.system_dock.pinned))
         if self._launcher_ready_notified:
             return
         self._launcher_ready_notified = True
@@ -326,6 +431,16 @@ class BECMainApp(BECMainWindow):
             )
             tour_steps.append(notif_step)
 
+        if self.system_dock is not None:
+            dock_step = self.guided_tour.register_widget(
+                widget=self.system_dock,
+                title="System Dock",
+                text="Scan progress, the queue, BEC status, beamline states and notifications "
+                "live here once for the whole app. Click an icon to open its panel, and use the "
+                "pin in the panel header to dock it next to your workspace.",
+            )
+            tour_steps.append(dock_step)
+
         # --- View-Specific Components ---
 
         # Register all views that can extend the tour
@@ -392,6 +507,8 @@ class BECMainApp(BECMainWindow):
             help_menu.addAction(tour_action)
 
     def cleanup(self):
+        if self.system_dock is not None:
+            self.system_dock.cleanup()
         for view_id, idx in self._view_index.items():
             view = self.stack.widget(idx)
             view.close()

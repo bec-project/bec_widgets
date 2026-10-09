@@ -684,6 +684,8 @@ class NotificationHostBase(QObject):
     DRAWER_WIDTH = 400
     MARGIN = 16
 
+    drawer_toggled = Signal(bool)
+
     def __init__(self, window: QWidget, status_bar: QStatusBar | None = None, dispatcher=None):
         super().__init__(window)
         self.window = window
@@ -696,6 +698,10 @@ class NotificationHostBase(QObject):
         self.search = ""
         self.selected_id: str | None = None
         self._sync_pending = False
+        # set by a container that hosts the drawer itself (the main app's system dock): the
+        # drawer is then laid out by that container, and toasts keep clear of ``right_inset``
+        self.drawer_docked = False
+        self.right_inset = 0
         if status_bar is None and isinstance(window, QMainWindow):
             status_bar = window.statusBar()
         self.status_bar = status_bar
@@ -721,6 +727,7 @@ class NotificationHostBase(QObject):
 
     def set_drawer_open(self, open_: bool) -> None:
         """Open or close the history drawer. Opening marks everything as read."""
+        changed = bool(open_) != self.drawer_open
         self.drawer_open = bool(open_)
         self.queue.set_suspended(self.drawer_open)
         if self.drawer_open:
@@ -728,6 +735,8 @@ class NotificationHostBase(QObject):
         else:
             self.selected_id = None
         self.sync()
+        if changed:
+            self.drawer_toggled.emit(self.drawer_open)
 
     def open_details(self, entry_id: str) -> None:
         """Open the drawer on the details of one entry (the toast's Details action)."""
@@ -891,7 +900,8 @@ class NotificationHostBase(QObject):
             status = self.window.statusBar() if self.window.statusBar() else None
             if status is not None and status.isVisible():
                 bottom = status.geometry().top() - 1
-        return QRect(rect.left(), top, rect.width(), max(0, bottom - top + 1))
+        width = max(0, rect.width() - self.right_inset)
+        return QRect(rect.left(), top, width, max(0, bottom - top + 1))
 
     def toast_geometry(self, content_height: int) -> QRect:
         """Bottom-right rectangle for a toast stack of ``content_height`` pixels."""

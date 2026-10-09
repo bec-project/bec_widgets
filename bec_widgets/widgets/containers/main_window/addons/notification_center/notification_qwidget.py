@@ -718,7 +718,7 @@ class NotificationHostQWidget(NotificationHostBase):
         self.bell.set_state(state, tokens)
 
     def _place_views(self) -> None:
-        if self.drawer.isVisible():
+        if self.drawer.isVisible() and not self.drawer_docked:
             self.drawer.setGeometry(self.drawer_geometry())
             self.drawer.raise_()
         if self.toasts.isVisible():
