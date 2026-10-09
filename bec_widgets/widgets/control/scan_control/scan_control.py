@@ -317,7 +317,18 @@ class ScanControl(BECWidget, QWidget):
     def _update_run_button_state(self) -> None:
         """Start requires a selected scan and valid metadata."""
         has_scan = bool(self.comboBox_scan_selection.currentText())
-        self.button_run_scan.setEnabled(has_scan and self._scan_metadata is not None)
+        metadata_valid = self._scan_metadata is not None
+        self.button_run_scan.setEnabled(has_scan and metadata_valid)
+        if not has_scan:
+            tooltip = "Select a scan to start."
+        elif not metadata_valid:
+            problems = self._metadata_form.validation_messages()
+            tooltip = "Complete the scan metadata to start."
+            if problems:
+                tooltip = f"{tooltip}\n" + "\n".join(problems)
+        else:
+            tooltip = ""
+        self.button_run_scan.setToolTip(tooltip)
 
     def _update_selected_scan_tooltip(self) -> None:
         """Mirror the selected item's documentation tooltip on the closed combo box."""
@@ -766,7 +777,7 @@ class ScanControl(BECWidget, QWidget):
             hide(bool): Hide or show the metadata form.
         """
         self._hide_metadata = hide
-        self._metadata_form.setVisible(not hide)
+        self._metadata_group.setVisible(not hide)
 
     @SafeProperty(bool)
     def hide_optional_metadata(self):

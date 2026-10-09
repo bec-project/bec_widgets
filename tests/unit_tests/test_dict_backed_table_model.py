@@ -175,13 +175,11 @@ def test_scan_metadata_form_drops_deleted_extra_row(qtbot):
     widget = create_widget(qtbot, ScanMetadata, initial_extras=[["k1", "v1"], ["k2", "v2"]])
     received: list[dict] = []
     widget.form_data_updated.connect(received.append)
-    table = widget._additional_metadata
+    editor = widget.form.extra_fields_section.editor
 
-    selection = table._table_view.selectionModel()
-    selection.select(table._table_model.index(0, 0), QItemSelectionModel.SelectionFlag.Select)
-    table.delete_selected_rows()
+    editor.rows()[0].remove_button.click()
 
-    assert table.dump_dict() == {"k2": "v2"}
+    assert editor.value() == {"k2": "v2"}
     assert received, "deleting a row must re-validate the form"
     assert "k1" not in received[-1]
     assert received[-1]["k2"] == "v2"

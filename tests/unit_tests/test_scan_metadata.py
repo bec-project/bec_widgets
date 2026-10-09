@@ -1,22 +1,18 @@
 from decimal import Decimal
-from typing import Set
 
 import pytest
 from bec_lib.metadata_schema import BasicScanMetadata
 from pydantic import Field
 from pydantic.types import Json
 from qtpy.QtCore import QItemSelectionModel, QPoint, Qt
+from qtpy.QtWidgets import QCheckBox, QDoubleSpinBox, QLineEdit, QSpinBox
 
-from bec_widgets.utils.forms_from_types.items import (
-    BoolFormItem,
-    DictFormItem,
-    DynamicFormItem,
-    FloatDecimalFormItem,
-    IntFormItem,
-    StrFormItem,
-)
+from bec_widgets.tests.utils import create_widget
+from bec_widgets.utils.forms_from_types.entry_list_editor import EntryListEditor
+from bec_widgets.utils.forms_from_types.pydantic_widget_form import OptionalValueWidget
 from bec_widgets.widgets.editors.dict_backed_table import DictBackedTable
 from bec_widgets.widgets.editors.scan_metadata.scan_metadata import ScanMetadata
+from bec_widgets.widgets.utility.spinbox.decimal_spinbox import BECSpinBox
 
 # pylint: disable=no-member
 # pylint: disable=missing-function-docstring
@@ -40,8 +36,22 @@ class ExampleSchema(BasicScanMetadata):
     unsupported_class: Json = Field(default=set())
 
 
+TEST_VALUES = {
+    "sample_name": "test name",
+    "str_optional": None,
+    "str_required": "something",
+    "bool_optional": None,
+    "bool_required_nodefault": False,
+    "int_default": 21,
+    "int_nodefault_optional": -10,
+    "float_nodefault": 0.1,
+    "decimal_dp_limits_nodefault": 456.789,
+    "dict_default": {"test_dict": "values"},
+    "unsupported_class": '["set", "item"]',
+}
+
 TEST_DICT = {
-    "scan_name": "",
+    "scan_name": "example_scan",
     "comment": "",
     "sample_name": "test name",
     "str_optional": None,
@@ -59,131 +69,158 @@ TEST_DICT = {
 
 
 @pytest.fixture
-def example_md():
-    return ExampleSchema.model_validate(TEST_DICT)
+def schema_registry(monkeypatch):
+    monkeypatch.setattr(
+        "bec_lib.metadata_schema._get_metadata_schema_registry",
+        lambda: {"example_scan": ExampleSchema},
+    )
 
 
 @pytest.fixture
-def empty_metadata_widget(qtbot):
-    widget = ScanMetadata()
-    widget._additional_metadata._table_model._data = [["extra_field", "extra_data"]]
-    qtbot.addWidget(widget)
+def metadata_widget(qtbot, schema_registry):
+    widget = create_widget(
+        qtbot,
+        ScanMetadata,
+        scan_name="example_scan",
+        initial_extras=[["extra_field", "extra_data"]],
+    )
     yield widget
 
 
-@pytest.fixture
-def metadata_widget(empty_metadata_widget: ScanMetadata):
-    widget = empty_metadata_widget
-    widget._md_schema = ExampleSchema
-    widget.populate()
+def test_fields_use_matching_widgets(metadata_widget: ScanMetadata):
+    widgets = metadata_widget.form.widgets
+    for name in ["scan_name", "comment", "sample_name", "str_required", "unsupported_class"]:
+        assert type(widgets[name]) is QLineEdit, name
+    assert isinstance(metadata_widget.form.input_widget("str_optional"), QLineEdit)
+    assert metadata_widget.form.input_widget("str_optional").maxLength() == 23
+    assert isinstance(widgets["bool_optional"], OptionalValueWidget)
+    assert isinstance(widgets["bool_required_default"], QCheckBox)
+    assert isinstance(widgets["bool_required_nodefault"], QCheckBox)
+    assert isinstance(widgets["int_default"], QSpinBox)
+    assert isinstance(widgets["int_nodefault_optional"], OptionalValueWidget)
+    assert isinstance(widgets["float_nodefault"], BECSpinBox)
+    decimal = widgets["decimal_dp_limits_nodefault"]
+    assert type(decimal) is QDoubleSpinBox
+    assert decimal.decimals() == 2
+    assert (decimal.minimum(), decimal.maximum()) == (pytest.approx(1.01), pytest.approx(34.5))
+    assert isinstance(widgets["dict_default"], EntryListEditor)
 
-    scan_name = widget._form_grid.layout().itemAtPosition(0, 1).widget()
-    comment = widget._form_grid.layout().itemAtPosition(1, 1).widget()
-    sample_name = widget._form_grid.layout().itemAtPosition(2, 1).widget()
-    str_optional = widget._form_grid.layout().itemAtPosition(3, 1).widget()
-    str_required = widget._form_grid.layout().itemAtPosition(4, 1).widget()
-    bool_optional = widget._form_grid.layout().itemAtPosition(5, 1).widget()
-    bool_required_default = widget._form_grid.layout().itemAtPosition(6, 1).widget()
-    bool_required_nodefault = widget._form_grid.layout().itemAtPosition(7, 1).widget()
-    int_default = widget._form_grid.layout().itemAtPosition(8, 1).widget()
-    int_nodefault_optional = widget._form_grid.layout().itemAtPosition(9, 1).widget()
-    float_nodefault = widget._form_grid.layout().itemAtPosition(10, 1).widget()
-    decimal_dp_limits_nodefault = widget._form_grid.layout().itemAtPosition(11, 1).widget()
-    dict_default = widget._form_grid.layout().itemAtPosition(12, 1).widget()
-    unsupported_class = widget._form_grid.layout().itemAtPosition(13, 1).widget()
 
-    yield (
-        widget,
-        {
-            "scan_name": scan_name,
-            "comment": comment,
-            "sample_name": sample_name,
-            "str_optional": str_optional,
-            "str_required": str_required,
-            "bool_optional": bool_optional,
-            "bool_required_default": bool_required_default,
-            "bool_required_nodefault": bool_required_nodefault,
-            "int_default": int_default,
-            "int_nodefault_optional": int_nodefault_optional,
-            "float_nodefault": float_nodefault,
-            "decimal_dp_limits_nodefault": decimal_dp_limits_nodefault,
-            "dict_default": dict_default,
-            "unsupported_class": unsupported_class,
-        },
+def test_required_fields_are_marked(metadata_widget: ScanMetadata):
+    form = metadata_widget.form
+    assert form.layout().labelForField(form.field_widget("str_required")).text() == (
+        "Str required *"
     )
+    assert form.layout().labelForField(form.field_widget("comment")).text() == "Comment"
 
 
-def fill_components(components: dict[str, DynamicFormItem]):
-    components["sample_name"].setValue("test name")
-    components["str_optional"].setValue(None)
-    components["str_required"].setValue("something")
-    components["bool_optional"].setValue(None)
-    components["bool_required_nodefault"].setValue(False)
-    components["int_default"].setValue(21)
-    components["int_nodefault_optional"].setValue(-10)
-    components["float_nodefault"].setValue(0.1)
-    components["decimal_dp_limits_nodefault"].setValue(456.789)
-    components["dict_default"].setValue({"test_dict": "values"})
-    components["unsupported_class"].setValue(r'["set", "item"]')
+def test_form_data_includes_extras_and_scan_name(metadata_widget: ScanMetadata, qtbot):
+    metadata_widget.set_field_values(TEST_VALUES)
+    received = []
+    metadata_widget.form_data_updated.connect(received.append)
+
+    assert metadata_widget.validate_form()
+    # the emitted metadata is validated, so the Json field arrives parsed
+    assert received[-1] == TEST_DICT | {
+        "unsupported_class": ["set", "item"],
+        "extra_field": "extra_data",
+    }
+    # Decimals are sent as floats, like the other numbers
+    assert isinstance(received[-1]["decimal_dp_limits_nodefault"], float)
+    assert metadata_widget.get_form_data()["extra_field"] == "extra_data"
 
 
-def test_griditems_are_correct_class(
-    metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormItem]],
-):
-    _, components = metadata_widget
-    assert isinstance(components["sample_name"], StrFormItem)
-    assert isinstance(components["str_optional"], StrFormItem)
-    assert isinstance(components["str_required"], StrFormItem)
-    assert isinstance(components["bool_optional"], BoolFormItem)
-    assert isinstance(components["bool_required_default"], BoolFormItem)
-    assert isinstance(components["bool_required_nodefault"], BoolFormItem)
-    assert isinstance(components["int_default"], IntFormItem)
-    assert isinstance(components["int_nodefault_optional"], IntFormItem)
-    assert isinstance(components["float_nodefault"], FloatDecimalFormItem)
-    assert isinstance(components["decimal_dp_limits_nodefault"], FloatDecimalFormItem)
-    assert isinstance(components["dict_default"], DictFormItem)
-    assert isinstance(components["unsupported_class"], StrFormItem)
+def test_validation_messages(metadata_widget: ScanMetadata):
+    metadata_widget.set_field_values(TEST_VALUES | {"str_required": ""})
+    cleared = []
+    metadata_widget.form_data_cleared.connect(cleared.append)
+
+    assert not metadata_widget.validate_form()
+    assert cleared == [None]
+    assert metadata_widget.validation_messages() == ["Str required: Field required"]
+    assert metadata_widget._summary.isVisibleTo(metadata_widget)
+    assert "Str required: Field required" in metadata_widget._summary.text.text()
+    assert metadata_widget.form.input_widget("str_required").property("state") == "error"
+
+    metadata_widget.set_field_values({"str_required": "something"})
+    assert metadata_widget.validate_form()
+    assert not metadata_widget._summary.isVisibleTo(metadata_widget)
+    assert metadata_widget.form.input_widget("str_required").property("state") == ""
 
 
-def test_grid_to_dict(metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormItem]]):
-    widget, components = metadata_widget = metadata_widget
-    fill_components(components)
-
-    assert widget._dict_from_grid() == TEST_DICT
-    assert widget.get_form_data() == TEST_DICT | {"extra_field": "extra_data"}
+def test_numbers_clipped_to_limits(metadata_widget: ScanMetadata):
+    metadata_widget.set_field_values(TEST_VALUES | {"decimal_dp_limits_nodefault": -56})
+    assert metadata_widget.get_form_data()["decimal_dp_limits_nodefault"] == pytest.approx(1.01)
+    assert metadata_widget.validate_form()
 
 
-def test_validation(metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormItem]]):
-    widget, components = metadata_widget = metadata_widget
-    assert widget._validity.compact_status.styleSheet().startswith(
-        widget._validity.compact_status.default_led[:114]
-    )
-
-    fill_components(components)
-    widget.validate_form()
-    assert widget._validity_message.text() == "No errors!"
-
-    components["bool_required_nodefault"]._main_widget.clear()
-    widget.validate_form()
-    assert "Input should be a valid boolean" in widget._validity_message.text()
-    components["bool_required_nodefault"].setValue(True)
-
-    components["float_nodefault"]._main_widget.clear()
-    widget.validate_form()
-    assert "Input should be a valid number" in widget._validity_message.text()
-    components["float_nodefault"].setValue(True)
+def test_editing_a_field_revalidates(metadata_widget: ScanMetadata):
+    metadata_widget.set_field_values(TEST_VALUES)
+    received = []
+    metadata_widget.validity_proc.connect(received.append)
+    metadata_widget.form.input_widget("str_required").setText("x")
+    assert received[-1] is True
+    metadata_widget.form.input_widget("str_required").setText("")
+    assert received[-1] is False
 
 
-def test_numbers_clipped_to_limits(
-    metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormItem]],
-):
-    widget, components = metadata_widget = metadata_widget
-    fill_components(components)
+@pytest.mark.parametrize(
+    "key, message",
+    [
+        ("sample_name", "'sample_name' is already a field of this form."),
+        ("extra_field", "Key 'extra_field' is used more than once."),
+        ("", "Enter a key for the value."),
+    ],
+)
+def test_invalid_additional_metadata_keys(metadata_widget: ScanMetadata, key, message):
+    metadata_widget.set_field_values(TEST_VALUES)
+    editor = metadata_widget.form.extra_fields_section.editor
+    row = editor.add_entry(key, "value")
 
-    components["decimal_dp_limits_nodefault"].setValue(-56)
-    assert components["decimal_dp_limits_nodefault"].getValue() == pytest.approx(1.01)
-    widget.validate_form()
-    assert widget._validity_message.text() == "No errors!"
+    assert not metadata_widget.validate_form()
+    assert metadata_widget.validation_messages() == [f"Additional metadata: {message}"]
+    assert row.key_edit.property("state") == "error"
+
+    row.key_edit.setText("unique_key")
+    assert metadata_widget.validate_form()
+    assert row.key_edit.property("state") == ""
+    assert metadata_widget.get_form_data()["unique_key"] == "value"
+
+
+def test_blank_additional_metadata_rows_are_ignored(metadata_widget: ScanMetadata):
+    metadata_widget.set_field_values(TEST_VALUES)
+    metadata_widget.form.extra_fields_section.editor.add_button.click()
+
+    assert metadata_widget.validate_form()
+    assert "" not in metadata_widget.get_form_data()
+
+
+def test_switching_scans_keeps_shared_values_and_extras(metadata_widget: ScanMetadata):
+    metadata_widget.set_field_values(TEST_VALUES | {"comment": "keep me"})
+    metadata_widget.update_with_new_scan("other_scan")
+
+    assert metadata_widget._md_schema is BasicScanMetadata
+    assert set(metadata_widget.form.widgets) == {"scan_name", "comment", "sample_name"}
+    assert metadata_widget.form.input_widget("scan_name").placeholderText() == "other_scan"
+    assert metadata_widget.get_form_data() == {
+        "scan_name": "other_scan",
+        "comment": "keep me",
+        "sample_name": "test name",
+        "extra_field": "extra_data",
+    }
+
+
+def test_typed_scan_name_is_kept(metadata_widget: ScanMetadata):
+    metadata_widget.set_field_values({"scan_name": "my alignment"})
+    assert metadata_widget.get_form_data()["scan_name"] == "my alignment"
+
+
+def test_hide_optional_metadata(metadata_widget: ScanMetadata):
+    section = metadata_widget.form.extra_fields_section
+    assert section.isVisibleTo(metadata_widget)
+    metadata_widget.hide_optional_metadata = True
+    assert metadata_widget.hide_optional_metadata
+    assert not section.isVisibleTo(metadata_widget)
 
 
 @pytest.fixture

@@ -8,11 +8,10 @@ import pytest
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.messages import AvailableResourceMessage, ScanHistoryMessage
 from bec_lib.scan_history import ScanHistory
-from qtpy.QtCore import QModelIndex, QPoint, Qt
-from qtpy.QtWidgets import QCheckBox, QComboBox, QDialog, QStyle
+from qtpy.QtCore import QPoint, Qt
+from qtpy.QtWidgets import QCheckBox, QComboBox, QDialog, QLineEdit, QStyle
 
 from bec_widgets.tests.client_mocks import mocked_client
-from bec_widgets.utils.forms_from_types.items import StrFormItem
 from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.control.scan_control import ScanControl
@@ -1750,16 +1749,12 @@ def test_scan_metadata_is_updated_even_without_default_form_changes(
     assert scan_control._metadata_form._scan_name == "line_scan"
     scan_control.comboBox_scan_selection.setCurrentText("grid_scan")
     assert scan_control._metadata_form._scan_name == "grid_scan"
-    scan_control._metadata_form._additional_metadata._add_button.click()
-    qtbot.wait(100)
-    table_model = scan_control._metadata_form._additional_metadata._table_model
-    model_key = table_model.index(0, 0, QModelIndex())
-    table_model.setData(model_key, "test key 1", Qt.EditRole)
-    model_value = model_key.siblingAtColumn(1)
-    table_model.setData(model_value, "test value 1", Qt.EditRole)
-    assert scan_control._metadata_form._additional_metadata.dump_dict() == {
-        "test key 1": "test value 1"
-    }
+    editor = scan_control._metadata_form.form.extra_fields_section.editor
+    editor.add_button.click()
+    row = editor.rows()[0]
+    row.key_edit.setText("test key 1")
+    row.value_edit.setText("test value 1")
+    assert editor.value() == {"test key 1": "test value 1"}
     assert scan_control._scan_metadata == {
         "comment": "",
         "sample_name": "",
@@ -1772,22 +1767,42 @@ def test_scan_metadata_is_connected(scan_control):
     assert scan_control._metadata_form._scan_name == "line_scan"
     scan_control.comboBox_scan_selection.setCurrentText("grid_scan")
     assert scan_control._metadata_form._scan_name == "grid_scan"
-    sample_name = scan_control._metadata_form._form_grid.layout().itemAtPosition(2, 1).widget()
-    assert isinstance(sample_name, StrFormItem)
-    sample_name._main_widget.setText("Test Sample")
+    sample_name = scan_control._metadata_form.form.input_widget("sample_name")
+    assert isinstance(sample_name, QLineEdit)
+    sample_name.setText("Test Sample")
 
-    scan_control._metadata_form._additional_metadata._table_model._data = TEST_TABLE_ENTRY
-    scan_control._metadata_form.validate_form()
+    scan_control._metadata_form.set_extra_metadata(dict(TEST_TABLE_ENTRY))
     assert scan_control._scan_metadata == TEST_MD
+
+
+def test_invalid_scan_metadata_disables_start_and_explains_why(scan_control):
+    assert scan_control.button_run_scan.isEnabled()
+    assert scan_control.button_run_scan.toolTip() == ""
+
+    scan_control._metadata_form.set_extra_metadata({"sample_name": "clash"})
+
+    assert scan_control._scan_metadata is None
+    assert not scan_control.button_run_scan.isEnabled()
+    assert "Complete the scan metadata" in scan_control.button_run_scan.toolTip()
+    assert "already a field of this form" in scan_control.button_run_scan.toolTip()
+
+    scan_control._metadata_form.set_extra_metadata({"operator": "jan"})
+    assert scan_control.button_run_scan.isEnabled()
+    assert scan_control._scan_metadata["operator"] == "jan"
+
+
+def test_hide_metadata_hides_whole_section(scan_control):
+    scan_control.hide_metadata = True
+    assert not scan_control._metadata_group.isVisibleTo(scan_control)
+    scan_control.hide_metadata = False
+    assert scan_control._metadata_group.isVisibleTo(scan_control)
 
 
 def test_scan_metadata_is_passed_to_scan_function(scan_control: ScanControl):
     scan_control.comboBox_scan_selection.setCurrentText("grid_scan")
 
-    sample_name = scan_control._metadata_form._form_grid.layout().itemAtPosition(2, 1).widget()
-    sample_name._main_widget.setText("Test Sample")
-    scan_control._metadata_form._additional_metadata._table_model._data = TEST_TABLE_ENTRY
-    scan_control._metadata_form.validate_form()
+    scan_control._metadata_form.form.input_widget("sample_name").setText("Test Sample")
+    scan_control._metadata_form.set_extra_metadata(dict(TEST_TABLE_ENTRY))
 
     assert scan_control._scan_metadata == TEST_MD
 
