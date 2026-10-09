@@ -101,3 +101,57 @@ class EmptyStateQml(QWidget):
     def cleanup(self) -> None:
         """Unload the scene before the controller goes away."""
         release_quick_widget(self.view)
+
+
+class ProfileSwitcherQmlPopup(QFrame):
+    """The profile switcher as a popup rendered with Qt Quick.
+
+    Args:
+        controller(ProfileSwitcherController): Shared switcher state.
+        parent(QWidget | None): Parent widget.
+    """
+
+    def __init__(self, controller, parent: QWidget | None = None):
+        super().__init__(parent, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
+        self.setObjectName("profileSwitcherQml")
+        self.controller = controller
+        self.resize(420, 460)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.view = create_quick_widget(
+            self, QML_DIR / "ProfileSwitcher.qml", {"backend": controller}
+        )
+        self.view.setClearColor(ThemeTokens().card)
+        layout.addWidget(self.view)
+        root = self.view.rootObject()
+        if root is not None:
+            root.closeRequested.connect(self.close)
+        controller.profile_chosen.connect(lambda *_: self.close())
+
+    def open_at(self, anchor: QWidget | None) -> None:
+        """Show the switcher below ``anchor``, right-aligned with it."""
+        self.controller.reset()
+        if anchor is not None:
+            pos = anchor.mapToGlobal(QPoint(anchor.width() - self.width(), anchor.height() + 4))
+        else:
+            parent = self.parentWidget()
+            center = parent.mapToGlobal(parent.rect().center()) if parent else QPoint(200, 200)
+            pos = center - QPoint(self.width() // 2, self.height() // 2)
+        screen = self.screen().availableGeometry() if self.screen() else None
+        if screen is not None:
+            pos.setX(max(screen.left(), min(pos.x(), screen.right() - self.width())))
+            pos.setY(max(screen.top(), min(pos.y(), screen.bottom() - self.height())))
+        self.move(pos)
+        self.show()
+        self.view.setFocus(Qt.FocusReason.PopupFocusReason)
+        root = self.view.rootObject()
+        if root is not None:
+            root.focusSearch()
+
+    def refresh_theme(self) -> None:
+        """The QML scene follows ``theme`` by itself; only the clear colour is updated."""
+        self.view.setClearColor(ThemeTokens().card)
+
+    def cleanup(self) -> None:
+        """Unload the scene before the controller goes away."""
+        release_quick_widget(self.view)

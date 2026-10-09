@@ -245,3 +245,96 @@ def test_legacy_mode_keeps_old_chrome(qtbot, mocked_client, monkeypatch):
     assert QtAds.CDockManager.testConfigFlag(flag.DockAreaHasCloseButton)
     widget = area.new("Waveform")
     assert area.dock_list()[0].windowTitle() == widget.objectName()
+
+
+# ---------------------------------------------------------------------- profile switcher
+
+
+def _save_two_profiles(area):
+    area.new("Waveform")
+    area.save_profile("Alpha", show_dialog=False, quick_select=True)
+    area.new("PositionerBox")
+    area.save_profile("Beta", show_dialog=False, quick_select=False)
+    area.load_profile("Alpha")
+
+
+def test_profile_combo_opens_switcher(dock_area, qtbot):
+    _save_two_profiles(dock_area)
+    combo = dock_area.toolbar.components.get_action("workspace_combo").widget
+    combo.showPopup()
+    switcher = dock_area._chrome.switcher
+    assert switcher.isVisible()
+    rows = dock_area._chrome.switcher_controller.rows.items
+    assert [(r["name"], r["section"], r["isCurrent"]) for r in rows] == [
+        ("Alpha", "In the toolbar list", True),
+        ("Beta", "Other profiles", False),
+    ]
+    assert dock_area._chrome.switcher_controller.highlight == 0
+    assert dock_area._chrome.switcher_controller.thumbnail_for("Alpha") is not None
+
+
+def test_profile_switcher_search_and_open(dock_area, qtbot):
+    _save_two_profiles(dock_area)
+    dock_area._chrome.open_profile_switcher(None)
+    switcher = dock_area._chrome.switcher
+    switcher.search.setText("bet")
+    assert [r["name"] for r in dock_area._chrome.switcher_controller.rows.items] == ["Beta"]
+    qtbot.keyClick(switcher.search, Qt.Key.Key_Return)
+    assert dock_area._current_profile_name == "Beta"
+    assert not switcher.isVisible()
+    switcher.search.setText("nothing like this")
+    assert dock_area._chrome.switcher_controller.rows.count == 0
+
+
+@pytest.mark.parametrize(
+    "key, method",
+    [
+        ("save", "save_profile_dialog"),
+        ("revert", "restore_baseline_profile"),
+        ("library", "show_workspace_manager"),
+    ],
+)
+def test_profile_switcher_footer(dock_area, key, method):
+    from unittest import mock
+
+    chrome = dock_area._chrome
+    chrome.open_profile_switcher(None)
+    requested = []
+    chrome.switcher_controller.action_requested.connect(requested.append)
+    chrome.switcher_controller.action_requested.disconnect(chrome._run_profile_action)
+    button = chrome.switcher.footer_buttons[key]
+    button.setEnabled(True)
+    button.click()
+    assert requested == [key]
+    assert not chrome.switcher.isVisible()
+
+    area = mock.MagicMock()
+    with mock.patch.object(chrome, "area", area):
+        chrome._run_profile_action(key)
+    getattr(area, method).assert_called_once()
+
+
+def test_profile_preview_shows_only_the_docks(dock_area):
+    from qtpy.QtGui import QPixmap
+
+    dock_area.new("Waveform")
+    pixmap = QPixmap()
+    assert pixmap.loadFromData(bytes(dock_area.preview_bytes()))
+    assert pixmap.height() == dock_area.dock_manager.height()
+    assert pixmap.height() < dock_area.height()
+
+
+def test_qml_profile_switcher_loads(qtbot, mocked_client, monkeypatch):
+    monkeypatch.setenv("BEC_DOCK_CHROME", "qml")
+    area = BECDockArea(client=mocked_client, startup_profile=None)
+    qtbot.addWidget(area)
+    area.show()
+    qtbot.waitExposed(area)
+    _save_two_profiles(area)
+    area._chrome.open_profile_switcher(None)
+    view = area._chrome.switcher.view
+    assert view.rootObject() is not None
+    assert not view.errors()
+    assert area._chrome.switcher_controller.rows.items[0]["previewUrl"].startswith("image://")
+    area._chrome.switcher_controller.activate(1)
+    assert area._current_profile_name == "Beta"

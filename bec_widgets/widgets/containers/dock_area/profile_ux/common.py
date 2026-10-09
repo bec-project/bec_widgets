@@ -528,7 +528,8 @@ class ProfileActions:
         if dock_area is None or not dock_area.isVisible():
             return None
         pixmap = QPixmap()
-        data = dock_area.screenshot_bytes()
+        capture = getattr(dock_area, "preview_bytes", dock_area.screenshot_bytes)
+        data = capture()
         if not data or not pixmap.loadFromData(bytes(data)):
             return None
         return pixmap

@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import Callable
 
 from qtpy.QtCore import Qt
-from qtpy.QtGui import QFont
-from qtpy.QtWidgets import QComboBox, QSizePolicy
+from qtpy.QtGui import QFont, QPainter
+from qtpy.QtWidgets import QComboBox, QSizePolicy, QWidget
 
 from bec_widgets import SafeSlot
 from bec_widgets.utils.toolbars.actions import MaterialIconAction, WidgetAction
@@ -20,9 +20,46 @@ class ProfileComboBox(QComboBox):
         super().__init__(parent)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._quick_provider: Callable[[], list[str]] = list_quick_profiles
+        self._switcher: Callable[[QWidget], None] | None = None
+        self._painter: Callable[[QComboBox, QPainter], None] | None = None
 
     def set_quick_profile_provider(self, provider: Callable[[], list[str]]) -> None:
         self._quick_provider = provider
+
+    def set_switcher(
+        self,
+        opener: Callable[[QWidget], None] | None,
+        painter: Callable[[QComboBox, QPainter], None] | None = None,
+    ) -> None:
+        """
+        Replace the drop-down list with a custom switcher popup.
+
+        Args:
+            opener(Callable | None): Called with this combo instead of showing the list; None
+                restores the plain list.
+            painter(Callable | None): Paints the closed combo instead of the default style.
+        """
+        self._switcher = opener
+        self._painter = painter if opener is not None else None
+        self.update()
+
+    def showPopup(self):  # pylint: disable=invalid-name
+        """Open the switcher when one is installed, else the plain list."""
+        if self._switcher is not None:
+            self._switcher(self)
+            return
+        super().showPopup()
+
+    def paintEvent(self, event):  # pylint: disable=invalid-name
+        """Paint with the installed switcher painter, if any."""
+        if self._painter is None:
+            super().paintEvent(event)
+            return
+        painter = QPainter(self)
+        try:
+            self._painter(self, painter)
+        finally:
+            painter.end()
 
     def _refresh_profiles(
         self, current_text: str, active_profile: str | None = None, show_empty_profile: bool = False

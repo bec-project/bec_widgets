@@ -5,7 +5,8 @@
 * human dock titles (``Motor``, ``Waveform 2``) that can be renamed by double-clicking the tab,
 * tab-only close with an Undo bar instead of deleting a whole group at once,
 * one Add widget gallery with search and a placement choice (Ctrl+Shift+A),
-* an empty state with starter layouts.
+* an empty state with starter layouts,
+* a profile switcher with previews in place of the toolbar profile list.
 
 The gallery and the empty state come in a QWidget and a QML version; ``BEC_DOCK_CHROME`` picks
 one (see :func:`~.ads_style.chrome_mode`).
@@ -42,7 +43,7 @@ if TYPE_CHECKING:  # pragma: no cover
 __all__ = ["DockChrome", "chrome_mode", "configure_ads_flags", "apply_dock_chrome_style"]
 
 
-class DockChrome(QObject):
+class DockChrome(QObject):  # pylint: disable=too-many-instance-attributes
     """Owns the gallery, empty state, undo bar and tab renaming of one dock area.
 
     Args:
@@ -63,6 +64,8 @@ class DockChrome(QObject):
         self._batch_open = False
         self._last_dock: CDockWidget | None = None
         self.gallery = None
+        self.switcher = None
+        self.switcher_controller = None
 
         self.undo_bar = UndoBar(area)
         self.undo_bar.undo_requested.connect(self.undo_close)
@@ -254,6 +257,69 @@ class DockChrome(QObject):
                 return dock
         return None
 
+    # ------------------------------------------------------------------ profile switcher
+    def attach_profile_switcher(self, combo) -> None:
+        """Make the toolbar profile combo open the profile switcher instead of a plain list."""
+        from bec_widgets.widgets.containers.dock_area.chrome.profile_switcher_qwidget import (
+            paint_profile_button,
+        )
+
+        combo.setMinimumWidth(200)
+        combo.setFixedHeight(30)
+        combo.setToolTip("Switch profile")
+        combo.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
+        combo.set_switcher(self.open_profile_switcher, paint_profile_button)
+
+    def open_profile_switcher(self, anchor: QWidget | None = None) -> None:
+        """Open the profile switcher below ``anchor``."""
+        if self.switcher is None:
+            from bec_widgets.widgets.containers.dock_area.chrome.profile_switcher import (
+                ProfileSwitcherController,
+            )
+            from bec_widgets.widgets.containers.dock_area.profile_ux.common import ProfileActions
+
+            publish = None
+            if self.mode == "qml":
+                from bec_widgets.widgets.containers.dock_area.profile_ux.profile_qml import (
+                    preview_provider,
+                )
+
+                publish = preview_provider().publish
+            self.switcher_controller = ProfileSwitcherController(
+                ProfileActions(self.area), publish, self
+            )
+            self.switcher_controller.profile_chosen.connect(self._switch_profile)
+            self.switcher_controller.action_requested.connect(self._run_profile_action)
+            if self.mode == "qml":
+                from bec_widgets.widgets.containers.dock_area.chrome.chrome_qml import (
+                    ProfileSwitcherQmlPopup,
+                )
+
+                self.switcher = ProfileSwitcherQmlPopup(self.switcher_controller, self.area)
+            else:
+                from bec_widgets.widgets.containers.dock_area.chrome import profile_switcher_qwidget
+
+                self.switcher = profile_switcher_qwidget.ProfileSwitcherPopup(
+                    self.switcher_controller, self.area
+                )
+        self.switcher.open_at(anchor)
+
+    def _switch_profile(self, name: str, new_tab: bool) -> None:
+        actions = self.switcher_controller.actions
+        if actions.host is not None and (new_tab or actions.open_elsewhere(name)):
+            actions.open(name, new_tab=True)
+            return
+        if name != actions.current_profile():
+            self.area.load_profile(name)
+
+    def _run_profile_action(self, key: str) -> None:
+        if key == "save":
+            self.area.save_profile_dialog()
+        elif key == "revert":
+            self.area.restore_baseline_profile(show_dialog=True)
+        elif key == "library":
+            self.area.show_workspace_manager()
+
     # ------------------------------------------------------------------ empty state
     def _on_dock_added(self, dock: CDockWidget) -> None:
         self._last_dock = dock
@@ -293,16 +359,19 @@ class DockChrome(QObject):
         apply_dock_chrome_style(self.area.dock_manager, True)
         self.undo_bar.refresh_theme()
         self.empty_state.refresh_theme()
-        if self.gallery is not None:
-            self.gallery.refresh_theme()
+        for popup in (self.gallery, self.switcher):
+            if popup is not None:
+                popup.refresh_theme()
 
     def cleanup(self) -> None:
         """Delete pending docks and unload QML scenes."""
         self.flush()
-        for view in (self.gallery, self.empty_state):
+        for view in (self.gallery, self.switcher, self.empty_state):
             if view is not None and hasattr(view, "cleanup"):
                 view.cleanup()
-        if self.gallery is not None:
-            self.gallery.close()
-            self.gallery.deleteLater()
-            self.gallery = None
+        for popup in (self.gallery, self.switcher):
+            if popup is not None:
+                popup.close()
+                popup.deleteLater()
+        self.gallery = None
+        self.switcher = None

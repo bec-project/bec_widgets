@@ -7,7 +7,7 @@ from typing import Callable, Literal, Mapping, Sequence
 import slugify
 from bec_lib import bec_logger
 from bec_qthemes import material_icon
-from qtpy.QtCore import QSize, Qt, Signal
+from qtpy.QtCore import QBuffer, QByteArray, QIODevice, QSize, Qt, Signal
 from qtpy.QtGui import QPixmap
 from qtpy.QtWidgets import (
     QApplication,
@@ -89,6 +89,8 @@ from bec_widgets.widgets.containers.qt_ads import CDockWidget
 logger = bec_logger.logger
 
 _PROFILE_NAMESPACE_UNSET = object()
+# Widest profile preview stored with the improved chrome, in pixels
+PREVIEW_MAX_WIDTH = 1280
 
 PROFILE_STATE_KEYS = {key: SETTINGS_KEYS[key] for key in ("geom", "state", "ads_state")}
 StartupProfile = Literal["restore", "skip"] | str | None
@@ -646,6 +648,9 @@ class BECDockArea(DockAreaWidget):
         self.toolbar.components.get_action("attach_all").action.setToolTip(
             "Dock all floating windows back into this workspace"
         )
+        self._chrome.attach_profile_switcher(
+            self.toolbar.components.get_action("workspace_combo").widget
+        )
         self._refresh_modern_toolbar()
 
     def _refresh_modern_toolbar(self) -> None:
@@ -673,9 +678,36 @@ class BECDockArea(DockAreaWidget):
         self.screenshot_button.setIcon(
             material_icon("photo_camera", size=(36, 36), color=tokens.fg_muted)
         )
+        self.toolbar.components.get_action("workspace_combo").widget.update()
 
     def _on_lock_button_toggled(self, checked: bool) -> None:
         self._set_editable(not checked)
+
+    def preview_bytes(self) -> QByteArray:
+        """
+        Image of the workspace for profile previews, encoded as PNG.
+
+        With the improved chrome only the docks are captured (no toolbar, no empty-state or
+        undo overlays) and the image is limited to 1280 px wide; otherwise the whole dock area.
+
+        Returns:
+            QByteArray: PNG bytes, empty when nothing could be captured.
+        """
+        if self._chrome is None:
+            return self.screenshot_bytes()
+        pixmap = self.dock_manager.grab()
+        if pixmap.isNull():
+            return QByteArray()
+        if pixmap.width() > PREVIEW_MAX_WIDTH:
+            pixmap = pixmap.scaledToWidth(
+                PREVIEW_MAX_WIDTH, Qt.TransformationMode.SmoothTransformation
+            )
+        data = QByteArray()
+        buffer = QBuffer(data)
+        buffer.open(QIODevice.OpenModeFlag.WriteOnly)
+        pixmap.save(buffer, "PNG")
+        buffer.close()
+        return data
 
     @SafeSlot()
     def copy_screenshot(self) -> None:
@@ -849,7 +881,7 @@ class BECDockArea(DockAreaWidget):
         self.state_manager.save_state(settings=settings)
         write_manifest(settings, self.dock_list())
         if save_preview:
-            ba = self.screenshot_bytes()
+            ba = self.preview_bytes()
             if ba and len(ba) > 0:
                 settings.setValue(SETTINGS_KEYS["screenshot"], ba)
                 settings.setValue(SETTINGS_KEYS["screenshot_at"], now_iso_utc())
@@ -1190,7 +1222,7 @@ class BECDockArea(DockAreaWidget):
             current_pixmap = None
             if self.isVisible():
                 current_pixmap = QPixmap()
-                ba = bytes(self.screenshot_bytes())
+                ba = bytes(self.preview_bytes())
                 current_pixmap.loadFromData(ba)
             if current_pixmap is None or current_pixmap.isNull():
                 current_pixmap = load_runtime_profile_screenshot(target, namespace=namespace)
