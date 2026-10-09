@@ -411,12 +411,16 @@ class RingProgressBar(BECWidget, QWidget):
         self.layout.addWidget(self.toolbar)
 
         # Placeholder for the actual ring progress bar widget
-        self.ring_progress_bar = RingProgressContainerWidget(self)
+        self.ring_progress_bar = self._create_ring_container()
         self.layout.addWidget(self.ring_progress_bar)
 
         self.settings_dialog = None
 
         self.toolbar.show_bundles(["rpb_settings"])
+
+    def _create_ring_container(self) -> RingProgressContainerWidget:
+        """Create the widget that holds and renders the rings."""
+        return RingProgressContainerWidget(self)
 
     def apply_theme(self, theme: str):
         super().apply_theme(theme)
