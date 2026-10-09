@@ -469,6 +469,8 @@ SETTINGS_KEYS = {
     "screenshot": "profile/screenshot",
     "screenshot_at": "profile/screenshot_at",
     "last_profile": "app/last_profile",
+    "open_workspaces": "app/open_workspaces",
+    "current_workspace": "app/current_workspace",
 }
 
 
@@ -662,6 +664,60 @@ def set_last_profile(
         s.setValue(key, name)
     else:
         s.remove(key)
+
+
+def _workspace_tabs_key(key: str, namespace: str | None) -> str:
+    ns = slugify.slugify(namespace, separator="_") if namespace else None
+    base = SETTINGS_KEYS[key]
+    return f"{base}/{ns}" if ns else base
+
+
+def get_open_workspaces(namespace: str | None = None) -> tuple[list[str], str | None]:
+    """
+    Retrieve the workspace tabs that were open when the app last persisted them.
+
+    Args:
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+
+    Returns:
+        tuple[list[str], str | None]: Profile names in tab order and the profile
+            of the active tab (``None`` when unknown).
+    """
+    s = _app_settings()
+    raw = s.value(_workspace_tabs_key("open_workspaces", namespace), [])
+    if isinstance(raw, str):
+        raw = [raw] if raw else []
+    names: list[str] = []
+    for name in raw or []:
+        name = str(name).strip()
+        if name and name not in names:
+            names.append(name)
+    current = s.value(_workspace_tabs_key("current_workspace", namespace), "", type=str)
+    return names, (current or None)
+
+
+def set_open_workspaces(
+    names: list[str], current: str | None = None, namespace: str | None = None
+) -> None:
+    """
+    Persist the open workspace tabs (profile names in tab order) and the active one.
+
+    Args:
+        names (list[str]): Profile names in tab order. Unsaved workspaces are left out.
+        current (str | None, optional): Profile of the active tab. Defaults to ``None``.
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+    """
+    s = _app_settings()
+    key = _workspace_tabs_key("open_workspaces", namespace)
+    if names:
+        s.setValue(key, list(names))
+    else:
+        s.remove(key)
+    current_key = _workspace_tabs_key("current_workspace", namespace)
+    if current:
+        s.setValue(current_key, current)
+    else:
+        s.remove(current_key)
 
 
 def is_experimental_features_enabled() -> bool:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
-from typing import Literal, Mapping, Sequence
+from typing import Callable, Literal, Mapping, Sequence
 
 import slugify
 from bec_lib import bec_logger
@@ -124,6 +124,8 @@ class BECDockArea(DockAreaWidget):
     # Define a signal for mode changes
     mode_changed = Signal(str)
     profile_changed = Signal(str)
+    # Emitted instead of loading when the profile is already open in another dock area
+    profile_redirected = Signal(str)
 
     def __init__(
         self,
@@ -145,6 +147,8 @@ class BECDockArea(DockAreaWidget):
         self._auto_save_upon_exit = auto_save_upon_exit
         self._profile_management_enabled = enable_profile_management
         self._startup_profile = self._normalize_startup_profile(startup_profile)
+        # Optional hook set by a container (e.g. workspace tabs) that hosts several dock areas
+        self.profile_in_use_elsewhere: Callable[[str], bool] | None = None
         super().__init__(
             parent, default_add_direction=default_add_direction, title="BEC Dock Area", **kwargs
         )
@@ -660,6 +664,10 @@ class BECDockArea(DockAreaWidget):
         """Namespace used to scope runtime/baseline profile files for this dock area."""
         return self._resolve_profile_namespace()
 
+    def _is_profile_in_use_elsewhere(self, name: str | None) -> bool:
+        check = self.profile_in_use_elsewhere
+        return bool(name) and check is not None and bool(check(name))
+
     def _profile_exists(self, name: str, namespace: str | None) -> bool:
         return any(
             os.path.exists(path) for path in runtime_profile_candidates(name, namespace)
@@ -844,6 +852,14 @@ class BECDockArea(DockAreaWidget):
             # Overwrite existing settings profile when saving programmatically
             overwrite_existing = origin == "settings"
 
+        if name != current_profile and self._is_profile_in_use_elsewhere(name):
+            message = f"Profile '{name}' is open in another workspace tab."
+            if show_dialog:
+                QMessageBox.information(self, "Save Profile", message)
+            else:
+                logger.warning(message)
+            return
+
         origin_before_save = profile_origin(name, namespace=namespace)
         overwrite_baseline = overwrite_existing and origin_before_save == "settings"
 
@@ -914,8 +930,13 @@ class BECDockArea(DockAreaWidget):
             if not ok or not name:
                 return
 
-        namespace = self.profile_namespace
         prev_name = getattr(self, "_current_profile_name", None)
+        if name != prev_name and self._is_profile_in_use_elsewhere(name):
+            self._refresh_workspace_list()
+            self.profile_redirected.emit(name)
+            return
+
+        namespace = self.profile_namespace
         skip_pair = getattr(self, "_pending_autosave_skip", None)
         if prev_name and prev_name != name:
             if skip_pair and skip_pair == (prev_name, name):
