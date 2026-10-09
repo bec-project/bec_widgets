@@ -1,4 +1,5 @@
 import functools
+import os
 import sys
 import traceback
 from typing import Any, Callable, Literal
@@ -111,7 +112,9 @@ def SafeProperty(
                 error_msg = traceback.format_exc()
 
                 if popup_error:
-                    ErrorPopupUtility().custom_exception_hook(*sys.exc_info(), popup_error=True)
+                    ErrorPopupUtility().custom_exception_hook(
+                        *sys.exc_info(), popup_error=True, source=py_getter.__qualname__
+                    )
                 logger.error(f"SafeProperty error in GETTER of '{prop_name}':\n{error_msg}")
                 return default
 
@@ -173,7 +176,7 @@ def SafeProperty(
 
                         if popup_error:
                             ErrorPopupUtility().custom_exception_hook(
-                                *sys.exc_info(), popup_error=True
+                                *sys.exc_info(), popup_error=True, source=setter_func.__qualname__
                             )
                         logger.error(f"SafeProperty error in SETTER of '{prop_name}':\n{error_msg}")
                         return
@@ -298,7 +301,9 @@ def SafeSlot(*slot_args, **slot_kwargs):  # pylint: disable=invalid-name
                 slot_name = f"{method.__module__}.{method.__qualname__}"
                 error_msg = traceback.format_exc()
                 if call_params["popup_error"]:
-                    ErrorPopupUtility().custom_exception_hook(*sys.exc_info(), popup_error=True)
+                    ErrorPopupUtility().custom_exception_hook(
+                        *sys.exc_info(), popup_error=True, source=method.__qualname__
+                    )
                 logger.error(f"SafeSlot error in slot '{slot_name}':\n{error_msg}")
                 if call_params["raise_error"]:
                     raise
@@ -339,6 +344,12 @@ class WarningPopupUtility(QObject):
 _popup_utility_instance = None
 
 
+def _error_dialog_ui() -> str | None:
+    """Return ``"qwidget"`` or ``"qml"`` when ``BEC_ERROR_DIALOG`` selects the new dialog."""
+    value = os.environ.get("BEC_ERROR_DIALOG", "").strip().lower()
+    return value if value in ("qwidget", "qml") else None
+
+
 class _ErrorPopupUtility(QObject):
     """
     Utility class to manage error popups in the application to show error messages to the users.
@@ -346,10 +357,14 @@ class _ErrorPopupUtility(QObject):
     """
 
     error_occurred = Signal(str, str, QWidget)
+    # title, traceback, source, dialog version; used instead of error_occurred when the
+    # redesigned error dialog is selected with BEC_ERROR_DIALOG
+    error_reported = Signal(str, str, str, str)
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
         self.error_occurred.connect(self.show_error_message)
+        self.error_reported.connect(self.show_error_dialog)
         self.enable_error_popup = False
         self._initialized = True
         sys.excepthook = self.custom_exception_hook
@@ -369,6 +384,21 @@ class _ErrorPopupUtility(QObject):
         msg.setMinimumWidth(600)
         msg.setMinimumHeight(400)
         msg.exec_()
+
+    @SafeSlot(str, str, str, str)
+    def show_error_dialog(self, title: str, message: str, source: str, ui: str):
+        """Show the error in the redesigned, resizable error dialog.
+
+        Args:
+            title(str): Kind of error.
+            message(str): Formatted traceback.
+            source(str): Where the error was raised.
+            ui(str): ``"qwidget"`` or ``"qml"``.
+        """
+        # pylint: disable=import-outside-toplevel
+        from bec_widgets.utils.error_dialog.error_dialog_registry import show_error_dialog
+
+        show_error_dialog(title, message, source=source, parent=self.parent(), ui=ui)
 
     def show_property_error(self, title, message, widget):
         """
@@ -415,12 +445,17 @@ class _ErrorPopupUtility(QObject):
     def get_error_message(self, exctype, value, tb):
         return "".join(traceback.format_exception(exctype, value, tb))
 
-    def custom_exception_hook(self, exctype, value, tb, popup_error=False):
+    def custom_exception_hook(self, exctype, value, tb, popup_error=False, source=None):
         if popup_error or self.enable_error_popup:
+            title = "Method error" if popup_error else "Application Error"
+            ui = _error_dialog_ui()
+            if ui is not None:
+                self.error_reported.emit(
+                    title, self.get_error_message(exctype, value, tb), source or "", ui
+                )
+                return
             self.error_occurred.emit(
-                "Method error" if popup_error else "Application Error",
-                self.get_error_message(exctype, value, tb),
-                self.parent(),
+                title, self.get_error_message(exctype, value, tb), self.parent()
             )
         else:
             sys.__excepthook__(exctype, value, tb)  # Call the original excepthook
