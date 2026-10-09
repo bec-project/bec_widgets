@@ -61,7 +61,8 @@ class QmlTheme(QObject):
 
     The names used by the first ports are kept as aliases (``muted``, ``faint``, ``text``,
     ``foreground``, ``background``, ``accent``, ``busy``, ``ok``, ``warn``, ``err``,
-    ``emergency``, ``isDark``, ``busyText``, ``okTint`` ...), so their QML runs unchanged.
+    ``emergency``, ``isDark``, ``busyText``, ``okTint``, ``window``, ``base``, ``button``,
+    ``onAccent`` and the raw palette map ``c``), so their QML runs unchanged.
     """
 
     changed = Signal()
@@ -184,6 +185,20 @@ class QmlTheme(QObject):
     okTint = _color_property("success_tint")
     warnTint = _color_property("warning_tint")
     errTint = _color_property("danger_tint")
+    window = _color_property("bg")
+    base = _color_property("field")
+    button = _color_property("card")
+    onAccent = _color_property("on_primary")
+
+    @Property("QVariantMap", notify=changed)
+    def c(self) -> dict:
+        """The raw ``bec_qthemes`` palette as ``{KEY: "#rrggbb"}``, e.g. ``theme.c.ACCENT_DEFAULT``."""
+        theme = app_theme()
+        colors = dict(getattr(theme, "colors", None) or {})
+        return {
+            key: QColor(value).name() for key, value in colors.items() if QColor(value).isValid()
+        }
+
     # pylint: enable=invalid-name
 
     del _color_property, _metric_property

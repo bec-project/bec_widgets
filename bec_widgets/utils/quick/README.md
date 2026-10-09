@@ -57,8 +57,11 @@ a theme switch.
 **Aliases for existing ports.** `QmlTheme` also answers to the token names used on the earlier
 branches, so their QML runs unchanged when they switch to this host: `muted`, `faint`, `text`,
 `foreground`, `background`, `accent`, `busy`, `ok`, `warn`, `err`, `emergency`, `isDark`,
-`busyText`, `okText`, `warnText`, `errText`, `busyTint`, `okTint`, `warnTint`, `errTint`.
-New code uses the canonical names.
+`busyText`, `okText`, `warnText`, `errText`, `busyTint`, `okTint`, `warnTint`, `errTint`,
+`window`, `base`, `button`, `onAccent` and `c` (the raw `bec_qthemes` palette as a map, e.g.
+`theme.c.ACCENT_DEFAULT`). New code uses the canonical names. One difference to note: on the
+positioner-box branch `accent` meant the selection colour; here it is `ACCENT_DEFAULT`, so use
+`primary` where that branch used `accent`.
 
 ## Controls
 

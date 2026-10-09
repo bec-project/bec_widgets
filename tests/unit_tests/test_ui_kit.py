@@ -105,12 +105,17 @@ def test_qml_theme_aliases_match_canonical_names(dark_theme):
         ("emergency", "danger"),
         ("errText", "dangerText"),
         ("okTint", "successTint"),
+        ("window", "bg"),
+        ("base", "field"),
+        ("button", "card"),
+        ("onAccent", "onPrimary"),
     ]
     for alias, canonical in pairs:
         assert theme.property(alias) == theme.property(canonical), alias
     assert theme.property("isDark") is True
     assert theme.property("radiusLarge") == 10
     assert theme.toneText("warn") == theme.property("warningText")
+    assert QColor(theme.property("c")["CARD_BG"]) == theme.property("card")
 
 
 def test_qml_theme_emits_changed_on_theme_switch(qtbot):
