@@ -66,7 +66,7 @@ class BECQueue(BECWidget, CompactPopupWidget):
         self.controller.clear_requested.connect(self.clear_queue)
         self._history_ready.connect(self.controller.set_history)
 
-        self.view = create_quick_widget(self, QML_FILE, {"queue": self.controller})
+        self.view = self._create_view()
         self.view.setMinimumSize(320, 160)
         self.addWidget(self.view)
         self.label = "BEC Queue"
@@ -76,6 +76,14 @@ class BECQueue(BECWidget, CompactPopupWidget):
         self.bec_dispatcher.connect_slot(self.on_scan_progress, MessageEndpoints.scan_progress())
         if refresh_upon_start:
             self.refresh_queue()
+
+    def _create_view(self) -> QWidget:
+        """Create the widget that renders the queue: here the QML view."""
+        return create_quick_widget(self, QML_FILE, {"queue": self.controller})
+
+    def _release_view(self):
+        """Unload the QML tree before the controller it binds to is deleted."""
+        self.view.setSource(QUrl())
 
     @Property(bool)
     def hide_toolbar(self):
@@ -223,10 +231,10 @@ class BECQueue(BECWidget, CompactPopupWidget):
         self.queue.request_queue_reset()
 
     def cleanup(self):
-        """Release the QML view before the controller it binds to."""
+        """Wait for a pending history read and release the view."""
         if self._history_thread is not None:
             self._history_thread.join(timeout=1)
-        self.view.setSource(QUrl())
+        self._release_view()
         super().cleanup()
 
 
