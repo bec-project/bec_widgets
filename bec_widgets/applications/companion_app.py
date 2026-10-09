@@ -12,7 +12,11 @@ import os
 import signal
 import sys
 import traceback
+from collections.abc import Callable
 from contextlib import redirect_stderr, redirect_stdout
+from inspect import currentframe
+from threading import RLock, local
+from typing import TextIO
 
 import darkdetect
 import shiboken6
@@ -39,24 +43,87 @@ startup_profiler.mark("module imports")
 
 
 class SimpleFileLikeFromLogOutputFunc:
-    def __init__(self, log_func):
+    """Log complete lines on flush, bypassing logging for Loguru's own diagnostics.
+
+    ``fallback_stream`` must bypass the logger; ``None`` discards fallback output.
+    Coroutine sinks must not print to redirected streams: their execution has no
+    synchronous logging frame to identify (their Loguru failure reports do).
+    """
+
+    def __init__(
+        self, log_func: Callable[[str], object], fallback_stream: TextIO | None = None
+    ) -> None:
         self._log_func = log_func
         self._buffer = []
+        self._fallback_stream = fallback_stream
+        self._buffer_lock = RLock()
+        self._local = local()
 
-    def write(self, buffer):
-        self._buffer.append(buffer)
+    def write(self, buffer: str) -> int:
+        """Buffer output, sending writes made during logging to the fallback stream."""
+        if self._is_logging():
+            self._write_fallback(buffer)
+        else:
+            with self._buffer_lock:
+                self._buffer.append(buffer)
+        return len(buffer)
 
-    def flush(self):
-        lines, _, remaining = "".join(self._buffer).rpartition("\n")
-        if lines:
+    def flush(self) -> None:
+        """Log complete lines once, preserving the unfinished line for the next flush."""
+        if self._is_logging():
+            return
+        with self._buffer_lock:
+            lines, _, remaining = "".join(self._buffer).rpartition("\n")
+            # Detach before logging: sinks can write or flush this stream themselves.
+            self._buffer = [remaining]
+        if not lines:
+            return
+        self._local.logging = True
+        try:
             self._log_func(lines)
-        self._buffer = [remaining]
+        except Exception:
+            # Reporting this through the logger would retry the failing sink.
+            self._write_fallback(f"{lines}\n")
+        finally:
+            self._local.logging = False
+
+    def _is_logging(self) -> bool:
+        if getattr(self._local, "logging", False):
+            return True
+        # Loguru reports failures to sys.stderr, also from direct logger calls and
+        # queued sinks, when our flush guard is inactive. It has no configurable
+        # diagnostic stream, so recognize its active logging/error-reporting frames.
+        # Match only _log in loguru._logger: logger.catch wraps ordinary application code.
+        frame = currentframe()
+        try:
+            while frame is not None:
+                module = frame.f_globals.get("__name__")
+                if module in ("loguru._handler", "loguru._error_interceptor") or (
+                    module == "loguru._logger" and frame.f_code.co_name == "_log"
+                ):
+                    return True
+                frame = frame.f_back
+            return False
+        finally:
+            del frame
+
+    def _write_fallback(self, buffer: str) -> None:
+        if self._fallback_stream is None:
+            return
+        try:
+            self._fallback_stream.write(buffer)
+            self._fallback_stream.flush()
+        except (OSError, ValueError):
+            # The original stream can also be unavailable (e.g. a closed parent pipe).
+            pass
 
     @property
-    def encoding(self):
+    def encoding(self) -> str:
+        """Encoding used by callers writing text to this stream."""
         return "utf-8"
 
-    def close(self):
+    def close(self) -> None:
+        """Leave the original process stream open."""
         return
 
 
@@ -87,9 +154,15 @@ class GUIServer:
             bec_logger._update_sinks()
 
         bec_logger.disabled_modules = ["bec_lib.scan_items"]
-        with redirect_stdout(SimpleFileLikeFromLogOutputFunc(logger.info)):  # type: ignore
-            with redirect_stderr(SimpleFileLikeFromLogOutputFunc(logger.error)):  # type: ignore
-                self._run()
+        with (
+            redirect_stdout(
+                SimpleFileLikeFromLogOutputFunc(logger.info, fallback_stream=sys.__stdout__)
+            ),
+            redirect_stderr(
+                SimpleFileLikeFromLogOutputFunc(logger.error, fallback_stream=sys.__stderr__)
+            ),
+        ):
+            self._run()
 
     def _get_service_config(self) -> ServiceConfig:
         if self.config:
