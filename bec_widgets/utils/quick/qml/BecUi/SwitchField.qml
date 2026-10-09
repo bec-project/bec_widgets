@@ -4,7 +4,7 @@ import QtQuick.Controls.Basic
 // Toggle switch for boolean parameters.
 Switch {
     id: root
-    implicitHeight: 32
+    implicitHeight: theme.controlHeight
     hoverEnabled: true
     padding: 0
     indicator: Rectangle {
@@ -19,7 +19,7 @@ Switch {
         Rectangle {
             x: root.checked ? parent.width - width - 3 : 3
             y: 3
-            width: 16; height: 16; radius: 8
+            width: 16; height: 16; radius: theme.radiusSmall + 2
             color: root.checked ? theme.onPrimary : theme.fgMuted
             Behavior on x { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
         }
@@ -28,7 +28,7 @@ Switch {
         leftPadding: root.indicator.width + 8
         text: root.text
         color: theme.fg
-        font.pixelSize: 13
+        font.pixelSize: theme.fontBody
         verticalAlignment: Text.AlignVCenter
     }
 }
