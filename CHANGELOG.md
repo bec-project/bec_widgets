@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v3.39.5 (2026-10-09)
+
+### Bug Fixes
+
+- **dict_backed_table**: Check only keys on edit and connect autoscale once
+  ([`72255b9`](https://github.com/bec-project/bec_widgets/commit/72255b90b03536fbacd421e6ca0cfbab904faeb3))
+
+- **dict_backed_table**: Follow the Qt item model update rules
+  ([`bf793fb`](https://github.com/bec-project/bec_widgets/commit/bf793fb72dbf8426e3b26b3ca34c884177bd04bb))
+
+
 ## v3.39.4 (2026-10-09)
 
 ### Bug Fixes
