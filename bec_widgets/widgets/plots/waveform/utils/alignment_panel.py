@@ -17,7 +17,7 @@ from bec_widgets.utils.colors import get_accent_colors, get_theme_name
 from bec_widgets.widgets.control.device_control.positioner_box.positioner_control_line.positioner_control_line import (
     PositionerControlLine,
 )
-from bec_widgets.widgets.dap.lmfit_dialog.lmfit_dialog import LMFitDialog
+from bec_widgets.widgets.dap.lmfit_dialog.fit_dialog_factory import create_fit_dialog
 
 
 class WaveformAlignmentPanel(QWidget):
@@ -36,7 +36,7 @@ class WaveformAlignmentPanel(QWidget):
         self.positioner = PositionerControlLine(parent=self, client=client, gui_id=gui_id)
         self.positioner.hide_device_selection = True
 
-        self.fit_dialog = LMFitDialog(
+        self.fit_dialog = create_fit_dialog(
             parent=self, client=client, gui_id=gui_id, ui_file="lmfit_dialog_compact.ui"
         )
         self.fit_dialog.active_action_list = ["center"]

@@ -40,7 +40,7 @@ from bec_widgets.utils.signal_classification import (
 )
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import MaterialIconAction
-from bec_widgets.widgets.dap.lmfit_dialog.lmfit_dialog import LMFitDialog
+from bec_widgets.widgets.dap.lmfit_dialog.fit_dialog_factory import create_fit_dialog
 from bec_widgets.widgets.plots.plot_base import PlotBase
 from bec_widgets.widgets.plots.waveform.curve import Curve, CurveConfig, DeviceSignal
 from bec_widgets.widgets.plots.waveform.settings.curve_settings.curve_setting import CurveSetting
@@ -630,7 +630,7 @@ class Waveform(PlotBase):
         """
         Add the DAP summary to the side panel.
         """
-        self.dap_summary = LMFitDialog(parent=self)
+        self.dap_summary = create_fit_dialog(parent=self)
         self.side_panel.add_menu(
             action_id="fit_params",
             icon_name="monitoring",
@@ -646,7 +646,7 @@ class Waveform(PlotBase):
         """
         fit_action = self.toolbar.components.get_action("fit_params").action
         if self.dap_summary_dialog is None or not self.dap_summary_dialog.isVisible():
-            self.dap_summary = LMFitDialog(parent=self)
+            self.dap_summary = create_fit_dialog(parent=self)
             self.dap_summary_dialog = QDialog(modal=False)
             self.dap_summary_dialog.layout = QVBoxLayout(self.dap_summary_dialog)
             self.dap_summary_dialog.layout.addWidget(self.dap_summary)
