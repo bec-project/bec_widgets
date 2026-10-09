@@ -25,6 +25,7 @@ from qtpy.QtQuickWidgets import QQuickWidget
 from qtpy.QtWidgets import QApplication, QWidget
 
 from bec_widgets.utils.quick.tokens import METRICS, ThemeTokens, app_theme
+from bec_widgets.utils.quick.tokens import blend as _blend  # kept for ports importing it from here
 
 logger = bec_logger.logger
 
