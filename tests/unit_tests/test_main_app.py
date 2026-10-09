@@ -67,7 +67,7 @@ def app_with_spies(qtbot, mocked_client):
     app.add_view(icon="widgets", title="Veto View", view_id="vv", widget=vv, mini_text="vv")
 
     # Start from dock_area (default) to avoid extra enter/exit counts on spies
-    assert app.stack.currentIndex() == app._view_index["Docks"]
+    assert app.stack.currentIndex() == app._view_index["dock_area"]
     return app, v1, v2, vv
 
 
@@ -305,3 +305,18 @@ def test_guided_tour_can_start_and_stop(app_with_spies, qtbot):
 
     # Check that tour is stopped
     assert not app.guided_tour._active
+
+
+def test_builtin_views_use_stable_ids(app_with_spies, qtbot):
+    """Views call set_current("device_manager") etc.; the ids must match the registered views."""
+    app, _, _, _ = app_with_spies
+    for view_id in ("dock_area", "device_manager", "admin_view"):
+        assert view_id in app._view_index
+    app.set_current("device_manager")
+    qtbot.wait(50)
+    assert app.stack.currentIndex() == app._view_index["device_manager"]
+    app.set_current("dock_area")
+    qtbot.wait(50)
+    assert app.stack.currentIndex() == app._view_index["dock_area"]
+    if hasattr(app.sidebar, "active_id"):
+        assert app.sidebar.active_id == "dock_area"

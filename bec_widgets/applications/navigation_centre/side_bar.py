@@ -76,6 +76,11 @@ class SideBar(QScrollArea):
         self.title_label.setGraphicsEffect(self.title_fx)
         self.title_fx.setOpacity(0.0)
         self.title_label.setVisible(False)  # TODO dirty trick to avoid layout shift
+        # Let the title shrink with the bar; otherwise its width pushes the toggle button out of
+        # the visible area at the start of the expand animation.
+        self.title_label.setSizePolicy(
+            QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Preferred
+        )
 
         self.toggle = QToolButton(self)
         self.toggle.setCheckable(False)
@@ -227,7 +232,10 @@ class SideBar(QScrollArea):
 
         """
         header = SectionHeader(self, title, anim_duration=self._anim_duration)
-        position = position if position is not None else self.content_layout.count() - 1
+        # Sections belong to the top group: append them above the spacer, not after the
+        # bottom items (which put a later section header above the bottom items).
+        spacer_index = self.content_layout.indexOf(self._bottom_spacer)
+        position = spacer_index if position is None else min(position, spacer_index)
         self.content_layout.insertWidget(position, header)
         for anim in header.animations:
             self.group.addAnimation(anim)
@@ -257,6 +265,7 @@ class SideBar(QScrollArea):
         from_top: bool = True,
         toggleable: bool = True,
         exclusive: bool = True,
+        subtitle: str | None = None,
     ) -> NavigationItem:
         """
         Add a navigation item to the side bar.
@@ -270,6 +279,7 @@ class SideBar(QScrollArea):
             from_top(bool, optional): Whether to count position from the top or bottom.
             toggleable(bool, optional): Whether the nav item is toggleable.
             exclusive(bool, optional): Whether the nav item is exclusive.
+            subtitle(str, optional): Description, shown as the tooltip.
 
         Returns:
             NavigationItem: The created navigation item.
@@ -283,6 +293,7 @@ class SideBar(QScrollArea):
             exclusive=exclusive,
             anim_duration=self._anim_duration,
         )
+        item.setToolTip(f"{title}\n{subtitle}" if subtitle else title)
         self._insert_nav_item(item, from_top=from_top, position=position)
         for anim in item.build_animations():
             self.group.addAnimation(anim)

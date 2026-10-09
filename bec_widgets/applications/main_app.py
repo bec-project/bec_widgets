@@ -5,8 +5,7 @@ from qtpy.QtCore import QTimer
 from qtpy.QtGui import QAction  # type: ignore
 from qtpy.QtWidgets import QApplication, QHBoxLayout, QStackedWidget, QWidget
 
-from bec_widgets.applications.navigation_centre.reveal_animator import ANIMATION_DURATION
-from bec_widgets.applications.navigation_centre.side_bar import SideBar
+from bec_widgets.applications.navigation_centre.nav_common import NavEntry, create_side_bar
 from bec_widgets.applications.navigation_centre.side_bar_components import NavigationItem
 from bec_widgets.applications.views.admin_view.admin_view import AdminView
 from bec_widgets.applications.views.developer_view.developer_view import DeveloperView
@@ -36,7 +35,7 @@ class BECMainApp(BECMainWindow):
         self,
         parent=None,
         *args,
-        anim_duration: int = ANIMATION_DURATION,
+        anim_duration: int | None = None,
         show_examples: bool = False,
         **kwargs,
     ):
@@ -46,7 +45,9 @@ class BECMainApp(BECMainWindow):
         self._launcher_ready_notified = False
 
         # --- Compose central UI (sidebar + stack)
-        self.sidebar = SideBar(parent=self, anim_duration=anim_duration)
+        self.sidebar = create_side_bar(
+            parent=self, anim_duration=anim_duration, remember_state=True
+        )
         self.stack = QStackedWidget(self)
 
         container = QWidget(self)
@@ -87,27 +88,40 @@ class BECMainApp(BECMainWindow):
         self.admin_view = AdminView(self)
         startup_profiler.mark("AdminView")
 
-        self.add_view(icon="widgets", title="Dock Area", widget=self.dock_area, mini_text="Docks")
+        self.add_view(
+            icon="widgets",
+            title="Dock Area",
+            view_id="dock_area",
+            widget=self.dock_area,
+            mini_text="Docks",
+            subtitle="Plots, controls and workspaces",
+        )
         self.add_view(
             icon="display_settings",
             title="Device Manager",
+            view_id="device_manager",
             widget=self.device_manager,
-            mini_text="DM",
+            mini_text="Devices",
+            subtitle="Device configuration",
         )
         if is_experimental_features_enabled():
             self.developer_view = DeveloperView(self)
             self.add_view(
                 icon="code_blocks",
                 title="IDE",
+                view_id="developer_view",
                 widget=self.developer_view,
                 mini_text="IDE",
+                subtitle="Scripts and macros",
                 exclusive=True,
             )
         self.add_view(
             icon="admin_panel_settings",
             title="Admin View",
+            view_id="admin_view",
             widget=self.admin_view,
             mini_text="Admin",
+            subtitle="Experiment and services",
             from_top=False,
         )
 
@@ -161,7 +175,8 @@ class BECMainApp(BECMainWindow):
         from_top: bool = True,
         toggleable: bool = True,
         exclusive: bool = True,
-    ) -> NavigationItem:
+        subtitle: str | None = None,
+    ) -> NavigationItem | NavEntry:
         """
         Register a view in the stack and create a matching nav item in the sidebar.
 
@@ -176,9 +191,10 @@ class BECMainApp(BECMainWindow):
             from_top(bool, optional): Whether to count position from the top or bottom.
             toggleable(bool, optional): Whether the nav item is toggleable.
             exclusive(bool, optional): Whether the nav item is exclusive.
+            subtitle(str, optional): One-line description shown in the open navigation panel.
 
         Returns:
-            NavigationItem: The created navigation item.
+            NavigationItem | NavEntry: The created navigation entry.
 
 
         """
@@ -192,6 +208,7 @@ class BECMainApp(BECMainWindow):
             from_top=from_top,
             toggleable=toggleable,
             exclusive=exclusive,
+            subtitle=subtitle,
         )
         # Wrap plain widgets into a ViewBase so enter/exit hooks are available
         if isinstance(widget, ViewBase):
@@ -255,9 +272,9 @@ class BECMainApp(BECMainWindow):
 
         # Register the sidebar toggle button
         toggle_step = self.guided_tour.register_widget(
-            widget=self.sidebar.toggle,
-            title="Sidebar Toggle",
-            text="Click this button to expand or collapse the sidebar. When expanded, you can see full navigation item titles and section names.",
+            widget=self._sidebar_tour_target("toggle"),
+            title="Navigation",
+            text="Click this button (or press Ctrl+B) to open the navigation panel with the full names of all views. Pin it there to keep it open. Ctrl+1, Ctrl+2, ... switch views directly.",
         )
         tour_steps.append(toggle_step)
 
@@ -265,7 +282,7 @@ class BECMainApp(BECMainWindow):
         sidebar_dock_area = self.sidebar.components.get("dock_area")
         if sidebar_dock_area:
             dock_step = self.guided_tour.register_widget(
-                widget=sidebar_dock_area,
+                widget=self._sidebar_tour_target("dock_area"),
                 title="Dock Area View",
                 text="Click here to access the Dock Area view, where you can manage and arrange your dockable panels.",
             )
@@ -274,7 +291,7 @@ class BECMainApp(BECMainWindow):
         sidebar_device_manager = self.sidebar.components.get("device_manager")
         if sidebar_device_manager:
             device_manager_step = self.guided_tour.register_widget(
-                widget=sidebar_device_manager,
+                widget=self._sidebar_tour_target("device_manager"),
                 title="Device Manager View",
                 text="Click here to open the Device Manager view, where you can view and manage device configs.",
             )
@@ -283,7 +300,7 @@ class BECMainApp(BECMainWindow):
         sidebar_developer_view = self.sidebar.components.get("developer_view")
         if sidebar_developer_view:
             developer_view_step = self.guided_tour.register_widget(
-                widget=sidebar_developer_view,
+                widget=self._sidebar_tour_target("developer_view"),
                 title="Developer View",
                 text="Click here to access the Developer view to write scripts and macros.",
             )
@@ -293,7 +310,7 @@ class BECMainApp(BECMainWindow):
         dark_mode_item = self.sidebar.components.get("dark_mode")
         if dark_mode_item:
             dark_mode_step = self.guided_tour.register_widget(
-                widget=dark_mode_item,
+                widget=self._sidebar_tour_target("dark_mode"),
                 title="Theme Toggle",
                 text="Switch between light and dark themes. The theme preference is saved and will be applied when you restart the application.",
             )
@@ -349,7 +366,7 @@ class BECMainApp(BECMainWindow):
 
             # Use the view's title for the navigation button
             nav_step = self.guided_tour.register_widget(
-                widget=nav_item,
+                widget=self._sidebar_tour_target(view_id),
                 title=view_tour.view_title,
                 text=f"Let's explore the features of the {view_tour.view_title}.",
             )
@@ -359,6 +376,14 @@ class BECMainApp(BECMainWindow):
         # Create the tour with all registered steps
         if tour_steps:
             self.guided_tour.create_tour(tour_steps)
+
+    def _sidebar_tour_target(self, entry_id: str):
+        """Return what the guided tour highlights for a navigation entry (or ``"toggle"``)."""
+        if hasattr(self.sidebar, "tour_target"):
+            return self.sidebar.tour_target(entry_id)
+        if entry_id == "toggle":
+            return self.sidebar.toggle
+        return self.sidebar.components.get(entry_id)
 
     def start_guided_tour(self):
         """
@@ -392,6 +417,8 @@ class BECMainApp(BECMainWindow):
             help_menu.addAction(tour_action)
 
     def cleanup(self):
+        if hasattr(self.sidebar, "cleanup"):
+            self.sidebar.cleanup()
         for view_id, idx in self._view_index.items():
             view = self.stack.widget(idx)
             view.close()
