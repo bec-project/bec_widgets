@@ -264,6 +264,9 @@ class ScanControlQWidget(ScanControlPortBase):
         for card in self.group_cards:
             self.groups_layout.removeWidget(card)
             card.hide()
+            # Detach right away so the old cards stop taking part in style polishing
+            # before the deferred delete runs.
+            card.setParent(None)
             card.deleteLater()
         self.group_cards = []
         self.editors = {}
@@ -299,8 +302,10 @@ class ScanControlQWidget(ScanControlPortBase):
                 card.setVisible(state["showKwargs"])
             self.groups_layout.insertWidget(self.groups_layout.count() - 1, card)
             self.group_cards.append(card)
-        tokens = refresh_kit_theme(self.groups_widget)
-        self._apply_styles(tokens)
+        # The root style sheet already cascades to the new cards; only the kit controls need
+        # their tokens. Re-setting the root style sheet here repolished the whole tree on
+        # every scan switch.
+        self._hint_tokens = refresh_kit_theme(self.groups_widget)
 
     def _build_row(self, index: int, row: list[dict], can_remove: bool, card: Card) -> QHBoxLayout:
         layout = QHBoxLayout()
