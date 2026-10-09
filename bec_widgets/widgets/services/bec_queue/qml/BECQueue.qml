@@ -166,7 +166,7 @@ Rectangle {
                 contentItem: Text {
                     leftPadding: mi.checkable ? 22 : 4
                     text: mi.text
-                    color: !mi.enabled ? theme.faint : mi.text.indexOf("Halt") === 0 || mi.text.indexOf("Clear") === 0 ? theme.errText : theme.fg
+                    color: !mi.enabled ? theme.faint : mi.text.indexOf("Halt") === 0 || mi.text.indexOf("Clear") === 0 ? theme.dangerText : theme.fg
                     font.pixelSize: 13
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -212,7 +212,7 @@ Rectangle {
             Layout.bottomMargin: 8
             implicitHeight: bannerRow.implicitHeight + 16
             radius: 7
-            color: root.locked ? theme.errTint : theme.warnTint
+            color: root.locked ? theme.dangerTint : theme.warningTint
             RowLayout {
                 id: bannerRow
                 anchors { fill: parent; margins: 8; leftMargin: 10 }
@@ -220,7 +220,7 @@ Rectangle {
                 Icon {
                     name: root.locked ? "lock" : "pause_circle"
                     size: 20
-                    color: root.locked ? theme.errText : theme.warnText
+                    color: root.locked ? theme.dangerText : theme.warningText
                     Layout.alignment: Qt.AlignTop
                 }
                 ColumnLayout {

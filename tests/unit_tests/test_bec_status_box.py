@@ -214,7 +214,7 @@ def test_qml_view_loads(qtbot, mocked_client):
 
 def test_qml_falls_back_to_widgets(qtbot, mocked_client):
     with mock.patch(
-        "bec_widgets.utils.qml_host.create_quick_widget", side_effect=RuntimeError("no GL")
+        "bec_widgets.utils.quick.create_quick_widget", side_effect=RuntimeError("no GL")
     ):
         box = create_widget(
             qtbot,

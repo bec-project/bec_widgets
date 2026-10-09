@@ -23,16 +23,16 @@ Button {
 
     readonly property color fgColor: !enabled ? theme.faint
         : kind === "dangerSolid" ? "white"
-        : kind === "danger" ? theme.errText : theme.fg
+        : kind === "danger" ? theme.dangerText : theme.fg
 
     background: Rectangle {
         radius: 6
         color: root.kind === "dangerSolid"
-               ? (root.down ? Qt.darker(theme.err, 1.2) : root.hovered ? Qt.lighter(theme.err, 1.1) : theme.err)
+               ? (root.down ? Qt.darker(theme.danger, 1.2) : root.hovered ? Qt.lighter(theme.danger, 1.1) : theme.danger)
                : root.down ? theme.pressed : root.hovered ? theme.hover : "transparent"
         border.width: root.visualFocus ? 2 : 1
         border.color: root.visualFocus ? theme.primary
-                      : root.kind === "danger" && root.enabled ? Qt.alpha(theme.err, 0.55)
+                      : root.kind === "danger" && root.enabled ? Qt.alpha(theme.danger, 0.55)
                       : root.kind === "dangerSolid" ? "transparent" : theme.border
         Behavior on color { ColorAnimation { duration: 90 } }
     }

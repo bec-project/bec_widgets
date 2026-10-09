@@ -9,14 +9,14 @@ Rectangle {
     property string iconName
     property string tone: "neutral"
 
-    readonly property color textColor: tone === "busy" ? theme.busyText
-        : tone === "ok" ? theme.okText
-        : tone === "warn" ? theme.warnText
-        : tone === "err" ? theme.errText
+    readonly property color textColor: tone === "busy" ? theme.infoText
+        : tone === "ok" ? theme.successText
+        : tone === "warn" ? theme.warningText
+        : tone === "err" ? theme.dangerText
         : tone === "stale" ? theme.faint : theme.muted
-    readonly property color fillColor: tone === "busy" ? theme.busyTint
-        : tone === "warn" ? theme.warnTint
-        : tone === "err" ? theme.errTint : "transparent"
+    readonly property color fillColor: tone === "busy" ? theme.infoTint
+        : tone === "warn" ? theme.warningTint
+        : tone === "err" ? theme.dangerTint : "transparent"
 
     implicitHeight: 22
     implicitWidth: row.implicitWidth + 14

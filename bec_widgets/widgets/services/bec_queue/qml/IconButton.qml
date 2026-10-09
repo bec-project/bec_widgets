@@ -31,7 +31,7 @@ AbstractButton {
             anchors.centerIn: parent
             name: root.iconName
             size: root.iconSize
-            color: !root.enabled ? theme.faint : root.danger ? theme.errText : theme.muted
+            color: !root.enabled ? theme.faint : root.danger ? theme.dangerText : theme.muted
         }
     }
 }

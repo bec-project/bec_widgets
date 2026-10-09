@@ -137,7 +137,7 @@ Rectangle {
                     height: parent.height
                     radius: 2.5
                     width: parent.width * Math.max(0, row.progress)
-                    color: row.tone === "warn" ? theme.warn : theme.busy
+                    color: row.tone === "warn" ? theme.warning : theme.busy
                     Behavior on width { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
                 }
                 Rectangle {   // indeterminate: no progress reported yet

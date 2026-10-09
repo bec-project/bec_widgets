@@ -13,7 +13,7 @@ from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.compact_popup import CompactPopupWidget
 from bec_widgets.utils.error_popups import SafeSlot
-from bec_widgets.widgets.services.bec_queue.qml_host import create_quick_widget
+from bec_widgets.utils.quick import create_quick_widget
 from bec_widgets.widgets.services.bec_queue.queue_model import IDLE_STATUSES, QueueController
 
 logger = bec_logger.logger
@@ -79,7 +79,7 @@ class BECQueue(BECWidget, CompactPopupWidget):
 
     def _create_view(self) -> QWidget:
         """Create the widget that renders the queue: here the QML view."""
-        return create_quick_widget(self, QML_FILE, {"queue": self.controller})
+        return create_quick_widget(self, QML_FILE, context={"queue": self.controller})
 
     def _release_view(self):
         """Unload the QML tree before the controller it binds to is deleted."""

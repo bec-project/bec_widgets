@@ -15,7 +15,7 @@ Rectangle {
     function toneColor(tone) {
         if (tone === "success") return theme.success
         if (tone === "warning") return theme.warning
-        if (tone === "emergency") return theme.emergency
+        if (tone === "emergency") return theme.danger
         return theme.muted
     }
     function iconUrl(name, color, filled) {

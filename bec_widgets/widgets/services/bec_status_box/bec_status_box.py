@@ -134,9 +134,11 @@ class BECStatusBox(BECWidget, CompactPopupWidget):
         if self.view_kind == "qml":
             try:
                 # pylint: disable=import-outside-toplevel
-                from bec_widgets.utils.qml_host import create_quick_widget
+                from bec_widgets.utils.quick import create_quick_widget
 
-                quick = create_quick_widget(self, QML_FILE, context={"statusModel": self.model})
+                quick = create_quick_widget(
+                    self, QML_FILE, context={"statusModel": self.model}, raise_on_error=True
+                )
                 quick.setMinimumSize(280, 220)
                 return quick
             except Exception as exc:  # pylint: disable=broad-except
