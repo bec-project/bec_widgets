@@ -14,6 +14,7 @@ from qtpy.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QPushButton,
     QSizePolicy,
     QToolButton,
@@ -324,3 +325,96 @@ class PortedPropertiesMixin:
             if cls is self.PORTED_FROM:
                 break
         return objects
+
+
+class ToggleSwitch(QPushButton):
+    """Checkable switch painted like ``BecUi.SwitchField``; the label shows On or Off."""
+
+    def __init__(self, parent: QWidget | None = None):
+        super().__init__(parent)
+        self.setCheckable(True)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setMinimumHeight(32)
+        self.setFixedWidth(84)
+        self._knob = 0.0
+        self._animation = QPropertyAnimation(self, b"knob", self)
+        self._animation.setDuration(120)
+        self._animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self.toggled.connect(self._animate)
+
+    def _animate(self, checked: bool) -> None:
+        self._animation.stop()
+        self._animation.setStartValue(self._knob)
+        self._animation.setEndValue(1.0 if checked else 0.0)
+        self._animation.start()
+
+    def setChecked(self, checked: bool) -> None:  # pylint: disable=invalid-name
+        """Set the state without animating."""
+        self.blockSignals(True)
+        super().setChecked(checked)
+        self.blockSignals(False)
+        self._animation.stop()
+        self._knob = 1.0 if checked else 0.0
+        self.update()
+
+    def _get_knob(self) -> float:
+        return self._knob
+
+    def _set_knob(self, value: float) -> None:
+        self._knob = value
+        self.update()
+
+    knob = Property(float, _get_knob, _set_knob)
+
+    def paintEvent(self, _event):  # pylint: disable=invalid-name
+        tokens = ThemeTokens()
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        track = QRectF(0, (self.height() - 22) / 2, 38, 22)
+        painter.setPen(tokens.primary if self.isChecked() else tokens.border)
+        painter.setBrush(tokens.primary if self.isChecked() else tokens.track)
+        painter.drawRoundedRect(track, 11, 11)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(tokens.on_primary if self.isChecked() else tokens.fg_muted)
+        painter.drawEllipse(QRectF(track.left() + 3 + self._knob * 16, track.top() + 3, 16, 16))
+        painter.setPen(tokens.fg)
+        font = self.font()
+        font.setPixelSize(13)
+        painter.setFont(font)
+        painter.drawText(
+            QRectF(track.right() + 8, 0, self.width() - track.right() - 8, self.height()),
+            Qt.AlignmentFlag.AlignVCenter,
+            "On" if self.isChecked() else "Off",
+        )
+        painter.end()
+
+
+class SuffixLineEdit(QLineEdit):
+    """Line edit that paints a unit suffix inside its right edge, like ``BecUi.InputField``."""
+
+    def __init__(self, parent: QWidget | None = None):
+        super().__init__(parent)
+        self._suffix = ""
+
+    def set_suffix(self, suffix: str) -> None:
+        """Set the unit shown at the right edge."""
+        self._suffix = suffix or ""
+        width = self.fontMetrics().horizontalAdvance(self._suffix) + 10 if self._suffix else 0
+        self.setTextMargins(0, 0, width, 0)
+        self.update()
+
+    def paintEvent(self, event):  # pylint: disable=invalid-name
+        super().paintEvent(event)
+        if not self._suffix:
+            return
+        painter = QPainter(self)
+        painter.setPen(ThemeTokens().fg_subtle)
+        font = self.font()
+        font.setPixelSize(12)
+        painter.setFont(font)
+        painter.drawText(
+            self.rect().adjusted(0, 0, -9, 0),
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
+            self._suffix,
+        )
+        painter.end()
