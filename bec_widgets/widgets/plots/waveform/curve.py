@@ -41,8 +41,8 @@ class CurveConfig(ConnectionConfig):
     )
     symbol_size: int | None = Field(7, description="The size of the symbol of the curve.")
     pen_width: int | None = Field(4, description="The width of the pen of the curve.")
-    pen_style: Literal["solid", "dash", "dot", "dashdot"] | None = Field(
-        "solid", description="The style of the pen of the curve."
+    pen_style: Literal["solid", "dash", "dot", "dashdot", "none"] | None = Field(
+        "solid", description="The style of the curve's connecting line; 'none' disables the line."
     )
     source: Literal["device", "dap", "custom", "history"] = Field(
         "custom", description="The source of the curve."
@@ -134,19 +134,26 @@ class Curve(BECConnector, pg.PlotDataItem):
             "dash": QtCore.Qt.DashLine,
             "dot": QtCore.Qt.DotLine,
             "dashdot": QtCore.Qt.DashDotLine,
+            "none": QtCore.Qt.NoPen,
         }
         pen_style = pen_style_map.get(self.config.pen_style, QtCore.Qt.SolidLine)
+        line_fallback = self.config.pen_style == "none" and self.opts["autoDownsample"]
+        pen_width = self.config.pen_width
+        if line_fallback:
+            pen_style = QtCore.Qt.SolidLine
+            pen_width = 1
 
-        pen = pg.mkPen(color=self.config.color, width=self.config.pen_width, style=pen_style)
+        pen = pg.mkPen(color=self.config.color, width=pen_width, style=pen_style)
         self.setPen(pen)
 
-        if self.config.symbol:
+        symbol = None if line_fallback else self.config.symbol
+        if symbol:
             symbol_color = self.config.symbol_color or self.config.color
             brush = pg.mkBrush(color=symbol_color)
 
             self.setSymbolBrush(brush)
             self.setSymbolSize(self.config.symbol_size)
-            self.setSymbol(self.config.symbol)
+        self.setSymbol(symbol)
 
     @property
     def dap_params(self):
@@ -238,7 +245,8 @@ class Curve(BECConnector, pg.PlotDataItem):
             - symbol_color: str
             - symbol_size: int
             - pen_width: int
-            - pen_style: Literal["solid", "dash", "dot", "dashdot"]
+            - pen_style: Literal["solid", "dash", "dot", "dashdot", "none"]
+              Use "none" to display markers without connecting lines.
         """
 
         # Mapping of keywords to setter methods
@@ -277,8 +285,7 @@ class Curve(BECConnector, pg.PlotDataItem):
             symbol(str): Symbol of the curve.
         """
         self.config.symbol = symbol
-        self.setSymbol(symbol)
-        self.updateItems()
+        self.apply_config()
 
     def set_symbol_color(self, symbol_color: str):
         """
@@ -310,12 +317,14 @@ class Curve(BECConnector, pg.PlotDataItem):
         self.config.pen_width = pen_width
         self.apply_config()
 
-    def set_pen_style(self, pen_style: Literal["solid", "dash", "dot", "dashdot"]):
+    def set_pen_style(self, pen_style: Literal["solid", "dash", "dot", "dashdot", "none"]) -> None:
         """
         Change the pen style of the curve.
 
         Args:
-            pen_style(Literal["solid", "dash", "dot", "dashdot"]): Style of the pen.
+            pen_style(Literal["solid", "dash", "dot", "dashdot", "none"]): Style of the pen.
+                Use "none" to display markers without connecting lines.
+                During automatic downsampling, "none" uses a 1 px solid line without markers.
         """
         self.config.pen_style = pen_style
         self.apply_config()

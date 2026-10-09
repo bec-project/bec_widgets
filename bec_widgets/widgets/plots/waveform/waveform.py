@@ -1999,7 +1999,8 @@ class Waveform(PlotBase):
         Curve items, by deactivating the symbol and activating downsampling auto, method='mean',
         if the data length exceeds N points. If the data length is less than N points, the
         symbol will be activated and downsampling will be deactivated. Maximum points will be
-        5x the limit.
+        5x the limit. The "none" style uses a 1 px solid line without markers while
+        downsampling, retaining its configured appearance for smaller datasets.
 
         Args:
             curve(Curve): The curve to adjust.
@@ -2009,6 +2010,14 @@ class Waveform(PlotBase):
         """
         if limit <= 1:
             logger.warning("Limit must be greater than 1.")
+            return
+        if curve.config.pen_style == "none":
+            downsampling = data_length > limit
+            curve.setDownsampling(ds=None if downsampling else 1, auto=downsampling, method=method)
+            if not downsampling and curve.config.symbol is None:
+                curve.set_symbol("o")
+            curve.apply_config()
+            curve.setClipToView(True)
             return
         if data_length > limit:
             if curve.config.symbol is not None:
@@ -2020,7 +2029,7 @@ class Waveform(PlotBase):
         elif data_length <= limit:
             curve.set_symbol("o")
             curve.set_pen_width(4)
-            curve.setDownsampling(ds=1, auto=None, method=method)
+            curve.setDownsampling(ds=1, auto=False, method=method)
             curve.setClipToView(True)
 
     def setup_dap_for_scan(self):
