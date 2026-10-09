@@ -325,10 +325,8 @@ class QmlGallery(QWidget):
 
 
 def _grab(widget: QWidget, path: Path) -> None:
-    if hasattr(widget, "view"):
-        widget.view.grabFramebuffer().save(str(path))
-    else:
-        widget.grab().save(str(path))
+    # QWidget.grab() also captures QQuickWidget content, at any QT_SCALE_FACTOR
+    widget.grab().save(str(path))
 
 
 def main(argv: list[str] | None = None) -> int:
