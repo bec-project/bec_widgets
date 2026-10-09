@@ -111,7 +111,9 @@ def SafeProperty(
                 error_msg = traceback.format_exc()
 
                 if popup_error:
-                    ErrorPopupUtility().custom_exception_hook(*sys.exc_info(), popup_error=True)
+                    ErrorPopupUtility().custom_exception_hook(
+                        *sys.exc_info(), popup_error=True, source=py_getter.__qualname__
+                    )
                 logger.error(f"SafeProperty error in GETTER of '{prop_name}':\n{error_msg}")
                 return default
 
@@ -173,7 +175,7 @@ def SafeProperty(
 
                         if popup_error:
                             ErrorPopupUtility().custom_exception_hook(
-                                *sys.exc_info(), popup_error=True
+                                *sys.exc_info(), popup_error=True, source=setter_func.__qualname__
                             )
                         logger.error(f"SafeProperty error in SETTER of '{prop_name}':\n{error_msg}")
                         return
@@ -298,7 +300,9 @@ def SafeSlot(*slot_args, **slot_kwargs):  # pylint: disable=invalid-name
                 slot_name = f"{method.__module__}.{method.__qualname__}"
                 error_msg = traceback.format_exc()
                 if call_params["popup_error"]:
-                    ErrorPopupUtility().custom_exception_hook(*sys.exc_info(), popup_error=True)
+                    ErrorPopupUtility().custom_exception_hook(
+                        *sys.exc_info(), popup_error=True, source=method.__qualname__
+                    )
                 logger.error(f"SafeSlot error in slot '{slot_name}':\n{error_msg}")
                 if call_params["raise_error"]:
                     raise
@@ -308,6 +312,26 @@ def SafeSlot(*slot_args, **slot_kwargs):  # pylint: disable=invalid-name
     return error_managed
 
 
+def _notification_hub():
+    """Return the notification hub if a window shows notifications, else None.
+
+    When the reworked notification UI is attached to a window, errors and warnings become
+    toasts with a history entry instead of blocking message boxes.
+    """
+    # only look the module up: if nobody imported it, no window can show notifications, and
+    # importing it here would pull Qt Quick into every widget that reports an error
+    module = sys.modules.get(
+        "bec_widgets.widgets.containers.main_window.addons.notification_center."
+        "notification_ux_common"
+    )
+    if module is None:
+        return None
+    hub = module.NotificationHub._instance  # pylint: disable=protected-access
+    if hub is None or not shiboken6.isValid(hub) or not hub.has_hosts:
+        return None
+    return hub
+
+
 class WarningPopupUtility(QObject):
     """
     Utility class to show warning popups in the application.
@@ -315,6 +339,11 @@ class WarningPopupUtility(QObject):
 
     @SafeSlot(str, str, str, QWidget)
     def show_warning_message(self, title, message, detailed_text, widget):
+        hub = _notification_hub()
+        if hub is not None:
+            source = type(widget).__name__ if widget is not None else ""
+            hub.notify(title, message, "warning", details=detailed_text, source=source)
+            return
         msg = QMessageBox(widget)
         msg.setIcon(QMessageBox.Warning)
         msg.setWindowTitle(title)
@@ -415,12 +444,17 @@ class _ErrorPopupUtility(QObject):
     def get_error_message(self, exctype, value, tb):
         return "".join(traceback.format_exception(exctype, value, tb))
 
-    def custom_exception_hook(self, exctype, value, tb, popup_error=False):
+    def custom_exception_hook(self, exctype, value, tb, popup_error=False, source=None):
         if popup_error or self.enable_error_popup:
+            title = "Method error" if popup_error else "Application Error"
+            hub = _notification_hub()
+            if hub is not None:
+                hub.report_exception(
+                    title, self.get_error_message(exctype, value, tb), source=source or title
+                )
+                return
             self.error_occurred.emit(
-                "Method error" if popup_error else "Application Error",
-                self.get_error_message(exctype, value, tb),
-                self.parent(),
+                title, self.get_error_message(exctype, value, tb), self.parent()
             )
         else:
             sys.__excepthook__(exctype, value, tb)  # Call the original excepthook
