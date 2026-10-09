@@ -43,7 +43,9 @@ from bec_widgets.utils.toolbars.toolbar import MaterialIconAction
 from bec_widgets.widgets.dap.lmfit_dialog.lmfit_dialog import LMFitDialog
 from bec_widgets.widgets.plots.plot_base import PlotBase
 from bec_widgets.widgets.plots.waveform.curve import Curve, CurveConfig, DeviceSignal
-from bec_widgets.widgets.plots.waveform.settings.curve_settings.curve_setting import CurveSetting
+from bec_widgets.widgets.plots.waveform.settings.curve_dialog.curve_dialog_common import (
+    create_curve_setting,
+)
 from bec_widgets.widgets.plots.waveform.utils.alignment_controller import (
     AlignmentContext,
     WaveformAlignmentController,
@@ -509,7 +511,8 @@ class Waveform(PlotBase):
         curve_action = self.toolbar.components.get_action("curve").action
 
         if self.curve_settings_dialog is None or not self.curve_settings_dialog.isVisible():
-            curve_setting = CurveSetting(parent=self, target_widget=self)
+            # BEC_CURVE_DIALOG=qwidget|qml opens the redesigned dialog; the default is unchanged
+            curve_setting = create_curve_setting(self)
             self.curve_settings_dialog = SettingsDialog(
                 self, settings_widget=curve_setting, window_title="Curve Settings", modal=False
             )
