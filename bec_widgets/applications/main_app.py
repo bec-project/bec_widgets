@@ -3,7 +3,7 @@ from bec_widgets.applications.startup_profiler import startup_profiler  # isort:
 from bec_qthemes import material_icon
 from qtpy.QtCore import QTimer
 from qtpy.QtGui import QAction  # type: ignore
-from qtpy.QtWidgets import QApplication, QHBoxLayout, QStackedWidget, QWidget
+from qtpy.QtWidgets import QApplication, QHBoxLayout, QMenu, QStackedWidget, QWidget
 
 from bec_widgets.applications.navigation_centre.reveal_animator import ANIMATION_DURATION
 from bec_widgets.applications.navigation_centre.side_bar import SideBar
@@ -22,6 +22,7 @@ from bec_widgets.utils.screen_utils import (
     available_screen_geometry,
     main_app_size_for_screen,
 )
+from bec_widgets.utils.tour_guide.guide import TourGuide, tour_ui_from_env
 from bec_widgets.widgets.containers.dock_area.profile_utils import is_experimental_features_enabled
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 
@@ -70,11 +71,20 @@ class BECMainApp(BECMainWindow):
         self._setup_guided_tour()
         startup_profiler.mark("guided tour")
 
+        # New tour guide (opt-in with BEC_TOUR_UI=qwidget|qml)
+        self.tour_guide: TourGuide | None = None
+        tour_ui = tour_ui_from_env()
+        if tour_ui is not None:
+            self._setup_tour_guide(tour_ui)
+            startup_profiler.mark("tour guide")
+
     def showEvent(self, event):
         super().showEvent(event)
         if self._launcher_ready_notified:
             return
         self._launcher_ready_notified = True
+        if getattr(self, "tour_guide", None) is not None and self._tour_guide_first_run:
+            QTimer.singleShot(600, self.tour_guide.maybe_show_welcome)
         QTimer.singleShot(0, lambda: notify_launcher_ready("bec-app", self))
 
     def _add_views(self):
@@ -243,6 +253,8 @@ class BECMainApp(BECMainWindow):
         self._current_view_id = vid
         if hasattr(new_view, "on_enter"):
             new_view.on_enter()
+        if getattr(self, "tour_guide", None) is not None:
+            self.tour_guide.notify_view_entered(vid)
 
     def _setup_guided_tour(self):
         """
@@ -367,6 +379,67 @@ class BECMainApp(BECMainWindow):
         """
         self.guided_tour.start_tour()
 
+    def _setup_tour_guide(self, ui: str, settings=None, first_run: bool = True):
+        """
+        Set up the tour guide: short task tours, a Help item in the sidebar, F1 for the tour list,
+        Shift+F1 for "What's this?" and a first-run welcome card.
+
+        Args:
+            ui(str): Overlay technology, "qwidget" or "qml".
+            settings(QSettings, optional): Where tour progress is stored (tests pass their own).
+            first_run(bool): Offer the tours with a welcome card once the window is shown.
+        """
+        # pylint: disable=import-outside-toplevel
+        from bec_widgets.applications.app_tours import app_tours
+
+        self._tour_guide_first_run = first_run
+        self.tour_guide = TourGuide(
+            self,
+            ui=ui,
+            settings=settings,
+            view_switcher=self.set_current,
+            current_view=lambda: self._current_view_id,
+        )
+        for tour in app_tours(self):
+            self.tour_guide.register_tour(tour)
+        for view_index in self._view_index.values():
+            view = self.stack.widget(view_index)
+            provider = getattr(view, "guide_tours", None)
+            if callable(provider):
+                for tour in provider(self) or []:
+                    self.tour_guide.register_tour(tour)
+
+        help_item = self.sidebar.add_item(
+            icon="help",
+            title="Help & tours",
+            id="help",
+            mini_text="Help",
+            from_top=False,
+            toggleable=False,
+        )
+        help_item.activated.connect(self.tour_guide.open_hub)
+        self.tour_guide.set_help_anchor(help_item)
+
+        menu_bar = self.menuBar()
+        help_menu = next(
+            (menu for menu in menu_bar.findChildren(QMenu) if menu.title() == "Help"), None
+        )
+        if help_menu is not None:
+            help_menu.addSeparator()
+            hub_action = QAction(material_icon("school"), "Tours…", self)
+            hub_action.setShortcut("F1")
+            hub_action.triggered.connect(self.tour_guide.open_hub)
+            help_menu.addAction(hub_action)
+            whats_this = QAction(material_icon("help_center"), "What's This?", self)
+            whats_this.setShortcut("Shift+F1")
+            whats_this.triggered.connect(self.tour_guide.toggle_whats_this)
+            help_menu.addAction(whats_this)
+            # The classic tour stays available; F1 now opens the tour list.
+            for action in help_menu.actions():
+                if action.text() == "Start Guided Tour":
+                    action.setShortcut("")
+                    action.setText("Classic Guided Tour")
+
     def _add_guided_tour_to_menu(self):
         """
         Add a 'Guided Tour' action to the Help menu.
@@ -392,6 +465,8 @@ class BECMainApp(BECMainWindow):
             help_menu.addAction(tour_action)
 
     def cleanup(self):
+        if getattr(self, "tour_guide", None) is not None:
+            self.tour_guide.cleanup()
         for view_id, idx in self._view_index.items():
             view = self.stack.widget(idx)
             view.close()
