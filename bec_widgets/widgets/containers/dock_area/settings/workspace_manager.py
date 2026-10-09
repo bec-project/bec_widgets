@@ -298,7 +298,8 @@ class WorkSpaceManager(BECWidget, QWidget):
 
     @SafeSlot(str)
     def switch_profile(self, profile_name: str):
-        self.target_widget.load_profile(profile_name)
+        load = getattr(self.target_widget, "load_profile_progressive", None)
+        (load or self.target_widget.load_profile)(profile_name)
         try:
             self.target_widget.toolbar.components.get_action(
                 "workspace_combo"

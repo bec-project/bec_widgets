@@ -6,7 +6,7 @@ from typing import Literal, Mapping, Sequence
 
 import slugify
 from bec_lib import bec_logger
-from qtpy.QtCore import Signal
+from qtpy.QtCore import QEvent, Signal
 from qtpy.QtGui import QPixmap
 from qtpy.QtWidgets import (
     QApplication,
@@ -40,6 +40,13 @@ from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.utils.widget_state_manager import WidgetStateManager
 from bec_widgets.widgets.containers.dock_area.basic_dock_area import DockAreaWidget
+from bec_widgets.widgets.containers.dock_area.profile_loading.common import (
+    progressive_loading_enabled,
+)
+from bec_widgets.widgets.containers.dock_area.profile_loading.loader import (
+    ProfileLoadJob,
+    create_progress,
+)
 from bec_widgets.widgets.containers.dock_area.profile_utils import (
     SETTINGS_KEYS,
     baseline_profile_candidates,
@@ -124,6 +131,8 @@ class BECDockArea(DockAreaWidget):
     # Define a signal for mode changes
     mode_changed = Signal(str)
     profile_changed = Signal(str)
+    # Emitted when every dock of a loaded profile holds its real widget (or the load was cancelled)
+    profile_load_finished = Signal(str)
 
     def __init__(
         self,
@@ -145,6 +154,9 @@ class BECDockArea(DockAreaWidget):
         self._auto_save_upon_exit = auto_save_upon_exit
         self._profile_management_enabled = enable_profile_management
         self._startup_profile = self._normalize_startup_profile(startup_profile)
+        self._profile_load_job: ProfileLoadJob | None = None
+        self._profile_load_progress = None
+        self._progressive_profile_load = False
         super().__init__(
             parent, default_add_direction=default_add_direction, title="BEC Dock Area", **kwargs
         )
@@ -248,7 +260,7 @@ class BECDockArea(DockAreaWidget):
 
     def _load_initial_profile(self, name: str) -> None:
         """Load the initial profile."""
-        self.load_profile(name)
+        self.load_profile_progressive(name)
         if not self._empty_profile_active:
             self._set_workspace_combo_text_silent(name)
 
@@ -675,6 +687,7 @@ class BECDockArea(DockAreaWidget):
         """
         self.save_to_settings(settings, keys=PROFILE_STATE_KEYS)
         self.state_manager.save_state(settings=settings)
+        self._copy_pending_widget_state(settings)
         write_manifest(settings, self.dock_list())
         if save_preview:
             ba = self.screenshot_bytes()
@@ -938,6 +951,11 @@ class BECDockArea(DockAreaWidget):
             self.save_profile(name, show_dialog=False, quick_select=True)
             return
 
+        if progressive_loading_enabled():
+            self._rebuild_profile(settings, name, namespace)
+            return
+
+        # Previous blocking pipeline, kept for comparison (BEC_PROFILE_LOADING=legacy)
         # Clear existing docks and remove all widgets
         self.delete_all()
 
@@ -970,6 +988,122 @@ class BECDockArea(DockAreaWidget):
         self._set_editable(self._editable)
 
         self._finalize_profile_change(name, namespace)
+
+    @SafeSlot(str)
+    @SafeSlot(str, bool)
+    def load_profile_progressive(self, name: str | None = None, restore_baseline: bool = False):
+        """
+        Load a workspace profile without blocking the GUI.
+
+        The saved layout appears at once with a skeleton in every dock, then the widgets are built
+        one per event-loop pass while a progress card offers to cancel. Used by the toolbar, the
+        workspace manager and startup; `load_profile` keeps returning only once all widgets exist.
+
+        Args:
+            name (str | None): The name of the profile to load. If None, prompts the user.
+            restore_baseline (bool): If True, restore the runtime copy from the baseline first.
+        """
+        self._progressive_profile_load = True
+        try:
+            self.load_profile(name, restore_baseline)
+        finally:
+            self._progressive_profile_load = False
+
+    @property
+    def profile_load_in_progress(self) -> bool:
+        """True while docks of the current profile are still being filled."""
+        job = self._profile_load_job
+        return job is not None and job.is_running
+
+    @SafeSlot()
+    def cancel_profile_load(self) -> None:
+        """Stop filling docks; unbuilt docks keep a "Load now" button."""
+        if self._profile_load_job is not None:
+            self._profile_load_job.cancel()
+
+    def _rebuild_profile(self, settings, name: str, namespace: str | None) -> None:
+        """
+        Replace the current docks with the profile in *settings*.
+
+        Builds placeholder docks and restores the layout first, then fills the docks either in
+        the background (`load_profile_progressive`) or before returning (`load_profile`).
+        """
+        self._discard_profile_load_job()
+        self.setUpdatesEnabled(False)
+        try:
+            self.delete_all()
+            job = ProfileLoadJob(
+                self, settings, read_manifest(settings), name, dict(PROFILE_STATE_KEYS)
+            )
+            self._profile_load_job = job
+            job.build_skeleton()
+            self._set_editable(self._editable)
+        finally:
+            self.setUpdatesEnabled(True)
+
+        job.finished.connect(lambda _completed, n=name: self.profile_load_finished.emit(n))
+
+        if self._progressive_profile_load:
+            # The profile is active from here on: a snapshot taken mid-load keeps unbuilt docks
+            self._finalize_profile_change(name, namespace)
+            progress = self._ensure_profile_load_progress()
+            job.progress.connect(progress.update_progress)
+            job.finished.connect(lambda _completed: progress.finish())
+            progress.begin(name, job.total)
+            job.start()
+            return
+
+        visible = self.isVisible()
+        if visible:
+            # Show the restored layout before the widgets are built
+            self.repaint()
+        job.run_to_completion(paint=visible)
+        self._finalize_profile_change(name, namespace)
+
+    def _ensure_profile_load_progress(self):
+        if self._profile_load_progress is None:
+            self._profile_load_progress = create_progress(self.dock_manager)
+            self._profile_load_progress.cancel_requested.connect(self.cancel_profile_load)
+            self.dock_manager.installEventFilter(self)
+        return self._profile_load_progress
+
+    def _discard_profile_load_job(self) -> None:
+        """Stop and drop the current load job before its docks are replaced."""
+        job = self._profile_load_job
+        self._profile_load_job = None
+        if job is None:
+            return
+        job.cancel()
+        job.deleteLater()
+
+    def _copy_pending_widget_state(self, settings) -> None:
+        """
+        Keep the saved state of widgets that are not built yet when writing a snapshot.
+
+        Placeholders do not take part in the state manager, so their widgets' entries are copied
+        from the profile being loaded; without this, saving mid-load would drop their settings.
+        """
+        job = self._profile_load_job
+        if job is None:
+            return
+        names = {p.profile_object_name for p in job.pending_placeholders()}
+        if not names:
+            return
+        source = job.settings
+        if source.fileName() == settings.fileName():
+            # Same file: the entries are already there and the state manager does not clear them
+            return
+        for key in source.allKeys():
+            group = key.split("/", 1)[0]
+            if names.intersection(group.split(".")):
+                settings.setValue(key, source.value(key))
+
+    def eventFilter(self, obj, event):  # noqa: N802 - Qt API
+        """Keep the loading progress card in place when the dock manager is resized."""
+        progress = self._profile_load_progress
+        if progress is not None and obj is self.dock_manager and event.type() == QEvent.Type.Resize:
+            progress.reposition()
+        return super().eventFilter(obj, event)
 
     @SafeSlot()
     @SafeSlot(str)
@@ -1271,6 +1405,7 @@ class BECDockArea(DockAreaWidget):
         Cleanup the dock area.
         """
         self.prepare_for_shutdown()
+        self._discard_profile_load_job()
         if self.manage_dialog is not None:
             self.manage_dialog.reject()
             self.manage_dialog = None

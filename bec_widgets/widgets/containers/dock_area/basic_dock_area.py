@@ -106,6 +106,8 @@ class DockAreaWidget(BECWidget, QWidget):
         self.dock_manager.setProperty("variant", variant)
 
         self._locked = False
+        # While > 0, per-dock parent normalization is skipped and done once at the end
+        self._dock_batch_depth = 0
         self._default_add_direction = (
             default_add_direction
             if default_add_direction in ("left", "right", "top", "bottom")
@@ -147,7 +149,10 @@ class DockAreaWidget(BECWidget, QWidget):
         ).action
         action.setObjectName("dockSettingsAction")
         action.setToolTip("Dock settings")
-        action.triggered.connect(lambda: self._open_dock_settings_dialog(dock, widget))
+        # Resolve the widget on trigger: profile loading swaps a placeholder for the real widget
+        action.triggered.connect(
+            lambda: self._open_dock_settings_dialog(dock, dock.widget() or widget)
+        )
 
         existing = list(dock.titleBarActions())
         existing.append(action)
@@ -295,6 +300,8 @@ class DockAreaWidget(BECWidget, QWidget):
         """
         Ensure each dock has a stable parent after tab switches, re-docking, or restore.
         """
+        if self._dock_batch_depth > 0:
+            return
         self._connect_dock_area_parent_guards()
         for dock in self.dock_list():
             if dock is None or not isValid(dock):
@@ -352,13 +359,7 @@ class DockAreaWidget(BECWidget, QWidget):
 
         dock = CDockWidget(self.dock_manager, widget.objectName(), self)
         dock.setWidget(widget)
-        widget_min_size = widget.minimumSize()
-        widget_min_hint = widget.minimumSizeHint()
-        dock_min_size = QSize(
-            max(widget_min_size.width(), widget_min_hint.width()),
-            max(widget_min_size.height(), widget_min_hint.height()),
-        )
-        dock.setMinimumSize(dock_min_size)
+        self._apply_dock_minimum_size(dock, widget)
         dock._dock_preferences = dict(dock_preferences or {})
         dock.setFeature(CDockWidget.DockWidgetFeature.DockWidgetDeleteOnClose, True)
         dock.setFeature(CDockWidget.DockWidgetFeature.CustomCloseHandling, True)
@@ -369,17 +370,12 @@ class DockAreaWidget(BECWidget, QWidget):
         self._customize_dock(dock, widget)
         resolved_icon = self._resolve_dock_icon(widget, dock_icon, apply_widget_icon)
 
-        close_handler = self._resolve_close_handler(widget, on_close)
-
-        def on_widget_destroyed():
-            if not isValid(dock):
-                return
-            dock.closeDockWidget()
-            dock.deleteDockWidget()
-
-        dock.closeRequested.connect(lambda: close_handler(dock))
-        if hasattr(widget, "widget_removed"):
-            widget.widget_removed.connect(on_widget_destroyed)
+        # The close handler is resolved when the close is requested, so it follows the widget
+        # currently in the dock (profile loading swaps a placeholder for the real widget).
+        dock.closeRequested.connect(
+            lambda: self._resolve_close_handler(dock.widget() or widget, on_close)(dock)
+        )
+        self._bind_widget_removed(dock, widget)
 
         dock.setMinimumSizeHintMode(
             CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidgetMinimumSize
@@ -408,6 +404,67 @@ class DockAreaWidget(BECWidget, QWidget):
             dock.setIcon(resolved_icon)
         self._normalize_all_dock_parents()
         return dock
+
+    @staticmethod
+    def _apply_dock_minimum_size(dock: CDockWidget, widget: QWidget) -> None:
+        """Size the dock so it never gets smaller than its widget allows."""
+        widget_min_size = widget.minimumSize()
+        widget_min_hint = widget.minimumSizeHint()
+        dock.setMinimumSize(
+            QSize(
+                max(widget_min_size.width(), widget_min_hint.width()),
+                max(widget_min_size.height(), widget_min_hint.height()),
+            )
+        )
+
+    @staticmethod
+    def _bind_widget_removed(dock: CDockWidget, widget: QWidget) -> None:
+        """Close the dock when its widget announces its own removal."""
+        if not hasattr(widget, "widget_removed"):
+            return
+
+        def on_widget_destroyed():
+            if not isValid(dock) or dock.widget() is not widget:
+                return
+            dock.closeDockWidget()
+            dock.deleteDockWidget()
+
+        widget.widget_removed.connect(on_widget_destroyed)
+
+    def _replace_dock_widget(
+        self, dock: CDockWidget, widget: QWidget, *, apply_widget_icon: bool = True
+    ) -> QWidget | None:
+        """
+        Put *widget* into an existing dock in place of its current content.
+
+        The dock keeps its position, size, title and features, so the layout does not move.
+
+        Args:
+            dock(CDockWidget): Dock whose content is replaced.
+            widget(QWidget): New content widget.
+            apply_widget_icon(bool): Whether to use the widget's ICON_NAME as dock icon.
+
+        Returns:
+            QWidget | None: The previous content widget, now without a parent dock.
+        """
+        previous = dock.takeWidget()
+        dock.setWidget(widget)
+        self._apply_dock_minimum_size(dock, widget)
+        self._bind_widget_removed(dock, widget)
+        icon = self._resolve_dock_icon(widget, None, apply_widget_icon)
+        if icon is not None:
+            dock.setIcon(icon)
+        return previous
+
+    def _begin_dock_batch(self) -> None:
+        """Start adding many docks at once; parent normalization runs once in `_end_dock_batch`."""
+        self._dock_batch_depth += 1
+
+    def _end_dock_batch(self) -> None:
+        """Finish a batch started with `_begin_dock_batch`."""
+        self._dock_batch_depth = max(0, self._dock_batch_depth - 1)
+        if self._dock_batch_depth == 0:
+            self._normalize_all_dock_parents()
 
     def _delete_dock(self, dock: CDockWidget) -> None:
         widget = dock.widget()
@@ -1477,7 +1534,17 @@ class DockAreaWidget(BECWidget, QWidget):
     @SafeSlot()
     def delete_all(self):
         """Delete all docks and their associated widgets."""
-        for dock in self.dock_list():
+        docks = self.dock_list()
+        # Take every widget out before removing any dock: removing a dock that still holds its
+        # widget makes Qt ADS re-lay out (and resize every plot in) the remaining docks each time.
+        for dock in docks:
+            if not isValid(dock):
+                continue
+            widget = dock.takeWidget()
+            if widget is not None and isValid(widget):
+                widget.close()
+                widget.deleteLater()
+        for dock in docks:
             self._delete_dock(dock)
 
     def cleanup(self):

@@ -96,6 +96,19 @@ class WidgetStateManager:
         else:
             logger.warning("No filename or settings provided for saving state.")
 
+    def load_widget_state(self, widget: QWidget, settings: QSettings) -> None:
+        """
+        Load the state of one widget below the managed root and of its children.
+
+        Keys are resolved relative to the managed root exactly as `load_state` does, so this
+        restores the same values for *widget* as a full `load_state` would.
+
+        Args:
+            widget(QWidget): Widget below the managed root.
+            settings(QSettings): The QSettings object to load the state from.
+        """
+        self._load_widget_state_qsettings(widget, settings)
+
     def _save_widget_state_qsettings(
         self, widget: QWidget, settings: QSettings, recursive: bool = True
     ):

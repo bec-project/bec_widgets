@@ -745,7 +745,10 @@ def write_manifest(settings: QSettings, docks: list[CDockWidget]) -> None:
         settings.setArrayIndex(i)
         w = dock.widget()
         settings.setValue("object_name", w.objectName())
-        settings.setValue("widget_class", w.__class__.__name__)
+        # A dock still loading holds a placeholder that knows the class it stands for
+        settings.setValue(
+            "widget_class", getattr(w, "profile_widget_class", None) or w.__class__.__name__
+        )
         settings.setValue("closable", getattr(dock, "_default_closable", True))
         settings.setValue("floatable", getattr(dock, "_default_floatable", True))
         settings.setValue("movable", getattr(dock, "_default_movable", True))

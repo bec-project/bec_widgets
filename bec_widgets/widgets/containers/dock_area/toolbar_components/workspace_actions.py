@@ -190,6 +190,10 @@ class WorkspaceConnection(BundleConnection):
         if not hasattr(self.target_widget, "workspace_is_locked"):
             raise AttributeError("Target widget must implement 'workspace_is_locked'.")
         self._connected = False
+        # Switching from the toolbar keeps the GUI responsive while the profile fills
+        self._load_profile_slot = getattr(
+            self.target_widget, "load_profile_progressive", self.target_widget.load_profile
+        )
 
     def connect(self):
         self._connected = True
@@ -199,7 +203,7 @@ class WorkspaceConnection(BundleConnection):
             save_action.triggered.connect(self.target_widget.save_profile_dialog)
 
         self.components.get_action("workspace_combo").widget.currentTextChanged.connect(
-            self.target_widget.load_profile
+            self._load_profile_slot
         )
 
         reset_action = self.components.get_action("reset_baseline_workspace").action
@@ -218,7 +222,7 @@ class WorkspaceConnection(BundleConnection):
         if save_action.isVisible():
             save_action.triggered.disconnect(self.target_widget.save_profile_dialog)
         self.components.get_action("workspace_combo").widget.currentTextChanged.disconnect(
-            self.target_widget.load_profile
+            self._load_profile_slot
         )
 
         reset_action = self.components.get_action("reset_baseline_workspace").action
