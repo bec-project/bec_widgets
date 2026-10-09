@@ -1,6 +1,6 @@
 [project]
 name = "bec_widgets"
-version = "3.39.3"
+version = "3.39.4"
 description = "BEC Widgets"
 requires-python = ">=3.11"
 classifiers = [

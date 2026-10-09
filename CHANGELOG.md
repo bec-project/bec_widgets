@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v3.39.4 (2026-10-09)
+
+### Bug Fixes
+
+- **curve_settings**: Edit curve copies and drop removed curves
+  ([`00f7f56`](https://github.com/bec-project/bec_widgets/commit/00f7f566b2b407e02fbcb91dc068ad3feb4a2a36))
+
+- **curve_settings**: Keep custom curves and DAP settings on apply
+  ([`6a37b36`](https://github.com/bec-project/bec_widgets/commit/6a37b36ede882d2484c97c953f5ecc63d99a47f0))
+
+
 ## v3.39.3 (2026-10-07)
 
 ### Bug Fixes
