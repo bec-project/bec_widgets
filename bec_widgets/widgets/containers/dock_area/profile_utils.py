@@ -749,6 +749,8 @@ def write_manifest(settings: QSettings, docks: list[CDockWidget]) -> None:
         settings.setValue("closable", getattr(dock, "_default_closable", True))
         settings.setValue("floatable", getattr(dock, "_default_floatable", True))
         settings.setValue("movable", getattr(dock, "_default_movable", True))
+        settings.setValue("title", dock.windowTitle())
+        settings.setValue("custom_title", bool(getattr(dock, "_custom_title", False)))
         is_floating = bool(dock.isFloating())
         settings.setValue("floating", is_floating)
         if is_floating:
@@ -815,6 +817,8 @@ def read_manifest(settings: QSettings) -> list[dict]:
                 "closable": settings.value("closable", type=bool),
                 "floatable": settings.value("floatable", type=bool),
                 "movable": settings.value("movable", type=bool),
+                "title": settings.value("title", "") or "",
+                "custom_title": settings.value("custom_title", False, type=bool),
                 "floating": floating,
                 "floating_screen": settings.value("floating_screen", ""),
                 "floating_relative": rel,

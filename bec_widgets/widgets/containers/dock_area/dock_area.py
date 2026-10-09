@@ -6,14 +6,17 @@ from typing import Literal, Mapping, Sequence
 
 import slugify
 from bec_lib import bec_logger
-from qtpy.QtCore import Signal
+from bec_qthemes import material_icon
+from qtpy.QtCore import QSize, Qt, Signal
 from qtpy.QtGui import QPixmap
 from qtpy.QtWidgets import (
     QApplication,
     QDialog,
     QInputDialog,
+    QMenu,
     QMessageBox,
     QSizePolicy,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -28,6 +31,7 @@ from bec_widgets.utils.bec_plugin_helper import (
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.name_utils import pascal_to_title
 from bec_widgets.utils.plugin_utils import get_rpc_widget_registry
+from bec_widgets.utils.quick.host import ThemeTokens
 from bec_widgets.utils.rpc_decorator import rpc_timeout
 from bec_widgets.utils.rpc_widget_handler import widget_handler
 from bec_widgets.utils.toolbars.actions import (
@@ -38,8 +42,10 @@ from bec_widgets.utils.toolbars.actions import (
 )
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
+from bec_widgets.utils.ux_kit import TextButton
 from bec_widgets.utils.widget_state_manager import WidgetStateManager
 from bec_widgets.widgets.containers.dock_area.basic_dock_area import DockAreaWidget
+from bec_widgets.widgets.containers.dock_area.chrome import DockChrome
 from bec_widgets.widgets.containers.dock_area.profile_utils import (
     SETTINGS_KEYS,
     baseline_profile_candidates,
@@ -159,6 +165,14 @@ class BECDockArea(DockAreaWidget):
 
         self.dark_mode_button = DarkModeButton(parent=self, toolbar=True)
         self.dark_mode_button.setVisible(enable_profile_management)
+
+        # Improved chrome: human titles, close with undo, Add widget gallery, empty state
+        self._chrome: DockChrome | None = None
+        self.add_widget_button: TextButton | None = None
+        self.lock_button: QToolButton | None = None
+        self.screenshot_button: QToolButton | None = None
+        if self._chrome_mode != "legacy":
+            self._chrome = DockChrome(self, mode=self._chrome_mode)
         self._setup_toolbar()
         self._hook_toolbar()
 
@@ -270,6 +284,41 @@ class BECDockArea(DockAreaWidget):
             prefs["show_settings_action"] = True
             dock._dock_preferences = prefs
         super()._customize_dock(dock, widget)
+        chrome = getattr(self, "_chrome", None)
+        if chrome is not None:
+            chrome.init_dock(dock, widget)
+
+    def _default_close_handler(self, dock: CDockWidget, widget: QWidget) -> None:
+        """Close a dock from its tab. With the improved chrome the dock can be restored."""
+        chrome = getattr(self, "_chrome", None)
+        if chrome is None:
+            super()._default_close_handler(dock, widget)
+            return
+        chrome.close_dock(dock)
+
+    def dock_map(self) -> dict[str, CDockWidget]:
+        """Return the dock widgets map as dictionary with names as keys.
+
+        Docks that were closed but can still be restored with Undo are not included.
+        """
+        docks = super().dock_map()
+        chrome = getattr(self, "_chrome", None)
+        if chrome is None or len(chrome.pending) == 0:
+            return docks
+        return {name: dock for name, dock in docks.items() if dock not in chrome.pending}
+
+    @SafeSlot()
+    def delete_all(self):
+        """Delete all docks and their associated widgets, including ones waiting for Undo."""
+        chrome = getattr(self, "_chrome", None)
+        if chrome is not None:
+            chrome.flush()
+        super().delete_all()
+
+    def open_widget_gallery(self) -> None:
+        """Open the Add widget gallery (Ctrl+Shift+A)."""
+        if self._chrome is not None:
+            self._chrome.open_gallery(getattr(self, "add_widget_button", None))
 
     @SafeSlot(popup_error=True)
     def new(
@@ -514,8 +563,14 @@ class BECDockArea(DockAreaWidget):
         self.toolbar.components.add_safe("dark_mode", dark_mode_action)
 
         bda = ToolbarBundle("dock_actions", self.toolbar.components)
-        bda.add_action("attach_all")
-        bda.add_action("screenshot")
+        if self._chrome is not None:
+            self._setup_modern_toolbar_actions()
+            bda.add_action("lock_layout")
+            bda.add_action("attach_all")
+            bda.add_action("screenshot_menu")
+        else:
+            bda.add_action("attach_all")
+            bda.add_action("screenshot")
         bda.add_action("dark_mode")
         self.toolbar.add_bundle(bda)
 
@@ -529,6 +584,98 @@ class BECDockArea(DockAreaWidget):
             self._ACTION_MAPPINGS["menu_plugins"] = plugin_actions
 
         self._apply_toolbar_layout()
+
+    def _setup_modern_toolbar_actions(self) -> None:
+        """Toolbar controls of the improved chrome: Add widget, Lock layout, Screenshot menu."""
+        self.add_widget_button = TextButton("Add widget", "primary", "add", parent=self)
+        self.add_widget_button.setObjectName("addWidgetButton")
+        self.add_widget_button.setToolTip("Add a widget to this workspace (Ctrl+Shift+A)")
+        self.add_widget_button.clicked.connect(self.open_widget_gallery)
+        self.toolbar.components.add_safe(
+            "add_widget",
+            WidgetAction(widget=self.add_widget_button, adjust_size=False, parent=self),
+        )
+        add_bundle = ToolbarBundle("add_widget", self.toolbar.components)
+        add_bundle.add_action("add_widget")
+        self.toolbar.add_bundle(add_bundle)
+
+        self.lock_button = QToolButton(self)
+        self.lock_button.setObjectName("lockLayoutButton")
+        self.lock_button.setCheckable(True)
+        self.lock_button.setAutoRaise(True)
+        self.lock_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.lock_button.setIconSize(QSize(18, 18))
+        self.lock_button.toggled.connect(self._on_lock_button_toggled)
+        self.toolbar.components.add_safe(
+            "lock_layout", WidgetAction(widget=self.lock_button, adjust_size=False, parent=self)
+        )
+
+        self.screenshot_button = QToolButton(self)
+        self.screenshot_button.setObjectName("screenshotMenuButton")
+        self.screenshot_button.setAutoRaise(True)
+        self.screenshot_button.setToolTip("Screenshot of this workspace")
+        self.screenshot_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.screenshot_button.setIconSize(QSize(18, 18))
+        menu = QMenu(self.screenshot_button)
+        menu.addAction("Save image…", self.screenshot)
+        menu.addAction("Copy image", self.copy_screenshot)
+        menu.addSeparator()
+        menu.addAction("Send to SciLog…", self.screenshot_to_scilog)
+        self.screenshot_button.setMenu(menu)
+        self.toolbar.components.add_safe(
+            "screenshot_menu",
+            WidgetAction(widget=self.screenshot_button, adjust_size=False, parent=self),
+        )
+        self.toolbar.components.get_action("attach_all").action.setToolTip(
+            "Dock all floating windows back into this workspace"
+        )
+        self._refresh_modern_toolbar()
+
+    def _refresh_modern_toolbar(self) -> None:
+        """Update icons, labels and colours of the improved toolbar controls."""
+        if self._chrome is None:
+            return
+        tokens = ThemeTokens()
+        locked = self._locked
+        self.add_widget_button.refresh_theme(tokens)
+        self.add_widget_button.setEnabled(not locked)
+        self.lock_button.blockSignals(True)
+        self.lock_button.setChecked(locked)
+        self.lock_button.blockSignals(False)
+        self.lock_button.setText("Layout locked" if locked else "Lock layout")
+        self.lock_button.setToolTip(
+            "Unlock to move, add or close widgets again"
+            if locked
+            else "Lock the layout so widgets cannot be moved or closed by accident. "
+            "The widgets keep working."
+        )
+        color = tokens.primary if locked else tokens.fg_muted
+        self.lock_button.setIcon(
+            material_icon("lock" if locked else "lock_open", size=(36, 36), color=color)
+        )
+        self.screenshot_button.setIcon(
+            material_icon("photo_camera", size=(36, 36), color=tokens.fg_muted)
+        )
+
+    def _on_lock_button_toggled(self, checked: bool) -> None:
+        self._set_editable(not checked)
+
+    @SafeSlot()
+    def copy_screenshot(self) -> None:
+        """Copy an image of the dock area to the clipboard."""
+        QApplication.clipboard().setPixmap(self.grab())
+
+    @SafeSlot(str)
+    def apply_theme(self, theme: str):
+        """Re-apply the chrome colours after a theme change.
+
+        Args:
+            theme(str): Name of the new theme.
+        """
+        super().apply_theme(theme)
+        if self._chrome is not None:
+            self._chrome.refresh_theme()
+            self._refresh_modern_toolbar()
 
     def _hook_toolbar(self):
         def _connect_menu(menu_key: str):
@@ -622,6 +769,8 @@ class BECDockArea(DockAreaWidget):
             self.toolbar.components.get_action("save_workspace").action.setVisible(not value)
         for dock in self.dock_list():
             dock.setting_action.setVisible(not value)
+        if getattr(self, "_chrome", None) is not None and self.lock_button is not None:
+            self._refresh_modern_toolbar()
 
     def _last_profile_instance_id(self) -> str | None:
         """
@@ -673,6 +822,8 @@ class BECDockArea(DockAreaWidget):
             settings(QSettings): The settings object to write to.
             save_preview(bool): Whether to save a screenshot preview.
         """
+        if self._chrome is not None:
+            self._chrome.flush()
         self.save_to_settings(settings, keys=PROFILE_STATE_KEYS)
         self.state_manager.save_state(settings=settings)
         write_manifest(settings, self.dock_list())
@@ -955,7 +1106,7 @@ class BECDockArea(DockAreaWidget):
                         "absolute": item.get("floating_absolute"),
                         "screen_name": item.get("floating_screen"),
                     }
-                self._make_dock(
+                dock = self._make_dock(
                     w,
                     closable=item["closable"],
                     floatable=item["floatable"],
@@ -964,6 +1115,11 @@ class BECDockArea(DockAreaWidget):
                     floating_state=floating_state,
                     area=QtAds.DockWidgetArea.RightDockWidgetArea,
                 )
+                if self._chrome is not None and item.get("title"):
+                    self._chrome.rename_dock(dock, item["title"])
+                    dock._custom_title = bool(  # pylint: disable=protected-access
+                        item.get("custom_title")
+                    )
 
         self.load_from_settings(settings, keys=PROFILE_STATE_KEYS)
         self.state_manager.load_state(settings=settings)
@@ -1184,6 +1340,9 @@ class BECDockArea(DockAreaWidget):
         mode_key = getattr(self, "_mode", "creator")
         if mode_key == "user":
             bundles = ["spacer_bundle", "workspace", "dock_actions"]
+        elif mode_key == "creator" and getattr(self, "_chrome", None) is not None:
+            # One Add widget gallery replaces the three Add menus
+            bundles = ["add_widget", "spacer_bundle", "workspace", "dock_actions"]
         elif mode_key == "creator":
             bundles = ["menu_plots", "menu_devices", "menu_utils"]
             if "menu_plugins" in getattr(self, "_ACTION_MAPPINGS", {}):
@@ -1274,6 +1433,8 @@ class BECDockArea(DockAreaWidget):
         if self.manage_dialog is not None:
             self.manage_dialog.reject()
             self.manage_dialog = None
+        if self._chrome is not None:
+            self._chrome.cleanup()
         self.delete_all()
         self.dark_mode_button.close()
         self.dark_mode_button.deleteLater()

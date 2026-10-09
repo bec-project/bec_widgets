@@ -244,7 +244,7 @@ class BECDockArea(RPCBase):
     @rpc_call
     def delete_all(self):
         """
-        Delete all docks and their associated widgets.
+        Delete all docks and their associated widgets, including ones waiting for Undo.
         """
 
     @rpc_call
@@ -1296,7 +1296,7 @@ class DockAreaView(RPCBase):
     @rpc_call
     def delete_all(self):
         """
-        Delete all docks and their associated widgets.
+        Delete all docks and their associated widgets, including ones waiting for Undo.
         """
 
     @rpc_call

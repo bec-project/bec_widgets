@@ -17,6 +17,11 @@ from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.utils.property_editor import PropertyEditor
 from bec_widgets.utils.rpc_widget_handler import widget_handler
 from bec_widgets.utils.toolbars.actions import MaterialIconAction
+from bec_widgets.widgets.containers.dock_area.chrome.ads_style import (
+    apply_dock_chrome_style,
+    chrome_mode,
+    configure_ads_flags,
+)
 from bec_widgets.widgets.containers.qt_ads import (
     CDockAreaWidget,
     CDockManager,
@@ -101,9 +106,12 @@ class DockAreaWidget(BECWidget, QWidget):
         self._root_layout.setContentsMargins(0, 0, 0, 0)
         self._root_layout.setSpacing(0)
 
+        self._chrome_mode = chrome_mode()
+        configure_ads_flags(self._chrome_mode != "legacy")
         self.dock_manager = CDockManager(self)
         self.dock_manager.setStyleSheet("")
         self.dock_manager.setProperty("variant", variant)
+        apply_dock_chrome_style(self.dock_manager, self._chrome_mode != "legacy")
 
         self._locked = False
         self._default_add_direction = (
@@ -158,7 +166,14 @@ class DockAreaWidget(BECWidget, QWidget):
         """Launch the property editor dialog for the dock's widget."""
         dlg = DockSettingsDialog(self, widget)
         dlg.resize(600, 600)
-        dlg.exec()
+        if self._chrome_mode == "legacy":
+            dlg.exec()
+            return
+        # Non-modal, so the widget stays visible and usable while its settings change
+        dlg.setWindowTitle(f"Settings · {dock.windowTitle()}")
+        dlg.setModal(False)
+        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
+        dlg.show()
 
     ################################################################################
     # Dock Lifecycle
@@ -1479,6 +1494,15 @@ class DockAreaWidget(BECWidget, QWidget):
         """Delete all docks and their associated widgets."""
         for dock in self.dock_list():
             self._delete_dock(dock)
+
+    @SafeSlot(str)
+    def apply_theme(self, theme: str):  # pylint: disable=unused-argument
+        """Re-apply the dock chrome colours after a theme change.
+
+        Args:
+            theme(str): Name of the new theme.
+        """
+        apply_dock_chrome_style(self.dock_manager, self._chrome_mode != "legacy")
 
     def cleanup(self):
         """Tear down all docks via the Qt ADS API before the base BECWidget cleanup runs.

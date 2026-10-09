@@ -47,6 +47,13 @@ from bec_widgets.widgets.plots.waveform.waveform import Waveform
 
 
 @pytest.fixture
+def legacy_chrome(monkeypatch):
+    """Run a test against the dock area chrome as it was before the UX rework."""
+    monkeypatch.setenv("BEC_DOCK_CHROME", "legacy")
+    yield
+
+
+@pytest.fixture
 def advanced_dock_area(qtbot, mocked_client):
     """Create an AdvancedDockArea instance for testing."""
     widget = BECDockArea(client=mocked_client)
@@ -990,6 +997,7 @@ class TestToolbarFunctionality:
         floating_dock = advanced_dock_area.dock_map()["FloatingWaveform"]
         assert floating_dock.isFloating()
 
+    @pytest.mark.usefixtures("legacy_chrome")
     def test_screenshot_action(self, advanced_dock_area, tmpdir):
         """Test screenshot toolbar action."""
         # Create a test screenshot file path in tmpdir
@@ -1017,6 +1025,7 @@ class TestToolbarFunctionality:
                 # Verify save was called with the filename
                 mock_screenshot.save.assert_called_once_with(str(screenshot_path))
 
+    @pytest.mark.usefixtures("legacy_chrome")
     def test_screenshot_button_has_scilog_dropdown(self, advanced_dock_area):
         """Test screenshot toolbar button exposes a SciLog dropdown option."""
         action = advanced_dock_area.toolbar.components.get_action("screenshot")
@@ -1030,6 +1039,7 @@ class TestToolbarFunctionality:
             "Send Screenshot to SciLog",
         ]
 
+    @pytest.mark.usefixtures("legacy_chrome")
     def test_screenshot_to_scilog_action(self, advanced_dock_area):
         """Test sending a screenshot through the BEC SciLog messaging service."""
         mock_message = mock.MagicMock()
@@ -1128,6 +1138,7 @@ class TestDockSettingsDialog:
         assert dialog.isModal()
         assert hasattr(dialog, "prop_editor")
 
+    @pytest.mark.usefixtures("legacy_chrome")
     def test_open_dock_settings_dialog(self, advanced_dock_area, qtbot):
         """Test opening dock settings dialog."""
         from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import (
@@ -2432,6 +2443,7 @@ class TestToolbarModeBundles:
         assert "flat_plots" not in shown_bundles
         assert "flat_devices" not in shown_bundles
 
+    @pytest.mark.usefixtures("legacy_chrome")
     def test_developer_mode_toolbar_visibility(self, advanced_dock_area):
         """Test toolbar bundle visibility in developer mode."""
         advanced_dock_area.mode = "creator"
