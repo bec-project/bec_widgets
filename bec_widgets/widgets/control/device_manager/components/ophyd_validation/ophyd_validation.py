@@ -9,11 +9,13 @@ In addition, it allows to configure the test parameters.
                   Mostly relevant for ADBase integrations.
 """
 
+import atexit
 import queue
 import weakref
 from typing import Any
 from uuid import uuid4
 
+import shiboken6
 from bec_lib.atlas_models import Device as DeviceModel
 from bec_lib.logger import bec_logger
 from qtpy import QtCore, QtWidgets
@@ -134,6 +136,57 @@ class DeviceTest(QtCore.QRunnable):
             )
 
 
+_RETIRED_POOL_POLL_MS = 200
+# Thread pools of shut-down ThreadPoolManagers that still run device tests (see _retire_pool).
+_retired_pools: list[QtCore.QThreadPool] = []
+
+
+def _retire_pool(pool: QtCore.QThreadPool) -> None:
+    """
+    Take over a thread pool that still runs device tests from its (closing) owner.
+
+    A running StaticDeviceTest cannot be interrupted, and destroying a QThreadPool blocks until
+    its runnables return. The pool is therefore re-parented to the application, so destroying
+    its former parent does not freeze the GUI thread, and deleted once it is idle.
+
+    Args:
+        pool (QtCore.QThreadPool): The thread pool to retire.
+    """
+    pool.setParent(QtCore.QCoreApplication.instance())
+    _retired_pools.append(pool)
+    _delete_pool_when_idle(pool)
+
+
+def _delete_pool_when_idle(pool: QtCore.QThreadPool) -> None:
+    """
+    Delete a retired thread pool once none of its runnables is running any more.
+
+    Polled from the GUI thread, so the QThreadPool destructor never has to wait for a test.
+
+    Args:
+        pool (QtCore.QThreadPool): The thread pool to delete.
+    """
+    if shiboken6.isValid(pool) and pool.activeThreadCount() > 0:
+        QtCore.QTimer.singleShot(_RETIRED_POOL_POLL_MS, pool, lambda: _delete_pool_when_idle(pool))
+        return
+    _retired_pools[:] = [p for p in _retired_pools if p is not pool]
+    if shiboken6.isValid(pool):
+        pool.deleteLater()
+
+
+@atexit.register
+def _wait_for_retired_pools() -> None:
+    """
+    At interpreter exit, wait for device tests that are still running in retired pools.
+
+    Registered after PySide's own atexit cleanup and therefore run before it: PySide destroys
+    the Python-owned QObjects (e.g. the DeviceTestResult a running test emits on) in its cleanup.
+    """
+    for pool in list(_retired_pools):
+        if shiboken6.isValid(pool):
+            pool.waitForDone()
+
+
 class ThreadPoolManager(QtCore.QObject):
     """
     Manager wrapping QThreadPool to expose a queue for jobs.
@@ -159,6 +212,7 @@ class ThreadPoolManager(QtCore.QObject):
         self.poll_interval_ms = poll_interval_ms
         self._timer.setInterval(self.poll_interval_ms)
         self._active_tests: dict[str, weakref.ReferenceType[DeviceTest]] = {}
+        self._shut_down = False
 
     def start_polling(self):
         """Start the polling timer."""
@@ -172,16 +226,26 @@ class ThreadPoolManager(QtCore.QObject):
 
     def _emit_device_validation_started(self, device_name: str):
         """Emit device validation started signal."""
+        if self._shut_down:
+            return
         self.device_validation_started.emit(device_name)
 
     def _emit_device_validated(
         self, device_config: dict, config_status: int, connection_status: int, error_message: str
     ):
         """Emit device validated signal."""
+        if self._shut_down:
+            return
         self.device_validated.emit(device_config, config_status, connection_status, error_message)
 
     def submit(self, device_name: str, device_test: DeviceTest):
         """Queue a job for execution."""
+        if self._shut_down:
+            logger.debug(
+                f"Thread pool manager is shut down, dropping device test of {device_name}."
+            )
+            device_test.cancel()
+            return
         device_test.signals.device_validation_started.connect(self._emit_device_validation_started)
         device_test.signals.device_validated.connect(self._emit_device_validated)
         self._queue.put((device_name, device_test))
@@ -225,8 +289,45 @@ class ThreadPoolManager(QtCore.QObject):
         with self._queue.mutex:
             return [device_name for device_name, _ in list(self._queue.queue)]
 
+    def shutdown(self) -> None:
+        """
+        Stop starting device tests and drop all pending results, without blocking.
+
+        The poll timer is stopped, queued (not yet started) tests are discarded and running tests
+        are cancelled; their result signals are disconnected so late results are dropped. A test
+        that is already running cannot be interrupted: if any is still running, the thread pool
+        is retired (handed over to the application and deleted once idle), so destroying the
+        parent does not block the GUI thread in the QThreadPool destructor until the tests return.
+        """
+        if self._shut_down:
+            return
+        self._shut_down = True
+        self.stop_polling()
+        with self._queue.mutex:
+            queued = [runnable for _, runnable in self._queue.queue]
+            self._queue.queue.clear()
+        running = [ref() for ref in self._active_tests.values()]
+        self._active_tests.clear()
+        for runnable in queued + running:
+            if runnable is None:
+                continue
+            runnable.cancel()
+            for signal in (
+                runnable.signals.device_validated,
+                runnable.signals.device_validation_started,
+            ):
+                try:
+                    signal.disconnect()
+                except RuntimeError:  # nothing left to disconnect
+                    pass
+        self.pool.clear()
+        if self.pool.activeThreadCount() > 0:
+            _retire_pool(self.pool)
+
     def _process_queue(self):
         """Start new jobs if there is capacity. Runs with specified poll interval."""
+        if self._shut_down:
+            return
         while not self._queue.empty() and len(self._active_tests) < self.pool.maxThreadCount():
             device_name, runnable = self._queue.get()
             runnable.signals.device_validated.connect(self._on_task_finished)
@@ -370,6 +471,17 @@ class OphydValidation(BECWidget, QtWidgets.QWidget):
         """Start the thread pool polling loop."""
         if self.thread_pool_manager:
             self.thread_pool_manager.start_polling()
+
+    def cleanup(self):
+        """
+        Stop all validations without blocking, then clean up the widget.
+
+        Queued device tests are dropped and results of running ones are discarded; a test that
+        is already running cannot be interrupted and finishes in the background.
+        """
+        if self.thread_pool_manager is not None:
+            self.thread_pool_manager.shutdown()
+        super().cleanup()
 
     def _create_list_widget_with_label(self, label_text: str) -> BECList:
         """Setup the running validations section."""
@@ -607,7 +719,9 @@ class OphydValidation(BECWidget, QtWidgets.QWidget):
             # and therefore must not have the signal emitted immediately in the same event loop iteration.
             # Otherwise, the dialog would block signal processing.
             QtCore.QTimer.singleShot(
-                0, lambda: self.multiple_validations_completed.emit(devices_already_in_session)
+                0,
+                self,
+                lambda: self.multiple_validations_completed.emit(devices_already_in_session),
             )
 
     def cancel_validation(self, device_name: str) -> None:
@@ -725,8 +839,10 @@ class OphydValidation(BECWidget, QtWidgets.QWidget):
         self, widget: ValidationListItem, connect: bool, force_connect: bool, timeout: float
     ) -> None:
         """Delayed submission of device test to ensure UI updates."""
+        # The list item is the context object: the submission is dropped if the item (or this
+        # widget, its ancestor) is deleted before the event loop runs it.
         QtCore.QTimer.singleShot(
-            0, lambda: self._submit_test(widget, connect, force_connect, timeout)
+            0, widget, lambda: self._submit_test(widget, connect, force_connect, timeout)
         )
 
     def _submit_test(
