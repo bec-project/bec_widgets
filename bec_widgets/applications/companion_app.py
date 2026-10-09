@@ -19,7 +19,6 @@ import shiboken6
 from bec_lib.logger import bec_logger
 from bec_lib.service_config import ServiceConfig
 from bec_qthemes import apply_theme
-from qtmonaco.pylsp_provider import pylsp_server
 from qtpy.QtCore import QSize, Qt, QTimer
 from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QApplication
@@ -27,6 +26,7 @@ from qtpy.QtWidgets import QApplication
 import bec_widgets
 from bec_widgets.applications.launch_window import LaunchWindow
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
+from bec_widgets.utils.pylsp_server import stop_pylsp_server
 from bec_widgets.utils.rpc_register import RPCRegister
 
 # isort: on
@@ -222,10 +222,6 @@ class GUIServer:
             if self.launcher_window and shiboken6.isValid(self.launcher_window):
                 self.launcher_window.close()
                 self.launcher_window.deleteLater()
-
-        def stop_pylsp_server():
-            if pylsp_server.is_running():
-                pylsp_server.stop()
 
         def stop_dispatcher():
             if self.dispatcher:
