@@ -558,7 +558,7 @@ class BECStatusBox(RPCBase):
     @rpc_call
     def get_server_state(self) -> "str":
         """
-        Get the state ("RUNNING", "BUSY", "IDLE", "ERROR") of the BEC server
+        Get the state ("RUNNING", "BUSY", "IDLE", "ERROR", "NOTCONNECTED") of the BEC server
         """
 
     @rpc_call
