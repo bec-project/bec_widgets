@@ -887,6 +887,7 @@ class TestToolbarFunctionality:
         """Test utils toolbar actions trigger widget creation."""
         utils_actions = [
             "queue",
+            "queue_qt",
             "terminal",
             "status",
             "progress_bar",
@@ -2496,6 +2497,7 @@ class TestFlatToolbarActions:
         """Test that flat utils actions are created."""
         utils_actions = [
             "flat_queue",
+            "flat_queue_qt",
             "flat_status",
             "flat_progress_bar",
             "flat_scan_progress_bar",

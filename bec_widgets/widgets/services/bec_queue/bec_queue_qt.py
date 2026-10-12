@@ -2,7 +2,7 @@
 QWidget rendering of the BEC queue, with the same UX as the QML view.
 
 This exists to compare the two toolkits on the same data layer (:class:`QueueController`) and the
-same shell (:class:`BECQueue`); only the view differs. It is not registered for RPC or Designer.
+same shell (:class:`BECQueue`); only the view differs.
 """
 
 from __future__ import annotations
@@ -732,8 +732,7 @@ class BECQueueQt(BECQueue):
     Same shell, controller and behaviour as :class:`BECQueue`; only the rendering differs.
     """
 
-    PLUGIN = False
-    RPC = False
+    PLUGIN = True
 
     def _create_view(self) -> QWidget:
         return QueueView(self.controller, self)

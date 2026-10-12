@@ -30,6 +30,7 @@ _Widgets = {
     "BECMainWindow": "BECMainWindow",
     "BECProgressBar": "BECProgressBar",
     "BECQueue": "BECQueue",
+    "BECQueueQt": "BECQueueQt",
     "BECShell": "BECShell",
     "BECStatusBox": "BECStatusBox",
     "BeamlineStateManager": "BeamlineStateManager",
@@ -506,6 +507,30 @@ class BECQueue(RPCBase):
     """Widget to display the BEC queue."""
 
     _IMPORT_MODULE = "bec_widgets.widgets.services.bec_queue.bec_queue"
+
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
+
+class BECQueueQt(RPCBase):
+    """The BEC queue with a QWidget view instead of QML, for comparing the two toolkits."""
+
+    _IMPORT_MODULE = "bec_widgets.widgets.services.bec_queue.bec_queue_qt"
 
     @rpc_call
     def remove(self):

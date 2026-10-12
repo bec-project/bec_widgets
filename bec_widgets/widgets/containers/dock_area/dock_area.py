@@ -376,7 +376,8 @@ class BECDockArea(DockAreaWidget):
             ),
         }
         util_actions = {
-            "queue": (widget_icons["BECQueue"], "Scan Queue", "BECQueue"),
+            "queue": (widget_icons["BECQueue"], "Scan Queue (QML)", "BECQueue"),
+            "queue_qt": (widget_icons["BECQueueQt"], "Scan Queue (QWidgets)", "BECQueueQt"),
             "status": (widget_icons["BECStatusBox"], "BEC Status Box", "BECStatusBox"),
             "progress_bar": (
                 widget_icons["RingProgressBar"],

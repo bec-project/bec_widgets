@@ -52,3 +52,21 @@ def test_qt_view_paused_banner_and_empty_state(qt_queue, busy_queue):
     qt_queue.update_queue({}, {})
     assert qt_queue.view._rows == {}
     assert not qt_queue.view.empty.isHidden()
+
+
+def test_dock_area_toolbar_adds_both_queue_views(qtbot, mocked_client):
+    """The Dock Area toolbar offers the QML and the QWidget queue side by side."""
+    # pylint: disable=import-outside-toplevel
+    from bec_widgets.widgets.containers.dock_area.dock_area import BECDockArea
+    from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
+
+    area = BECDockArea(client=mocked_client)
+    qtbot.addWidget(area)
+    qtbot.waitExposed(area)
+    menu = area.toolbar.components.get_action("menu_utils")
+    menu.actions["queue"].action.trigger()
+    menu.actions["queue_qt"].action.trigger()
+
+    widgets = list(area.widget_map().values())
+    assert sum(type(w) is BECQueue for w in widgets) == 1
+    assert sum(type(w) is BECQueueQt for w in widgets) == 1
