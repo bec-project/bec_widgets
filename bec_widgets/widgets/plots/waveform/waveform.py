@@ -1570,11 +1570,16 @@ class Waveform(PlotBase):
         """
         curve.rpc_register.remove_rpc(curve)
 
-        # Stop tracking the removed curve, so history refreshes and DAP requests skip it
-        if curve in self._history_curves:
-            self._history_curves.remove(curve)
-        if curve in self._dap_curves:
-            self._dap_curves.remove(curve)
+        # Stop tracking the removed curve, so history refreshes, DAP requests and sync/async
+        # updates skip it, also when remove_curve cannot re-categorise (no scan to read from)
+        for tracked in (
+            self._history_curves,
+            self._dap_curves,
+            self._sync_curves,
+            self._async_curves,
+        ):
+            if curve in tracked:
+                tracked.remove(curve)
 
         # Remove itself from the DAP summary only for side panels
         if (

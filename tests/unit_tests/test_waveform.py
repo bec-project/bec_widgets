@@ -865,6 +865,65 @@ def test_removing_curve_named_like_its_device_keeps_shared_async_stream(
     np.testing.assert_array_equal(remaining.get_data()[1], [1, 2, 3])
 
 
+@pytest.mark.parametrize("removal", ["remove_curve", "clear_all"])
+def test_removed_curves_release_async_streams_and_tracking(
+    qtbot, mocked_client_with_dap, monkeypatch, scan_history_factory, removal
+):
+    """
+    Regression for #1301: removing every curve of a live scan (one by one or with clear_all)
+    must release the async stream and leave no curve in any tracking list.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    # The fit request is not under test (it cannot serialise the mocked scan item)
+    monkeypatch.setattr(wf, "request_dap", lambda *args, **kwargs: None)
+    inject_scan_history(wf, scan_history_factory, ("hist-1", 1))
+    async_curve = wf.plot(arg1="async_device")
+    sync_curve = wf.plot(arg1="bpm4i")
+    dap_curve = wf.add_dap_curve(device_label=sync_curve.name(), dap_name="GaussianModel")
+    history_curve = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist-1")
+    scan_item = create_dummy_scan_item(scan_id="scan-1")
+    monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: scan_item)
+    wf.on_scan_status({"scan_id": "scan-1", "status": "open"}, {})
+    assert _async_readback_endpoints(wf) == [_async_readback_endpoint("scan-1", "async_device")]
+    assert (wf._async_curves, wf._sync_curves) == ([async_curve], [sync_curve])
+    assert (wf._dap_curves, wf._history_curves) == ([dap_curve], [history_curve])
+
+    if removal == "remove_curve":
+        # The DAP curve goes with its parent
+        for curve in (async_curve, sync_curve, history_curve):
+            wf.remove_curve(curve.name())
+    else:
+        wf.clear_all()
+
+    assert wf.curves == []
+    assert _async_readback_endpoints(wf) == []
+    assert wf._async_streams_setup == {}
+    assert wf._async_curves == wf._sync_curves == wf._dap_curves == wf._history_curves == []
+
+
+def test_removed_curve_leaves_tracking_when_curves_cannot_be_recategorised(
+    qtbot, mocked_client, monkeypatch
+):
+    """
+    Regression for #1301: when remove_curve cannot re-categorise the curves (the scan carries
+    no readout priority), the removed curve must still leave the sync and async lists, so the
+    next updates do not touch it.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    async_curve = wf.plot(arg1="async_device")
+    sync_curve = wf.plot(arg1="bpm4i")
+    scan_item = create_dummy_scan_item(scan_id="scan-1")
+    monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: scan_item)
+    wf.on_scan_status({"scan_id": "scan-1", "status": "open"}, {})
+    assert (wf._async_curves, wf._sync_curves) == ([async_curve], [sync_curve])
+    scan_item.status_message.info.pop("readout_priority")
+
+    wf.remove_curve(async_curve.name())
+    wf.remove_curve(sync_curve.name())
+
+    assert wf._async_curves == wf._sync_curves == []
+
+
 def test_request_dap_skips_unchanged_static_parent(qtbot, mocked_client_with_dap, monkeypatch):
     """
     DAP curves whose parent is a static custom curve must not be resubmitted by
