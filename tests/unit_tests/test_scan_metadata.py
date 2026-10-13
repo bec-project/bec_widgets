@@ -155,16 +155,17 @@ def test_grid_to_dict(metadata_widget: tuple[ScanMetadata, dict[str, DynamicForm
 
 def test_validation(metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormItem]]):
     widget, components = metadata_widget = metadata_widget
-    assert widget._validity.compact_status.styleSheet().startswith(
-        widget._validity.compact_status.default_led[:114]
-    )
+    assert widget._validity_state is None
+    assert widget._validity_message.text() == "Not yet validated"
 
     fill_components(components)
     widget.validate_form()
+    assert widget._validity_state is True
     assert widget._validity_message.text() == "No errors!"
 
     components["bool_required_nodefault"]._main_widget.clear()
     widget.validate_form()
+    assert widget._validity_state is False
     assert "Input should be a valid boolean" in widget._validity_message.text()
     components["bool_required_nodefault"].setValue(True)
 

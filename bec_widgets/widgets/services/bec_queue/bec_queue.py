@@ -12,7 +12,6 @@ from qtpy.QtWidgets import QHeaderView, QLabel, QTableWidget, QTableWidgetItem, 
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.compact_popup import CompactPopupWidget
 from bec_widgets.utils.toolbars.actions import WidgetAction
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
@@ -24,7 +23,7 @@ from bec_widgets.widgets.control.buttons.stop_button.stop_button import StopButt
 logger = bec_logger.logger
 
 
-class BECQueue(BECWidget, CompactPopupWidget):
+class BECQueue(BECWidget, QWidget):
     """
     Widget to display the BEC queue.
     """
@@ -52,18 +51,16 @@ class BECQueue(BECWidget, CompactPopupWidget):
         refresh_upon_start: bool = True,
         **kwargs,
     ):
-        super().__init__(
-            parent=parent, layout=QVBoxLayout, client=client, gui_id=gui_id, config=config, **kwargs
-        )
-        self.layout.setSpacing(0)
-        self.layout.setContentsMargins(0, 0, 0, 0)
+        super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.setSpacing(0)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
         self._toolbar_hidden = False
 
         # Set up the toolbar
         self.set_toolbar()
         # Set up the table
         self.table = QTableWidget(self)
-        # self.layout.addWidget(self.table)
         self.table.setColumnCount(5)
         self.table.setHorizontalHeaderLabels(
             ["Scan Number", "Scan Name", "Type", "Status", "Cancel"]
@@ -72,9 +69,7 @@ class BECQueue(BECWidget, CompactPopupWidget):
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Stretch)
 
-        self.addWidget(self.table)
-        self.label = "BEC Queue"
-        self.tooltip = "BEC Queue status"
+        self.main_layout.addWidget(self.table)
 
         self.bec_dispatcher.connect_slot(self.update_queue, MessageEndpoints.scan_queue_status())
         self.reset_content()
@@ -108,7 +103,7 @@ class BECQueue(BECWidget, CompactPopupWidget):
         self.toolbar.add_bundle(control_bundle)
         self.toolbar.show_bundles(["queue_label", "control"])
 
-        self.addWidget(self.toolbar)
+        self.main_layout.addWidget(self.toolbar)
 
     @Property(bool)
     def hide_toolbar(self):
@@ -222,7 +217,6 @@ class BECQueue(BECWidget, CompactPopupWidget):
             if all(item.status in ("STOPPED", "COMPLETED", "IDLE") for item in queue_info)
             else True
         )
-        self.set_global_state("warning" if busy else "default")
         self.queue_busy.emit(busy)
 
     def format_item(self, content: str, status=False, tooltip: str = "") -> QTableWidgetItem:

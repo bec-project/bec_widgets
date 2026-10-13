@@ -11,10 +11,9 @@ from typing import TYPE_CHECKING
 from bec_lib.utils.import_utils import lazy_import_from
 from pydantic import BaseModel
 from qtpy.QtCore import QObject, QTimer, Signal, Slot
-from qtpy.QtWidgets import QHBoxLayout, QTreeWidget, QTreeWidgetItem
+from qtpy.QtWidgets import QHBoxLayout, QTreeWidget, QTreeWidgetItem, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.compact_popup import CompactPopupWidget
 from bec_widgets.widgets.services.bec_status_box.status_item import StatusItem
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -65,7 +64,7 @@ class BECServiceStatusMixin(QObject):
         self._service_update_timer.deleteLater()
 
 
-class BECStatusBox(BECWidget, CompactPopupWidget):
+class BECStatusBox(BECWidget, QWidget):
     """An autonomous widget to display the status of BEC services.
 
     Args:
@@ -92,7 +91,8 @@ class BECStatusBox(BECWidget, CompactPopupWidget):
         gui_id: str = None,
         **kwargs,
     ):
-        super().__init__(parent=parent, layout=QHBoxLayout, client=client, gui_id=gui_id, **kwargs)
+        super().__init__(parent=parent, client=client, gui_id=gui_id, **kwargs)
+        self.main_layout = QHBoxLayout(self)
 
         self.box_name = box_name
         self.status_container = defaultdict(lambda: {"info": None, "item": None, "widget": None})
@@ -101,13 +101,11 @@ class BECStatusBox(BECWidget, CompactPopupWidget):
             bec_service_status_mixin = BECServiceStatusMixin(self, client=self.client)
         self.bec_service_status = bec_service_status_mixin
 
-        self.label = box_name
-        self.tooltip = "BEC servers health status"
         self.init_ui()
         self.bec_service_status.services_update.connect(self.update_service_status)
         self.bec_core_state.connect(self.update_top_item_status)
         self.tree.itemDoubleClicked.connect(self.on_tree_item_double_clicked)
-        self.addWidget(self.tree)
+        self.main_layout.addWidget(self.tree)
 
     def init_ui(self) -> None:
         """Init the UI for the BECStatusBox widget, should only take place once."""
@@ -171,7 +169,6 @@ class BECStatusBox(BECWidget, CompactPopupWidget):
             status (BECStatus): The state of the core services.
         """
         self.status_container[self.box_name]["info"].status = status
-        self.set_global_state("emergency" if status == "NOTCONNECTED" else "success")
         self.service_update.emit(self.status_container[self.box_name]["info"])
 
     def _update_status_container(

@@ -4,13 +4,20 @@ from types import GenericAlias, NoneType, UnionType
 from typing import NamedTuple
 
 from bec_lib.logger import bec_logger
-from bec_qthemes import material_icon
 from pydantic import BaseModel, ValidationError
 from qtpy.QtCore import Signal  # type: ignore
-from qtpy.QtWidgets import QApplication, QGridLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
+from qtpy.QtWidgets import (
+    QApplication,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
 
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.compact_popup import CompactPopupWidget
+from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.forms_from_types import styles
 from bec_widgets.utils.forms_from_types.items import (
@@ -204,14 +211,13 @@ class PydanticModelForm(TypedForm):
             **kwargs,
         )
 
-        self._validity = CompactPopupWidget()
-        self._validity.compact_view = True  # type: ignore
-        self._validity.label = "Validity"  # type: ignore
-        self._validity.compact_show_popup.setIcon(
-            material_icon(icon_name="info", size=(10, 10), convert_to_pixmap=False)
-        )
-        self._validity_message = QLabel("Not yet validated")
-        self._validity.addWidget(self._validity_message)
+        self._validity = QWidget(self)
+        validity_layout = QHBoxLayout(self._validity)
+        validity_layout.setContentsMargins(0, 0, 0, 0)
+        self._validity_message = QLabel("Not yet validated", self._validity)
+        self._validity_message.setWordWrap(True)
+        validity_layout.addWidget(self._validity_message)
+        self._validity_state: bool | None = None
         self._layout.addWidget(self._validity)
         self.value_changed.connect(self.validate_form)
 
@@ -266,6 +272,14 @@ class PydanticModelForm(TypedForm):
         """Get the entered metadata as a dict."""
         return self._dict_from_grid()
 
+    def _set_validity(self, valid: bool, message: str):
+        """Show the validation result inline, coloured by the theme's accent colours."""
+        self._validity_state = valid
+        accents = get_accent_colors()
+        color = accents.success if valid else accents.emergency
+        self._validity_message.setStyleSheet(f"color: {color.name()};")
+        self._validity_message.setText(message)
+
     def validate_form(self, *_) -> bool:
         """validate the currently entered metadata against the pydantic schema.
         If successful, returns on metadata_emitted and returns true.
@@ -273,14 +287,12 @@ class PydanticModelForm(TypedForm):
         try:
             metadata_dict = self.get_form_data()
             self._md_schema.model_validate(metadata_dict)
-            self._validity.set_global_state("success")
-            self._validity_message.setText("No errors!")
+            self._set_validity(True, "No errors!")
             self.form_data_updated.emit(metadata_dict)
             self.validity_proc.emit(True)
             return True
         except ValidationError as e:
-            self._validity.set_global_state("emergency")
-            self._validity_message.setText(str(e))
+            self._set_validity(False, str(e))
             self.form_data_cleared.emit(None)
             self.validity_proc.emit(False)
             return False
