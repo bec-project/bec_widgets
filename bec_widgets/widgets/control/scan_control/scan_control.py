@@ -80,8 +80,23 @@ class ScanControl(BECWidget, QWidget):
         gui_id: str | None = None,
         allowed_scans: list | None = None,
         default_scan: str | None = None,
+        scan_info: dict | None = None,
         **kwargs,
     ):
+        """Initialize scan controls from subscribed metadata or the available-scans endpoint.
+
+        Args:
+            parent (QWidget | None): Owning widget.
+            client (BECClient | None): Existing BEC client.
+            config (ScanControlConfig | dict | None): Widget configuration.
+            gui_id (str | None): RPC widget identity.
+            allowed_scans (list | None): Optional scan-selection filter.
+            default_scan (str | None): Initial selected scan.
+            scan_info (dict | None): Already subscribed scan metadata, avoiding a Redis read
+                during embedded editor construction. Defaults to reading the existing endpoint.
+            **kwargs (object): Additional BECWidget arguments.
+        """
+        self._available_scans_override = scan_info
         if config is None:
             config = ScanControlConfig(
                 widget_class=self.__class__.__name__, allowed_scans=allowed_scans
@@ -254,9 +269,11 @@ class ScanControl(BECWidget, QWidget):
 
     def populate_scans(self):
         """Populates the scan selection combo box with available scans from BEC session."""
-        self.available_scans = self.client.connector.get(
-            MessageEndpoints.available_scans()
-        ).resource
+        self.available_scans = (
+            self._available_scans_override
+            if self._available_scans_override is not None
+            else self.client.connector.get(MessageEndpoints.available_scans()).resource
+        )
         self._update_scan_selector()
 
     def _supported_scan_names(self) -> list[str]:
@@ -768,7 +785,7 @@ class ScanControl(BECWidget, QWidget):
             hide(bool): Hide or show the metadata form.
         """
         self._hide_metadata = hide
-        self._metadata_form.setVisible(not hide)
+        self._metadata_group.setVisible(not hide)
 
     @SafeProperty(bool)
     def hide_optional_metadata(self):

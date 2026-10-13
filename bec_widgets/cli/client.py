@@ -54,6 +54,7 @@ _Widgets = {
     "SBBMonitor": "SBBMonitor",
     "ScanControl": "ScanControl",
     "ScanProgressBar": "ScanProgressBar",
+    "ScanScheduler": "ScanScheduler",
     "ScatterWaveform": "ScatterWaveform",
     "SignalLabel": "SignalLabel",
     "TextBox": "TextBox",
@@ -5423,6 +5424,43 @@ class ScanProgressBar(RPCBase):
     def detach(self):
         """
         Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
+
+class ScanScheduler(RPCBase):
+    """Edit nested components and execute validated sequences through procedures."""
+
+    _IMPORT_MODULE = "bec_widgets.widgets.control.scan_scheduler.scan_scheduler"
+
+    @rpc_call
+    def load_json(self, document: "str", definitions: "str" = "[]") -> "None":
+        """
+        Load a structurally valid document and reusable definitions into the editor.
+
+        Args:
+            document (str): Sequence document JSON.
+            definitions (str): JSON list of reusable definitions. Defaults to an empty library.
+        """
+
+    @rpc_call
+    def document_json(self) -> "str":
+        """
+        Return the current edited document with structural schema validation.
+
+        Returns:
+            str: Authoritative sequence JSON for saving or submission.
+        """
+
+    @rpc_call
+    def validate_sequence(self) -> "None":
+        """
+        Validate the entire draft and refresh all exports on a background task.
+        """
+
+    @rpc_call
+    def execute_sequence(self) -> "None":
+        """
+        Validate and execute the current sequence through the existing procedure API.
         """
 
 

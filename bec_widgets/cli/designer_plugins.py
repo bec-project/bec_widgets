@@ -100,6 +100,7 @@ designer_plugins = {
         "bec_widgets.widgets.progress.scan_progressbar.scan_progressbar",
         "ScanProgressBar",
     ),
+    "ScanScheduler": ("bec_widgets.widgets.control.scan_scheduler.scan_scheduler", "ScanScheduler"),
     "ScatterWaveform": (
         "bec_widgets.widgets.plots.scatter_waveform.scatter_waveform",
         "ScatterWaveform",
@@ -163,6 +164,7 @@ widget_icons = {
     "ScanIndexComboBox": "history",
     "ScanMetadata": "list_alt",
     "ScanProgressBar": "timelapse",
+    "ScanScheduler": "account_tree",
     "ScatterWaveform": "scatter_plot",
     "SignalComboBox": "list_alt",
     "SignalLabel": "scoreboard",

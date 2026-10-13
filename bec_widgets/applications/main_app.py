@@ -24,6 +24,7 @@ from bec_widgets.utils.screen_utils import (
 )
 from bec_widgets.widgets.containers.dock_area.profile_utils import is_experimental_features_enabled
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
+from bec_widgets.widgets.control.scan_scheduler import ScanScheduler
 
 startup_profiler.mark("module imports")
 
@@ -93,6 +94,14 @@ class BECMainApp(BECMainWindow):
             title="Device Manager",
             widget=self.device_manager,
             mini_text="DM",
+        )
+        self.scan_scheduler = ScanScheduler(parent=self)
+        self.add_view(
+            icon="account_tree",
+            title="Scan Scheduler",
+            widget=self.scan_scheduler,
+            mini_text="Scans",
+            view_id="scan_scheduler",
         )
         if is_experimental_features_enabled():
             self.developer_view = DeveloperView(self)
