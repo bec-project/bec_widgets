@@ -11,11 +11,18 @@ Rectangle {
     implicitHeight: header.height + list.contentHeight + 16
 
     property string expandedService: ""
+    // while a restart runs or just finished, the header shows its progress instead
+    readonly property string headerTone: statusModel.restartState === "running" ? "progress"
+                                       : statusModel.restartState === "done" ? "success"
+                                       : statusModel.restartState === "failed" ? "emergency"
+                                       : statusModel.tone
+    readonly property color headerColor: toneColor(headerTone)
 
     function toneColor(tone) {
         if (tone === "success") return theme.success
         if (tone === "warning") return theme.warning
         if (tone === "emergency") return theme.emergency
+        if (tone === "progress") return theme.primary
         return theme.muted
     }
     function iconUrl(name, color, filled) {
@@ -29,10 +36,9 @@ Rectangle {
         anchors { left: parent.left; right: parent.right; top: parent.top; margins: 8 }
         height: 56
         radius: 8
-        color: Qt.rgba(root.toneColor(statusModel.tone).r, root.toneColor(statusModel.tone).g,
-                       root.toneColor(statusModel.tone).b, theme.dark ? 0.16 : 0.12)
-        border.color: Qt.rgba(root.toneColor(statusModel.tone).r, root.toneColor(statusModel.tone).g,
-                              root.toneColor(statusModel.tone).b, 0.45)
+        color: Qt.rgba(root.headerColor.r, root.headerColor.g, root.headerColor.b,
+                       theme.dark ? 0.16 : 0.12)
+        border.color: Qt.rgba(root.headerColor.r, root.headerColor.g, root.headerColor.b, 0.45)
 
         RowLayout {
             anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
@@ -41,13 +47,26 @@ Rectangle {
                 id: dot
                 Layout.alignment: Qt.AlignVCenter
                 width: 12; height: 12; radius: 6
-                color: root.toneColor(statusModel.tone)
+                visible: statusModel.restartState !== "running"
+                color: root.headerColor
                 SequentialAnimation on opacity {
-                    running: statusModel.tone === "emergency"
+                    running: root.headerTone === "emergency"
                     loops: Animation.Infinite
                     onRunningChanged: if (!running) dot.opacity = 1
                     NumberAnimation { to: 0.35; duration: 700; easing.type: Easing.InOutQuad }
                     NumberAnimation { to: 1.0; duration: 700; easing.type: Easing.InOutQuad }
+                }
+            }
+            Image {
+                id: restartSpinner
+                visible: statusModel.restartState === "running"
+                Layout.preferredWidth: 16; Layout.preferredHeight: 16
+                sourceSize: Qt.size(16, 16)
+                source: root.iconUrl("progress_activity", theme.primary, false)
+                RotationAnimation on rotation {
+                    running: restartSpinner.visible
+                    loops: Animation.Infinite
+                    from: 0; to: 360; duration: 1000
                 }
             }
             ColumnLayout {
@@ -56,7 +75,8 @@ Rectangle {
                 Text {
                     objectName: "headline"
                     Layout.fillWidth: true
-                    text: statusModel.headline
+                    text: statusModel.restartState !== "" ? statusModel.restartText
+                                                          : statusModel.headline
                     color: theme.text
                     font.pixelSize: 14; font.bold: true
                     elide: Text.ElideRight
@@ -67,6 +87,31 @@ Rectangle {
                     color: theme.muted
                     font.pixelSize: 11
                     elide: Text.ElideRight
+                }
+            }
+            Rectangle {
+                id: restartButton
+                objectName: "restartButton"
+                Layout.preferredWidth: 30; Layout.preferredHeight: 30
+                radius: 6
+                opacity: statusModel.canRestart ? 1.0 : 0.4
+                color: restartArea.containsMouse && statusModel.canRestart
+                       ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.08) : "transparent"
+                ToolTip.visible: restartArea.containsMouse
+                ToolTip.text: statusModel.canRestart ? "Restart BEC server"
+                              : statusModel.restartState === "running" ? "Restart in progress"
+                              : "Restart needs SciHub to be running"
+                Image {
+                    anchors.centerIn: parent
+                    sourceSize: Qt.size(18, 18)
+                    source: root.iconUrl("restart_alt", theme.text, false)
+                }
+                MouseArea {
+                    id: restartArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: statusModel.canRestart ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    onClicked: statusModel.requestRestart()
                 }
             }
         }

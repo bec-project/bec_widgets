@@ -260,6 +260,8 @@ class ServiceStatusModel(QAbstractListModel):
 
     summaryChanged = Signal()
     rowsChanged = Signal()
+    restartChanged = Signal()
+    restartRequested = Signal()
 
     ROLE_NAMES = (
         "serviceName",
@@ -284,6 +286,9 @@ class ServiceStatusModel(QAbstractListModel):
         self._headline = "Waiting for BEC services"
         self._detail = ""
         self._tone = "neutral"
+        self._restart_state = ""
+        self._restart_text = ""
+        self._can_restart = False
         self._roles = {Qt.ItemDataRole.UserRole + i: n for i, n in enumerate(self.ROLE_NAMES)}
         self._role_ids = {name: role for role, name in self._roles.items()}
 
@@ -405,6 +410,46 @@ class ServiceStatusModel(QAbstractListModel):
     def tone(self) -> str:
         """The overall tone: success, warning, emergency or neutral."""
         return self._tone
+
+    # ---- server restart -----------------------------------------------------------------------
+
+    def set_restart(self, state: str, text: str = "") -> None:
+        """Set the restart progress shown in the header.
+
+        Args:
+            state (str): "" (none), "running", "done" or "failed".
+            text (str): The line shown while the state is set.
+        """
+        if (state, text) != (self._restart_state, self._restart_text):
+            self._restart_state, self._restart_text = state, text
+            self.restartChanged.emit()
+
+    def set_can_restart(self, can_restart: bool) -> None:
+        """Enable or disable the restart action."""
+        if can_restart != self._can_restart:
+            self._can_restart = can_restart
+            self.restartChanged.emit()
+
+    @Property(str, notify=restartChanged)
+    def restartState(self) -> str:
+        """The restart progress: "", "running", "done" or "failed"."""
+        return self._restart_state
+
+    @Property(str, notify=restartChanged)
+    def restartText(self) -> str:
+        """The restart progress line."""
+        return self._restart_text
+
+    @Property(bool, notify=restartChanged)
+    def canRestart(self) -> bool:
+        """Whether a restart can be requested now (SciHub is up and no restart is running)."""
+        return self._can_restart and self._restart_state != "running"
+
+    @Slot()
+    def requestRestart(self) -> None:
+        """Ask the owner widget to confirm and request a BEC server restart."""
+        if self.canRestart:
+            self.restartRequested.emit()
 
     @Slot(str)
     def copyDetails(self, service_name: str) -> None:

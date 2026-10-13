@@ -35,6 +35,7 @@ _FALLBACK = {
     "ACCENT_WARNING": "#eda200",
     "ACCENT_EMERGENCY": "#e0534b",
     "ACCENT_SUCCESS": "#59a869",
+    "PRIMARY": "#6089ef",
 }
 
 
@@ -52,6 +53,7 @@ def tone_color(colors: dict[str, QColor], tone: str) -> QColor:
         "success": colors["ACCENT_SUCCESS"],
         "warning": colors["ACCENT_WARNING"],
         "emergency": colors["ACCENT_EMERGENCY"],
+        "progress": colors["PRIMARY"],
     }.get(tone, colors["DISABLED_FG"])
 
 
@@ -119,13 +121,57 @@ class StatusHeader(QFrame):
         text.addWidget(self.headline)
         text.addWidget(self.detail)
         text.addStretch()
+        self.spinner = QLabel(self)
+        self.spinner.setFixedSize(16, 16)
+        self.spinner.setVisible(False)
+        self.restart_button = QToolButton(self)
+        self.restart_button.setObjectName("restartButton")
+        self.restart_button.setAutoRaise(True)
+        self.restart_button.setIconSize(QSize(18, 18))
+        self.restart_button.setCursor(Qt.CursorShape.PointingHandCursor)
         layout.addWidget(self.dot)
+        layout.addWidget(self.spinner)
         layout.addLayout(text, 1)
+        layout.addWidget(self.restart_button)
+        self._angle = 0
+        self._spin = QTimer(self)
+        self._spin.setInterval(80)
+        self._spin.timeout.connect(self._step_spinner)
         self._tone = "neutral"
         self._pulse_up = False
         self._pulse = QTimer(self)
         self._pulse.setInterval(50)
         self._pulse.timeout.connect(self._step_pulse)
+
+    def set_restart(self, state: str, can_restart: bool) -> None:
+        """Show the restart action and spinner for the model's restart state."""
+        running = state == "running"
+        self.restart_button.setEnabled(can_restart)
+        self.restart_button.setToolTip(
+            "Restart BEC server"
+            if can_restart
+            else "Restart in progress" if running else "Restart needs SciHub to be running"
+        )
+        self.spinner.setVisible(running)
+        self.dot.setVisible(not running)
+        if running:
+            self._spin.start()
+        else:
+            self._spin.stop()
+
+    def _step_spinner(self):
+        self._angle = (self._angle + 30) % 360
+        self._paint_spinner()
+
+    def _paint_spinner(self):
+        color = theme_colors()["PRIMARY"]
+        pixmap = material_icon("progress_activity", size=(16, 16), color=color)
+        rotated = pixmap.transformed(
+            QTransform().rotate(self._angle), Qt.TransformationMode.SmoothTransformation
+        )
+        x = (rotated.width() - pixmap.width()) // 2
+        y = (rotated.height() - pixmap.height()) // 2
+        self.spinner.setPixmap(rotated.copy(x, y, pixmap.width(), pixmap.height()))
 
     def set_summary(self, headline: str, detail: str, tone: str) -> None:
         """Show the summary of the model."""
@@ -152,6 +198,10 @@ class StatusHeader(QFrame):
         accent = tone_color(colors, self._tone)
         alpha = 41 if get_theme_name() != "light" else 31
         self.dot.set_color(accent)
+        self.restart_button.setIcon(
+            material_icon("restart_alt", size=(18, 18), color=colors["FG"], convert_to_pixmap=False)
+        )
+        self._paint_spinner()
         self.setStyleSheet(
             f"#StatusHeader {{ background: {rgba(accent, alpha)}; border: 1px solid "
             f"{rgba(accent, 115)}; border-radius: 8px; }}"
@@ -160,8 +210,9 @@ class StatusHeader(QFrame):
         )
 
     def stop(self) -> None:
-        """Stop the pulse timer."""
+        """Stop the pulse and spinner timers."""
         self._pulse.stop()
+        self._spin.stop()
 
 
 class ServiceRowWidget(QFrame):
@@ -413,12 +464,20 @@ class StatusBoxWidgetView(QWidget):
 
         model.rowsChanged.connect(self.sync)
         model.summaryChanged.connect(self._update_summary)
+        model.restartChanged.connect(self._update_summary)
+        self.header.restart_button.clicked.connect(model.requestRestart)
         self._update_summary()
         self.sync()
         self.apply_theme()
 
     def _update_summary(self):
-        self.header.set_summary(self.model.headline, self.model.detail, self.model.tone)
+        state = self.model.restartState
+        if state:
+            tone = {"running": "progress", "done": "success"}.get(state, "emergency")
+            self.header.set_summary(self.model.restartText, self.model.detail, tone)
+        else:
+            self.header.set_summary(self.model.headline, self.model.detail, self.model.tone)
+        self.header.set_restart(state, self.model.canRestart)
 
     def sync(self) -> None:
         """Bring the row widgets in line with the model, reusing existing widgets."""

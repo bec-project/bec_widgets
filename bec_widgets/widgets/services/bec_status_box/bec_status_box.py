@@ -5,32 +5,47 @@ The widget automatically updates the status of all running BEC services, and dis
 from __future__ import annotations
 
 import os
+import threading
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import_from
 from pydantic import BaseModel
 from qtpy.QtCore import QObject, QTimer, Signal
-from qtpy.QtWidgets import QHBoxLayout, QWidget
+from qtpy.QtWidgets import QHBoxLayout, QMessageBox, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.compact_popup import CompactPopupWidget
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.widgets.services.bec_status_box.status_box_widgets import StatusBoxWidgetView
-from bec_widgets.widgets.services.bec_status_box.status_model import ServiceStatusModel, build_rows
+from bec_widgets.widgets.services.bec_status_box.status_model import (
+    ServiceStatusModel,
+    build_rows,
+    friendly_name,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.client import BECClient
-    from bec_lib.messages import BECStatus, ServiceMetricMessage, StatusMessage
+    from bec_lib.messages import (
+        BECStatus,
+        ServiceMetricMessage,
+        ServiceRequestMessage,
+        StatusMessage,
+    )
 else:
     # TODO : Put normal imports back when Pydantic gets faster
-    BECStatus = lazy_import_from("bec_lib.messages", ("BECStatus",))
+    BECStatus, ServiceRequestMessage = lazy_import_from(
+        "bec_lib.messages", ("BECStatus", "ServiceRequestMessage")
+    )
 
 logger = bec_logger.logger
 
 QML_FILE = Path(__file__).parent / "qml" / "StatusBox.qml"
+RESTART_TIMEOUT_S = 120
 
 
 @dataclass
@@ -125,6 +140,14 @@ class BECStatusBox(BECWidget, CompactPopupWidget):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.addWidget(self.view)
         self.model.summaryChanged.connect(self._update_compact_state)
+        self.model.restartRequested.connect(self.confirm_restart)
+        self._restart_requested_at: float | None = None
+        self._restart_timeout = QTimer(self)
+        self._restart_timeout.setSingleShot(True)
+        self._restart_timeout.timeout.connect(self._restart_timed_out)
+        self._restart_clear = QTimer(self)
+        self._restart_clear.setSingleShot(True)
+        self._restart_clear.timeout.connect(lambda: self.model.set_restart(""))
         self.bec_service_status.services_update.connect(self.update_service_status)
         self.bec_core_state.connect(self.update_top_item_status)
         self._update_compact_state()
@@ -261,6 +284,86 @@ class BECStatusBox(BECWidget, CompactPopupWidget):
     def _refresh_model(self) -> None:
         rows = build_rows(self.status_container.values(), self.CORE_SERVICES)
         self.model.set_rows(rows, self.core_state)
+        scihub = self.status_container.get("SciHub")
+        self.model.set_can_restart(scihub is not None and scihub.status != "NOTCONNECTED")
+        self._check_restart_progress()
+
+    # ---- server restart -----------------------------------------------------------------------
+
+    @SafeSlot()
+    def confirm_restart(self) -> None:
+        """Ask the user to confirm, then request a restart of the BEC server."""
+        answer = QMessageBox.warning(
+            self,
+            "Restart BEC server",
+            "Restart all BEC server services?\n\n"
+            "A running scan is aborted, and devices are reloaded. "
+            "Clients stay connected and continue after the restart.",
+            QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Yes,
+            QMessageBox.StandardButton.Cancel,
+        )
+        if answer == QMessageBox.StandardButton.Yes:
+            self.request_restart()
+
+    def request_restart(self) -> None:
+        """Request a restart of all BEC server services through SciHub.
+
+        The progress is shown in the header: a service counts as restarted once it reports
+        RUNNING with a process start time after the request.
+        """
+        if not self.model.canRestart:
+            return
+        self._restart_requested_at = time.time()
+        self.client.connector.send(
+            MessageEndpoints.service_request(), ServiceRequestMessage(action="restart")
+        )
+        logger.info("BEC server restart requested from the status box")
+        self._restart_clear.stop()
+        self._restart_timeout.start(int(RESTART_TIMEOUT_S * 1000))
+        self.model.set_restart("running", f"Restarting BEC server · 0/{len(self.CORE_SERVICES)}")
+
+    def _restarted_services(self) -> list[str]:
+        restarted = []
+        for name in self.CORE_SERVICES:
+            container = self.status_container.get(name)
+            if container is None or container.status not in ("RUNNING", "BUSY"):
+                continue
+            started = (container.metrics or {}).get("create_time")
+            if started is not None and started >= self._restart_requested_at:
+                restarted.append(name)
+        return restarted
+
+    def _check_restart_progress(self) -> None:
+        if self._restart_requested_at is None:
+            return
+        done = len(self._restarted_services())
+        total = len(self.CORE_SERVICES)
+        if done < total:
+            self.model.set_restart("running", f"Restarting BEC server · {done}/{total}")
+            return
+        self._restart_requested_at = None
+        self._restart_timeout.stop()
+        self.model.set_restart("done", "BEC server restarted")
+        self._restart_clear.start(6000)
+        threading.Thread(target=self._reload_client, daemon=True, name="status_box_reload").start()
+
+    def _reload_client(self) -> None:
+        """Reload scans and devices in this client after a restart (runs off the GUI thread)."""
+        # pylint: disable=protected-access
+        try:
+            self.client._load_scans()
+            self.client.device_manager._reload_action()
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.warning(f"Reloading the client after the server restart failed: {exc}")
+
+    def _restart_timed_out(self) -> None:
+        if self._restart_requested_at is None:
+            return
+        missing = [n for n in self.CORE_SERVICES if n not in self._restarted_services()]
+        self._restart_requested_at = None
+        names = ", ".join(friendly_name(n)[0] for n in missing)
+        self.model.set_restart("failed", f"Restart not finished: {names} did not come back")
+        self._restart_clear.start(15000)
 
     def _update_compact_state(self) -> None:
         tone = self.model.tone
@@ -284,6 +387,8 @@ class BECStatusBox(BECWidget, CompactPopupWidget):
     def cleanup(self):
         """Cleanup the BECStatusBox widget."""
         self.bec_service_status.cleanup()
+        self._restart_timeout.stop()
+        self._restart_clear.stop()
         if isinstance(self.view, StatusBoxWidgetView):
             self.view.cleanup()
         return super().cleanup()

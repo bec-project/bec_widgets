@@ -44,6 +44,7 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets.utils.colors import apply_theme, get_theme_name
+from bec_widgets.widgets.services.bec_status_box import bec_status_box
 from bec_widgets.widgets.services.bec_status_box.bec_status_box import BECStatusBox
 
 STATES = ["Running", "Busy", "Idle", "Error", "Not connected"]
@@ -135,6 +136,28 @@ class SimulatedServices(QObject):
             )
         return infos, metrics
 
+    def simulate_restart(self, fail: bool = False) -> None:
+        """Mimic SciHub restarting the server: core services drop out, then come back one by one.
+
+        Args:
+            fail (bool): Keep the scan bundler down, so the restart never finishes.
+        """
+        saved = dict(self.core_states)
+        for name in BECStatusBox.CORE_SERVICES:
+            self.core_states[name] = "Not connected"
+        self.emit_update()
+
+        def bring_back(index: int):
+            name = BECStatusBox.CORE_SERVICES[index]
+            if fail and name == "ScanBundler":
+                return
+            self.start_times[name] = time.time()
+            self.core_states[name] = saved[name] if saved[name] != "Not connected" else "Running"
+            self.emit_update()
+
+        for index in range(len(BECStatusBox.CORE_SERVICES)):
+            QTimer.singleShot(2500 + 900 * index, lambda i=index: bring_back(i))
+
     def emit_update(self) -> None:
         """Emit one update, like the real mixin does every second."""
         self._tick += 1
@@ -217,6 +240,9 @@ class ControlPanel(QWidget):
             lambda on: self.flap_timer.start(2000) if on else self.flap_timer.stop()
         )
         grid.addWidget(self.flapping)
+        self.restart_fails = QCheckBox("Server restart fails (Scan bundler stays down)")
+        grid.addWidget(self.restart_fails)
+        grid.addWidget(QLabel("Restart: use the button in either view's header."))
         layout.addWidget(scenarios)
 
         view = QGroupBox("Look")
@@ -308,6 +334,8 @@ class CompareWindow(QMainWindow):
         self.setWindowTitle("BEC status box: QWidget vs QML")
         self.sim = SimulatedServices(self)
         client = mock.MagicMock()
+        client.connector.send.side_effect = self._on_send
+        bec_status_box.RESTART_TIMEOUT_S = 20  # a failed restart shows up quickly in the demo
         self.boxes = {
             "QWidget": TimedStatusBox(
                 client=client, bec_service_status_mixin=self.sim, view="widgets"
@@ -357,6 +385,11 @@ class CompareWindow(QMainWindow):
         self.setCentralWidget(splitter)
         self.resize(1250, 780)
         self.sim.emit_update()
+
+    def _on_send(self, endpoint, msg):
+        if getattr(msg, "action", None) == "restart":
+            fail = self.findChild(ControlPanel).restart_fails.isChecked()
+            self.sim.simulate_restart(fail=fail)
 
     def closeEvent(self, event):
         self.sim.timer.stop()

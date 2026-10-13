@@ -3,9 +3,10 @@ import time
 from unittest import mock
 
 import pytest
+from bec_lib.endpoints import MessageEndpoints
 from bec_lib.messages import BECStatus, ServiceInfo, ServiceMetricMessage, StatusMessage
 from qtpy.QtQuickWidgets import QQuickWidget
-from qtpy.QtWidgets import QApplication
+from qtpy.QtWidgets import QApplication, QMessageBox
 
 from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.tests.utils import create_widget
@@ -276,3 +277,72 @@ def test_widget_view_follows_theme(qtbot, mocked_client):
     qtbot.waitUntil(lambda: box.view.styleSheet() != dark)
     apply_theme("dark")
     qtbot.waitUntil(lambda: box.view.styleSheet() == dark)
+
+
+def _restarted(started):
+    info, metrics = _all_services()
+    for name in BECStatusBox.CORE_SERVICES:
+        metrics[name].metrics["create_time"] = started
+    return info, metrics
+
+
+@pytest.fixture
+def send(status_box):
+    with mock.patch.object(status_box.client.connector, "send") as send_mock:
+        yield send_mock
+
+
+def test_restart_needs_scihub(status_box, send):
+    status_box.update_service_status(*_all_services(skip=["SciHub"]))
+    assert not status_box.model.canRestart
+    status_box.model.requestRestart()
+    send.assert_not_called()
+    status_box.update_service_status(*_all_services())
+    assert status_box.model.canRestart
+
+
+def test_restart_confirm_cancel(status_box, send):
+    status_box.update_service_status(*_all_services())
+    with mock.patch(
+        "bec_widgets.widgets.services.bec_status_box.bec_status_box.QMessageBox.warning",
+        return_value=QMessageBox.StandardButton.Cancel,
+    ) as dialog:
+        status_box.model.requestRestart()
+    dialog.assert_called_once()
+    send.assert_not_called()
+
+
+def test_restart_progress_and_done(status_box, send):
+    status_box.update_service_status(*_all_services())
+    with (
+        mock.patch(
+            "bec_widgets.widgets.services.bec_status_box.bec_status_box.QMessageBox.warning",
+            return_value=QMessageBox.StandardButton.Yes,
+        ),
+        mock.patch.object(status_box, "_reload_client") as reload_client,
+    ):
+        status_box.model.requestRestart()
+        endpoint, msg = send.call_args[0]
+        assert endpoint == MessageEndpoints.service_request()
+        assert msg.action == "restart"
+        model = status_box.model
+        assert model.restartState == "running"
+        assert not model.canRestart
+        # old processes are still reporting: nothing counts as restarted yet
+        status_box.update_service_status(*_restarted(time.time() - 100))
+        assert model.restartText.endswith("0/5")
+        status_box.update_service_status(*_all_services(skip=BECStatusBox.CORE_SERVICES))
+        assert model.restartState == "running"
+        status_box.update_service_status(*_restarted(time.time() + 1))
+        assert model.restartState == "done"
+        assert model.canRestart
+    reload_client.assert_called_once()
+
+
+def test_restart_timeout(status_box, send):
+    status_box.update_service_status(*_all_services())
+    with mock.patch.object(status_box.model, "restartRequested"):
+        status_box.request_restart()
+    status_box._restart_timed_out()
+    assert status_box.model.restartState == "failed"
+    assert "Device server" in status_box.model.restartText
