@@ -7,7 +7,6 @@ try:
 except ImportError:
     pytest.skip(reason="Requires plugin repo!", allow_module_level=True)
 
-from qtpy.QtWidgets import QGridLayout
 
 from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.control.scan_control import ScanControl
@@ -68,11 +67,9 @@ def test_scan_metadata_for_custom_scan(
 
     def do_test():
         # Set the metadata
-        grid: QGridLayout = scan_control._metadata_form._form_grid.layout()
-        for i in range(grid.rowCount() - 1):  # type: ignore
-            field_name = grid.itemAtPosition(i, 0).widget().property("_model_field_name")
+        for field_name, widget in scan_control._metadata_form.widget_dict.items():
             if (value_to_set := md.pop(field_name, None)) is not None:
-                grid.itemAtPosition(i, 1).widget().setValue(value_to_set)
+                widget.setValue(value_to_set)
         # all values should be used
         assert md == {}
         assert scan_control.button_run_scan.isEnabled()
