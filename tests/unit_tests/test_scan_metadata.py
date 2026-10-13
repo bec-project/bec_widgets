@@ -3,7 +3,7 @@ from typing import Set
 
 import pytest
 from bec_lib.metadata_schema import BasicScanMetadata
-from pydantic import Field
+from pydantic import BaseModel, Field, ValidationError
 from pydantic.types import Json
 from qtpy.QtCore import QItemSelectionModel, QPoint, Qt
 
@@ -77,40 +77,7 @@ def metadata_widget(empty_metadata_widget: ScanMetadata):
     widget._md_schema = ExampleSchema
     widget.populate()
 
-    scan_name = widget._form_grid.layout().itemAtPosition(0, 1).widget()
-    comment = widget._form_grid.layout().itemAtPosition(1, 1).widget()
-    sample_name = widget._form_grid.layout().itemAtPosition(2, 1).widget()
-    str_optional = widget._form_grid.layout().itemAtPosition(3, 1).widget()
-    str_required = widget._form_grid.layout().itemAtPosition(4, 1).widget()
-    bool_optional = widget._form_grid.layout().itemAtPosition(5, 1).widget()
-    bool_required_default = widget._form_grid.layout().itemAtPosition(6, 1).widget()
-    bool_required_nodefault = widget._form_grid.layout().itemAtPosition(7, 1).widget()
-    int_default = widget._form_grid.layout().itemAtPosition(8, 1).widget()
-    int_nodefault_optional = widget._form_grid.layout().itemAtPosition(9, 1).widget()
-    float_nodefault = widget._form_grid.layout().itemAtPosition(10, 1).widget()
-    decimal_dp_limits_nodefault = widget._form_grid.layout().itemAtPosition(11, 1).widget()
-    dict_default = widget._form_grid.layout().itemAtPosition(12, 1).widget()
-    unsupported_class = widget._form_grid.layout().itemAtPosition(13, 1).widget()
-
-    yield (
-        widget,
-        {
-            "scan_name": scan_name,
-            "comment": comment,
-            "sample_name": sample_name,
-            "str_optional": str_optional,
-            "str_required": str_required,
-            "bool_optional": bool_optional,
-            "bool_required_default": bool_required_default,
-            "bool_required_nodefault": bool_required_nodefault,
-            "int_default": int_default,
-            "int_nodefault_optional": int_nodefault_optional,
-            "float_nodefault": float_nodefault,
-            "decimal_dp_limits_nodefault": decimal_dp_limits_nodefault,
-            "dict_default": dict_default,
-            "unsupported_class": unsupported_class,
-        },
-    )
+    yield widget, widget.widget_dict
 
 
 def fill_components(components: dict[str, DynamicFormItem]):
@@ -166,13 +133,169 @@ def test_validation(metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormIt
     components["bool_required_nodefault"]._main_widget.clear()
     widget.validate_form()
     assert widget._validity_state is False
-    assert "Input should be a valid boolean" in widget._validity_message.text()
+    assert widget._validity_message.text() == "Invalid field: bool_required_nodefault"
+    assert (
+        widget._validity_message.toolTip() == "bool_required_nodefault: Required - please fill in"
+    )
     components["bool_required_nodefault"].setValue(True)
 
     components["float_nodefault"]._main_widget.clear()
     widget.validate_form()
-    assert "Input should be a valid number" in widget._validity_message.text()
+    assert widget._validity_message.text() == "Invalid field: float_nodefault"
+    assert widget._validity_message.toolTip() == "float_nodefault: Required - please fill in"
     components["float_nodefault"].setValue(True)
+
+
+def test_validation_summary_stays_short(
+    metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormItem]],
+):
+    widget, components = metadata_widget
+    fill_components(components)
+    components["bool_required_nodefault"]._main_widget.clear()
+    components["float_nodefault"]._main_widget.clear()
+    widget.validate_form()
+    summary = widget._validity_summary
+    assert summary == "2 invalid fields: bool_required_nodefault, float_nodefault"
+    assert "\n" not in summary
+    assert "errors.pydantic.dev" not in widget._validity_message.toolTip()
+
+
+def test_validation_summary_uses_field_titles(
+    metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormItem]],
+):
+    widget, _ = metadata_widget
+    with pytest.raises(ValidationError) as excinfo:
+        ExampleSchema.model_validate(TEST_DICT | {"str_optional": "x" * 30})
+    assert "Optional string" in widget._summarize_errors(excinfo.value)
+
+
+def test_validation_summary_groups_union_and_list_errors(
+    metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormItem]],
+):
+    class UnionListSchema(BasicScanMetadata):
+        u: int | float = Field(title="Union")
+        lst: list[int] = Field(default_factory=list, title="List")
+
+    widget, _ = metadata_widget
+    with pytest.raises(ValidationError) as excinfo:
+        UnionListSchema.model_validate({"u": "x", "lst": [1, "a", "b"]})
+    widget._md_schema = UnionListSchema
+    assert widget._summarize_errors(excinfo.value) == "2 invalid fields: Union, List"
+
+
+def test_validation_issues_are_readable(
+    metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormItem]],
+):
+    class ReadableSchema(BasicScanMetadata):
+        name: str = Field(max_length=3, title="Name")
+        count: int = Field(title="Count")
+        value: Decimal = Field(decimal_places=1, title="Value")
+
+    widget, _ = metadata_widget
+    widget._md_schema = ReadableSchema
+    with pytest.raises(ValidationError) as excinfo:
+        ReadableSchema.model_validate({"name": "toolong", "count": None, "value": Decimal("1.25")})
+    issues = widget._describe_errors(excinfo.value)
+    assert [(i.field, i.title, i.entered) for i in issues] == [
+        ("name", "Name", "'toolong'"),
+        ("count", "Count", "empty"),
+        ("value", "Value", "1.25"),
+    ]
+    assert issues[0].problem == "String should have at most 3 characters"
+    assert issues[1].problem == "Required - please fill in"
+
+
+def test_validation_issues_keep_nested_locations(
+    metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormItem]],
+):
+    class Detector(BaseModel):
+        prefix: str
+        gain: int
+
+    class NestedSchema(BasicScanMetadata):
+        positions: list[int] = Field(default_factory=list, title="Positions")
+        offsets: dict[str, int] = Field(default_factory=dict, title="Offsets")
+        detector: Detector | None = Field(None, title="Detector")
+        value: int | float = Field(0, title="Value")
+
+    widget, _ = metadata_widget
+    widget._md_schema = NestedSchema
+    with pytest.raises(ValidationError) as excinfo:
+        NestedSchema.model_validate(
+            {
+                "positions": [1, "a", 3, "b"],
+                "offsets": {"x": 1, "y": "bad"},
+                "detector": {"gain": "hi"},
+                "value": "x",
+            }
+        )
+    issues = {issue.field: issue for issue in widget._describe_errors(excinfo.value)}
+    positions = issues["positions"].problem.split("\n")
+    assert [line.split(":")[0] for line in positions] == ["[1]", "[3]"]
+    assert issues["offsets"].problem.startswith("y: Input should be a valid integer")
+    assert issues["detector"].problem.split("\n") == [
+        "prefix: Required - please fill in",
+        "gain: Input should be a valid integer, unable to parse string as an integer",
+    ]
+    # union members are tagged with their type name, which is not a location
+    assert not any(
+        line.startswith(("int:", "float:")) for line in issues["value"].problem.split("\n")
+    )
+    assert len(issues["value"].problem.split("\n")) == 2
+
+
+def test_validation_errors_under_each_field(
+    metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormItem]],
+):
+    widget, components = metadata_widget
+    errors = widget._field_errors
+    assert set(errors) == set(components)
+    assert not any(label.isVisibleTo(widget) for label in errors.values())
+
+    fill_components(components)
+    components["bool_required_nodefault"]._main_widget.clear()
+    components["float_nodefault"]._main_widget.clear()
+    widget.validate_form()
+    shown = {name for name, label in errors.items() if label.isVisibleTo(widget)}
+    assert shown == {"bool_required_nodefault", "float_nodefault"}
+    assert errors["float_nodefault"].text() == "Required - please fill in"
+    assert "errors.pydantic.dev" not in errors["float_nodefault"].text()
+
+    components["bool_required_nodefault"].setValue(True)
+    widget.validate_form()
+    shown = {name for name, label in errors.items() if label.isVisibleTo(widget)}
+    assert shown == {"float_nodefault"}
+
+    components["float_nodefault"].setValue(1.5)
+    widget.validate_form()
+    assert not any(label.isVisibleTo(widget) for label in errors.values())
+
+
+def test_validation_error_line_sits_under_its_field(
+    metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormItem]],
+):
+    widget, components = metadata_widget
+    grid = widget._form_grid.layout()
+    rows = list(widget.enumerate_form_widgets())
+    assert len(rows) == len(components)  # error lines are not form rows
+    for row in rows:
+        name = row.label.property("_model_field_name")
+        index = grid.indexOf(widget._field_errors[name])
+        assert grid.getItemPosition(index)[:2] == (row.i + 1, 1)
+
+
+def test_validation_error_lines_follow_schema_change(
+    metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormItem]],
+):
+    class OtherSchema(BasicScanMetadata):
+        count: int = Field(title="Count")
+
+    widget, _ = metadata_widget
+    widget.set_schema(OtherSchema)
+    assert set(widget._field_errors) == {"scan_name", "comment", "sample_name", "count"}
+    widget.validate_form()
+    assert widget._field_errors["count"].isVisibleTo(widget)
+    assert widget._validity_message.text() == "Invalid field: Count"
 
 
 def test_numbers_clipped_to_limits(

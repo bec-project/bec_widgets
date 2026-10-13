@@ -135,7 +135,7 @@ class DeviceConfigDialog(QDialog):
         # TODO: replace when https://github.com/bec-project/bec/issues/528 https://github.com/bec-project/bec/issues/547 are resolved
         for button in [self.button_box.button(b) for b in [_StdBtn.Apply, _StdBtn.Ok]]:
             button.setEnabled(valid)
-            button.setToolTip(self._form._validity_message.text())
+            button.setToolTip(self._form._validity_message.toolTip())
 
     def _process_action(self):
         self.accepted_data.emit(self._form.get_form_data())

@@ -1772,7 +1772,7 @@ def test_scan_metadata_is_connected(scan_control):
     assert scan_control._metadata_form._scan_name == "line_scan"
     scan_control.comboBox_scan_selection.setCurrentText("grid_scan")
     assert scan_control._metadata_form._scan_name == "grid_scan"
-    sample_name = scan_control._metadata_form._form_grid.layout().itemAtPosition(2, 1).widget()
+    sample_name = scan_control._metadata_form.widget_dict["sample_name"]
     assert isinstance(sample_name, StrFormItem)
     sample_name._main_widget.setText("Test Sample")
 
@@ -1784,7 +1784,7 @@ def test_scan_metadata_is_connected(scan_control):
 def test_scan_metadata_is_passed_to_scan_function(scan_control: ScanControl):
     scan_control.comboBox_scan_selection.setCurrentText("grid_scan")
 
-    sample_name = scan_control._metadata_form._form_grid.layout().itemAtPosition(2, 1).widget()
+    sample_name = scan_control._metadata_form.widget_dict["sample_name"]
     sample_name._main_widget.setText("Test Sample")
     scan_control._metadata_form._additional_metadata._table_model._data = TEST_TABLE_ENTRY
     scan_control._metadata_form.validate_form()
