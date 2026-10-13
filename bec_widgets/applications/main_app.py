@@ -24,6 +24,8 @@ from bec_widgets.utils.screen_utils import (
 )
 from bec_widgets.widgets.containers.dock_area.profile_utils import is_experimental_features_enabled
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
+from bec_widgets.widgets.services.bec_status_box.bec_status_box import BECStatusBox
+from bec_widgets.widgets.services.bec_status_box.status_pill import BECStatusPill
 
 startup_profiler.mark("module imports")
 
@@ -64,6 +66,9 @@ class BECMainApp(BECMainWindow):
 
         self._add_views()
         startup_profiler.mark("views added")
+
+        self._add_status_pill()
+        startup_profiler.mark("status pill")
 
         # Initialize guided tour
         self.guided_tour = GuidedTour(self)
@@ -138,6 +143,26 @@ class BECMainApp(BECMainWindow):
 
         # Add guided tour to Help menu
         self._add_guided_tour_to_menu()
+
+    def _add_status_pill(self):
+        """Add the BEC services pill to the status bar, left of the notification indicator."""
+        self.status_pill = BECStatusPill(self, client=self.client)
+        self.status_pill.dock_requested.connect(self.dock_status_box)
+        self.status_bar.insertPermanentWidget(0, self.status_pill)
+
+    def dock_status_box(self) -> None:
+        """Show a status box in the dock area, reusing one that is already docked."""
+        dock_area = self.dock_area.dock_area
+        for widget in dock_area.widget_list():
+            if isinstance(widget, BECStatusBox):
+                dock = next((d for d in dock_area.dock_list() if d.widget() is widget), None)
+                if dock is not None:
+                    dock.toggleView(True)
+                    dock.raise_()
+                break
+        else:
+            dock_area.new("BECStatusBox")
+        self.set_current("dock_area")
 
     # --- Public API ------------------------------------------------------
     def add_section(self, title: str, id: str, position: int | None = None):
@@ -392,6 +417,7 @@ class BECMainApp(BECMainWindow):
             help_menu.addAction(tour_action)
 
     def cleanup(self):
+        self.status_pill.cleanup()
         for view_id, idx in self._view_index.items():
             view = self.stack.widget(idx)
             view.close()
