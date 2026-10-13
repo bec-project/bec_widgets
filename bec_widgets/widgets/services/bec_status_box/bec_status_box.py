@@ -271,6 +271,16 @@ class BECStatusBox(BECWidget, CompactPopupWidget):
         )
         self.tooltip = f"{self.model.headline}\n{self.model.detail}".strip()
 
+    @SafeSlot(str)
+    def apply_theme(self, theme: str):
+        """Restyle the QWidget view after a theme change. The QML view follows the theme itself.
+
+        Args:
+            theme (str): The name of the new theme.
+        """
+        if isinstance(self.view, StatusBoxWidgetView):
+            self.view.apply_theme()
+
     def cleanup(self):
         """Cleanup the BECStatusBox widget."""
         self.bec_service_status.cleanup()

@@ -257,3 +257,22 @@ def test_build_rows_order_and_groups():
     assert [r.group for r in rows] == [CORE_GROUP, CORE_GROUP, OTHER_GROUP, OTHER_GROUP]
     assert rows[1].tone == "emergency"
     assert rows[3].status == "NOTCONNECTED"
+
+
+def test_widget_view_follows_theme(qtbot, mocked_client):
+    from bec_widgets.utils.colors import apply_theme
+
+    box = create_widget(
+        qtbot,
+        BECStatusBox,
+        client=mocked_client,
+        bec_service_status_mixin=mock.MagicMock(),
+        view="widgets",
+    )
+    box.update_service_status(*_all_services())
+    apply_theme("dark")
+    dark = box.view.styleSheet()
+    apply_theme("light")
+    qtbot.waitUntil(lambda: box.view.styleSheet() != dark)
+    apply_theme("dark")
+    qtbot.waitUntil(lambda: box.view.styleSheet() == dark)
