@@ -4,7 +4,6 @@ from typing import Literal
 
 from bec_lib import bec_logger
 
-from bec_widgets.widgets.containers.auto_update.auto_updates import AutoUpdates
 from bec_widgets.widgets.containers.dock_area.dock_area import BECDockArea
 
 logger = bec_logger.logger
@@ -38,17 +37,3 @@ def dock_area(
     )
     logger.info(f"Created advanced dock area with startup_profile: {startup_profile}")
     return widget
-
-
-def auto_update_dock_area(object_name: str | None = None) -> AutoUpdates:
-    """
-    Create a dock area with auto update enabled.
-
-    Args:
-        object_name(str): The name of the dock area.
-
-    Returns:
-        BECDockArea: The created dock area.
-    """
-    _auto_update = AutoUpdates(object_name=object_name)
-    return _auto_update
