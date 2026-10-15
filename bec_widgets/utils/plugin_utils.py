@@ -216,14 +216,6 @@ def _resolve_widget_from_registry(import_path: str, widget_name: str) -> type[QW
     return getattr(widget, widget_name)
 
 
-def designer_plugin_exists(name: str) -> bool:
-    from bec_widgets.utils.bec_plugin_helper import get_plugin_designer_registry
-
-    internal_registry = _get_designer_registry()
-    external_registry = get_plugin_designer_registry()
-    return name in internal_registry or name in external_registry
-
-
 def get_designer_plugin(name: str, raise_on_missing: bool = True) -> type[QWidget] | None:
     from bec_widgets.utils.bec_plugin_helper import get_plugin_designer_registry
 
