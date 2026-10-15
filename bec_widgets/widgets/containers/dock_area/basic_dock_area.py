@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import itertools
 from dataclasses import dataclass
 from typing import Any, Callable, Literal, Mapping, Sequence, cast
 
@@ -25,6 +26,11 @@ from bec_widgets.widgets.containers.qt_ads import (
 )
 
 logger = bec_logger.logger
+
+# Dynamic property tagging a splitter with its latest layout-ratio request; deferred applies of
+# older requests compare against it and skip themselves.
+_RATIO_REQUEST_PROPERTY = "_bec_layout_ratio_request"
+_ratio_requests = itertools.count(1)
 
 
 class DockSettingsDialog(QDialog):
@@ -746,7 +752,9 @@ class DockAreaWidget(BECWidget, QWidget):
 
         The deferred callback is bound to the splitter as context object, so Qt drops it
         if the splitter is deleted (e.g. by ADS while the layout changes) before it runs.
-        While the splitter has no usable size, the ratios wait for its next resize.
+        While the splitter has no usable size, the ratios wait for its next resize. Every request
+        tags the splitter, so a deferred apply of an older request skips itself once a newer one
+        for the same splitter exists.
 
         Args:
             splitter(QtAds.CDockSplitter): Target splitter.
@@ -759,7 +767,12 @@ class DockAreaWidget(BECWidget, QWidget):
         if not ratios:
             return
 
+        request = next(_ratio_requests)
+        splitter.setProperty(_RATIO_REQUEST_PROPERTY, request)
+
         def apply():
+            if splitter.property(_RATIO_REQUEST_PROPERTY) != request:
+                return  # superseded by a newer request for this splitter
             count = splitter.count()
             if count != len(ratios):
                 return
