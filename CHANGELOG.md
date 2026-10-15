@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v3.40.0 (2026-10-15)
+
+### Bug Fixes
+
+- **widgets**: Remove CompactPopupWidget and all its usage
+  ([`c9a836f`](https://github.com/bec-project/bec_widgets/commit/c9a836f85098ea5ccdb35fc5189543cf79484daa))
+
+### Chores
+
+- Drop scan base-class filter and require BEC 4.0
+  ([`703513b`](https://github.com/bec-project/bec_widgets/commit/703513b1759a3832d87aa4a83ff704592104dbf7))
+
+### Features
+
+- **forms**: Show metadata validation errors under each field
+  ([`1a710e5`](https://github.com/bec-project/bec_widgets/commit/1a710e5a9c1e243cca44e9bc25a3339d96fc05d9))
+
+
 ## v3.39.5 (2026-10-09)
 
 ### Bug Fixes
