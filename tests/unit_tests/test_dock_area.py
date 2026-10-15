@@ -433,6 +433,12 @@ class TestBasicDockArea:
             def findChildren(self, *_args, **_kwargs):
                 return []
 
+            def setProperty(self, name, value):
+                self.__dict__[name] = value
+
+            def property(self, name):
+                return self.__dict__.get(name)
+
         splitter = DummySplitter()
 
         basic_dock_area._schedule_splitter_weights(splitter, [1, 2, 1])
@@ -646,6 +652,19 @@ class TestBasicDockArea:
         left_px, right_px = root.sizes()
         assert left_px > 2 * right_px
         assert root.findChildren(basic_dock_module._ResizeWatcher) == []
+
+    def test_layout_ratios_superseded_request_does_not_apply(self, collapsed_dock_area, qtbot):
+        """An older request still queued when a newer one arrives must not win either."""
+        outer, area, root = collapsed_dock_area
+        area.set_layout_ratios(horizontal=[1, 3])
+        # The area gets its width back between the two queued applies.
+        QTimer.singleShot(0, outer, lambda: outer.setSizes([400, 400]))
+        area.set_layout_ratios(horizontal=[3, 1])
+        qtbot.waitUntil(lambda: root.width() > 0)
+        qtbot.wait(50)
+
+        left_px, right_px = root.sizes()
+        assert left_px > 2 * right_px
 
     def test_first_dock_title_bar_preference_survives_second_dock(self, basic_dock_area):
         first = QWidget(parent=basic_dock_area)
