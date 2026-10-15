@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.40.1 (2026-10-15)
+
+### Bug Fixes
+
+- **ophyd_validation**: Shut down the validation thread pool on cleanup
+  ([`592323c`](https://github.com/bec-project/bec_widgets/commit/592323c5756122acac218f5c348feea1d7ed1f3e))
+
+
 ## v3.40.0 (2026-10-15)
 
 ### Bug Fixes
