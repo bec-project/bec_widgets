@@ -51,7 +51,6 @@ Main package and test areas:
 - `bec_widgets/tests/` — packaged test helpers for downstream plugin repos
 - `tests/unit_tests/` — main test suite
 - `tests/end-2-end/` — tests against a real BEC deployment
-- `tests/reference_failures/` — failed image-comparison output collected in CI
 
 Console scripts declared in `pyproject.toml`:
 

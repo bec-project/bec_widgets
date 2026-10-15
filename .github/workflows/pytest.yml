@@ -60,14 +60,6 @@ jobs:
           coverage report
           coverage xml -o coverage-unit.xml
 
-      - name: Upload test artifacts
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: image-references
-          path: bec_widgets/tests/reference_failures/
-          if-no-files-found: ignore
-
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
