@@ -48,15 +48,6 @@ def plot_export_bundle(components: ToolbarComponents) -> ToolbarBundle:
     return bundle
 
 
-def plot_export_connection(components: ToolbarComponents, target_widget=None):
-    """
-    Connects the plot export actions to the target widget.
-    Args:
-        components (ToolbarComponents): The components to be connected.
-        target_widget: The widget to which the actions will be connected.
-    """
-
-
 class PlotExportConnection(BundleConnection):
     def __init__(self, components: ToolbarComponents, target_widget):
         super().__init__()
