@@ -1,6 +1,25 @@
 # CHANGELOG
 
 
+## v3.40.2 (2026-10-15)
+
+### Bug Fixes
+
+- **bec_queue**: Remove the clicked row on abort
+  ([`0f325a7`](https://github.com/bec-project/bec_widgets/commit/0f325a75490350e038c3a8fd64c113b76c11f704))
+
+### Refactoring
+
+- **assets**: Remove unused alignment_1d icon
+  ([`4120f27`](https://github.com/bec-project/bec_widgets/commit/4120f270075ce7a68ac7a1b1255be815b91cea96))
+
+- **utils**: Remove unused BECTable
+  ([`e4b6589`](https://github.com/bec-project/bec_widgets/commit/e4b6589c4dd71022eec7fe9852f4f69d498a43bf))
+
+- **utils**: Remove unused DoubleValidationDelegate
+  ([`49643b8`](https://github.com/bec-project/bec_widgets/commit/49643b8374fac76398e7b082ca0423e9116177f6))
+
+
 ## v3.40.1 (2026-10-15)
 
 ### Bug Fixes
