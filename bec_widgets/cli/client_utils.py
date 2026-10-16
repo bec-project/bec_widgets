@@ -305,20 +305,6 @@ def wait_for_server(client: BECGuiClient):
     yield
 
 
-class WidgetNameSpace:
-    def __repr__(self):
-        console = Console()
-        table = Table(title="Available widgets for BEC CLI usage")
-        table.add_column("Widget Name", justify="left", style="magenta")
-        table.add_column("Description", justify="left")
-        for attr, value in self.__dict__.items():
-            docs = value.__doc__
-            docs = docs if docs else "No description available"
-            table.add_row(attr, docs)
-        console.print(table)
-        return ""
-
-
 class AvailableWidgetsNamespace:
     """Namespace for available widgets in the BEC GUI."""
 
