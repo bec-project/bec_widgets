@@ -8,6 +8,7 @@ import pytest
 from bec_widgets.utils.generate_cli import ClientGenerator, write_designer_plugins
 from bec_widgets.utils.generate_designer_plugin import DesignerPluginInfo
 from bec_widgets.utils.plugin_utils import BECClassContainer, BECClassInfo
+from bec_widgets.utils.rpc_decorator import rpc_timeout, rpc_timeout_hint
 
 # pylint: disable=missing-function-docstring
 
@@ -58,6 +59,18 @@ class MockViewWithContent:
 
     def activate(self):
         """Activate view."""
+
+
+class MockWidgetWithTimeout:
+    USER_ACCESS = ["slow_call", "blocking_call"]
+
+    @rpc_timeout_hint(30)
+    def slow_call(self):
+        """Slow call."""
+
+    @rpc_timeout_hint(None)
+    def blocking_call(self):
+        """Blocking call."""
 
 
 class MockDesignerWidgetBase:
@@ -309,3 +322,21 @@ def test_write_designer_plugins(tmp_path):
     assert '"MockDesignerWidget"' in content
     assert '"MockDesignerWidget": "mock_icon"' in content
     assert "MockDesignerWidgetPlugin" not in content
+
+
+def test_generate_content_for_class_emits_rpc_timeout_hint():
+    generator = ClientGenerator()
+    generator.generate_content_for_class(MockWidgetWithTimeout)
+
+    assert "@rpc_timeout(30)\n    @rpc_call\n    def slow_call(self):" in generator.content
+    assert "@rpc_timeout(None)\n    @rpc_call\n    def blocking_call(self):" in generator.content
+
+
+def test_deprecated_rpc_timeout_alias_still_sets_hint():
+    with pytest.warns(DeprecationWarning, match="rpc_timeout_hint"):
+
+        @rpc_timeout(5)
+        def legacy_call():
+            """Legacy call."""
+
+    assert legacy_call.__rpc_timeout__ == 5

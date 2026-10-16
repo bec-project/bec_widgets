@@ -24,7 +24,7 @@ import bec_widgets.widgets.containers.qt_ads as QtAds
 from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
 from bec_widgets.utils.busy_loader import install_busy_loader
 from bec_widgets.utils.error_popups import SafeConnect, SafeSlot
-from bec_widgets.utils.rpc_decorator import rpc_timeout
+from bec_widgets.utils.rpc_decorator import rpc_timeout_hint
 from bec_widgets.utils.rpc_register import RPCRegister
 from bec_widgets.utils.widget_io import WidgetHierarchy
 from bec_widgets.widgets.utility.spinner.spinner import SpinnerWidget
@@ -330,7 +330,7 @@ class BECWidget(BECConnector):
 
     @SafeSlot()
     @SafeSlot(str)
-    @rpc_timeout(None)
+    @rpc_timeout_hint(None)
     def screenshot(self, file_name: str | None = None):
         """
         Take a screenshot of the dock area and save it to a file.
@@ -397,7 +397,7 @@ class BECWidget(BECConnector):
         return ba
 
     @SafeSlot(popup_error=True)
-    @rpc_timeout(None)
+    @rpc_timeout_hint(None)
     def screenshot_to_scilog(self) -> None:
         """
         Take a screenshot of the widget and send it to SciLog through BEC messaging services.

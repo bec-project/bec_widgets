@@ -28,7 +28,7 @@ from bec_widgets.utils.bec_plugin_helper import (
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.name_utils import pascal_to_title
 from bec_widgets.utils.plugin_utils import get_rpc_widget_registry
-from bec_widgets.utils.rpc_decorator import rpc_timeout
+from bec_widgets.utils.rpc_decorator import rpc_timeout_hint
 from bec_widgets.utils.rpc_widget_handler import widget_handler
 from bec_widgets.utils.toolbars.actions import (
     ExpandableMenuAction,
@@ -766,7 +766,7 @@ class BECDockArea(DockAreaWidget):
         return list_profiles(namespace)
 
     @SafeSlot(str)
-    @rpc_timeout(None)
+    @rpc_timeout_hint(None)
     def save_profile(
         self,
         name: str | None = None,
@@ -889,7 +889,7 @@ class BECDockArea(DockAreaWidget):
     @SafeSlot()
     @SafeSlot(str)
     @SafeSlot(str, bool)
-    @rpc_timeout(None)
+    @rpc_timeout_hint(None)
     def load_profile(self, name: str | None = None, restore_baseline: bool = False):
         """
         Load a workspace profile.
@@ -974,7 +974,7 @@ class BECDockArea(DockAreaWidget):
     @SafeSlot()
     @SafeSlot(str)
     @SafeSlot(str, bool)
-    @rpc_timeout(None)
+    @rpc_timeout_hint(None)
     def restore_baseline_profile(self, name: str | None = None, show_dialog: bool = False):
         """
         Overwrite the runtime copy of *name* with the baseline.
