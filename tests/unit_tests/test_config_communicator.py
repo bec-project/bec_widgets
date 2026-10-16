@@ -3,7 +3,7 @@ from unittest.mock import ANY, MagicMock, call
 import pytest
 from bec_lib.config_helper import ConfigHelper
 
-from bec_widgets.widgets.services.device_browser.device_item.config_communicator import (
+from bec_widgets.widgets.control.device_manager.components.config_communicator import (
     CommunicateConfigAction,
 )
 

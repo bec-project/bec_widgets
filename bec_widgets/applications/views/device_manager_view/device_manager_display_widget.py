@@ -46,15 +46,15 @@ from bec_widgets.widgets.control.device_manager.components import (
     OphydValidation,
 )
 from bec_widgets.widgets.control.device_manager.components._util import SharedSelectionSignal
+from bec_widgets.widgets.control.device_manager.components.config_communicator import (
+    CommunicateConfigAction,
+)
 from bec_widgets.widgets.control.device_manager.components.ophyd_validation.ophyd_validation_utils import (
     ConfigStatus,
     ConnectionStatus,
 )
 from bec_widgets.widgets.progress.device_initialization_progress_bar.device_initialization_progress_bar import (
     DeviceInitializationProgressBar,
-)
-from bec_widgets.widgets.services.device_browser.device_item.config_communicator import (
-    CommunicateConfigAction,
 )
 from bec_widgets.widgets.utility.spinner.spinner import SpinnerWidget
 
