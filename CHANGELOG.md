@@ -1,6 +1,57 @@
 # CHANGELOG
 
 
+## v3.40.4 (2026-10-16)
+
+### Bug Fixes
+
+- **device_manager**: Compare SortTableItem by text when it has no sort data
+  ([`68d5093`](https://github.com/bec-project/bec_widgets/commit/68d5093002364ce4d9120263cfa029afa773eb25))
+
+### Continuous Integration
+
+- Keep faulthandler enabled after pytest exits
+  ([`83eb874`](https://github.com/bec-project/bec_widgets/commit/83eb8748ae46e12b628fae8660395472aba1262a))
+
+### Refactoring
+
+- **client_utils**: Remove unused WidgetNameSpace
+  ([`5a4b328`](https://github.com/bec-project/bec_widgets/commit/5a4b3283181b165c69d4f4acd934615155ec6144))
+
+- **color_button**: Merge ColorButton into ColorButtonNative
+  ([`824979f`](https://github.com/bec-project/bec_widgets/commit/824979f7c4d8409ecfcd7cd94fa29ecd61fcde4c))
+
+- **device_browser**: Remove unused PresetClassDeviceConfigDialog
+  ([`1a790c2`](https://github.com/bec-project/bec_widgets/commit/1a790c296442f6173440208f23dbe273cbbe89e2))
+
+- **device_manager**: Share one SortTableItem with an optional sort key
+  ([`9c8800a`](https://github.com/bec-project/bec_widgets/commit/9c8800a8fa8215832d3c094ec07b5091b7154ec9))
+
+- **examples**: Remove the TicTacToe Designer plugin example
+  ([`74daa7f`](https://github.com/bec-project/bec_widgets/commit/74daa7fdcbf29ed0a8fa612aedcd250513a74f22))
+
+- **multi_waveform**: Remove unused MultiWaveformSelectionToolbarBundle
+  ([`ebe6707`](https://github.com/bec-project/bec_widgets/commit/ebe67079f38ee18e671e7fc0528ac0381f66d291))
+
+- **rpc**: Remove unused rpc_public and register_rpc_methods decorators
+  ([`f606fa8`](https://github.com/bec-project/bec_widgets/commit/f606fa8a713156e08734455e8aebe595ccef4d18))
+
+- **toolbar**: Remove unused TutorialAction
+  ([`4d6a07a`](https://github.com/bec-project/bec_widgets/commit/4d6a07a940edddc055656cf7b67ac47144dfa6dc))
+
+- **utils**: Remove unused GridLayoutManager
+  ([`a857c96`](https://github.com/bec-project/bec_widgets/commit/a857c966164ca8b35d5731cde3acc4c89a5e2ae3))
+
+- **utils**: Remove unused QtRedisMessageWaiter
+  ([`9cce9df`](https://github.com/bec-project/bec_widgets/commit/9cce9dfe465942c487469d36e77ac2137c90d493))
+
+- **utils**: Remove unused ThreadTracker
+  ([`1efd0cf`](https://github.com/bec-project/bec_widgets/commit/1efd0cf4b886b16282099f91e387ee9719de1939))
+
+- **utils**: Remove unused widget image reference helpers
+  ([`bfd8235`](https://github.com/bec-project/bec_widgets/commit/bfd82350cd597e707007949cf3683ada5cf9379d))
+
+
 ## v3.40.3 (2026-10-16)
 
 ### Bug Fixes
