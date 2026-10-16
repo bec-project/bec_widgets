@@ -37,10 +37,6 @@ designer_plugins = {
         "bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button",
         "DarkModeButton",
     ),
-    "DeviceBrowser": (
-        "bec_widgets.widgets.services.device_browser.device_browser",
-        "DeviceBrowser",
-    ),
     "DeviceComboBox": (
         "bec_widgets.widgets.control.device_input.device_combobox.device_combobox",
         "DeviceComboBox",
@@ -135,7 +131,6 @@ widget_icons = {
     "ColormapSelector": "palette",
     "DapComboBox": "data_exploration",
     "DarkModeButton": "dark_mode",
-    "DeviceBrowser": "lists",
     "DeviceComboBox": "list_alt",
     "FeedbackDialog": "feedback",
     "Heatmap": "dataset",

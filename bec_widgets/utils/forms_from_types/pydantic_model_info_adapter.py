@@ -10,6 +10,20 @@ from pydantic_core import PydanticUndefined
 from bec_widgets.utils.scan_arg_metadata import ui_config_from_metadata
 
 NUMERIC_BOUND_KEYS = {"gt", "ge", "lt", "le"}
+# Annotated constraints that map onto form metadata keys, e.g. ``decimal_places`` -> ``precision``
+_CONSTRAINT_KEYS = {key: key for key in NUMERIC_BOUND_KEYS} | {
+    "decimal_places": "precision",
+    "max_length": "max_length",
+}
+
+
+def _constraint_metadata(entry: object) -> dict[str, Any]:
+    """Return the form metadata carried by one ``FieldInfo.metadata`` constraint entry."""
+    return {
+        target: getattr(entry, key)
+        for key, target in _CONSTRAINT_KEYS.items()
+        if getattr(entry, key, None) is not None
+    }
 
 
 def pydantic_model_input_configs(model: type[BaseModel]) -> list[dict[str, Any]]:
@@ -21,10 +35,8 @@ def pydantic_model_input_configs(model: type[BaseModel]) -> list[dict[str, Any]]
             if isinstance(entry, ScanArgument):
                 metadata.update(entry.model_dump(exclude_none=True))
                 continue
-            for key in NUMERIC_BOUND_KEYS:
-                value = getattr(entry, key, None)
-                if value is not None:
-                    metadata.setdefault(key, value)
+            for key, value in _constraint_metadata(entry).items():
+                metadata.setdefault(key, value)
 
         if isinstance(info.json_schema_extra, Mapping):
             metadata.update(dict(info.json_schema_extra))

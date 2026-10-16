@@ -1,16 +1,17 @@
 from decimal import Decimal
+from typing import Literal
 from unittest.mock import patch
 
 import pytest
 from bec_lib.device import Device, Signal
 from bec_lib.scan_args import ScanArgument
-from pydantic import BaseModel, Field
-from qtpy.QtWidgets import QCheckBox, QLabel, QLineEdit
+from pydantic import BaseModel, ConfigDict, Field
+from qtpy.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QLabel, QLineEdit
 
 from bec_widgets.tests.client_mocks import mocked_client
-from bec_widgets.utils.forms_from_types.forms import PydanticModelForm, TypedForm
-from bec_widgets.utils.forms_from_types.items import FloatDecimalFormItem, IntFormItem, StrFormItem
+from bec_widgets.utils.forms_from_types.entry_list_editor import EntryListEditor
 from bec_widgets.utils.forms_from_types.pydantic_widget_form import (
+    EXTRA_FIELDS_KEY,
     OptionalValueWidget,
     PydanticWidgetForm,
 )
@@ -23,20 +24,6 @@ from bec_widgets.widgets.utility.spinbox.decimal_spinbox import BECSpinBox
 # pylint: disable=missing-function-docstring
 # pylint: disable=redefined-outer-name
 # pylint: disable=protected-access
-
-
-class ExampleSchema(BaseModel):
-    str_optional: str | None = Field(
-        None, title="Optional string", description="an optional string", max_length=23
-    )
-    str_required: str
-    bool_optional: bool | None = Field(None)
-    bool_required_default: bool = Field(True)
-    bool_required_nodefault: bool = Field()
-    int_default: int = Field(123)
-    int_nodefault_optional: int | None = Field(lt=-1, ge=-44)
-    float_nodefault: float
-    decimal_dp_limits_nodefault: Decimal = Field(decimal_places=2, gt=1, le=34.5)
 
 
 class GeneratedBeamlineSchema(BaseModel):
@@ -111,56 +98,6 @@ class GeneratedRequiredNumericAndOptionalBoolSchema(BaseModel):
     enabled: bool | None = None
     retry_count: int
     scale: float
-
-
-TEST_DICT = {
-    "sample_name": "test name",
-    "str_optional": "None",
-    "str_required": "something",
-    "bool_optional": None,
-    "bool_required_default": True,
-    "bool_required_nodefault": False,
-    "int_default": 21,
-    "int_nodefault_optional": -10,
-    "float_nodefault": 123.456,
-    "decimal_dp_limits_nodefault": 34.5,
-}
-
-
-@pytest.fixture
-def example_md():
-    return ExampleSchema.model_validate(TEST_DICT)
-
-
-@pytest.fixture
-def model_widget(qtbot):
-    widget = PydanticModelForm(data_model=ExampleSchema)
-    widget.populate()
-    qtbot.addWidget(widget)
-    yield widget
-
-
-def test_widget_dict(model_widget: PydanticModelForm):
-    assert isinstance(model_widget.widget_dict["str_optional"], StrFormItem)
-    assert isinstance(model_widget.widget_dict["float_nodefault"], FloatDecimalFormItem)
-    assert isinstance(model_widget.widget_dict["int_default"], IntFormItem)
-
-
-def test_widget_set_data(model_widget: PydanticModelForm):
-    data = ExampleSchema.model_validate(TEST_DICT)
-    model_widget.set_data(data)
-    for key in [
-        "str_optional",
-        "str_required",
-        "bool_optional",
-        "bool_required_default",
-        "bool_required_nodefault",
-        "int_default",
-        "int_nodefault_optional",
-        "float_nodefault",
-        "decimal_dp_limits_nodefault",
-    ]:
-        assert model_widget.widget_dict[key].getValue() == TEST_DICT[key]
 
 
 def test_pydantic_widget_form_uses_field_metadata_and_type_widgets(qtbot, mocked_client):
@@ -326,3 +263,118 @@ def test_pydantic_widget_form_preserves_optional_bool_none(qtbot):
 
     assert form.raw_data()["enabled"] is True
     assert form.model_instance().enabled is True
+
+
+class GeneratedExtraSchema(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    sample: str = Field(title="Sample", description="Sample identifier", max_length=8)
+    dose: Decimal = Field(Decimal("0.50"), decimal_places=2, ge=0)
+    tags: list[int] = Field(default_factory=list)
+    settings: dict[str, int] = Field(default_factory=dict)
+    mode: Literal["fast", "slow"] | None = None
+
+
+def test_pydantic_widget_form_extra_fields_round_trip(qtbot):
+    form = PydanticWidgetForm(GeneratedExtraSchema, allow_extra_fields=True)
+    qtbot.addWidget(form)
+    form.set_data({"sample": "s1", "operator": "jan"})
+
+    assert form.extra_data() == {"operator": "jan"}
+    assert form.raw_data()["operator"] == "jan"
+    assert form.get_data()["operator"] == "jan"
+
+
+def test_pydantic_widget_form_extra_fields_survive_model_change(qtbot):
+    class Other(BaseModel):
+        model_config = ConfigDict(extra="allow")
+        sample: str = ""
+
+    form = PydanticWidgetForm(GeneratedExtraSchema, allow_extra_fields=True)
+    qtbot.addWidget(form)
+    form.set_data({"sample": "s1", "operator": "jan"})
+    form.set_model(Other)
+
+    assert form.layout().indexOf(form.extra_fields_section) >= 0
+    assert form.raw_data() == {"sample": "s1", "operator": "jan"}
+
+
+def test_pydantic_widget_form_reports_invalid_extra_keys(qtbot):
+    form = PydanticWidgetForm(GeneratedExtraSchema, allow_extra_fields=True)
+    qtbot.addWidget(form)
+    form.set_partial_data({"sample": "s1"})
+    form.set_extra_data({"sample": "clash"})
+
+    assert form.validation_errors() == {
+        EXTRA_FIELDS_KEY: "'sample' is already a field of this form."
+    }
+    assert not form.validate()
+    with pytest.raises(ValueError, match="already a field"):
+        form.get_data()
+    row = form.extra_fields_section.editor.rows()[0]
+    assert row.key_edit.property("state") == "error"
+
+
+def test_pydantic_widget_form_without_extra_fields_has_no_section(qtbot):
+    form = PydanticWidgetForm(GeneratedExtraSchema)
+    qtbot.addWidget(form)
+    assert form.extra_fields_section is None
+    assert form.extra_data() == {}
+
+
+def test_pydantic_widget_form_decimal_list_dict_and_optional_literal(qtbot):
+    form = PydanticWidgetForm(GeneratedExtraSchema)
+    qtbot.addWidget(form)
+
+    dose = form.input_widget("dose")
+    assert type(dose) is QDoubleSpinBox
+    assert dose.decimals() == 2
+    assert form.raw_data()["dose"] == Decimal("0.50")
+    assert isinstance(form.input_widget("tags"), EntryListEditor)
+    assert not form.input_widget("tags").key_value
+    assert form.input_widget("settings").key_value
+    mode = form.input_widget("mode")
+    assert isinstance(mode, QComboBox)
+    assert [mode.itemText(i) for i in range(mode.count())] == ["", "fast", "slow"]
+
+    form.set_partial_data(
+        {"sample": "s1", "tags": [1, 2], "settings": {"gain": 3}, "dose": Decimal("1.25")}
+    )
+    data = form.get_data()
+    assert data["tags"] == [1, 2]
+    assert data["settings"] == {"gain": 3}
+    assert data["dose"] == Decimal("1.25")
+    assert data["mode"] is None
+
+    mode.setCurrentText("slow")
+    assert form.get_data()["mode"] == "slow"
+
+
+def test_pydantic_widget_form_text_constraints_and_placeholder(qtbot):
+    form = PydanticWidgetForm(GeneratedExtraSchema)
+    qtbot.addWidget(form)
+    sample = form.input_widget("sample")
+    assert sample.maxLength() == 8
+    assert sample.placeholderText() == "Sample identifier"
+
+
+def test_pydantic_widget_form_required_markers_and_empty_text(qtbot):
+    plain = PydanticWidgetForm(GeneratedExtraSchema)
+    strict = PydanticWidgetForm(
+        GeneratedExtraSchema, mark_required=True, empty_text_as_missing=True
+    )
+    qtbot.addWidget(plain)
+    qtbot.addWidget(strict)
+
+    # default behaviour is unchanged: an empty required text is an empty string
+    assert plain.layout().labelForField(plain.field_widget("sample")).text() == "Sample"
+    assert plain.validate()
+
+    assert strict.layout().labelForField(strict.field_widget("sample")).text() == "Sample *"
+    assert strict.validation_errors() == {"sample": "Required - please fill in"}
+    assert not strict.validate()
+    assert strict.input_widget("sample").property("state") == "error"
+
+    strict.input_widget("sample").setText("s1")
+    assert strict.validate()
+    assert strict.input_widget("sample").property("state") == ""

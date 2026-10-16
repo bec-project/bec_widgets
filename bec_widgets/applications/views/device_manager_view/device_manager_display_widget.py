@@ -45,16 +45,15 @@ from bec_widgets.widgets.control.device_manager.components import (
     DocstringView,
     OphydValidation,
 )
-from bec_widgets.widgets.control.device_manager.components._util import SharedSelectionSignal
+from bec_widgets.widgets.control.device_manager.components.config_communicator import (
+    CommunicateConfigAction,
+)
 from bec_widgets.widgets.control.device_manager.components.ophyd_validation.ophyd_validation_utils import (
     ConfigStatus,
     ConnectionStatus,
 )
 from bec_widgets.widgets.progress.device_initialization_progress_bar.device_initialization_progress_bar import (
     DeviceInitializationProgressBar,
-)
-from bec_widgets.widgets.services.device_browser.device_item.config_communicator import (
-    CommunicateConfigAction,
 )
 from bec_widgets.widgets.utility.spinner.spinner import SpinnerWidget
 
@@ -173,7 +172,6 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
         # other communications to REDIS as uploading a config through a CommunicationConfigAction
         # will block if we use the config_helper from self.client.config._config_helper
         self._config_helper = config_helper.ConfigHelper(self.client.connector)
-        self._shared_selection = SharedSelectionSignal()
 
         # Device Table View widget
         self.device_table_view = DeviceTable(self)
