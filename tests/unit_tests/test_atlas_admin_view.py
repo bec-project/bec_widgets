@@ -256,7 +256,7 @@ class TestBECAtlasHTTPService:
     def test_handle_response_login(self, http_service, qtbot):
         """Test that handling a login response correctly decodes the token and starts the auth timer."""
         exp = time.time() + 300
-        token = jwt.encode({"email": "alice@example.org", "exp": exp}, "secret", algorithm="HS256")
+        token = jwt.encode({"email": "alice@example.org", "exp": exp}, "x" * 32, algorithm="HS256")
         payload = ("{" f'"access_token": "{token}"' "}").encode()
         reply = _FakeReply(
             request_url="http://localhost:8000/user/login", status=200, payload=payload

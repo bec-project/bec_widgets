@@ -12,6 +12,8 @@ from bec_widgets.utils.property_editor import PropertyEditor
 class TestWidget(QWidget):
     """Test widget with various property types for testing the property editor."""
 
+    __test__ = False  # helper class, not a test
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("TestWidget")

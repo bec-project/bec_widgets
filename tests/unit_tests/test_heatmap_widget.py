@@ -620,6 +620,8 @@ def test_pending_request_queueing_and_start(heatmap_widget):
     # Simulate an active worker processing a job so new requests are queued.
     heatmap_widget._interpolation_worker = mock.MagicMock()
     heatmap_widget._interpolation_worker.is_processing = True
+    # Wired like _ensure_interpolation_thread does, so the cleanup disconnect finds it.
+    heatmap_widget.interpolation_requested.connect(heatmap_widget._interpolation_worker.process)
 
     with mock.patch.object(heatmap_widget, "_start_step_scan_interpolation") as start_mock:
         heatmap_widget._request_step_scan_interpolation(
@@ -645,6 +647,7 @@ def test_finish_interpolation_thread_cleans_references(heatmap_widget):
     thread_mock.isRunning.return_value = True
     heatmap_widget._interpolation_worker = worker_mock
     heatmap_widget._interpolation_thread = thread_mock
+    heatmap_widget.interpolation_requested.connect(worker_mock.process)
 
     heatmap_widget._finish_interpolation_thread()
 

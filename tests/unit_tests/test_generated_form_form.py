@@ -80,15 +80,20 @@ class GeneratedSignalOnlySchema(BaseModel):
 
 class GeneratedScanArgumentSchema(BaseModel):
     device: Device | str = Field(
-        default="", **ScanArgument(display_name="Device", description="Device source.").model_dump()
+        default="",
+        json_schema_extra=ScanArgument(
+            display_name="Device", description="Device source."
+        ).model_dump(),
     )
     signal: Signal | str | None = Field(
         default=None,
-        **ScanArgument(display_name="Signal", description="Signal source.").model_dump(),
+        json_schema_extra=ScanArgument(
+            display_name="Signal", description="Signal source."
+        ).model_dump(),
     )
     low_limit: float | None = Field(
         default=None,
-        **ScanArgument(
+        json_schema_extra=ScanArgument(
             display_name="Low limit",
             description="Optional lower bound.",
             reference_units="device",
@@ -99,7 +104,7 @@ class GeneratedScanArgumentSchema(BaseModel):
     )
     exposure: float = Field(
         default=0.1,
-        **ScanArgument(
+        json_schema_extra=ScanArgument(
             display_name="Exposure", tooltip="Camera exposure.", units="s", precision=3, gt=0
         ).model_dump(),
     )

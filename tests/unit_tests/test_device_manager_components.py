@@ -13,7 +13,8 @@ from ophyd_devices.interfaces.device_config_templates.ophyd_templates import (
     OPHYD_DEVICE_TEMPLATES,
     EpicsMotorDeviceConfigTemplate,
 )
-from ophyd_devices.utils.static_device_test import StaticDeviceTest, TestResult
+from ophyd_devices.utils.static_device_test import StaticDeviceTest
+from ophyd_devices.utils.static_device_test import TestResult as DeviceTestResult
 from qtpy import QtCore, QtGui, QtWidgets
 
 from bec_widgets.tests.client_mocks import mocked_client
@@ -1028,7 +1029,7 @@ class TestOphydValidation:
             runnable.tester, "run_with_list_output"
         ) as mock_run_with_list_output:
             mock_run_with_list_output.return_value = [
-                TestResult(
+                DeviceTestResult(
                     name="test_device",
                     config_is_valid=ConfigStatus.VALID.value,
                     success=ConnectionStatus.CANNOT_CONNECT.value,
@@ -1445,7 +1446,7 @@ class TestOphydValidation:
             name = next(iter(tester.config))
             started.append(name)
             release.wait(timeout=3)
-            return [TestResult(name=name, success=False, message="", config_is_valid=True)]
+            return [DeviceTestResult(name=name, success=False, message="", config_is_valid=True)]
 
         configs = [
             {"name": f"dev_{i}", "deviceClass": "ophyd.Signal", "enabled": True} for i in range(6)
