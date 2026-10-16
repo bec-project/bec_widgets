@@ -4,7 +4,7 @@ import re
 
 import markdown
 from bec_lib.endpoints import MessageEndpoints
-from bec_lib.messages import ProcedureRequestMessage
+from bec_lib.procedures.helper import FrontendProcedureHelper
 from bec_lib.script_executor import upload_script
 from bec_qthemes import material_icon
 from qtpy.QtGui import QKeySequence, QShortcut  # type: ignore
@@ -372,12 +372,9 @@ class DeveloperWidget(DockAreaWidget):
         if (script_id := self._try_upload()) is not None:
             self.current_script_id = script_id
             print(f"Uploaded script with ID: {self.current_script_id}")
-            self.client.connector.xadd(
-                MessageEndpoints.procedure_request(),
-                ProcedureRequestMessage(
-                    identifier="run_script", args_kwargs=((self.current_script_id,), {})
-                ).model_dump(),
-            )
+            FrontendProcedureHelper(
+                self.client.connector, monitor_responses=False
+            ).request.procedure("run_script", ((self.current_script_id,), {}))
 
     @SafeSlot()
     def on_stop(self):
