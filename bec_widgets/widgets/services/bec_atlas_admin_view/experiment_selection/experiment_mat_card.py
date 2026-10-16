@@ -17,7 +17,6 @@ from qtpy.QtWidgets import (
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import get_theme_palette
-from bec_widgets.utils.round_frame import RoundedFrame
 from bec_widgets.widgets.services.bec_atlas_admin_view.experiment_selection.utils import (
     format_name,
     format_schedule,
