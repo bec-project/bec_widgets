@@ -1,6 +1,7 @@
 from unittest import mock
 
 import numpy as np
+import pyqtgraph as pg
 import pytest
 from bec_lib import messages
 from bec_lib.scan_data_container import ScanDataContainer
@@ -14,6 +15,7 @@ from bec_widgets.widgets.plots.multi_waveform.multi_waveform import MultiWavefor
 from bec_widgets.widgets.plots.plot_base import PlotBase, UIMode
 from bec_widgets.widgets.plots.plot_info_label import TextOnlyLegendSample
 from bec_widgets.widgets.plots.scatter_waveform.scatter_waveform import ScatterWaveform
+from bec_widgets.widgets.plots.toolbar_components.plot_export import _draw_plot_item
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
 
 from .conftest import create_widget
@@ -802,12 +804,13 @@ def test_matplotlib_export_action_opens_exporter(qtbot, mocked_client):
 
     with (
         mock.patch.dict("sys.modules", {"matplotlib": mock.MagicMock()}),
-        mock.patch("pyqtgraph.exporters.MatplotlibExporter") as exporter,
+        mock.patch(
+            "bec_widgets.widgets.plots.toolbar_components.plot_export.export_to_matplotlib"
+        ) as export,
     ):
         matplotlib_action.trigger()
 
-    exporter.assert_called_once_with(pb.plot_item)
-    exporter.return_value.export.assert_called_once()
+    export.assert_called_once_with(pb.plot_item)
 
 
 def test_matplotlib_export_action_warns_without_matplotlib(qtbot, mocked_client):
@@ -827,3 +830,25 @@ def test_matplotlib_export_action_warns_without_matplotlib(qtbot, mocked_client)
         warning_util.return_value.show_warning.call_args.kwargs["title"]
         == "Matplotlib not installed"
     )
+
+
+def test_matplotlib_export_draws_per_point_colors(qtbot, mocked_client):
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    pb.title = "Export"
+    x = np.arange(5, dtype=float)
+    brushes = [pg.mkBrush(i * 50, 0, 0) for i in range(5)]
+    # PlotDataItem with one brush per point, as ScatterCurve sets it
+    pb.plot_item.addItem(pg.PlotDataItem(x=x, y=x, symbol="o", symbolBrush=brushes))
+    # ScatterPlotItem with one brush per point, as the MotorMap trace sets it
+    pb.plot_item.addItem(pg.ScatterPlotItem(x=x, y=2 * x, brush=brushes, pen=None))
+    fig = mock.MagicMock()
+    ax = fig.add_subplot.return_value
+
+    _draw_plot_item(fig, pb.plot_item)
+
+    ax.set_title.assert_called_once_with("Export")
+    assert ax.scatter.call_count == 2
+    for call in ax.scatter.call_args_list:
+        facecolors = call.kwargs["facecolors"]
+        assert len(facecolors) == 5
+        assert facecolors[1] == brushes[1].color().getRgbF()
