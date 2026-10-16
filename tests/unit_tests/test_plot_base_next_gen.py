@@ -1,3 +1,5 @@
+from unittest import mock
+
 import numpy as np
 import pytest
 from bec_lib import messages
@@ -792,3 +794,36 @@ def test_limits_accept_fractional_values(qtbot, mocked_client):
     pb.y_limits = (-1.75, 3.5)
     assert (pb.x_limits.x(), pb.x_limits.y()) == (0.5, 9.25)
     assert (pb.y_limits.x(), pb.y_limits.y()) == (-1.75, 3.5)
+
+
+def test_matplotlib_export_action_opens_exporter(qtbot, mocked_client):
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    matplotlib_action = pb.toolbar.components.get_action("matplotlib").action
+
+    with (
+        mock.patch.dict("sys.modules", {"matplotlib": mock.MagicMock()}),
+        mock.patch("pyqtgraph.exporters.MatplotlibExporter") as exporter,
+    ):
+        matplotlib_action.trigger()
+
+    exporter.assert_called_once_with(pb.plot_item)
+    exporter.return_value.export.assert_called_once()
+
+
+def test_matplotlib_export_action_warns_without_matplotlib(qtbot, mocked_client):
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    matplotlib_action = pb.toolbar.components.get_action("matplotlib").action
+
+    with (
+        mock.patch.dict("sys.modules", {"matplotlib": None}),
+        mock.patch(
+            "bec_widgets.widgets.plots.toolbar_components.plot_export.WarningPopupUtility"
+        ) as warning_util,
+    ):
+        matplotlib_action.trigger()
+
+    warning_util.return_value.show_warning.assert_called_once()
+    assert (
+        warning_util.return_value.show_warning.call_args.kwargs["title"]
+        == "Matplotlib not installed"
+    )

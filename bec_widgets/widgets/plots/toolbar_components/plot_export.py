@@ -93,6 +93,7 @@ class PlotExportConnection(BundleConnection):
         if self.target_widget:
             try:
                 import matplotlib as mpl
+                from pyqtgraph.exporters import MatplotlibExporter
 
                 MatplotlibExporter(self.target_widget.plot_item).export()
             except ModuleNotFoundError:
