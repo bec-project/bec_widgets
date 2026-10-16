@@ -37,6 +37,9 @@ from bec_widgets.widgets.control.device_manager.components.device_config_templat
     ReadoutPriorityComboBox,
     _try_literal_eval,
 )
+from bec_widgets.widgets.control.device_manager.components.device_table.device_table import (
+    SortTableItem,
+)
 from bec_widgets.widgets.control.device_manager.components.device_table.device_table_row import (
     DeviceTableRow,
 )
@@ -293,6 +296,42 @@ class TestDeviceTableRow:
             ConfigStatus.UNKNOWN,
             ConnectionStatus.UNKNOWN,
         )
+
+
+class TestSortTableItem:
+    """Test class for SortTableItem."""
+
+    @staticmethod
+    def _item(data=None, text: str = "", sort_key=None) -> SortTableItem:
+        item = SortTableItem(text, sort_key=sort_key)
+        if data is not None:
+            item.setData(QtCore.Qt.ItemDataRole.UserRole, data)
+        return item
+
+    def test_compares_user_role_data(self):
+        """Without a sort key, the UserRole data is compared directly."""
+        low, high = self._item(1, text="b"), self._item(2, text="a")
+        assert low < high
+        assert high > low
+        assert not high < low
+
+    def test_sort_key(self):
+        """A sort key maps the UserRole data before comparing."""
+
+        def key(data: dict) -> tuple[int, int]:
+            return data["first"], data["second"]
+
+        a = self._item({"first": 0, "second": 2}, sort_key=key)
+        b = self._item({"first": 1, "second": 0}, sort_key=key)
+        c = self._item({"first": 0, "second": 1}, sort_key=key)
+        assert a < b and b > a
+        assert c < a and a > c
+
+    def test_non_item_comparison(self):
+        """Comparing with a non-item returns NotImplemented."""
+        item = self._item(1)
+        assert item.__lt__(1) is NotImplemented
+        assert item.__gt__(1) is NotImplemented
 
 
 class TestDeviceTable:

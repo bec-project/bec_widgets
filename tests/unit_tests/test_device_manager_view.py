@@ -372,6 +372,22 @@ class TestDeviceManagerViewDialogs:
         section.update_summary("2 devices validated, 1 failed.")
         assert section.summary_label.text() == "2 devices validated, 1 failed."
 
+    def test_validation_section_sorts_by_status(self, device_config: dict, qtbot):
+        """Rows sort by config status first, then by connection status."""
+        section = ValidationSection(title="Validation Results")
+        qtbot.addWidget(section)
+        for name, config_status, connection_status in (
+            ("dev_a", 1, 0),
+            ("dev_b", 0, 2),
+            ("dev_c", 0, 1),
+        ):
+            config = device_config.copy()
+            config["name"] = name
+            section.add_device(config, config_status, connection_status)
+
+        names = [section.table.cellWidget(row, 0).device_name for row in range(3)]
+        assert names == ["dev_c", "dev_b", "dev_a"]
+
     @pytest.fixture
     def device_configs_valid(self, device_config: dict):
         """Fixture for multiple device configurations."""

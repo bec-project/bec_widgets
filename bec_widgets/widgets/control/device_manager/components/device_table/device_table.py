@@ -145,26 +145,48 @@ class CheckBoxDelegate(QtWidgets.QStyledItemDelegate):
 
 
 class SortTableItem(QtWidgets.QTableWidgetItem):
-    """Custom TableWidgetItem with hidden __column_data attribute for sorting."""
+    """
+    Table item that sorts by the value stored under the UserRole data role.
+
+    Items without UserRole data fall back to the QTableWidgetItem comparison.
+
+    Args:
+        *args: Positional arguments forwarded to QTableWidgetItem.
+        sort_key (Callable[[Any], Any] | None): Optional callable that maps the UserRole data
+            to the value that is compared. If None, the UserRole data is compared directly.
+        **kwargs: Keyword arguments forwarded to QTableWidgetItem.
+    """
+
+    def __init__(self, *args, sort_key: Callable[[Any], Any] | None = None, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._sort_key = sort_key
+
+    def _sort_values(self, other: QtWidgets.QTableWidgetItem) -> tuple[Any, Any] | None:
+        """Return the values to compare, or None if either item has no UserRole data."""
+        self_data = self.data(QtCore.Qt.ItemDataRole.UserRole)
+        other_data = other.data(QtCore.Qt.ItemDataRole.UserRole)
+        if self_data is None or other_data is None:
+            return None
+        if self._sort_key is None:
+            return self_data, other_data
+        return self._sort_key(self_data), self._sort_key(other_data)
 
     def __lt__(self, other: QtWidgets.QTableWidgetItem) -> bool:
         """Override less-than operator for sorting."""
         if not isinstance(other, QtWidgets.QTableWidgetItem):
             return NotImplemented
-        self_data = self.data(QtCore.Qt.ItemDataRole.UserRole)
-        other_data = other.data(QtCore.Qt.ItemDataRole.UserRole)
-        if self_data is not None and other_data is not None:
-            return self_data < other_data
+        values = self._sort_values(other)
+        if values is not None:
+            return values[0] < values[1]
         return super().__lt__(other)
 
     def __gt__(self, other: QtWidgets.QTableWidgetItem) -> bool:
-        """Override less-than operator for sorting."""
+        """Override greater-than operator for sorting."""
         if not isinstance(other, QtWidgets.QTableWidgetItem):
             return NotImplemented
-        self_data = self.data(QtCore.Qt.ItemDataRole.UserRole)
-        other_data = other.data(QtCore.Qt.ItemDataRole.UserRole)
-        if self_data is not None and other_data is not None:
-            return self_data > other_data
+        values = self._sort_values(other)
+        if values is not None:
+            return values[0] > values[1]
         return super().__gt__(other)
 
 
