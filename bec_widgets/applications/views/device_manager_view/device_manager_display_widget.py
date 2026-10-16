@@ -45,7 +45,6 @@ from bec_widgets.widgets.control.device_manager.components import (
     DocstringView,
     OphydValidation,
 )
-from bec_widgets.widgets.control.device_manager.components._util import SharedSelectionSignal
 from bec_widgets.widgets.control.device_manager.components.config_communicator import (
     CommunicateConfigAction,
 )
@@ -173,7 +172,6 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
         # other communications to REDIS as uploading a config through a CommunicationConfigAction
         # will block if we use the config_helper from self.client.config._config_helper
         self._config_helper = config_helper.ConfigHelper(self.client.connector)
-        self._shared_selection = SharedSelectionSignal()
 
         # Device Table View widget
         self.device_table_view = DeviceTable(self)
