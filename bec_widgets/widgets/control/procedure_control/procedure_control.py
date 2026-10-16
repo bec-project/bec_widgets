@@ -1,6 +1,6 @@
 import operator
 from functools import partial, reduce
-from typing import Literal
+from typing import Callable, Literal
 
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
@@ -8,6 +8,7 @@ from bec_lib.messages import (
     ProcedureExecutionMessage,
     ProcedureQNotifMessage,
     ProcedureRequestMessage,
+    ProcedureStatusUpdate,
 )
 from bec_lib.procedures.helper import FrontendProcedureHelper
 from bec_qthemes._icon.material_icons import material_icon
@@ -45,6 +46,7 @@ class _BaseConfig(BaseModel):
     helper: FrontendProcedureHelper
     tree: QTreeWidget
     active_queue: bool = False
+    running: Callable[[], list[ProcedureExecutionMessage]] | None = None
 
 
 class _QueueConfig(BaseModel):
@@ -170,8 +172,7 @@ class QueueItem(_ActionItem):
 
     def update(self, msgs: list[ProcedureExecutionMessage]):
         if self._config.active_queue:
-            active = self._config.helper.get.running_procedures()
-            for msg in active:
+            for msg in _running(self._config):
                 if msg.queue == self._queue:
                     JobItem(
                         self, [msg.identifier, "RUNNING"], _ItemConfig(base=self._config, msg=msg)
@@ -195,6 +196,12 @@ class QueueItem(_ActionItem):
         self._config.helper.request.clear_unhandled_queue(self._queue)
 
 
+def _running(config: _BaseConfig) -> list[ProcedureExecutionMessage]:
+    if config.running is not None:
+        return config.running()
+    return list(config.helper.get.running_procedures())
+
+
 class CategoryItem(QTreeWidgetItem):
     def __init__(self, parent, strings: list[str], config: _BaseConfig):
         super().__init__(parent, strings)
@@ -209,7 +216,9 @@ class CategoryItem(QTreeWidgetItem):
             if queue_item.childCount() == 0:
                 self.removeChild(queue_item)
                 del self._queues[queue]
-        elif msgs:
+        elif msgs or (
+            self._config.active_queue and any(m.queue == queue for m in _running(self._config))
+        ):
             self._queues[queue] = QueueItem(
                 self, [queue], _QueueConfig(base=self._config, queue=queue, msgs=msgs)
             )
@@ -227,8 +236,13 @@ class ProcedureControl(BECWidget, QWidget):
         super().__init__(parent=parent, client=client, config=config, gui_id=gui_id, **kwargs)
         self._conn = self.bec_dispatcher.client.connector
         self._helper = FrontendProcedureHelper(self._conn)
+        # a worker reports "Finished" before it drops the job from the active set
+        self._ended_ids: set[str] = set()
         self._setup_ui()
         self.bec_dispatcher.connect_slot(self._update, MessageEndpoints.procedure_queue_notif())
+        self.bec_dispatcher.connect_slot(
+            self._on_status_update, MessageEndpoints.procedure_status_update()
+        )
         self._init_queues()
         self._content.itemSelectionChanged.connect(self.on_selection_changed)
 
@@ -253,6 +267,22 @@ class ProcedureControl(BECWidget, QWidget):
             read_queue = self._helper.get.unhandled_queue
         cat_to_update.update(msg.queue_name, read_queue(msg.queue_name))
 
+    def _running(self) -> list[ProcedureExecutionMessage]:
+        running = list(self._helper.get.running_procedures())
+        self._ended_ids &= {msg.execution_id for msg in running}
+        return [msg for msg in running if msg.execution_id not in self._ended_ids]
+
+    @SafeSlot(ProcedureStatusUpdate, dict)
+    def _on_status_update(self, msg: dict | ProcedureStatusUpdate, _):
+        msg = ProcedureStatusUpdate.model_validate(msg)
+        if msg.action in ("Finished", "Aborted"):
+            self._ended_ids.add(msg.execution_id)
+        queues = set(self._active_queues._queues) | set(
+            self._helper.get.active_and_pending_queue_names()
+        )
+        for queue in queues:
+            self._active_queues.update(queue, self._helper.get.exec_queue(queue))
+
     def _setup_ui(self):
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
@@ -262,7 +292,13 @@ class ProcedureControl(BECWidget, QWidget):
         self._content.setHeaderLabels(["name", "status", "params", "actions"])
         self._layout.addWidget(self._content)
 
-        config = partial(_BaseConfig, helper=self._helper, tree=self._content, actions_column=3)
+        config = partial(
+            _BaseConfig,
+            helper=self._helper,
+            tree=self._content,
+            actions_column=3,
+            running=self._running,
+        )
 
         self._active_queues = CategoryItem(
             self._content,
