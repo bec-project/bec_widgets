@@ -104,15 +104,15 @@
                 </widget>
             </item>
             <item row="5" column="1">
-                <widget class="ColorButton" name="color_scatter"/>
+                <widget class="ColorButtonNative" name="color_scatter"/>
             </item>
         </layout>
     </widget>
     <customwidgets>
         <customwidget>
-            <class>ColorButton</class>
-            <extends>QWidget</extends>
-            <header>color_button</header>
+            <class>ColorButtonNative</class>
+            <extends>QPushButton</extends>
+            <header>color_button_native</header>
         </customwidget>
     </customwidgets>
     <resources/>

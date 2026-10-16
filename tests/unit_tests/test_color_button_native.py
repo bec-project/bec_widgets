@@ -24,6 +24,18 @@ def test_color_button_native(qtbot):
     assert cb.color == new_color.name()
 
 
+def test_color_button_native_accepts_rgba_tuple(qtbot):
+    """RGB(A) tuples are shown as their hex code; the alpha channel is dropped."""
+    cb = create_widget(qtbot, ColorButtonNative)
+
+    with qtbot.waitSignal(cb.color_changed, timeout=1000) as blocker:
+        cb.set_color((255, 128, 0, 100))
+
+    assert cb.color == "#ff8000"
+    assert cb.text() == "#ff8000"
+    assert blocker.args == ["#ff8000"]
+
+
 def test_color_dialog_applies_chosen_color(qtbot, monkeypatch):
     """Clicking the button should open the dialog and apply the selected color."""
     cb = create_widget(qtbot, ColorButtonNative)

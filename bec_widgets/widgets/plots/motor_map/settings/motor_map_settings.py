@@ -1,5 +1,6 @@
 import os
 
+from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QFrame, QScrollArea, QVBoxLayout, QWidget
 
 from bec_widgets.utils.error_popups import SafeSlot
@@ -55,7 +56,7 @@ class MotorMapSettings(SettingWidget):
     def connect_all_signals(self):
         for widget in self.ui_widget_list:
             WidgetIO.connect_widget_change_signal(widget, self.set_property)
-        self.ui.color_scatter.color_selected.connect(
+        self.ui.color_scatter.color_changed.connect(
             lambda color: self.target_widget.setProperty("color_scatter", color)
         )
 
@@ -98,8 +99,7 @@ class MotorMapSettings(SettingWidget):
         if widget_to_set is None:
             return
         if widget_to_set is self.ui.color_scatter:
-            # Update the color scatter button
-            self.ui.color_scatter.set_color(value)
+            self._show_color(value)
             return
         # Block signals to avoid triggering set_property again
         was_blocked = widget_to_set.blockSignals(True)
@@ -115,7 +115,18 @@ class MotorMapSettings(SettingWidget):
             value = getattr(self.target_widget, property_name)
             WidgetIO.set_value(widget, value)
 
-        self.ui.color_scatter.set_color(self.target_widget.color)
+        self._show_color(self.target_widget.color)
+
+    def _show_color(self, color: tuple | str):
+        """
+        Show a color on the color button without sending it back to the target widget.
+
+        Args:
+            color(tuple|str): The color to show, as an RGBA tuple or a HEX string.
+        """
+        was_blocked = self.ui.color_scatter.blockSignals(True)
+        self.ui.color_scatter.set_color(color)
+        self.ui.color_scatter.blockSignals(was_blocked)
 
     def accept_changes(self):
         """
@@ -126,4 +137,6 @@ class MotorMapSettings(SettingWidget):
             value = WidgetIO.get_value(widget)
             setattr(self.target_widget, property_name, value)
 
-        self.target_widget.color_scatter = self.ui.color_scatter.get_color()
+        # The button only holds RGB, so keep the target's alpha when the color is unchanged
+        if QColor(self.ui.color_scatter.color).rgb() != self.target_widget.color_scatter.rgb():
+            self.target_widget.color_scatter = self.ui.color_scatter.color

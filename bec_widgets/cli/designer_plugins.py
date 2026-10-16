@@ -24,7 +24,6 @@ designer_plugins = {
         "BeamlineStateManager",
     ),
     "BecConsole": ("bec_widgets.widgets.editors.bec_console.bec_console", "BecConsole"),
-    "ColorButton": ("bec_widgets.widgets.utility.visual.color_button.color_button", "ColorButton"),
     "ColorButtonNative": (
         "bec_widgets.widgets.utility.visual.color_button_native.color_button_native",
         "ColorButtonNative",
@@ -132,7 +131,6 @@ widget_icons = {
     "BECStatusBox": "widgets",
     "BeamlineStateManager": "format_list_bulleted",
     "BecConsole": "terminal",
-    "ColorButton": "colors",
     "ColorButtonNative": "colors",
     "ColormapSelector": "palette",
     "DapComboBox": "data_exploration",
