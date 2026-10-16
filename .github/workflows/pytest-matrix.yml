@@ -37,6 +37,7 @@ jobs:
       QTWEBENGINE_DISABLE_SANDBOX: 1
       QT_QPA_PLATFORM: "offscreen"
       QTWEBENGINE_CHROMIUM_FLAGS: "--disable-gpu"
+      PYTHONFAULTHANDLER: 1 # keep the crash traceback on after pytest exits (crashes at interpreter shutdown)
 
     steps:
       - name: Checkout BEC Widgets
