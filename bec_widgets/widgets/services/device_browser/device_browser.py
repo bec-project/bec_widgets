@@ -9,9 +9,12 @@ from bec_lib.logger import bec_logger
 from bec_lib.messages import ConfigAction, ScanStatusMessage
 from bec_qthemes import material_icon
 from pyqtgraph import SignalProxy
-from qtpy.QtCore import QThreadPool, Signal
+from qtpy.QtCore import Qt, QThreadPool, Signal
 from qtpy.QtWidgets import QFileDialog, QListWidget, QToolButton, QVBoxLayout, QWidget
 
+from bec_widgets.applications.views.device_manager_view.device_manager_dialogs import (
+    DeviceFormDialog,
+)
 from bec_widgets.utils.bec_signal_proxy import cleanup_signal_proxy
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
@@ -19,8 +22,8 @@ from bec_widgets.utils.list_of_expandable_frames import ListOfExpandableFrames
 from bec_widgets.utils.rpc_register import RPCRegister
 from bec_widgets.utils.ui_loader import UILoader
 from bec_widgets.widgets.services.device_browser.device_item import DeviceItem
-from bec_widgets.widgets.services.device_browser.device_item.device_config_dialog import (
-    DirectUpdateDeviceConfigDialog,
+from bec_widgets.widgets.services.device_browser.device_item.config_communicator import (
+    CommunicateConfigAction,
 )
 from bec_widgets.widgets.services.device_browser.util import map_device_type_to_icon
 
@@ -109,9 +112,26 @@ class DeviceBrowser(BECWidget, QWidget):
             self.ui.import_button, "input", self._load_from_file, "append/merge config from file"
         )
 
+    @SafeSlot()
     def _create_add_dialog(self):
-        dialog = DirectUpdateDeviceConfigDialog(parent=self, device=None, action="add")
+        dialog = DeviceFormDialog(parent=self, add_btn_text="Add Device")
+        dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        dialog.setWindowTitle("Add new device")
+        dialog.accepted_data.connect(self._add_device)
         dialog.open()
+
+    @SafeSlot(dict, int, int, str, str, popup_error=True)
+    def _add_device(self, config: dict, *_):
+        if (name := config.get("name")) in self.dev:
+            raise ValueError(f"Can't add {name}: a device with this name already exists!")
+        logger.info(f"Sending request to add device: {config}")
+        adder = CommunicateConfigAction(self._config_helper, None, config, "add")
+        adder.signals.error.connect(self._add_device_error)
+        self._q_threadpool.start(adder)
+
+    @SafeSlot(Exception, popup_error=True)
+    def _add_device_error(self, e: Exception):
+        raise e
 
     def on_device_update(self, action: ConfigAction, content: dict) -> None:
         """

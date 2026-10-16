@@ -83,7 +83,8 @@ class CommunicateConfigAction(QRunnable):
         logger.info("Done cancelling configuration operation")
 
     def process_remove_readd(self, dev_name: str):
+        new_name = self.config.get("name") or dev_name
         logger.info(f"Removing and readding device: {dev_name}")
         self.process_simple_action(dev_name, "remove")
-        self.process_simple_action(dev_name, "add")
-        logger.info(f"Reinstated {dev_name} successfully!")
+        self.process_simple_action(new_name, "add")
+        logger.info(f"Reinstated {new_name} successfully!")

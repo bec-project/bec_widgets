@@ -2,14 +2,19 @@ from typing import TYPE_CHECKING
 from unittest import mock
 
 import pytest
+from bec_lib.atlas_models import Device as DeviceConfigModel
 from bec_lib.device import Device
 from qtpy.QtCore import QPoint, Qt
-from qtpy.QtWidgets import QTabWidget
+from qtpy.QtWidgets import QDialog, QLabel, QTabWidget
 
+from bec_widgets.applications.views.device_manager_view.device_manager_dialogs import (
+    DeviceFormDialog,
+)
 from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.services.device_browser.device_browser import DeviceBrowser
-from bec_widgets.widgets.services.device_browser.device_item.device_config_form import (
-    DeviceConfigForm,
+from bec_widgets.widgets.services.device_browser.device_item.device_item import (
+    config_change,
+    config_to_yaml,
 )
 from bec_widgets.widgets.services.device_browser.device_item.device_signal_display import (
     SignalDisplay,
@@ -93,13 +98,12 @@ def test_device_item_expansion(device_browser, qtbot):
     tab_widget: QTabWidget = widget._contents.layout().itemAt(0).widget()
     qtbot.waitUntil(lambda: tab_widget.widget(0) is not None, timeout=100)
     qtbot.waitUntil(
-        lambda: isinstance(tab_widget.widget(0).layout().itemAt(0).widget(), DeviceConfigForm),
-        timeout=100,
+        lambda: isinstance(tab_widget.widget(0).layout().itemAt(0).widget(), QLabel), timeout=100
     )
-    form = tab_widget.widget(0).layout().itemAt(0).widget()
+    config_view: QLabel = tab_widget.widget(0).layout().itemAt(0).widget()
     assert widget.expanded
-    assert (name_field := form.widget_dict.get("name")) is not None
-    qtbot.waitUntil(lambda: name_field.getValue() == "aptrx", timeout=500)
+    qtbot.waitUntil(lambda: config_view.text().startswith("name: aptrx\n"), timeout=500)
+    assert "deviceClass: ophyd_devices.SimPositioner" in config_view.text()
     qtbot.mouseClick(widget._expansion_button, Qt.MouseButton.LeftButton)
     assert not widget.expanded
 
@@ -199,3 +203,143 @@ def test_device_browser_cleanup_detaches_filter_proxy(device_browser: DeviceBrow
         update_filter.assert_not_called()
         assert not proxy.timer.timer.isActive()
         assert proxy.args is None
+
+
+_BASIC_CONFIG = {
+    "name": "test_device",
+    "enabled": True,
+    "deviceClass": "TestDevice",
+    "readoutPriority": "monitored",
+    "deviceConfig": {"param": 1},
+}
+
+
+@pytest.mark.parametrize(
+    ["edited", "expected_keys"],
+    [
+        ({}, set()),
+        (_BASIC_CONFIG, set()),
+        ({"readOnly": False}, set()),
+        ({"readOnly": True}, {"readOnly"}),
+        ({"readOnly": True, "description": "test"}, {"readOnly", "description"}),
+        ({"deviceTags": ["tag"]}, {"deviceTags"}),
+        ({"deviceConfig": {"param": 2}}, "all"),
+        ({"deviceClass": "OtherDevice"}, "all"),
+        ({"name": "renamed"}, "all"),
+    ],
+)
+def test_config_change(edited, expected_keys):
+    change = config_change(_BASIC_CONFIG, edited)
+    if expected_keys == "all":
+        assert change == DeviceConfigModel.model_validate({**_BASIC_CONFIG, **edited}).model_dump()
+    else:
+        assert set(change) == expected_keys
+
+
+def test_config_to_yaml_puts_name_and_class_first():
+    text = config_to_yaml(DeviceConfigModel.model_validate(_BASIC_CONFIG))
+    assert text.splitlines()[:2] == ["name: test_device", "deviceClass: TestDevice"]
+    assert "  param: 1" in text
+
+
+def _opened_dialog(open_dialog) -> DeviceFormDialog:
+    opened = []
+    with mock.patch.object(QDialog, "open", lambda dialog: opened.append(dialog)):
+        open_dialog()
+    (dialog,) = opened
+    assert isinstance(dialog, DeviceFormDialog)
+    return dialog
+
+
+def _first_item(device_browser) -> "DeviceItem":
+    return device_browser.dev_list.itemWidget(device_browser.dev_list.itemAt(0, 0))
+
+
+def _run_inline(widget):
+    widget._q_threadpool = mock.MagicMock()
+    widget._q_threadpool.start.side_effect = lambda runnable: runnable.run()
+    widget._config_helper = mock.MagicMock()
+
+
+def test_add_dialog_sends_add_request(device_browser, qtbot):
+    dialog = _opened_dialog(device_browser._create_add_dialog)
+    _run_inline(device_browser)
+    config = {**_BASIC_CONFIG, "name": "new_device"}
+    dialog.accepted_data.emit(config, 0, 0, "", "")
+    device_browser._config_helper.send_config_request.assert_called_once_with(
+        action="add", config={"new_device": config}, wait_for_response=False
+    )
+    dialog.close()
+
+
+def test_add_dialog_refuses_existing_name(device_browser, qtbot):
+    dialog = _opened_dialog(device_browser._create_add_dialog)
+    _run_inline(device_browser)
+    with mock.patch(
+        "bec_widgets.utils.error_popups._ErrorPopupUtility.custom_exception_hook"
+    ) as mock_hook:
+        dialog.accepted_data.emit({**_BASIC_CONFIG, "name": "samx"}, 0, 0, "", "")
+    assert isinstance(mock_hook.call_args[0][1], ValueError)
+    device_browser._config_helper.send_config_request.assert_not_called()
+    dialog.close()
+
+
+def test_edit_dialog_is_prefilled(device_browser, qtbot):
+    widget = _first_item(device_browser)
+    dialog = _opened_dialog(widget._create_edit_dialog)
+    config = dialog._device_config_template.get_config_fields()
+    assert config["name"] == widget.device
+    assert config["deviceClass"] == device_browser.dev[widget.device]._config["deviceClass"]
+    dialog.close()
+
+
+def test_edit_dialog_sends_only_changes(device_browser, qtbot):
+    widget = _first_item(device_browser)
+    dialog = _opened_dialog(widget._create_edit_dialog)
+    _run_inline(widget)
+    config = {**dialog._device_config_template.get_config_fields(), "readOnly": True}
+    dialog.accepted_data.emit(config, 0, 0, "", "")
+    widget._config_helper.send_config_request.assert_called_once_with(
+        action="update", config={widget.device: {"readOnly": True}}, wait_for_response=False
+    )
+    dialog.close()
+
+
+def test_edit_dialog_without_changes_sends_nothing(device_browser, qtbot):
+    widget = _first_item(device_browser)
+    dialog = _opened_dialog(widget._create_edit_dialog)
+    _run_inline(widget)
+    dialog.accepted_data.emit(dialog._device_config_template.get_config_fields(), 0, 0, "", "")
+    widget._config_helper.send_config_request.assert_not_called()
+    dialog.close()
+
+
+def test_edit_dialog_rename_recreates_device(device_browser, qtbot):
+    widget = _first_item(device_browser)
+    old_name = widget.device
+    dialog = _opened_dialog(widget._create_edit_dialog)
+    _run_inline(widget)
+    config = {**dialog._device_config_template.get_config_fields(), "name": "renamed_device"}
+    dialog.accepted_data.emit(config, 0, 0, "", "")
+    calls = widget._config_helper.send_config_request.call_args_list
+    assert [(c.kwargs["action"], list(c.kwargs["config"])) for c in calls] == [
+        ("remove", [old_name]),
+        ("add", ["renamed_device"]),
+    ]
+    qtbot.waitUntil(lambda: old_name not in device_browser.dev_list._item_dict, timeout=1000)
+    dialog.close()
+
+
+def test_edit_dialog_rename_refuses_existing_name(device_browser, qtbot):
+    widget = _first_item(device_browser)
+    other = next(name for name in device_browser.dev if name != widget.device)
+    dialog = _opened_dialog(widget._create_edit_dialog)
+    _run_inline(widget)
+    config = {**dialog._device_config_template.get_config_fields(), "name": other}
+    with mock.patch(
+        "bec_widgets.utils.error_popups._ErrorPopupUtility.custom_exception_hook"
+    ) as mock_hook:
+        dialog.accepted_data.emit(config, 0, 0, "", "")
+    assert isinstance(mock_hook.call_args[0][1], ValueError)
+    widget._config_helper.send_config_request.assert_not_called()
+    dialog.close()
