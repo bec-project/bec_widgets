@@ -1,3 +1,5 @@
+import warnings
+
 import pytest
 from qtpy.QtPdf import QPdfDocument
 from qtpy.QtPdfWidgets import QPdfView
@@ -225,6 +227,26 @@ def test_load_pdf_file(qtbot, pdf_viewer_widget: PdfViewerWidget, temp_pdf_file,
     widget.current_file_path = temp_pdf_file
     qtbot.wait(100)  # Wait for loading
     assert widget.current_file_path == temp_pdf_file
+
+
+def test_load_and_cleanup_do_not_warn_about_disconnect(
+    qtbot, mocked_client, temp_pdf_file, temp_pdf_file_2
+):
+    """Loading, reloading and (repeated) cleanup never disconnect a slot that is not connected."""
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        widget = PdfViewerWidget(client=mocked_client)
+        qtbot.addWidget(widget)
+        widget.load_pdf(temp_pdf_file)
+        widget.load_pdf(temp_pdf_file_2)
+        qtbot.wait(100)
+        widget.cleanup()
+        widget.cleanup()  # a repeated cleanup must not disconnect again
+        unloaded = PdfViewerWidget(client=mocked_client)
+        qtbot.addWidget(unloaded)
+        unloaded.cleanup()
+
+    assert [str(w.message) for w in caught if "Failed to disconnect" in str(w.message)] == []
 
 
 def test_load_invalid_pdf_file(qtbot, pdf_viewer_widget: PdfViewerWidget, tmpdir):
