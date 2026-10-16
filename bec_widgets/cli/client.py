@@ -92,44 +92,6 @@ class AdminView(RPCBase):
         """
 
 
-class AutoUpdates(RPCBase):
-    _IMPORT_MODULE = "bec_widgets.widgets.containers.auto_update.auto_updates"
-
-    @property
-    @rpc_call
-    def enabled(self) -> "bool":
-        """
-        Get the enabled status of the auto updates.
-        """
-
-    @enabled.setter
-    @rpc_call
-    def enabled(self) -> "bool":
-        """
-        Get the enabled status of the auto updates.
-        """
-
-    @property
-    @rpc_call
-    def selected_device(self) -> "str | None":
-        """
-        Get the selected device from the auto update config.
-
-        Returns:
-            str: The selected device. If no device is selected, None is returned.
-        """
-
-    @selected_device.setter
-    @rpc_call
-    def selected_device(self) -> "str | None":
-        """
-        Get the selected device from the auto update config.
-
-        Returns:
-            str: The selected device. If no device is selected, None is returned.
-        """
-
-
 class AvailableDeviceResources(RPCBase):
     _IMPORT_MODULE = "bec_widgets.widgets.control.device_manager.components.available_device_resources.available_device_resources"
 

@@ -24,13 +24,11 @@ from bec_widgets.utils.bec_plugin_helper import get_all_plugin_widgets
 from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.name_utils import pascal_to_snake
-from bec_widgets.utils.plugin_utils import get_plugin_auto_updates
 from bec_widgets.utils.round_frame import RoundedFrame
 from bec_widgets.utils.rpc_register import RPCRegister
 from bec_widgets.utils.screen_utils import apply_window_geometry, centered_geometry_for_app
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.utils.ui_loader import UILoader
-from bec_widgets.widgets.containers.auto_update.auto_updates import AutoUpdates
 from bec_widgets.widgets.containers.dock_area.dock_area import BECDockArea
 from bec_widgets.widgets.containers.dock_area.profile_utils import get_last_profile, list_profiles
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow, BECMainWindowNoRPC
@@ -236,20 +234,6 @@ class LaunchWindow(BECMainWindow):
             selector_items=list_profiles("bec"),
         )
         self._refresh_dock_area_profiles(preserve_selection=False)
-
-        self.available_auto_updates: dict[str, type[AutoUpdates]] = (
-            self._update_available_auto_updates()
-        )
-        self.register_tile(
-            name="auto_update",
-            icon_path=os.path.join(MODULE_PATH, "assets", "app_icons", "auto_update.png"),
-            top_label="Get automated",
-            main_label="BEC Auto Update Dock Area",
-            description="Dock area with auto update functionality for BEC widgets plotting.",
-            action_button=self._open_auto_update,
-            show_selector=True,
-            selector_items=list(self.available_auto_updates.keys()) + ["Default"],
-        )
 
         self.register_tile(
             name="custom_ui_file",
@@ -462,10 +446,6 @@ class LaunchWindow(BECMainWindow):
                     return None
                 return self._launch_custom_ui_file(ui_file)
 
-            if launch_script == "auto_update":
-                auto_update = kwargs.pop("auto_update", None)
-                return self._launch_auto_update(auto_update, geometry=geometry)
-
             if launch_script == "widget":
                 widget = kwargs.pop("widget", None)
                 if widget is None:
@@ -538,23 +518,6 @@ class LaunchWindow(BECMainWindow):
         logger.info(f"Launched custom UI: {filename}, type: {type(window).__name__}")
         return window
 
-    def _launch_auto_update(
-        self, auto_update: str, geometry: tuple[int, int, int, int] | None = None
-    ) -> AutoUpdates:
-        if auto_update in self.available_auto_updates:
-            auto_update_cls = self.available_auto_updates[auto_update]
-            window = auto_update_cls()
-        else:
-
-            auto_update = "auto_updates"
-            window = AutoUpdates()
-
-        window.resize(window.minimumSizeHint())
-        window.setWindowTitle(f"BEC - {window.objectName()}")
-        apply_window_geometry(window, geometry)
-        window.show()
-        return window
-
     def _launch_widget(
         self, widget: type[BECWidget], geometry: tuple[int, int, int, int] | None = None
     ) -> QWidget:
@@ -582,18 +545,6 @@ class LaunchWindow(BECMainWindow):
             tile.apply_theme(theme)
 
         super().apply_theme(theme)
-
-    def _open_auto_update(self):
-        """
-        Open the auto update window.
-        """
-        if self.tiles["auto_update"].selector is None:
-            auto_update = None
-        else:
-            auto_update = self.tiles["auto_update"].selector.currentText()
-            if auto_update == "Default":
-                auto_update = None
-        return self.launch("auto_update", auto_update=auto_update)
 
     def _open_dock_area(self):
         """
@@ -634,19 +585,6 @@ class LaunchWindow(BECMainWindow):
             self, "Select UI File", "", "UI Files (*.ui);;All Files (*)"
         )
         self.launch("custom_ui_file", ui_file=ui_file)
-
-    @staticmethod
-    def _update_available_auto_updates() -> dict[str, type[AutoUpdates]]:
-        """
-        Load all available auto updates from the plugin repository.
-        """
-        try:
-            auto_updates = get_plugin_auto_updates()
-            logger.info(f"Available auto updates: {auto_updates.keys()}")
-        except Exception as exc:
-            logger.error(f"Failed to load auto updates: {exc}")
-            return {}
-        return auto_updates
 
     def show_launcher(self):
         """
