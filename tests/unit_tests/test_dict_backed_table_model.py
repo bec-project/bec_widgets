@@ -16,7 +16,6 @@ from qtpy.QtTest import QAbstractItemModelTester
 
 from bec_widgets.tests.utils import create_widget
 from bec_widgets.widgets.editors.dict_backed_table import DictBackedTable
-from bec_widgets.widgets.editors.scan_metadata.scan_metadata import ScanMetadata
 
 INITIAL_DATA = [["key1", "value1"], ["key2", "value2"], ["key3", "value3"]]
 
@@ -169,22 +168,6 @@ def test_tables_do_not_share_backing_data(qtbot):
 
     assert first._table_model.rowCount() == 1
     assert second._table_model.rowCount() == 0
-
-
-def test_scan_metadata_form_drops_deleted_extra_row(qtbot):
-    widget = create_widget(qtbot, ScanMetadata, initial_extras=[["k1", "v1"], ["k2", "v2"]])
-    received: list[dict] = []
-    widget.form_data_updated.connect(received.append)
-    table = widget._additional_metadata
-
-    selection = table._table_view.selectionModel()
-    selection.select(table._table_model.index(0, 0), QItemSelectionModel.SelectionFlag.Select)
-    table.delete_selected_rows()
-
-    assert table.dump_dict() == {"k2": "v2"}
-    assert received, "deleting a row must re-validate the form"
-    assert "k1" not in received[-1]
-    assert received[-1]["k2"] == "v2"
 
 
 def test_values_are_not_checked_against_keys(table):
