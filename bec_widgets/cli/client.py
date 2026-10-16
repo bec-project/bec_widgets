@@ -5014,6 +5014,8 @@ class PositionerGroup(RPCBase):
 
 
 class ProcedurePanel(RPCBase):
+    _IMPORT_MODULE = "bec_widgets.widgets.control.procedure_control.procedure_panel"
+
     @rpc_call
     def new(
         self,
@@ -5063,7 +5065,7 @@ class ProcedurePanel(RPCBase):
                 or a sequence of button names to hide.
             show_settings_action(bool | None): Control whether a dock settings/property action should
                 be installed. Defaults to ``False`` for the basic dock area; subclasses
-                such as `AdvancedDockArea` override the default to ``True``.
+                such as `BECDockArea` override the default to ``True``.
             promote_central(bool): When True, promote the created dock to be the dock manager's
                 central widget (useful for editor stacks or other root content).
             dock_icon(QIcon | None): Optional icon applied to the dock via ``CDockWidget.setIcon``.
