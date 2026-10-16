@@ -29,7 +29,7 @@ jobs:
 
     steps:
       - name: Checkout BEC
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: bec-project/bec
           ref: ${{ inputs.BEC_CORE_BRANCH }}
@@ -48,7 +48,7 @@ jobs:
 
       - name: Upload BEC unit test artifacts if job fails
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: bec-unit-test-artifacts
           path: |
@@ -62,7 +62,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout BEC
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: bec-project/bec
           ref: ${{ inputs.BEC_CORE_BRANCH }}
@@ -77,7 +77,7 @@ jobs:
 
       - name: Upload BEC e2e logs if job fails
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: bec-e2e-test-logs
           path: ./_e2e_test_checkout_/bec/logs/*.log
