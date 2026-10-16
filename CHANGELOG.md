@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v3.40.3 (2026-10-16)
+
+### Bug Fixes
+
+- **dock_area**: Bind deferred splitter callbacks and stop busy polling
+  ([`7ce6bf2`](https://github.com/bec-project/bec_widgets/commit/7ce6bf2a5ab07a566d46e97e8199974f5b667633))
+
+- **dock_area**: Skip superseded deferred layout ratio requests
+  ([`4cfb49f`](https://github.com/bec-project/bec_widgets/commit/4cfb49ff9538415530cd12377650c4957b097769))
+
+
 ## v3.40.2 (2026-10-15)
 
 ### Bug Fixes
