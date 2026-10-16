@@ -5,14 +5,12 @@ from bec_lib.atlas_models import Device as DeviceConfigModel
 from bec_lib.config_helper import CONF as DEVICE_CONF_KEYS
 from bec_lib.config_helper import ConfigHelper
 from bec_lib.logger import bec_logger
-from pydantic import BaseModel, field_validator
+from pydantic import field_validator
 from qtpy.QtCore import QSize, Qt, QThreadPool, Signal  # type: ignore
 from qtpy.QtWidgets import (
     QApplication,
-    QComboBox,
     QDialog,
     QDialogButtonBox,
-    QHBoxLayout,
     QLabel,
     QStackedLayout,
     QVBoxLayout,
@@ -21,7 +19,7 @@ from qtpy.QtWidgets import (
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
-from bec_widgets.utils.forms_from_types.items import DynamicFormItem, DynamicFormItemType
+from bec_widgets.utils.forms_from_types.items import DynamicFormItem
 from bec_widgets.widgets.services.device_browser.device_item.config_communicator import (
     CommunicateConfigAction,
 )
@@ -152,58 +150,6 @@ class DeviceConfigDialog(QDialog):
     def accept(self):
         self._process_action()
         return super().accept()
-
-
-class EpicsMotorConfig(BaseModel):
-    prefix: str
-
-
-class EpicsSignalROConfig(BaseModel):
-    read_pv: str
-
-
-class EpicsSignalConfig(BaseModel):
-    read_pv: str
-    write_pv: str | None = None
-
-
-class PresetClassDeviceConfigDialog(DeviceConfigDialog):
-    def __init__(self, *, parent=None, **kwargs):
-        super().__init__(parent=parent, **kwargs)
-        self._device_models = {
-            "EpicsMotor": (EpicsMotorConfig, {"deviceClass": ("ophyd.EpicsMotor", False)}),
-            "EpicsSignalRO": (EpicsSignalROConfig, {"deviceClass": ("ophyd.EpicsSignalRO", False)}),
-            "EpicsSignal": (EpicsSignalConfig, {"deviceClass": ("ophyd.EpicsSignal", False)}),
-            "Custom": (None, {}),
-        }
-        self._create_selection_box()
-        self._selection_box.currentTextChanged.connect(self._replace_form)
-
-    def _apply_constraints(self, constraints: dict[str, tuple[DynamicFormItemType, bool]]):
-        for field_name, (value, editable) in constraints.items():
-            if (widget := self._form.widget_dict.get(field_name)) is not None:
-                widget.setValue(value)
-                if not editable:
-                    widget._set_pretty_display()
-
-    def _replace_form(self, deviceconfig_cls_key):
-        self._form.deleteLater()
-        if (devmodel_params := self._device_models.get(deviceconfig_cls_key)) is not None:
-            devmodel, params = devmodel_params
-        else:
-            devmodel, params = None, {}
-        self._form = DeviceConfigForm(class_deviceconfig_item=devmodel)
-        self._apply_constraints(params)
-        self._layout.insertWidget(1, self._form)
-        self._connect_form()
-
-    def _create_selection_box(self):
-        layout = QHBoxLayout()
-        self._selection_box = QComboBox()
-        self._selection_box.addItems(list(self._device_models.keys()))
-        layout.addWidget(QLabel("Choose a device class: "))
-        layout.addWidget(self._selection_box)
-        self._layout.insertLayout(0, layout)
 
 
 class DirectUpdateDeviceConfigDialog(BECWidget, DeviceConfigDialog):
@@ -358,8 +304,8 @@ def main():  # pragma: no cover
     def _show_dialog(*_):
         nonlocal dialog
         if dialog is None:
-            kwargs = {}  # kwargs = {"device": dev} if (dev := device.text()) else {"action": "add"}
-            dialog = PresetClassDeviceConfigDialog(**kwargs)  # type: ignore
+            kwargs = {"device": dev} if (dev := device.text()) else {"action": "add"}
+            dialog = DirectUpdateDeviceConfigDialog(**kwargs)  # type: ignore
             dialog.accepted.connect(accept)
             dialog.rejected.connect(_destroy_dialog)
             dialog.open()
