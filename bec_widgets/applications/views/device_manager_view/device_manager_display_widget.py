@@ -15,7 +15,6 @@ from bec_lib.messages import ConfigAction, ScanStatusMessage
 from bec_lib.plugin_helper import plugin_package_name, plugin_repo_path
 from bec_qthemes import apply_theme, material_icon
 from qtpy.QtCore import QMetaObject, Qt, QThreadPool, Signal
-from qtpy.QtGui import QColor
 from qtpy.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -33,6 +32,7 @@ from bec_widgets.applications.views.device_manager_view.device_manager_dialogs i
 from bec_widgets.applications.views.device_manager_view.device_manager_dialogs.upload_redis_dialog import (
     UploadRedisDialog,
 )
+from bec_widgets.utils.busy_loader import BusyStateWidget
 from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.toolbars.actions import MaterialIconAction
@@ -55,7 +55,6 @@ from bec_widgets.widgets.control.device_manager.components.ophyd_validation.ophy
 from bec_widgets.widgets.progress.device_initialization_progress_bar.device_initialization_progress_bar import (
     DeviceInitializationProgressBar,
 )
-from bec_widgets.widgets.utility.spinner.spinner import SpinnerWidget
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.client import BECClient
@@ -69,38 +68,32 @@ _yes_no_question = partial(
 )
 
 
-class CustomBusyWidget(QWidget):
-    """Custom busy widget to show during device config upload."""
+class CustomBusyWidget(BusyStateWidget):
+    """Busy state shown during device config upload: spinner, progress bar and cancel button."""
 
     cancel_requested = Signal()
 
     def __init__(self, parent=None, client: BECClient | None = None):
-        super().__init__(parent=parent)
+        super().__init__(parent=parent, text=None)
 
-        # Widgets
+        # Progress of the device initialization, on a card so it stays readable over the scrim
         self.progress = QWidget(parent=self)
+        self.progress.setObjectName("busyProgressCard")
+        self.progress.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.progress.setStyleSheet(
+            "#busyProgressCard { background-color: palette(window); border-radius: 12px; }"
+        )
         self.progress_layout = QVBoxLayout(self.progress)
         self.progress_layout.setContentsMargins(6, 6, 6, 6)
         self.progress_inner = DeviceInitializationProgressBar(parent=self.progress, client=client)
         self.progress_layout.addWidget(self.progress_inner)
         self.progress.setMinimumWidth(320)
 
-        # Spinner
-        self.spinner = SpinnerWidget(parent=self)
-        scale = self._ui_scale()
-        spinner_size = int(scale * 0.12) if scale else 1
-        spinner_size = max(32, min(spinner_size, 96))
-        self.spinner.setFixedSize(spinner_size, spinner_size)
-
         # Cancel button
         self.cancel_button = QPushButton("Cancel Upload", parent=self)
         self.cancel_button.setIcon(material_icon("cancel"))
         self.cancel_button.clicked.connect(self.cancel_requested.emit)
-        button_height = int(spinner_size * 0.9)
-        button_height = max(36, min(button_height, 72))
-        aspect_ratio = 3.8  # width / height, visually stable for text buttons
-        button_width = int(button_height * aspect_ratio)
-        self.cancel_button.setFixedSize(button_width, button_height)
+        self.cancel_button.setFixedSize(136, 36)
         color = get_accent_colors()
         self.cancel_button.setStyleSheet(f"""
             QPushButton {{
@@ -111,40 +104,14 @@ class CustomBusyWidget(QWidget):
             }}
             """)
 
-        # Layout
-        content_layout = QVBoxLayout(self)
-        content_layout.setContentsMargins(24, 24, 24, 24)
-        content_layout.setSpacing(16)
-        content_layout.addStretch()
-        content_layout.addWidget(self.spinner, 0, Qt.AlignmentFlag.AlignHCenter)
-        content_layout.addWidget(self.progress, 0, Qt.AlignmentFlag.AlignHCenter)
-        content_layout.addStretch()
-        content_layout.addWidget(self.cancel_button, 0, Qt.AlignmentFlag.AlignHCenter)
-
-        if hasattr(color, "_colors"):
-            bg_color = color._colors.get("BG", None)
-        if bg_color is None:  # Fallback if missing
-            bg_color = QColor(50, 50, 50, 255)
-        self.setStyleSheet(f"""
-            background-color: {bg_color.name()};
-            border-radius: 12px;
-            """)
-
-    def _ui_scale(self) -> int:
-        parent = self.parent()
-        if not parent:
-            return 0
-        return min(parent.width(), parent.height())
-
-    def showEvent(self, event):
-        """Show event to start the spinner."""
-        super().showEvent(event)
-        self.spinner.start()
-
-    def hideEvent(self, event):
-        """Hide event to stop the spinner."""
-        super().hideEvent(event)
-        self.spinner.stop()
+        # Progress below the spinner, cancel button at the bottom
+        self.content_layout.insertWidget(
+            self.content_layout.indexOf(self.label) + 1,
+            self.progress,
+            0,
+            Qt.AlignmentFlag.AlignHCenter,
+        )
+        self.content_layout.addWidget(self.cancel_button, 0, Qt.AlignmentFlag.AlignHCenter)
 
 
 class DeviceManagerDisplayWidget(DockAreaWidget):
