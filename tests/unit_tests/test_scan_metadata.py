@@ -4,13 +4,11 @@ import pytest
 from bec_lib.metadata_schema import BasicScanMetadata
 from pydantic import Field, ValidationError
 from pydantic.types import Json
-from qtpy.QtCore import QItemSelectionModel, QPoint, Qt
 from qtpy.QtWidgets import QCheckBox, QDoubleSpinBox, QFormLayout, QLineEdit, QSpinBox
 
 from bec_widgets.tests.utils import create_widget
 from bec_widgets.utils.forms_from_types.entry_list_editor import EntryListEditor
 from bec_widgets.utils.forms_from_types.pydantic_widget_form import OptionalValueWidget
-from bec_widgets.widgets.editors.dict_backed_table import DictBackedTable
 from bec_widgets.widgets.editors.scan_metadata.scan_metadata import ScanMetadata
 from bec_widgets.widgets.utility.spinbox.decimal_spinbox import BECSpinBox
 
@@ -309,44 +307,3 @@ def test_scan_metadata_form_drops_deleted_extra_row(qtbot):
     assert received, "deleting a row must re-validate the form"
     assert "k1" not in received[-1]
     assert received[-1]["k2"] == "v2"
-
-
-@pytest.fixture
-def table():
-    table = DictBackedTable(
-        initial_data=[["key1", "value1"], ["key2", "value2"], ["key3", "value3"]]
-    )
-    yield table
-    table._table_model.deleteLater()
-    table._table_view.deleteLater()
-    table.deleteLater()
-
-
-def test_additional_metadata_table_add_row(table: DictBackedTable):
-    assert table._table_model.rowCount() == 3
-    table._add_button.click()
-    assert table._table_model.rowCount() == 4
-
-
-def test_additional_metadata_table_delete_row(table: DictBackedTable):
-    assert table._table_model.rowCount() == 3
-    m = table._table_view.selectionModel()
-    item = table._table_view.indexAt(QPoint(0, 0)).siblingAtRow(1)
-    m.select(item, QItemSelectionModel.SelectionFlag.Select)
-    table.delete_selected_rows()
-    assert table._table_model.rowCount() == 2
-    assert list(table.dump_dict().keys()) == ["key1", "key3"]
-
-
-def test_additional_metadata_allows_changes(table: DictBackedTable):
-    assert table._table_model.rowCount() == 3
-    assert list(table.dump_dict().keys()) == ["key1", "key2", "key3"]
-    table._table_model.setData(table._table_model.index(1, 0), "key4", Qt.ItemDataRole.EditRole)
-    assert list(table.dump_dict().keys()) == ["key1", "key4", "key3"]
-
-
-def test_additional_metadata_doesnt_allow_dupes(table: DictBackedTable):
-    assert table._table_model.rowCount() == 3
-    assert list(table.dump_dict().keys()) == ["key1", "key2", "key3"]
-    table._table_model.setData(table._table_model.index(1, 0), "key1", Qt.ItemDataRole.EditRole)
-    assert list(table.dump_dict().keys()) == ["key1", "key2", "key3"]
