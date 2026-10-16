@@ -32,6 +32,7 @@ from bec_widgets.applications.views.device_manager_view.device_manager_view impo
 )
 from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.utils.busy_loader import BusyStateWidget
+from bec_widgets.utils.colors import apply_theme
 from bec_widgets.widgets.control.device_manager.components import (
     DeviceTable,
     DMConfigView,
@@ -672,6 +673,27 @@ class TestDeviceManagerView:
         # Hide should
         custom_busy.hideEvent(None)
         assert custom_busy.spinner._started is False
+
+    def test_custom_busy_widget_card_follows_theme(self, qtbot, mocked_client):
+        """The progress card repaints with the window color of the current theme."""
+        apply_theme("light")
+        widget = CustomBusyWidget(client=mocked_client)
+        qtbot.addWidget(widget)
+        widget.resize(600, 500)
+        widget.show()
+        qtbot.waitExposed(widget)
+
+        def card_color():
+            corner = widget.progress.geometry().topLeft()
+            return widget.grab().toImage().pixelColor(corner.x() + 20, corner.y() + 3)
+
+        light_window = QtWidgets.QApplication.palette().window().color()
+        assert card_color() == light_window
+
+        apply_theme("dark")
+        dark_window = QtWidgets.QApplication.palette().window().color()
+        assert dark_window != light_window
+        qtbot.waitUntil(lambda: card_color() == dark_window, timeout=2000)
 
     def test_device_manager_view_add_remove_device(
         self, device_manager_display_widget: DeviceManagerDisplayWidget, device_config
