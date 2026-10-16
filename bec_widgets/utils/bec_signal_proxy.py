@@ -22,11 +22,15 @@ def cleanup_signal_proxy(proxy: SignalProxy) -> None:
     Args:
         proxy(SignalProxy): The proxy to stop.
     """
+    # A repeated SignalProxy.disconnect makes PySide6 warn "Failed to disconnect".
+    if getattr(proxy, "_bec_cleaned_up", False):
+        return
     # Called explicitly: on subclasses of SignalProxy, PySide6 resolves proxy.disconnect
     # to the built-in QObject.disconnect instead of SignalProxy.disconnect.
     SignalProxy.disconnect(proxy)
     proxy.timer.stop()
     proxy.args = None
+    proxy._bec_cleaned_up = True
 
 
 class BECSignalProxy(SignalProxy):
