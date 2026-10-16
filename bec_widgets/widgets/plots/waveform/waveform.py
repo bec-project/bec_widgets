@@ -720,7 +720,6 @@ class Waveform(PlotBase):
         self.async_signal_update.emit()
         self.sync_signal_update.emit()
         self.plot_item.enableAutoRange(x=True)
-        self.round_plot_widget.apply_plot_widget_style()  # To keep the correct theme
         self._refresh_alignment_state(force_readback=True)
 
     @SafeProperty(str)
@@ -750,7 +749,6 @@ class Waveform(PlotBase):
         self.async_signal_update.emit()
         self.sync_signal_update.emit()
         self.plot_item.enableAutoRange(x=True)
-        self.round_plot_widget.apply_plot_widget_style()
         self._refresh_alignment_state(force_readback=True)
 
     @SafeProperty(str)
