@@ -10,24 +10,16 @@ from typing import TYPE_CHECKING
 import shiboken6
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import SIGNAL, SLOT, QBuffer, QByteArray, QIODevice, QObject, Qt, QTimer
-from qtpy.QtGui import QFont, QPixmap
-from qtpy.QtWidgets import (
-    QAbstractItemView,
-    QApplication,
-    QFileDialog,
-    QLabel,
-    QVBoxLayout,
-    QWidget,
-)
+from qtpy.QtGui import QPixmap
+from qtpy.QtWidgets import QAbstractItemView, QApplication, QFileDialog, QWidget
 
 import bec_widgets.widgets.containers.qt_ads as QtAds
 from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
-from bec_widgets.utils.busy_loader import install_busy_loader
+from bec_widgets.utils.busy_loader import BusyStateWidget, install_busy_loader
 from bec_widgets.utils.error_popups import SafeConnect, SafeSlot
 from bec_widgets.utils.rpc_decorator import rpc_timeout
 from bec_widgets.utils.rpc_register import RPCRegister
 from bec_widgets.utils.widget_io import WidgetHierarchy
-from bec_widgets.widgets.utility.spinner.spinner import SpinnerWidget
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_widgets.utils.busy_loader import BusyLoaderOverlay
@@ -195,56 +187,17 @@ class BECWidget(BECConnector):
             QWidget: The custom busy state widget.
 
         NOTE:
-            The implementation here is a SpinnerWidget with a "Loading..." label. This is the default
-            busy state widget for all BECWidgets. However, child classes with specific needs for the
-            busy state can easily overrite this method to provide a custom widget. The signature of
-            the method must be preserved to ensure compatibility with the busy overlay system. If
-            the widget provides a 'cleanup' method, it will be called when the overlay is cleaned up.
+            The implementation here is a BusyStateWidget, a spinner with a "Loading..." label.
+            This is the default busy state widget for all BECWidgets. However, child classes with
+            specific needs for the busy state can easily overrite this method to provide a custom
+            widget, for example by subclassing BusyStateWidget. The signature of the method must be
+            preserved to ensure compatibility with the busy overlay system. If the widget provides a
+            'cleanup' method, it will be called when the overlay is cleaned up.
 
             The widget may connect to the _busy_overlay signals foreground_color_changed and
             scrim_color_changed to update its colors when the theme changes.
         """
-
-        # Widget
-        class BusyStateWidget(QWidget):
-            def __init__(self, parent=None):
-                super().__init__(parent)
-                # label
-                label = QLabel("Loading...", self)
-                label.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-                f = QFont(label.font())
-                f.setBold(True)
-                f.setPointSize(f.pointSize() + 1)
-                label.setFont(f)
-
-                # spinner
-                spinner = SpinnerWidget(self)
-                spinner.setFixedSize(42, 42)
-
-                # Layout
-                lay = QVBoxLayout(self)
-                lay.setContentsMargins(24, 24, 24, 24)
-                lay.setSpacing(10)
-                lay.addStretch(1)
-                lay.addWidget(spinner, 0, Qt.AlignHCenter)
-                lay.addWidget(label, 0, Qt.AlignHCenter)
-                lay.addStretch(1)
-                self.setLayout(lay)
-
-            def showEvent(self, event):
-                """Show event to start the spinner."""
-                super().showEvent(event)
-                for child in self.findChildren(SpinnerWidget):
-                    child.start()
-
-            def hideEvent(self, event):
-                """Hide event to stop the spinner."""
-                super().hideEvent(event)
-                for child in self.findChildren(SpinnerWidget):
-                    child.stop()
-
-        widget = BusyStateWidget(self)
-        return widget
+        return BusyStateWidget(self)
 
     def _install_busy_loader(self) -> "BusyLoaderOverlay" | None:
         """

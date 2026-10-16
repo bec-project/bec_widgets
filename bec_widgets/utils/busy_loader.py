@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import QEvent, QObject, Qt, QTimer, Signal
-from qtpy.QtGui import QColor
+from qtpy.QtGui import QColor, QFont
 from qtpy.QtWidgets import (
     QApplication,
     QFrame,
@@ -16,6 +16,7 @@ from qtpy.QtWidgets import (
 
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.error_popups import SafeProperty
+from bec_widgets.widgets.utility.spinner.spinner import SpinnerWidget
 
 logger = bec_logger.logger
 
@@ -46,7 +47,7 @@ class _OverlayEventFilter(QObject):
 
 class BusyLoaderOverlay(QWidget):
     """
-    A semi-transparent scrim with centered text and an animated spinner.
+    A semi-transparent scrim that hosts a busy state widget, by default a BusyStateWidget.
     Call show()/hide() directly, or use via `install_busy_loader(...)`.
 
     Args:
@@ -234,6 +235,54 @@ class BusyLoaderOverlay(QWidget):
         if self._custom_widget is not None:
             if hasattr(self._custom_widget, "cleanup"):
                 self._custom_widget.cleanup()
+
+
+class BusyStateWidget(QWidget):
+    """
+    Default content of the busy overlay: a spinner with an optional message below it.
+    The spinner only runs while the widget is visible. Subclasses can add widgets to
+    `content_layout`, for example a progress bar or a cancel button.
+
+    Args:
+        parent(QWidget): The parent widget.
+        text(str | None): Message shown below the spinner. None hides the message.
+        spinner_size(int): Width and height of the spinner in pixels.
+    """
+
+    def __init__(
+        self, parent: QWidget | None = None, text: str | None = "Loading...", spinner_size: int = 42
+    ):
+        super().__init__(parent)
+
+        self.spinner = SpinnerWidget(self)
+        self.spinner.setFixedSize(spinner_size, spinner_size)
+
+        self.label = QLabel(text or "", self)
+        self.label.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        font = QFont(self.label.font())
+        font.setBold(True)
+        font.setPointSize(font.pointSize() + 1)
+        self.label.setFont(font)
+        if text is None:
+            self.label.hide()
+
+        self.content_layout = QVBoxLayout(self)
+        self.content_layout.setContentsMargins(24, 24, 24, 24)
+        self.content_layout.setSpacing(10)
+        self.content_layout.addStretch(1)
+        self.content_layout.addWidget(self.spinner, 0, Qt.AlignHCenter)
+        self.content_layout.addWidget(self.label, 0, Qt.AlignHCenter)
+        self.content_layout.addStretch(1)
+
+    def showEvent(self, event):
+        """Start the spinner when the widget is shown."""
+        super().showEvent(event)
+        self.spinner.start()
+
+    def hideEvent(self, event):
+        """Stop the spinner when the widget is hidden."""
+        super().hideEvent(event)
+        self.spinner.stop()
 
 
 def install_busy_loader(
