@@ -148,7 +148,7 @@ class SortTableItem(QtWidgets.QTableWidgetItem):
     """
     Table item that sorts by the value stored under the UserRole data role.
 
-    Items without UserRole data fall back to the QTableWidgetItem comparison.
+    If either item has no UserRole data, the items are compared by their text.
 
     Args:
         *args: Positional arguments forwarded to QTableWidgetItem.
@@ -178,7 +178,7 @@ class SortTableItem(QtWidgets.QTableWidgetItem):
         values = self._sort_values(other)
         if values is not None:
             return values[0] < values[1]
-        return super().__lt__(other)
+        return self.text() < other.text()
 
     def __gt__(self, other: QtWidgets.QTableWidgetItem) -> bool:
         """Override greater-than operator for sorting."""
@@ -187,7 +187,7 @@ class SortTableItem(QtWidgets.QTableWidgetItem):
         values = self._sort_values(other)
         if values is not None:
             return values[0] > values[1]
-        return super().__gt__(other)
+        return self.text() > other.text()
 
 
 class DeviceTable(BECWidget, QtWidgets.QWidget):

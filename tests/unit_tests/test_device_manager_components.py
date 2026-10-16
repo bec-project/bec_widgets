@@ -315,6 +315,25 @@ class TestSortTableItem:
         assert high > low
         assert not high < low
 
+    def test_falls_back_to_text_without_data(self):
+        """Items without UserRole data are compared by their text."""
+        a, b = self._item(text="a"), self._item(text="b")
+        assert a < b and b > a
+        assert not b < a and not a > b
+        assert self._item(1, text="b") > QtWidgets.QTableWidgetItem("a")
+        assert self._item(1, text="b") < self._item(text="c")
+
+    def test_table_sorts_items_without_data(self, qtbot):
+        """A table of items without UserRole data sorts by text in both directions."""
+        table = QtWidgets.QTableWidget(3, 1)
+        qtbot.addWidget(table)
+        for row, text in enumerate(["b", "c", "a"]):
+            table.setItem(row, 0, SortTableItem(text))
+        table.sortItems(0, QtCore.Qt.SortOrder.AscendingOrder)
+        assert [table.item(row, 0).text() for row in range(3)] == ["a", "b", "c"]
+        table.sortItems(0, QtCore.Qt.SortOrder.DescendingOrder)
+        assert [table.item(row, 0).text() for row in range(3)] == ["c", "b", "a"]
+
     def test_sort_key(self):
         """A sort key maps the UserRole data before comparing."""
 
