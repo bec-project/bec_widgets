@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from types import NoneType
-from typing import Any, Literal, get_args, get_origin
+from decimal import Decimal
+from types import NoneType, UnionType
+from typing import Any, Literal, Union, get_args, get_origin
 
 from bec_lib.device import DeviceBase, Signal
 from pydantic import BaseModel, ValidationError
 from pydantic.fields import FieldInfo
-from qtpy.QtCore import Qt
+from qtpy.QtCore import QLocale, Qt
 from qtpy.QtCore import Signal as QtSignal
 from qtpy.QtWidgets import (
     QCheckBox,
@@ -14,11 +15,14 @@ from qtpy.QtWidgets import (
     QDoubleSpinBox,
     QFormLayout,
     QHBoxLayout,
+    QLabel,
     QLineEdit,
     QSpinBox,
     QWidget,
 )
 
+from bec_widgets.utils.colors import get_accent_colors
+from bec_widgets.utils.forms_from_types.entry_list_editor import EntryListEditor, ExtraFieldsSection
 from bec_widgets.utils.forms_from_types.pydantic_model_info_adapter import (
     NUMERIC_BOUND_KEYS,
     pydantic_model_input_configs,
@@ -33,6 +37,52 @@ from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import SignalComboBox
 from bec_widgets.widgets.utility.spinbox.decimal_spinbox import BECSpinBox
+
+#: Key of :meth:`PydanticWidgetForm.validation_errors` entries about the extra fields editor.
+EXTRA_FIELDS_KEY = "__extra_fields__"
+
+
+def _value_annotation(annotation: Any) -> Any:
+    """Return the annotation without ``None`` for ``X | None``; unchanged otherwise."""
+    non_none_args = tuple(arg for arg in get_args(annotation) if arg is not NoneType)
+    if NoneType in get_args(annotation) and len(non_none_args) == 1:
+        return non_none_args[0]
+    return annotation
+
+
+#: Decimals of number inputs whose field gives no precision, as many as a float can hold.
+EXACT_DECIMALS = 307
+
+
+class _ExactTextMixin:  # pylint: disable=too-few-public-methods
+    """Show a number input's value with as many decimals as it needs.
+
+    Used with :data:`EXACT_DECIMALS`, so that values below the usual two decimals,
+    e.g. ``0.001``, are neither rounded nor padded with zeros.
+    """
+
+    exact = False
+
+    def textFromValue(self, value: float) -> str:  # noqa: N802 # pylint: disable=invalid-name
+        """Return the shortest text of ``value`` while :attr:`exact` is set."""
+        if not self.exact:
+            return super().textFromValue(value)
+        locale = self.locale()
+        text = locale.toString(
+            float(value), "f", QLocale.FloatingPointPrecisionOption.FloatingPointShortest
+        )
+        if not self.isGroupSeparatorShown():
+            text = text.replace(locale.groupSeparator(), "")
+        return text
+
+
+# pylint: disable-next=too-few-public-methods
+class _ExactDoubleSpinBox(_ExactTextMixin, QDoubleSpinBox):
+    """``QDoubleSpinBox`` for ``Decimal`` fields, see :class:`_ExactTextMixin`."""
+
+
+class _ExactBECSpinBox(_ExactTextMixin, BECSpinBox):
+    """``BECSpinBox`` for ``float`` fields, see :class:`_ExactTextMixin`."""
 
 
 class OptionalValueWidget(QWidget):
@@ -116,6 +166,7 @@ class OptionalValueWidget(QWidget):
         self.value_changed.emit(self.value())
 
 
+# pylint: disable-next=too-many-instance-attributes,too-many-public-methods
 class PydanticWidgetForm(QWidget):
     """Generate a Qt form from a Pydantic model.
 
@@ -132,7 +183,7 @@ class PydanticWidgetForm(QWidget):
     changed = QtSignal()
     validity_changed = QtSignal(bool)
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments
         self,
         model: type[BaseModel],
         parent: QWidget | None = None,
@@ -140,6 +191,12 @@ class PydanticWidgetForm(QWidget):
         data: BaseModel | dict[str, Any] | None = None,
         read_only_fields: set[str] | None = None,
         client=None,
+        allow_extra_fields: bool = False,
+        extra_fields_title: str = "Additional fields",
+        extra_fields_hint: str = "",
+        mark_required: bool = False,
+        empty_text_as_missing: bool = False,
+        show_field_errors: bool = False,
     ) -> None:
         """Create a generated form for a Pydantic model.
 
@@ -150,6 +207,17 @@ class PydanticWidgetForm(QWidget):
             read_only_fields: Field names that should be displayed but not editable.
             client: Optional BEC client passed to domain-specific widgets such as
                 device and signal combo boxes.
+            allow_extra_fields: Show a key/value editor below the model fields for
+                entries that are not part of the model. Only useful for models with
+                ``extra="allow"``.
+            extra_fields_title: Heading of the extra fields editor.
+            extra_fields_hint: Hint shown in the extra fields editor while it is empty.
+            mark_required: Append ``*`` to the labels of fields without a default.
+            empty_text_as_missing: Treat an empty text field without a default as a
+                missing value, so validation reports it as required instead of
+                accepting an empty string.
+            show_field_errors: Show the validation message of an invalid field in a
+                line directly under its input when :meth:`validate` runs.
         """
         super().__init__(parent=parent)
         self._model = model
@@ -158,6 +226,17 @@ class PydanticWidgetForm(QWidget):
         self._widgets: dict[str, QWidget] = {}
         self._field_configs: dict[str, dict[str, Any]] = {}
         self._baseline: dict[str, Any] = {}
+        self._mark_required = mark_required
+        self._empty_text_as_missing = empty_text_as_missing
+        self._show_field_errors = show_field_errors
+        self._error_labels: dict[str, QLabel] = {}
+        self._shown_errors: dict[str, str] = {}
+        self._extra_section: ExtraFieldsSection | None = None
+        if allow_extra_fields:
+            self._extra_section = ExtraFieldsSection(
+                self, title=extra_fields_title, empty_text=extra_fields_hint
+            )
+            self._extra_section.editor.changed.connect(self.changed)
 
         self._layout = QFormLayout()
         self._layout.setContentsMargins(0, 0, 0, 0)
@@ -245,6 +324,31 @@ class PydanticWidgetForm(QWidget):
             widget for widget in self.input_widgets().values() if isinstance(widget, widget_type)
         ]
 
+    @property
+    def extra_fields_section(self) -> ExtraFieldsSection | None:
+        """Return the extra fields section, or ``None`` if extra fields are disabled."""
+        return self._extra_section
+
+    def field_label(self, name: str) -> str:
+        """Return the user-facing label of field ``name``, without the required marker."""
+        return self._field_configs[name]["display_name"]
+
+    def extra_data(self) -> dict[str, str]:
+        """Return the non-blank extra fields as a mapping; empty when they are disabled."""
+        if self._extra_section is None:
+            return {}
+        return self._extra_section.editor.value()
+
+    def set_extra_data(self, data: dict[str, Any] | None) -> None:
+        """Replace the entries of the extra fields editor.
+
+        Args:
+            data: Mapping of extra keys to values; ``None`` clears the editor.
+        """
+        if self._extra_section is None:
+            return
+        self._extra_section.editor.set_value(data)
+
     def set_model(self, model: type[BaseModel], data: dict[str, Any] | None = None) -> None:
         """Replace the active model and rebuild the form.
 
@@ -269,6 +373,10 @@ class PydanticWidgetForm(QWidget):
             data: Pydantic model instance or raw field-value mapping.
         """
         values = data.model_dump() if isinstance(data, BaseModel) else dict(data)
+        if self._extra_section is not None:
+            self.set_extra_data(
+                {key: value for key, value in values.items() if key not in self._widgets}
+            )
         self.set_partial_data(values)
 
     def set_partial_data(self, data: dict[str, Any]) -> None:
@@ -291,12 +399,20 @@ class PydanticWidgetForm(QWidget):
         """Return current widget values without Pydantic validation.
 
         Returns:
-            Mapping of model field names to raw widget values.
+            Mapping of model field names to raw widget values, followed by the
+            entries of the extra fields editor that do not shadow a model field.
         """
-        return {name: self._read_widget_value(name) for name in self._widgets}
+        data = {name: self._read_widget_value(name) for name in self._widgets}
+        for key, value in self.extra_data().items():
+            data.setdefault(key, value)
+        return data
 
-    def get_data(self) -> dict[str, Any]:
+    def get_data(self, *, round_trip: bool = False) -> dict[str, Any]:
         """Return current data after Pydantic validation.
+
+        Args:
+            round_trip: Dump the data so that it validates against the model again,
+                e.g. ``Json`` fields stay JSON text instead of the parsed value.
 
         Returns:
             Validated model data as a dictionary.
@@ -305,7 +421,7 @@ class PydanticWidgetForm(QWidget):
             ValidationError: If Pydantic validation fails.
             ValueError: If domain widget validation fails.
         """
-        return self.model_instance().model_dump()
+        return self.model_instance().model_dump(round_trip=round_trip)
 
     def model_instance(self) -> BaseModel:
         """Return the current values as a Pydantic model instance.
@@ -318,21 +434,58 @@ class PydanticWidgetForm(QWidget):
             ValueError: If domain widget validation fails.
         """
         self._validate_domain_widgets()
-        return self._model.model_validate(self.raw_data())
+        self._validate_extra_fields()
+        return self._model.model_validate(self._validation_payload())
 
     def validate(self) -> bool:
-        """Validate the current form values.
+        """Validate the current form values and highlight the fields that are invalid.
 
         Returns:
             ``True`` when current values validate successfully, otherwise ``False``.
         """
+        errors = self.validation_errors()
+        self._show_errors(errors)
+        self.validity_changed.emit(not errors)
+        return not errors
+
+    def validation_errors(self) -> dict[str, str]:
+        """Return a readable validation message for each invalid field.
+
+        Missing values read ``Required - please fill in``. Every failing entry of a
+        field is listed on its own line, prefixed with its location inside the field,
+        e.g. ``[1]: Input should be a valid integer``.
+
+        Returns:
+            Mapping of field names to error messages. Problems in the extra fields
+            editor are reported under :data:`EXTRA_FIELDS_KEY`; errors Pydantic
+            cannot attribute to a field are reported under ``""``. Empty when the
+            form is valid.
+        """
+        found = dict(self._domain_widget_errors())
         try:
-            self.get_data()
-        except (ValidationError, ValueError):
-            self.validity_changed.emit(False)
-            return False
-        self.validity_changed.emit(True)
-        return True
+            self._model.model_validate(self._validation_payload())
+        except ValidationError as exc:
+            for name, message in self._describe_validation_error(exc).items():
+                found.setdefault(name, message)
+        # Field order first, then problems outside the fields, then the extra fields.
+        errors = {name: found.pop(name) for name in self._widgets if name in found}
+        errors.update(found)
+        extra_errors = self._extra_field_errors()
+        if extra_errors:
+            errors[EXTRA_FIELDS_KEY] = next(iter(extra_errors.values()))
+        return errors
+
+    def field_error_label(self, name: str) -> QLabel | None:
+        """Return the error line under field ``name``.
+
+        Args:
+            name: Model field name.
+
+        Returns:
+            The label, or ``None`` when the form was created without
+            ``show_field_errors``.
+        """
+        return self._error_labels.get(name)
 
     def dirty_fields(self) -> set[str]:
         """Return fields whose raw values differ from the clean baseline.
@@ -382,6 +535,9 @@ class PydanticWidgetForm(QWidget):
 
     def cleanup(self) -> None:
         """Close and schedule deletion of all generated field widgets."""
+        if self._extra_section is not None and self._layout.indexOf(self._extra_section) >= 0:
+            # The extra fields section outlives model changes; take it out before clearing.
+            self._layout.takeRow(self._extra_section)
         while self._layout.rowCount():
             row = self._layout.takeRow(0)
             for item in (row.labelItem, row.fieldItem):
@@ -395,6 +551,8 @@ class PydanticWidgetForm(QWidget):
                     widget.deleteLater()
         self._widgets.clear()
         self._field_configs.clear()
+        self._error_labels.clear()
+        self._shown_errors.clear()
 
     def closeEvent(self, event) -> None:  # noqa: N802
         self.cleanup()
@@ -406,6 +564,8 @@ class PydanticWidgetForm(QWidget):
             info = self._model.model_fields[name]
             widget = self._create_widget(name, info)
             label_text = config["display_name"]
+            if self._mark_required and info.is_required():
+                label_text = f"{label_text} *"
             self._layout.addRow(label_text, widget)
             label = self._layout.labelForField(widget)
             if label is not None:
@@ -415,9 +575,15 @@ class PydanticWidgetForm(QWidget):
             widget.setEnabled(name not in self._read_only_fields)
             self._widgets[name] = widget
             self._field_configs[name] = config
-            self._set_widget_value(name, config["default"])
+            # Limits and precision first: setting them rounds or clamps the value.
             self._apply_field_metadata(name)
+            self._set_widget_value(name, config["default"])
             self._connect_widget(widget)
+            if self._show_field_errors:
+                self._add_error_label(name)
+
+        if self._extra_section is not None:
+            self._layout.addRow(self._extra_section)
 
         self._connect_device_signal_widgets()
         self._connect_reference_unit_widgets()
@@ -425,14 +591,13 @@ class PydanticWidgetForm(QWidget):
 
     def _create_widget(self, name: str, info: FieldInfo) -> QWidget:
         annotation = info.annotation
-        args = get_args(annotation)
-        optional = NoneType in args
-        non_none_args = tuple(arg for arg in args if arg is not NoneType)
-        value_annotation = non_none_args[0] if len(non_none_args) == 1 else annotation
+        optional = NoneType in get_args(annotation)
+        value_annotation = _value_annotation(annotation)
 
         widget = self._create_value_widget(name, value_annotation)
-        numeric = value_annotation in (int, float) or any(
-            arg in (int, float) for arg in get_args(value_annotation)
+        numeric = value_annotation in (int, float, Decimal) or (
+            get_origin(value_annotation) in (Union, UnionType)
+            and any(arg in (int, float, Decimal) for arg in get_args(value_annotation))
         )
         if optional and (numeric or value_annotation is bool):
             return OptionalValueWidget(widget, parent=self)
@@ -459,8 +624,17 @@ class PydanticWidgetForm(QWidget):
             return DeviceComboBox(parent=self, client=self._client, arg_name=name)
         if get_origin(annotation) is Literal:
             widget = QComboBox(self)
+            if NoneType in get_args(self._model.model_fields[name].annotation):
+                widget.addItem("")  # the empty entry stands for None
             widget.addItems([str(value) for value in get_args(annotation)])
             return widget
+        if annotation is Decimal:
+            spin_box = _ExactDoubleSpinBox(self)
+            spin_box.setRange(-1_000_000_000, 1_000_000_000)
+            return spin_box
+        container = get_origin(annotation) or annotation
+        if container in (dict, list, set, tuple):
+            return EntryListEditor(self, key_value=container is dict, add_text="Add entry")
         if annotation is bool:
             return QCheckBox(self)
         if annotation is int:
@@ -468,7 +642,7 @@ class PydanticWidgetForm(QWidget):
             spin_box.setRange(-2147483647, 2147483647)
             return spin_box
         if annotation is float:
-            spin_box = BECSpinBox(self)
+            spin_box = _ExactBECSpinBox(self)
             spin_box.setRange(-1_000_000_000, 1_000_000_000)
             return spin_box
         return QLineEdit(self)
@@ -480,6 +654,9 @@ class PydanticWidgetForm(QWidget):
 
         if config.get("precision") is not None:
             apply_numeric_precision(input_widget, config)
+        elif isinstance(input_widget, _ExactTextMixin):
+            input_widget.exact = True
+            input_widget.setDecimals(EXACT_DECIMALS)
         if any(config.get(key) is not None for key in NUMERIC_BOUND_KEYS):
             apply_numeric_limits(input_widget, config)
 
@@ -487,9 +664,19 @@ class PydanticWidgetForm(QWidget):
         if input_widget is not field_widget:
             apply_unit_metadata(input_widget, config)
 
+        if isinstance(input_widget, QLineEdit):
+            if config.get("max_length") is not None:
+                input_widget.setMaxLength(int(config["max_length"]))
+            placeholder = config.get("placeholder") or config.get("description")
+            if placeholder:
+                input_widget.setPlaceholderText(str(placeholder))
+
     def _connect_widget(self, widget: QWidget) -> None:
         if isinstance(widget, OptionalValueWidget):
             widget.value_changed.connect(lambda _value: self.changed.emit())
+            return
+        if isinstance(widget, EntryListEditor):
+            widget.changed.connect(self.changed)
             return
         WidgetIO.connect_widget_change_signal(widget, lambda *_args: self.changed.emit())
 
@@ -551,28 +738,142 @@ class PydanticWidgetForm(QWidget):
             self._apply_reference_units(source_name, None)
 
     def _validate_domain_widgets(self) -> None:
-        for widget in self._widgets.values():
+        for message in self._domain_widget_errors().values():
+            raise ValueError(message)
+
+    def _domain_widget_errors(self) -> dict[str, str]:
+        errors: dict[str, str] = {}
+        for name, widget in self._widgets.items():
             if isinstance(widget, DeviceComboBox):
                 device = widget.currentText().strip()
                 if not device:
-                    raise ValueError("Device is required.")
-                if not widget.is_valid_input:
-                    raise ValueError(f"Device '{device}' is not available.")
+                    errors[name] = "Device is required."
+                elif not widget.is_valid_input:
+                    errors[name] = f"Device '{device}' is not available."
             if isinstance(widget, SignalComboBox):
                 signal = widget.get_signal_name().strip()
                 if signal and not widget.is_valid_input:
-                    raise ValueError(f"Signal '{signal}' is not available.")
+                    errors[name] = f"Signal '{signal}' is not available."
+            if isinstance(widget, EntryListEditor):
+                # Checked before the rows become a dict, which would keep only the last
+                # of several rows with the same key.
+                messages = list(dict.fromkeys(widget.row_errors().values()))
+                if messages:
+                    errors[name] = "\n".join(messages)
+        return errors
+
+    def _validate_extra_fields(self) -> None:
+        for message in self._extra_field_errors().values():
+            raise ValueError(message)
+
+    def _extra_field_errors(self) -> dict[int, str]:
+        if self._extra_section is None:
+            return {}
+        return self._extra_section.row_errors(set(self._widgets))
+
+    def _validation_payload(self) -> dict[str, Any]:
+        data = self.raw_data()
+        if self._empty_text_as_missing:
+            for name, widget in self._widgets.items():
+                if (
+                    isinstance(widget, QLineEdit)
+                    and data.get(name) in ("", None)
+                    and self._model.model_fields[name].is_required()
+                ):
+                    data.pop(name, None)
+        return data
+
+    def _add_error_label(self, name: str) -> None:
+        """Add the hidden error line in the field column of the row under field ``name``."""
+        error = QLabel(self)
+        error.setWordWrap(True)
+        error.setTextFormat(Qt.TextFormat.PlainText)
+        error.setVisible(False)
+        self._layout.setWidget(self._layout.rowCount(), QFormLayout.ItemRole.FieldRole, error)
+        self._error_labels[name] = error
+
+    def _describe_validation_error(self, error: ValidationError) -> dict[str, str]:
+        """Group Pydantic's errors by top-level field, without error codes and links."""
+        problems: dict[str, list[str]] = {}
+        for err in error.errors():
+            loc = tuple(err.get("loc") or ())
+            name = str(loc[0]) if loc else ""
+            if err["type"] == "missing" or err.get("input") is None:
+                message = "Required - please fill in"
+            else:
+                message = err["msg"]
+            path = self._error_path(name, loc[1:])
+            line = f"{path}: {message}" if path else message
+            lines = problems.setdefault(name, [])
+            if line not in lines:
+                lines.append(line)
+        return {name: "\n".join(lines) for name, lines in problems.items()}
+
+    def _error_path(self, name: str, sub_loc: tuple) -> str:
+        """Readable location inside a field, e.g. ``[1]``, ``key`` or ``inner[0].name``.
+
+        For fields with several possible types (``int | float``), Pydantic reports one
+        error per type, tagged with the type name; that tag is not a location and is
+        dropped.
+        """
+        field = self._model.model_fields.get(name)
+        annotation = _value_annotation(field.annotation) if field is not None else None
+        if get_origin(annotation) in (Union, UnionType) and sub_loc and isinstance(sub_loc[0], str):
+            sub_loc = sub_loc[1:]
+        path = ""
+        for part in sub_loc:
+            path += f"[{part}]" if isinstance(part, int) else f".{part}"
+        return path.lstrip(".")
+
+    def _show_errors(self, errors: dict[str, str]) -> None:
+        """Highlight invalid inputs and their labels; clear fields that became valid."""
+        error_color = get_accent_colors().emergency.name()
+        for name in set(self._shown_errors) | set(errors):
+            if name not in self._widgets:
+                continue
+            message = errors.get(name)
+            if self._shown_errors.get(name) == message:
+                continue
+            widget = self.input_widget(name)
+            widget.setProperty("state", "error" if message else "")
+            widget.style().unpolish(widget)
+            widget.style().polish(widget)
+            label = self._layout.labelForField(self._widgets[name])
+            if label is not None:
+                # Themes do not style QLabel[state="error"], so colour the label directly.
+                label.setStyleSheet(f"color: {error_color};" if message else "")
+            error_label = self._error_labels.get(name)
+            if error_label is not None:
+                error_label.setStyleSheet(f"color: {error_color};")
+                error_label.setText(message or "")
+                error_label.setVisible(message is not None)
+        for widget in self._widgets.values():
+            if isinstance(widget, EntryListEditor):
+                widget.show_row_errors()
+        if self._extra_section is not None:
+            self._extra_section.show_row_errors(set(self._widgets))
+        self._shown_errors = {name: msg for name, msg in errors.items() if name in self._widgets}
 
     def _read_widget_value(self, name: str) -> Any:
         widget = self._widgets[name]
         info = self._model.model_fields[name]
         if isinstance(widget, OptionalValueWidget):
             return widget.value()
+        if isinstance(widget, EntryListEditor):
+            return widget.value()
+        if isinstance(widget, QDoubleSpinBox) and _value_annotation(info.annotation) is Decimal:
+            exact = isinstance(widget, _ExactTextMixin) and widget.exact
+            text = repr(widget.value()) if exact else f"{widget.value():.{widget.decimals()}f}"
+            return Decimal(text)
         if isinstance(widget, QLineEdit):
             value = WidgetIO.get_value(widget)
             return None if NoneType in get_args(info.annotation) and value == "" else value
-        if isinstance(widget, QComboBox) and get_origin(info.annotation) is Literal:
-            return WidgetIO.get_value(widget, as_string=True)
+        if (
+            isinstance(widget, QComboBox)
+            and get_origin(_value_annotation(info.annotation)) is Literal
+        ):
+            value = WidgetIO.get_value(widget, as_string=True)
+            return None if NoneType in get_args(info.annotation) and value == "" else value
         return WidgetIO.get_value(widget)
 
     def _set_widget_value(self, name: str, value: Any) -> None:
@@ -580,6 +881,11 @@ class PydanticWidgetForm(QWidget):
         if isinstance(widget, OptionalValueWidget):
             widget.set_value(value)
             return
+        if isinstance(widget, EntryListEditor):
+            widget.set_value(value)
+            return
+        if isinstance(value, Decimal):
+            value = float(value)
         if value is None:
             if isinstance(widget, QLineEdit):
                 value = ""
@@ -587,6 +893,10 @@ class PydanticWidgetForm(QWidget):
                 value = False
             elif isinstance(widget, (QSpinBox, QDoubleSpinBox)):
                 value = 0
+            elif isinstance(widget, QComboBox):
+                value = ""
+        elif isinstance(widget, QLineEdit) and not isinstance(value, str):
+            value = str(value)
         WidgetIO.set_value(widget, value)
 
     def _model_has_device_field(self) -> bool:
@@ -614,7 +924,7 @@ if __name__ == "__main__":  # pragma: no cover
 
     from bec_lib.scan_args import ScanArgument
     from pydantic import Field
-    from qtpy.QtWidgets import QApplication, QLabel, QPushButton, QTabWidget, QTextEdit, QVBoxLayout
+    from qtpy.QtWidgets import QApplication, QPushButton, QTabWidget, QTextEdit, QVBoxLayout
 
     from bec_widgets.utils.colors import apply_theme
 
