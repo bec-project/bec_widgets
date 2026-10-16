@@ -1,4 +1,4 @@
-from time import sleep
+import threading
 from typing import Callable
 from unittest.mock import MagicMock, patch
 
@@ -21,13 +21,16 @@ from bec_widgets.widgets.control.procedure_control.procedure_control import (
     QueueItem,
 )
 
+RELEASE = threading.Event()
+
 
 class MockWorker(ProcedureWorker):
     """In-process stand-in for the out-of-process worker: same queue/active-set protocol."""
 
     def _kill_process(self): ...
 
-    def _setup_execution_environment(self): ...
+    def _setup_execution_environment(self):
+        self._abort_current = threading.Event()
 
     def _ending_or_ended(self) -> bool:
         return self._aborted.is_set()
@@ -35,7 +38,8 @@ class MockWorker(ProcedureWorker):
     def logs(self) -> list[str]:
         return []
 
-    def abort_execution(self, execution_id: str): ...
+    def abort_execution(self, execution_id: str):
+        self._abort_current.set()
 
     def work(self):
         while (
@@ -46,19 +50,15 @@ class MockWorker(ProcedureWorker):
             self.status = ProcedureWorkerStatus.RUNNING
             self._helper.status_update(item.execution_id, "Started")
             self._helper.notify_watchers(self._queue, queue_type="execution")
-            sleep(0.1)
-            self._helper.status_update(item.execution_id, "Finished")
+            # hold the job until the test releases it or aborts it
+            while not (RELEASE.is_set() or self._abort_current.is_set()):
+                RELEASE.wait(0.02)
+            aborted = self._abort_current.is_set()
+            self._abort_current.clear()
+            self._helper.status_update(item.execution_id, "Aborted" if aborted else "Finished")
             self._helper.remove_from_active.by_exec_id(item.execution_id)
             self.status = ProcedureWorkerStatus.IDLE
         self.status = ProcedureWorkerStatus.FINISHED
-
-
-@pytest.fixture(autouse=True)
-def fresh_fake_connector():
-    """Main's fixtures share one fakeredis connector between tests and shut it down after each;
-    its pub/sub listener does not come back, so give the next test a new one."""
-    yield
-    test_utils._REDIS_CONN = None
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -68,7 +68,10 @@ def register_test_proc():
 
 @pytest.fixture
 def proc_ctrl_w_helper(qtbot, mocked_client: MagicMock):
-    # the shared fakeredis connector outlives a single test
+    # Earlier tests shut the shared fake connector down and its pub/sub listener does not restart,
+    # but these tests need live notifications: give the client a fresh one.
+    test_utils._REDIS_CONN = None
+    mocked_client.connector = test_utils.global_mock_qt_redis_connector()
     for key in mocked_client.connector.keys("*procedure*"):
         mocked_client.connector._managed_connection.delete(key)
     proc_ctrl = ProcedureControl(client=mocked_client)
@@ -79,8 +82,10 @@ def proc_ctrl_w_helper(qtbot, mocked_client: MagicMock):
         patch("bec_server.procedures.manager.RedisConnector", fake_conn),
         patch("bec_server.procedures.worker_base.RedisConnector", fake_conn),
     ):
+        RELEASE.clear()
         manager = ProcedureManager(MagicMock(), MockWorker)
         yield proc_ctrl, BackendProcedureHelper(proc_ctrl.client.connector)
+        RELEASE.set()
         manager.shutdown()
 
 
@@ -99,6 +104,10 @@ def test_add_proc(qtbot, proc_ctrl_w_helper: tuple[ProcedureControl, BackendProc
     assert proc_ctrl._active_queues.childCount() == 0
     helper.request.procedure("test")
     qtbot.waitUntil(lambda: proc_ctrl._active_queues.childCount() != 0, timeout=5000)
+    queue: QueueItem = proc_ctrl._active_queues.child(0)
+    assert queue.child(0).text(1) == "RUNNING"
+    RELEASE.set()
+    qtbot.waitUntil(lambda: proc_ctrl._active_queues.childCount() == 0, timeout=5000)
 
 
 def test_abort(qtbot, proc_ctrl_w_helper: tuple[ProcedureControl, BackendProcedureHelper]):
