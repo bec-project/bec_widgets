@@ -56,6 +56,7 @@ class PdfViewerWidget(BECWidget, QWidget):
 
         # Create the PDF document and view first
         self._pdf_document = QPdfDocument(self)
+        self._pdf_document.statusChanged.connect(self._on_document_status_changed)
         self.pdf_view = QPdfView()
         self.pdf_view.setZoomMode(QPdfView.ZoomMode.FitToWidth)
 
@@ -328,15 +329,6 @@ class PdfViewerWidget(BECWidget, QWidget):
 
         self._current_file_path = file_path
 
-        # Disconnect any existing signal connections
-        try:
-            self._pdf_document.statusChanged.disconnect(self._on_document_status_changed)
-        except (TypeError, RuntimeError):
-            pass
-
-        # Connect to statusChanged signal to handle when document is ready
-        self._pdf_document.statusChanged.connect(self._on_document_status_changed)
-
         # Load the document
         self._pdf_document.load(file_path)
 
@@ -544,10 +536,12 @@ class PdfViewerWidget(BECWidget, QWidget):
 
     def cleanup(self):
         """Handle widget close event to prevent segfaults."""
-        if hasattr(self, "_pdf_document") and self._pdf_document:
-            self._pdf_document.statusChanged.disconnect()
+        # Cleanup can run twice (explicit call, then close); disconnect only once.
+        if getattr(self, "_pdf_document", None) is not None:
+            self._pdf_document.statusChanged.disconnect(self._on_document_status_changed)
             empty_doc = QPdfDocument(self)
             self.pdf_view.setDocument(empty_doc)
+            self._pdf_document = None
 
         if hasattr(self, "toolbar"):
             self.toolbar.cleanup()
