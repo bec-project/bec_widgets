@@ -12,6 +12,9 @@ from qtpy import QtCore, QtGui, QtWidgets
 
 from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.widgets.control.device_manager.components.device_table.device_table import (
+    SortTableItem,
+)
 from bec_widgets.widgets.control.device_manager.components.ophyd_validation import (
     ConfigStatus,
     ConnectionStatus,
@@ -95,38 +98,9 @@ class DeviceStatusItem(QtWidgets.QWidget):
         self._update_display()
 
 
-class SortTableItem(QtWidgets.QTableWidgetItem):
-    """Custom TableWidgetItem with hidden __column_data attribute for sorting."""
-
-    def __lt__(self, other: QtWidgets.QTableWidgetItem) -> bool:
-        """Override less-than operator for sorting."""
-        if not isinstance(other, QtWidgets.QTableWidgetItem):
-            return NotImplemented
-        self_data = self.data(QtCore.Qt.ItemDataRole.UserRole)
-        other_data = other.data(QtCore.Qt.ItemDataRole.UserRole)
-        if self_data is not None and other_data is not None:
-            self_data: DeviceStatusItem
-            other_data: DeviceStatusItem
-            if self_data.config_status != other_data.config_status:
-                return self_data.config_status < other_data.config_status
-            else:
-                return self_data.connection_status < other_data.connection_status
-        return super().__lt__(other)
-
-    def __gt__(self, other: QtWidgets.QTableWidgetItem) -> bool:
-        """Override less-than operator for sorting."""
-        if not isinstance(other, QtWidgets.QTableWidgetItem):
-            return NotImplemented
-        self_data = self.data(QtCore.Qt.ItemDataRole.UserRole)
-        other_data = other.data(QtCore.Qt.ItemDataRole.UserRole)
-        if self_data is not None and other_data is not None:
-            self_data: DeviceStatusItem
-            other_data: DeviceStatusItem
-            if self_data.config_status != other_data.config_status:
-                return self_data.config_status > other_data.config_status
-            else:
-                return self_data.connection_status > other_data.connection_status
-        return super().__gt__(other)
+def _status_sort_key(item: DeviceStatusItem) -> tuple[ConfigStatus, ConnectionStatus]:
+    """Sort device status items by config status first, then by connection status."""
+    return item.config_status, item.connection_status
 
 
 class ValidationSection(QtWidgets.QGroupBox):
@@ -180,7 +154,7 @@ class ValidationSection(QtWidgets.QGroupBox):
         else:
             row_position = self.table.rowCount()
             self.table.insertRow(row_position)
-            sort_item = SortTableItem(device_name)
+            sort_item = SortTableItem(device_name, sort_key=_status_sort_key)
             sort_item.setText("")
             self.table.setItem(row_position, 0, sort_item)
             device_item = DeviceStatusItem(device_config, config_status, connection_status)
