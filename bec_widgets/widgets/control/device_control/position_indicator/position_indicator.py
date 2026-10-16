@@ -1,10 +1,10 @@
 import numpy as np
 from qtpy.QtCore import Property, QSize, Qt, Slot
 from qtpy.QtGui import QBrush, QColor, QPainter, QPainterPath, QPen
-from qtpy.QtWidgets import QWidget
+from qtpy.QtWidgets import QApplication, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.colors import get_accent_colors, get_theme_palette
+from bec_widgets.utils.colors import get_accent_colors
 
 
 class PositionIndicator(BECWidget, QWidget):
@@ -38,7 +38,7 @@ class PositionIndicator(BECWidget, QWidget):
         self._rounded_corners = 10
         self._indicator_width = 2
         self._indicator_color = get_accent_colors().success
-        self._background_color = get_theme_palette().mid().color()
+        self._background_color = QApplication.palette().mid().color()
         self._use_color_palette = True
 
     def set_range(self, min_value: float, max_value: float):
@@ -234,7 +234,7 @@ class PositionIndicator(BECWidget, QWidget):
 
     def _get_background_brush(self):
         if self._use_color_palette:
-            return get_theme_palette().mid()
+            return QApplication.palette().mid()
         return QBrush(self._background_color)
 
     def paintEvent(self, event):
@@ -288,7 +288,7 @@ class PositionIndicator(BECWidget, QWidget):
 
 if __name__ == "__main__":  # pragma: no cover
     from bec_qthemes import setup_theme
-    from qtpy.QtWidgets import QApplication, QSlider, QVBoxLayout
+    from qtpy.QtWidgets import QSlider, QVBoxLayout
 
     app = QApplication([])
     setup_theme("dark")

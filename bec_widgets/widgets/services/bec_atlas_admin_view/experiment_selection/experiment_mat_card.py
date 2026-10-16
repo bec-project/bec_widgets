@@ -3,6 +3,7 @@
 from bec_lib.messages import ExperimentInfoMessage
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtWidgets import (
+    QApplication,
     QFrame,
     QGraphicsDropShadowEffect,
     QGridLayout,
@@ -16,7 +17,6 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.colors import get_theme_palette
 from bec_widgets.utils.round_frame import RoundedFrame
 from bec_widgets.widgets.services.bec_atlas_admin_view.experiment_selection.utils import (
     format_name,
@@ -59,7 +59,7 @@ class ExperimentMatCard(BECWidget, QWidget):
         self._card_frame = QFrame(parent=self)
         layout = QVBoxLayout(self._card_frame)
         self._card_frame.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        palette = get_theme_palette()
+        palette = QApplication.palette()
         self._card_frame.setStyleSheet(f"""
                 QFrame {{
                     border: 1px solid {palette.mid().color().name()};
@@ -82,7 +82,7 @@ class ExperimentMatCard(BECWidget, QWidget):
         self.apply_theme("light")
 
     def apply_theme(self, theme: str):
-        palette = get_theme_palette()
+        palette = QApplication.palette()
         self._card_frame.setStyleSheet(f"""
                 QFrame {{
                     border: 1px solid {palette.mid().color().name()};
@@ -229,7 +229,6 @@ if __name__ == "__main__":  # pragma: no cover
     import sys
 
     from bec_qthemes import apply_theme
-    from qtpy.QtWidgets import QApplication
 
     exp_info = {
         "_id": "p22622",

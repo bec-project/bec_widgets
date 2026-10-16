@@ -24,13 +24,6 @@ def get_theme_name():
     return QApplication.instance().theme.theme
 
 
-def get_theme_palette():
-    # FIXME this is legacy code, should be removed in the future
-    app = QApplication.instance()
-    palette = app.palette()
-    return palette
-
-
 def get_accent_colors() -> AccentColors:
     """
     Get the accent colors for the current theme. These colors are extensions of the color palette

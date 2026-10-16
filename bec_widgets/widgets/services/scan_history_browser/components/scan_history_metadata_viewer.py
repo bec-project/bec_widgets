@@ -8,7 +8,6 @@ from bec_qthemes import material_icon
 from qtpy import QtGui, QtWidgets
 
 from bec_widgets.utils.bec_widget import BECWidget, ConnectionConfig
-from bec_widgets.utils.colors import get_theme_palette
 from bec_widgets.utils.error_popups import SafeSlot
 
 logger = bec_logger.logger
@@ -61,7 +60,7 @@ class ScanHistoryMetadataViewer(BECWidget, QtWidgets.QGroupBox):
 
     def apply_theme(self, theme: str | None = None):
         """Apply the theme to the widget."""
-        colors = get_theme_palette()
+        colors = QtWidgets.QApplication.palette()
         palette = QtGui.QPalette()
         palette.setColor(self.backgroundRole(), colors.midlight().color())
         self.setPalette(palette)

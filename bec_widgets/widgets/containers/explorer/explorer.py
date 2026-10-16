@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 from qtpy.QtCore import Qt
-from qtpy.QtWidgets import QSizePolicy, QSpacerItem, QSplitter, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QApplication, QSizePolicy, QSpacerItem, QSplitter, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.colors import get_theme_palette
 from bec_widgets.widgets.containers.explorer.collapsible_tree_section import CollapsibleSection
 
 
@@ -98,7 +97,7 @@ class Explorer(BECWidget, QWidget):
 
     def _setup_splitter_styling(self) -> None:
         """Setup the splitter styling with theme colors"""
-        palette = get_theme_palette()
+        palette = QApplication.palette()
         separator_color = palette.mid().color()
 
         self.splitter.setStyleSheet(f"""
@@ -148,7 +147,7 @@ class Explorer(BECWidget, QWidget):
 if __name__ == "__main__":
     import os
 
-    from qtpy.QtWidgets import QApplication, QLabel
+    from qtpy.QtWidgets import QLabel
 
     from bec_widgets.widgets.containers.explorer.file_browser_tree_widget import (
         FileBrowserTreeWidget,
