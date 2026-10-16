@@ -1,3 +1,4 @@
+import warnings
 from unittest import mock
 
 import pyqtgraph as pg
@@ -256,4 +257,7 @@ def test_cleanup_signal_proxy_stops_queued_delivery(qtbot):
     assert calls == []
     assert ticks == []
     assert not proxy.timer.timer.isActive()
-    cleanup_signal_proxy(proxy)  # a second call is a no-op
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        cleanup_signal_proxy(proxy)  # a second call is a no-op, without PySide warnings
+    assert [str(w.message) for w in caught] == []
