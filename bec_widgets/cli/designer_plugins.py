@@ -29,10 +29,6 @@ designer_plugins = {
         "bec_widgets.widgets.utility.visual.color_button_native.color_button_native",
         "ColorButtonNative",
     ),
-    "ColormapSelector": (
-        "bec_widgets.widgets.utility.visual.colormap_selector.colormap_selector",
-        "ColormapSelector",
-    ),
     "DapComboBox": ("bec_widgets.widgets.dap.dap_combo_box.dap_combo_box", "DapComboBox"),
     "DarkModeButton": (
         "bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button",
@@ -134,7 +130,6 @@ widget_icons = {
     "BecConsole": "terminal",
     "ColorButton": "colors",
     "ColorButtonNative": "colors",
-    "ColormapSelector": "palette",
     "DapComboBox": "data_exploration",
     "DarkModeButton": "dark_mode",
     "DeviceBrowser": "lists",
