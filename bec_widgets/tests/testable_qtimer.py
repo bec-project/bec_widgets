@@ -17,6 +17,8 @@ class TestableQTimer(QTimer):
     Patch it over ``qtpy.QtCore.QTimer`` before the widgets under test are imported.
     """
 
+    __test__ = False  # helper class, not a test
+
     _instances: list[tuple[QTimer, str, str]] = []
     _current_test_name: str = ""
 

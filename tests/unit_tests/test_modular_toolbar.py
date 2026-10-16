@@ -389,7 +389,9 @@ def test_context_menu_contains_added_actions(
     toolbar.show_bundles(["test_bundle"])
     # Mock the QMenu.exec_ method to prevent the context menu from being displayed and block CI pipeline
     monkeypatch.setattr(QMenu, "exec_", lambda self, pos=None: None)
-    event = QContextMenuEvent(QContextMenuEvent.Mouse, QPoint(10, 10))
+    event = QContextMenuEvent(
+        QContextMenuEvent.Reason.Mouse, QPoint(10, 10), toolbar.mapToGlobal(QPoint(10, 10))
+    )
     toolbar.contextMenuEvent(event)
     menus = toolbar.findChildren(QMenu)
 
@@ -419,7 +421,9 @@ def test_context_menu_toggle_action_visibility(toolbar_fixture, material_icon_ac
 
     # Manually trigger the context menu event
     monkeypatch.setattr(QMenu, "exec_", lambda self, pos=None: None)
-    event = QContextMenuEvent(QContextMenuEvent.Mouse, QPoint(10, 10))
+    event = QContextMenuEvent(
+        QContextMenuEvent.Reason.Mouse, QPoint(10, 10), toolbar.mapToGlobal(QPoint(10, 10))
+    )
     toolbar.contextMenuEvent(event)
 
     # Grab the menu that was created

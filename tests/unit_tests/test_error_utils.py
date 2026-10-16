@@ -10,6 +10,8 @@ from bec_widgets.utils.error_popups import ErrorPopupUtility, ExampleWidget, Saf
 
 
 class TestSafePropertyClass(QObject):
+    __test__ = False  # helper class, not a test
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._my_value = 10  # internal store
@@ -30,6 +32,7 @@ class TestSafePropertyClass(QObject):
 
 
 class TestSafeSlotEmitter(QObject):
+    __test__ = False  # helper class, not a test
     test_signal = Signal()
 
 
@@ -37,6 +40,8 @@ class TestSafeSlotClass(QObject):
     """
     Test class to demonstrate the use of SafeSlot decorator.
     """
+
+    __test__ = False  # helper class, not a test
 
     def __init__(self, parent=None, signal_obj: TestSafeSlotEmitter | None = None):
         super().__init__(parent)
@@ -239,7 +244,8 @@ def test_safe_connect_removes_stale_connection(qtbot):
     # disconnects itself. A second disconnect attempt must then fail because
     # the connection no longer exists.
     emitter.str_signal.emit("after-death")
-    assert emitter.str_signal.disconnect(wrapper) is False
+    with pytest.warns(RuntimeWarning, match="Failed to disconnect"):
+        assert emitter.str_signal.disconnect(wrapper) is False
 
     emitter.deleteLater()
 
