@@ -204,21 +204,6 @@ def test_widgets_e2e_dap_combo_box(qtbot, connected_client_gui_obj, random_gener
 
 
 @pytest.mark.timeout(PYTEST_TIMEOUT)
-def test_widgets_e2e_device_browser(qtbot, connected_client_gui_obj, random_generator_from_seed):
-    """Test the DeviceBrowser widget."""
-    gui = connected_client_gui_obj
-    bec = gui._client
-    # Create dock_area and widget
-    widget = create_widget(qtbot, gui, gui.available_widgets.DeviceBrowser)
-    widget: client.DeviceBrowser
-
-    # No rpc calls yet to check
-
-    # Test removing the widget, or leaving it open for the next test
-    maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
-
-
-@pytest.mark.timeout(PYTEST_TIMEOUT)
 def test_widgets_e2e_image(qtbot, connected_client_gui_obj, random_generator_from_seed):
     """Test the Image widget."""
     gui = connected_client_gui_obj

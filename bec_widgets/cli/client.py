@@ -35,7 +35,6 @@ _Widgets = {
     "BeamlineStateManager": "BeamlineStateManager",
     "BecConsole": "BecConsole",
     "DapComboBox": "DapComboBox",
-    "DeviceBrowser": "DeviceBrowser",
     "Heatmap": "Heatmap",
     "Image": "Image",
     "LogPanel": "LogPanel",
@@ -1133,30 +1132,6 @@ class DeveloperView(RPCBase):
     def activate(self) -> "None":
         """
         Switch the parent application to this view.
-        """
-
-
-class DeviceBrowser(RPCBase):
-    """DeviceBrowser is a widget that displays all available devices in the current BEC session."""
-
-    _IMPORT_MODULE = "bec_widgets.widgets.services.device_browser.device_browser"
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-    @rpc_call
-    def attach(self):
-        """
-        None
-        """
-
-    @rpc_call
-    def detach(self):
-        """
-        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
 
