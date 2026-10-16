@@ -5,6 +5,7 @@ from qtpy.QtTest import QSignalSpy
 
 from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.plots.motor_map.motor_map import MotorMap
+from bec_widgets.widgets.plots.motor_map.settings.motor_map_settings import MotorMapSettings
 
 from .conftest import create_widget
 
@@ -373,16 +374,40 @@ def test_motor_map_settings_dialog(qtbot, mocked_client):
     assert mm.motor_map_settings.widget.ui.scatter_size.value() == 10
     assert mm.motor_map_settings.widget.ui.background_value.value() == 50
     assert mm.motor_map_settings.widget.ui.num_dim_points.value() == 20
-    assert mm.motor_map_settings.widget.ui.color_scatter.get_color(format="RGBA") == (
-        255,
-        0,
-        0,
-        255,
-    )
+    assert mm.motor_map_settings.widget.ui.color_scatter.color == "#ff0000"
 
     mm.motor_map_settings.close()
     qtbot.wait(200)
     assert mm.motor_map_settings is None
+
+
+def test_motor_map_settings_color_live_sync(qtbot, mocked_client):
+    """The side panel color button and the motor map color follow each other."""
+    mm = create_widget(qtbot, MotorMap, client=mocked_client)
+    settings = create_widget(qtbot, MotorMapSettings, target_widget=mm, popup=False)
+
+    mm.color = (0, 0, 255, 255)
+    assert settings.ui.color_scatter.color == "#0000ff"
+
+    settings.ui.color_scatter.set_color("#00ff00")
+    assert mm.color == (0, 255, 0, 255)
+    assert settings.ui.color_scatter.color == "#00ff00"
+
+
+def test_motor_map_settings_color_accept(qtbot, mocked_client):
+    """Applying the dialog sets a new color and keeps the alpha of an unchanged one."""
+    mm = create_widget(qtbot, MotorMap, client=mocked_client)
+    mm.color = (255, 0, 0, 100)
+    settings = create_widget(qtbot, MotorMapSettings, target_widget=mm, popup=True)
+    assert settings.ui.color_scatter.color == "#ff0000"
+
+    settings.accept_changes()
+    assert mm.color == (255, 0, 0, 100)
+
+    settings.ui.color_scatter.set_color("#00ff00")
+    assert mm.color == (255, 0, 0, 100)
+    settings.accept_changes()
+    assert mm.color == (0, 255, 0, 255)
 
 
 def test_motor_map_cleanup_detaches_update_proxy(qtbot, mocked_client):

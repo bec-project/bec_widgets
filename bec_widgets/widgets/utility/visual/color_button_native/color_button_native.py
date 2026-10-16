@@ -33,14 +33,17 @@ class ColorButtonNative(QPushButton):
         self.clicked.connect(self._open_color_dialog)
 
     @SafeSlot()
-    def set_color(self, color: str | QColor):
+    def set_color(self, color: str | tuple | QColor):
         """Set the button's color and update its appearance.
 
         Args:
-            color (str or QColor): The new color to assign.
+            color (str, tuple or QColor): The new color to assign, as a hex string,
+                an RGB(A) tuple or a QColor. The alpha channel is not shown.
         """
         if isinstance(color, QColor):
             self._color = color.name()
+        elif isinstance(color, (tuple, list)):
+            self._color = QColor(*color).name()
         else:
             self._color = color
         self._update_appearance()
