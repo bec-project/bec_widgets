@@ -31,7 +31,7 @@ from bec_widgets.applications.views.device_manager_view.device_manager_view impo
     DeviceManagerWidget,
 )
 from bec_widgets.tests.client_mocks import mocked_client
-from bec_widgets.utils.colors import get_accent_colors
+from bec_widgets.utils.busy_loader import BusyStateWidget
 from bec_widgets.widgets.control.device_manager.components import (
     DeviceTable,
     DMConfigView,
@@ -644,17 +644,21 @@ class TestDeviceManagerView:
     def test_custom_busy_widget(self, custom_busy: CustomBusyWidget, qtbot):
         """Test the CustomBusyWidget functionality."""
 
-        # Check layout
+        # Check layout: shared busy state spinner, no message, progress card and cancel button
+        assert isinstance(custom_busy, BusyStateWidget)
         assert custom_busy.progress is not None
         assert custom_busy.spinner is not None
         assert custom_busy.spinner._started is False
+        assert custom_busy.label.isHidden()
+        layout = custom_busy.content_layout
+        assert layout.indexOf(custom_busy.spinner) < layout.indexOf(custom_busy.progress)
+        assert layout.indexOf(custom_busy.progress) < layout.indexOf(custom_busy.cancel_button)
 
-        # Check background
-        color = get_accent_colors()
-        bg = color._colors["BG"]
-        sheet = custom_busy.styleSheet()
-        assert bg.name() in sheet
-        assert "border-radius: 12px" in sheet
+        # The card background is scoped to the progress card and follows the theme palette
+        sheet = custom_busy.progress.styleSheet()
+        assert "#busyProgressCard" in sheet
+        assert "palette(window)" in sheet
+        assert custom_busy.styleSheet() == ""
 
         # Show event should start spinner
         custom_busy.showEvent(None)
