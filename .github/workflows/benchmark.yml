@@ -39,13 +39,13 @@ jobs:
 
     steps:
       - name: Checkout BEC Widgets
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: bec-project/bec_widgets
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Conda
-        uses: conda-incubator/setup-miniconda@v3
+        uses: conda-incubator/setup-miniconda@v4
         with:
           auto-update-conda: true
           auto-activate-base: true
@@ -79,7 +79,7 @@ jobs:
           test -s "$BENCHMARK_JSON"
 
       - name: Upload benchmark artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: bw-benchmark-json-${{ matrix.attempt }}
           path: ${{ env.BENCHMARK_JSON }}
@@ -94,13 +94,13 @@ jobs:
 
     steps:
       - name: Checkout BEC Widgets
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: bec-project/bec_widgets
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Download benchmark attempts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: bw-benchmark-json-*
           path: benchmark-results/attempts
@@ -113,7 +113,7 @@ jobs:
             --output "$BENCHMARK_JSON"
 
       - name: Upload aggregate benchmark artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: bw-benchmark-json
           path: ${{ env.BENCHMARK_JSON }}
@@ -200,13 +200,13 @@ jobs:
 
     steps:
       - name: Checkout BEC Widgets
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: bec-project/bec_widgets
           ref: ${{ github.sha }}
 
       - name: Download aggregate benchmark artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: bw-benchmark-json
           path: benchmark-results
