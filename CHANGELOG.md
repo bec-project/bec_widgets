@@ -1,6 +1,27 @@
 # CHANGELOG
 
 
+## v3.40.5 (2026-10-17)
+
+### Bug Fixes
+
+- **pdf_viewer**: Connect document status once instead of disconnecting unconnected slots
+  ([`af2c748`](https://github.com/bec-project/bec_widgets/commit/af2c748127be6b3ed45d3c1c7c8f32008e98507c))
+
+- **signal_proxy**: Make cleanup_signal_proxy idempotent
+  ([`4c4e5fe`](https://github.com/bec-project/bec_widgets/commit/4c4e5febd80e1ea54baf09dc42a9463fd541f73b))
+
+### Continuous Integration
+
+- Bump GitHub actions to their Node 24 releases
+  ([`0dd2f94`](https://github.com/bec-project/bec_widgets/commit/0dd2f944cdd4fc2828ce84fb4e993838d4f43da2))
+
+### Testing
+
+- Remove collection and deprecation warnings from unit tests
+  ([`16765e5`](https://github.com/bec-project/bec_widgets/commit/16765e5d68325b0be63c510cb4a7d664e4f402e5))
+
+
 ## v3.40.4 (2026-10-16)
 
 ### Bug Fixes
