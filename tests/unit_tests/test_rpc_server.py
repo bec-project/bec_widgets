@@ -76,7 +76,7 @@ def test_gui_server_shutdown_is_idempotent(gui_server):
 
     with (
         patch.object(companion_app_module.shiboken6, "isValid", return_value=True),
-        patch.object(companion_app_module.pylsp_server, "is_running", return_value=False),
+        patch.object(companion_app_module, "stop_pylsp_server"),
     ):
         gui_server.shutdown()
         gui_server.shutdown()
@@ -368,7 +368,7 @@ def test_gui_server_stop_dispatcher_disconnects_before_stopping_cli_server(gui_s
     gui_server.launcher_window = MagicMock()
     with (
         patch.object(companion_app_module.shiboken6, "isValid", return_value=True),
-        patch.object(companion_app_module.pylsp_server, "is_running", return_value=False),
+        patch.object(companion_app_module, "stop_pylsp_server"),
     ):
         gui_server.shutdown()
     assert calls == ["disconnect_all", "stop_cli_server"]

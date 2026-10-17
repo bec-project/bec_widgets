@@ -14,6 +14,7 @@ from qtpy.QtWidgets import QApplication, QDialog, QVBoxLayout, QWidget
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import get_theme_name
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.pylsp_server import get_pylsp_server
 
 if TYPE_CHECKING:
     from bec_widgets.widgets.editors.monaco.scan_control_dialog import ScanControlDialog
@@ -58,6 +59,9 @@ class MonacoWidget(BECWidget, QWidget):
         super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
+        # qtmonaco.Monaco imports qtmonaco.pylsp_provider, whose import takes over SIGINT/SIGTERM;
+        # importing it here first keeps the process's own handlers (Ctrl-C and kill keep working).
+        get_pylsp_server()
         self.editor = qtmonaco.Monaco(self)
         layout.addWidget(self.editor)
         self.setLayout(layout)

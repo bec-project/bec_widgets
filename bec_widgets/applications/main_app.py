@@ -1,5 +1,7 @@
 from bec_widgets.applications.startup_profiler import startup_profiler  # isort: skip
 
+import signal
+
 from bec_qthemes import material_icon
 from qtpy.QtCore import QTimer
 from qtpy.QtGui import QAction  # type: ignore
@@ -17,6 +19,7 @@ from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.guided_tour import GuidedTour
 from bec_widgets.utils.launcher_ready import notify_launcher_ready
 from bec_widgets.utils.name_utils import sanitize_namespace
+from bec_widgets.utils.pylsp_server import stop_pylsp_server
 from bec_widgets.utils.screen_utils import (
     apply_centered_size,
     available_screen_geometry,
@@ -399,6 +402,40 @@ class BECMainApp(BECMainWindow):
         super().cleanup()
 
 
+def install_shutdown_signal_handlers(app: QApplication) -> None:
+    """
+    Close the application gracefully on SIGINT (Ctrl-C) and SIGTERM.
+
+    Without Python handlers SIGTERM kills the process before any cleanup runs, and the
+    KeyboardInterrupt raised for SIGINT is swallowed by whichever Qt slot it lands in, so Ctrl-C
+    never stops a Qt application. The handler only schedules the shutdown; the event loop then
+    closes all top-level windows (running the widgets' cleanup) and quits. A second signal while
+    that shutdown is still pending terminates the process right away.
+
+    Args:
+        app(QApplication): The application to quit; install after its main window exists.
+    """
+    shutdown_requested = False
+
+    def _shutdown():
+        for widget in app.topLevelWidgets():
+            widget.close()
+        app.quit()
+
+    def _request_shutdown(signum, _frame):
+        nonlocal shutdown_requested
+        if shutdown_requested:
+            stop_pylsp_server()
+            signal.signal(signum, signal.SIG_DFL)
+            signal.raise_signal(signum)
+            return
+        shutdown_requested = True
+        QTimer.singleShot(0, _shutdown)
+
+    signal.signal(signal.SIGINT, _request_shutdown)
+    signal.signal(signal.SIGTERM, _request_shutdown)
+
+
 def main():  # pragma: no cover
     """
     Main function to run the BEC main application, exposed as a script entry point through
@@ -436,6 +473,8 @@ def main():  # pragma: no cover
     # First event-loop iteration -> the window is actually painted/interactive.
     QTimer.singleShot(0, lambda: startup_profiler.mark("interactive", final=True))
 
+    app.aboutToQuit.connect(stop_pylsp_server)
+    install_shutdown_signal_handlers(app)
     sys.exit(app.exec())
 
 
