@@ -10,6 +10,8 @@ from pydantic.fields import FieldInfo
 from qtpy.QtCore import QLocale, Qt
 from qtpy.QtCore import Signal as QtSignal
 from qtpy.QtWidgets import (
+    QAbstractSpinBox,
+    QButtonGroup,
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
@@ -17,6 +19,7 @@ from qtpy.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QRadioButton,
     QSpinBox,
     QWidget,
 )
@@ -166,6 +169,67 @@ class OptionalValueWidget(QWidget):
         self.value_changed.emit(self.value())
 
 
+class TrueFalseEntry(QWidget):
+    """A "true"/"false" radio pair that can also have no choice made.
+
+    Used for required yes/no fields, so that a missing answer is not read as ``False``.
+
+    Attributes:
+        changed: Signal emitted when the choice changes.
+    """
+
+    changed = QtSignal()
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        """Create the radio pair with no choice made.
+
+        Args:
+            parent: Optional parent widget.
+        """
+        super().__init__(parent=parent)
+        self._true = QRadioButton("true", self)
+        self._false = QRadioButton("false", self)
+        self._group = QButtonGroup(self)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        for button in (self._true, self._false):
+            self._group.addButton(button)
+            layout.addWidget(button)
+        layout.addStretch(1)
+        self._group.buttonToggled.connect(self._on_toggled)
+
+    def value(self) -> bool | None:
+        """Return the choice.
+
+        Returns:
+            ``True`` or ``False``, or ``None`` while no choice is made.
+        """
+        if self._true.isChecked():
+            return True
+        if self._false.isChecked():
+            return False
+        return None
+
+    def set_value(self, value: bool | None) -> None:
+        """Select ``true`` or ``false``, or clear the choice for ``None``.
+
+        Args:
+            value: The choice to show.
+        """
+        if value is None:
+            self._group.setExclusive(False)
+            self._true.setChecked(False)
+            self._false.setChecked(False)
+            self._group.setExclusive(True)
+            self.changed.emit()
+            return
+        (self._true if value else self._false).setChecked(True)
+
+    def _on_toggled(self, _button: QRadioButton, checked: bool) -> None:
+        if checked:
+            self.changed.emit()
+
+
 # pylint: disable-next=too-many-instance-attributes,too-many-public-methods
 class PydanticWidgetForm(QWidget):
     """Generate a Qt form from a Pydantic model.
@@ -195,7 +259,7 @@ class PydanticWidgetForm(QWidget):
         extra_fields_title: str = "Additional fields",
         extra_fields_hint: str = "",
         mark_required: bool = False,
-        empty_text_as_missing: bool = False,
+        required_start_empty: bool = False,
         show_field_errors: bool = False,
     ) -> None:
         """Create a generated form for a Pydantic model.
@@ -213,9 +277,10 @@ class PydanticWidgetForm(QWidget):
             extra_fields_title: Heading of the extra fields editor.
             extra_fields_hint: Hint shown in the extra fields editor while it is empty.
             mark_required: Append ``*`` to the labels of fields without a default.
-            empty_text_as_missing: Treat an empty text field without a default as a
+            required_start_empty: Leave required fields without a default empty (blank
+                text and numbers, no choice for yes/no) and treat an empty one as a
                 missing value, so validation reports it as required instead of
-                accepting an empty string.
+                accepting an empty string, the minimum or ``False``.
             show_field_errors: Show the validation message of an invalid field in a
                 line directly under its input when :meth:`validate` runs.
         """
@@ -227,7 +292,7 @@ class PydanticWidgetForm(QWidget):
         self._field_configs: dict[str, dict[str, Any]] = {}
         self._baseline: dict[str, Any] = {}
         self._mark_required = mark_required
-        self._empty_text_as_missing = empty_text_as_missing
+        self._required_start_empty = required_start_empty
         self._show_field_errors = show_field_errors
         self._error_labels: dict[str, QLabel] = {}
         self._shown_errors: dict[str, str] = {}
@@ -636,6 +701,8 @@ class PydanticWidgetForm(QWidget):
         if container in (dict, list, set, tuple):
             return EntryListEditor(self, key_value=container is dict, add_text="Add entry")
         if annotation is bool:
+            if self._starts_empty(name):
+                return TrueFalseEntry(self)
             return QCheckBox(self)
         if annotation is int:
             spin_box = QSpinBox(self)
@@ -646,6 +713,15 @@ class PydanticWidgetForm(QWidget):
             spin_box.setRange(-1_000_000_000, 1_000_000_000)
             return spin_box
         return QLineEdit(self)
+
+    def _starts_empty(self, name: str) -> bool:
+        """Whether the input of field ``name`` starts empty, see ``required_start_empty``."""
+        info = self._model.model_fields[name]
+        return (
+            self._required_start_empty
+            and info.is_required()
+            and NoneType not in get_args(info.annotation)
+        )
 
     def _apply_field_metadata(self, name: str) -> None:
         config = self._field_configs[name]
@@ -675,9 +751,13 @@ class PydanticWidgetForm(QWidget):
         if isinstance(widget, OptionalValueWidget):
             widget.value_changed.connect(lambda _value: self.changed.emit())
             return
-        if isinstance(widget, EntryListEditor):
+        if isinstance(widget, (EntryListEditor, TrueFalseEntry)):
             widget.changed.connect(self.changed)
             return
+        if isinstance(widget, QAbstractSpinBox):
+            # The text too: emptying an input or typing the value it held while empty
+            # changes only the text.
+            widget.lineEdit().textChanged.connect(lambda *_args: self.changed.emit())
         WidgetIO.connect_widget_change_signal(widget, lambda *_args: self.changed.emit())
 
     def _connect_device_signal_widgets(self) -> None:
@@ -773,13 +853,9 @@ class PydanticWidgetForm(QWidget):
 
     def _validation_payload(self) -> dict[str, Any]:
         data = self.raw_data()
-        if self._empty_text_as_missing:
-            for name, widget in self._widgets.items():
-                if (
-                    isinstance(widget, QLineEdit)
-                    and data.get(name) in ("", None)
-                    and self._model.model_fields[name].is_required()
-                ):
+        if self._required_start_empty:
+            for name in self._widgets:
+                if self._starts_empty(name) and data.get(name) in ("", None):
                     data.pop(name, None)
         return data
 
@@ -788,6 +864,9 @@ class PydanticWidgetForm(QWidget):
         error = QLabel(self)
         error.setWordWrap(True)
         error.setTextFormat(Qt.TextFormat.PlainText)
+        # A wrapped label can be given more height than its text needs; keep the text
+        # right under the input instead of centred in that space.
+        error.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         error.setVisible(False)
         self._layout.setWidget(self._layout.rowCount(), QFormLayout.ItemRole.FieldRole, error)
         self._error_labels[name] = error
@@ -857,10 +936,14 @@ class PydanticWidgetForm(QWidget):
     def _read_widget_value(self, name: str) -> Any:
         widget = self._widgets[name]
         info = self._model.model_fields[name]
-        if isinstance(widget, OptionalValueWidget):
+        if isinstance(widget, (OptionalValueWidget, EntryListEditor, TrueFalseEntry)):
             return widget.value()
-        if isinstance(widget, EntryListEditor):
-            return widget.value()
+        if (
+            isinstance(widget, (QSpinBox, QDoubleSpinBox))
+            and widget.cleanText() == ""
+            and self._starts_empty(name)
+        ):
+            return None
         if isinstance(widget, QDoubleSpinBox) and _value_annotation(info.annotation) is Decimal:
             exact = isinstance(widget, _ExactTextMixin) and widget.exact
             text = repr(widget.value()) if exact else f"{widget.value():.{widget.decimals()}f}"
@@ -878,10 +961,7 @@ class PydanticWidgetForm(QWidget):
 
     def _set_widget_value(self, name: str, value: Any) -> None:
         widget = self._widgets[name]
-        if isinstance(widget, OptionalValueWidget):
-            widget.set_value(value)
-            return
-        if isinstance(widget, EntryListEditor):
+        if isinstance(widget, (OptionalValueWidget, EntryListEditor, TrueFalseEntry)):
             widget.set_value(value)
             return
         if isinstance(value, Decimal):
@@ -891,7 +971,10 @@ class PydanticWidgetForm(QWidget):
                 value = ""
             elif isinstance(widget, QCheckBox):
                 value = False
-            elif isinstance(widget, (QSpinBox, QDoubleSpinBox)):
+            elif isinstance(widget, QAbstractSpinBox):
+                if self._starts_empty(name):
+                    widget.clear()
+                    return
                 value = 0
             elif isinstance(widget, QComboBox):
                 value = ""

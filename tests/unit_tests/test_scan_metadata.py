@@ -10,7 +10,10 @@ from qtpy.QtWidgets import QCheckBox, QDoubleSpinBox, QFormLayout, QLineEdit, QS
 
 from bec_widgets.tests.utils import create_widget
 from bec_widgets.utils.forms_from_types.entry_list_editor import EntryListEditor
-from bec_widgets.utils.forms_from_types.pydantic_widget_form import OptionalValueWidget
+from bec_widgets.utils.forms_from_types.pydantic_widget_form import (
+    OptionalValueWidget,
+    TrueFalseEntry,
+)
 from bec_widgets.widgets.editors.scan_metadata.scan_metadata import ScanMetadata
 from bec_widgets.widgets.utility.spinbox.decimal_spinbox import BECSpinBox
 
@@ -100,7 +103,7 @@ def test_fields_use_matching_widgets(metadata_widget: ScanMetadata):
     assert metadata_widget.form.input_widget("str_optional").maxLength() == 23
     assert isinstance(widgets["bool_optional"], OptionalValueWidget)
     assert isinstance(widgets["bool_required_default"], QCheckBox)
-    assert isinstance(widgets["bool_required_nodefault"], QCheckBox)
+    assert isinstance(widgets["bool_required_nodefault"], TrueFalseEntry)
     assert isinstance(widgets["int_default"], QSpinBox)
     assert isinstance(widgets["int_nodefault_optional"], OptionalValueWidget)
     assert isinstance(widgets["float_nodefault"], BECSpinBox)
