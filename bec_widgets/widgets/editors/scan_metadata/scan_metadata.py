@@ -83,7 +83,7 @@ class ScanMetadata(BECWidget, QWidget):
             extra_fields_title="Additional metadata",
             extra_fields_hint="Store extra information with the scan as key-value pairs.",
             mark_required=True,
-            empty_text_as_missing=True,
+            required_start_empty=True,
             show_field_errors=True,
         )
         self._form.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)

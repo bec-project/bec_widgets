@@ -14,6 +14,7 @@ from bec_widgets.utils.forms_from_types.pydantic_widget_form import (
     EXTRA_FIELDS_KEY,
     OptionalValueWidget,
     PydanticWidgetForm,
+    TrueFalseEntry,
 )
 from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
@@ -355,6 +356,95 @@ def test_pydantic_widget_form_decimal_list_dict_and_optional_literal(qtbot):
     assert form.get_data()["mode"] == "slow"
 
 
+class RequiredNumbersSchema(BaseModel):
+    count: int = Field(gt=0)
+    energy: float
+    dose: Decimal = Field(gt=0, decimal_places=1)
+    mounted: bool
+    repeats: int = 3
+    enabled: bool = True
+
+
+def test_pydantic_widget_form_required_start_empty(qtbot):
+    plain = PydanticWidgetForm(RequiredNumbersSchema)
+    strict = PydanticWidgetForm(RequiredNumbersSchema, required_start_empty=True)
+    qtbot.addWidget(plain)
+    qtbot.addWidget(strict)
+
+    # default behaviour is unchanged: numbers start at their minimum, yes/no is a checkbox
+    assert plain.input_widget("count").value() == 1
+    assert isinstance(plain.input_widget("mounted"), QCheckBox)
+    assert plain.validate()
+
+    # required fields start empty and are reported as missing, defaults stay filled in
+    for name in ("count", "energy", "dose"):
+        assert strict.input_widget(name).text() == "", name
+    assert isinstance(strict.input_widget("mounted"), TrueFalseEntry)
+    assert strict.input_widget("repeats").value() == 3
+    assert isinstance(strict.input_widget("enabled"), QCheckBox)
+    assert strict.validation_errors() == {
+        name: "Required - please fill in" for name in ("count", "energy", "dose", "mounted")
+    }
+
+    strict.set_partial_data({"count": 2, "energy": 7.5, "dose": Decimal("0.5"), "mounted": False})
+    assert strict.validate()
+    assert strict.get_data()["mounted"] is False
+    assert strict.get_data()["count"] == 2
+
+    # clearing a value makes it missing again
+    strict.set_partial_data({"count": None, "mounted": None})
+    assert set(strict.validation_errors()) == {"count", "mounted"}
+
+
+def test_pydantic_widget_form_empty_number_edits_emit_changed(qtbot):
+    form = PydanticWidgetForm(RequiredNumbersSchema, required_start_empty=True)
+    qtbot.addWidget(form)
+    count = form.input_widget("count")
+    assert count.text() == ""
+
+    # typing the value the empty input already holds still changes the form
+    with qtbot.waitSignal(form.changed):
+        qtbot.keyClicks(count, str(count.value()))
+    assert form.raw_data()["count"] == count.value()
+    assert "count" not in form.validation_errors()
+
+    # the arrows change the form too
+    with qtbot.waitSignal(form.changed):
+        count.stepUp()
+    assert form.raw_data()["count"] == count.value()
+
+    # emptying a valid input makes it missing again
+    with qtbot.waitSignal(form.changed):
+        count.clear()
+    assert form.validation_errors()["count"] == "Required - please fill in"
+
+
+class RequiredNumbersWithUnitsSchema(BaseModel):
+    count: int = Field(json_schema_extra={"units": "s"})
+    energy: float = Field(json_schema_extra={"units": "eV"})
+
+
+def test_pydantic_widget_form_empty_numbers_with_units_are_missing(qtbot):
+    form = PydanticWidgetForm(RequiredNumbersWithUnitsSchema, required_start_empty=True)
+    qtbot.addWidget(form)
+    assert form.input_widget("count").text().strip() == "s"
+    assert not form.validate()
+    assert set(form.validation_errors()) == {"count", "energy"}
+
+
+def test_true_false_entry(qtbot):
+    entry = TrueFalseEntry()
+    qtbot.addWidget(entry)
+    assert entry.value() is None
+    with qtbot.waitSignal(entry.changed):
+        entry.set_value(True)
+    assert entry.value() is True
+    entry.set_value(False)
+    assert entry.value() is False
+    entry.set_value(None)
+    assert entry.value() is None
+
+
 def test_pydantic_widget_form_text_constraints_and_placeholder(qtbot):
     form = PydanticWidgetForm(GeneratedExtraSchema)
     qtbot.addWidget(form)
@@ -365,9 +455,7 @@ def test_pydantic_widget_form_text_constraints_and_placeholder(qtbot):
 
 def test_pydantic_widget_form_required_markers_and_empty_text(qtbot):
     plain = PydanticWidgetForm(GeneratedExtraSchema)
-    strict = PydanticWidgetForm(
-        GeneratedExtraSchema, mark_required=True, empty_text_as_missing=True
-    )
+    strict = PydanticWidgetForm(GeneratedExtraSchema, mark_required=True, required_start_empty=True)
     qtbot.addWidget(plain)
     qtbot.addWidget(strict)
 
