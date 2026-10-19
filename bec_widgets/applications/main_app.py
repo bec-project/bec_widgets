@@ -1,5 +1,7 @@
 from bec_widgets.applications.startup_profiler import startup_profiler  # isort: skip
 
+from bec_lib.endpoints import MessageEndpoints
+from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from qtpy.QtCore import QTimer
 from qtpy.QtGui import QAction  # type: ignore
@@ -14,6 +16,7 @@ from bec_widgets.applications.views.device_manager_view.device_manager_view impo
 from bec_widgets.applications.views.dock_area_view.dock_area_view import DockAreaView
 from bec_widgets.applications.views.view import ViewBase, WaveformViewInline, WaveformViewPopup
 from bec_widgets.utils.colors import apply_theme
+from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.guided_tour import GuidedTour
 from bec_widgets.utils.launcher_ready import notify_launcher_ready
 from bec_widgets.utils.name_utils import sanitize_namespace
@@ -69,6 +72,19 @@ class BECMainApp(BECMainWindow):
         self.guided_tour = GuidedTour(self)
         self._setup_guided_tour()
         startup_profiler.mark("guided tour")
+
+        self.bec_dispatcher.connect_slot(self._on_client_restart, MessageEndpoints.client_restart())
+
+    @SafeSlot(dict, dict)
+    def _on_client_restart(self, msg: dict, _meta: dict) -> None:
+        """Close the application when the server requests clients to restart."""
+        reason = msg.get("reason")
+        detail = f": {reason}" if reason else ""
+        bec_logger.logger.info(f"Client restart requested by server{detail}. Exiting...")
+        # Include hidden windows and continue if a launcher rejects its close event.
+        for widget in self.app.topLevelWidgets():
+            widget.close()
+        self.app.quit()
 
     def showEvent(self, event):
         super().showEvent(event)
