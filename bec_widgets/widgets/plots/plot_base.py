@@ -10,7 +10,7 @@ from bec_lib import bec_logger
 from bec_lib.scan_data_container import ScanDataContainer
 from bec_lib.scan_items import ScanItem
 from qtpy.QtCore import QPoint, QPointF, Qt, Signal
-from qtpy.QtWidgets import QHBoxLayout, QLabel, QMainWindow, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QFrame, QHBoxLayout, QLabel, QMainWindow, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
@@ -19,7 +19,6 @@ from bec_widgets.utils.entry_validator import EntryValidator
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.fps_counter import FPSCounter
 from bec_widgets.utils.plot_indicator_items import BECArrowItem, BECTickItem
-from bec_widgets.utils.round_frame import RoundedFrame
 from bec_widgets.utils.side_panel import SidePanel
 from bec_widgets.utils.toolbars.actions import MaterialIconAction
 from bec_widgets.utils.toolbars.performance import PerformanceConnection, performance_bundle
@@ -210,15 +209,20 @@ class PlotBase(BECWidget, QWidget):
         self._update_theme(None)
 
     def apply_theme(self, theme: str):
-        self.round_plot_widget.apply_theme(theme)
         if hasattr(self, "info_label"):
             self.info_label.set_theme(theme)
 
     def _init_ui(self):
         self.layout.addWidget(self.layout_manager)
-        self.round_plot_widget = RoundedFrame(parent=self, content_widget=self.plot_widget)
+        # Rounded plot background, painted by the theme QSS (QFrame[variant="plot_background"])
+        self.round_plot_widget = QFrame(parent=self)
         self.round_plot_widget.setProperty("variant", "plot_background")
         self.round_plot_widget.setProperty("frameless", True)
+        self.round_plot_widget.setProperty("skip_settings", True)
+        self.round_plot_widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        plot_frame_layout = QHBoxLayout(self.round_plot_widget)
+        plot_frame_layout.setContentsMargins(5, 5, 5, 5)
+        plot_frame_layout.addWidget(self.plot_widget)
 
         self.layout_manager.add_widget(self.round_plot_widget)
         self.layout_manager.add_widget_relative(self.fps_label, self.round_plot_widget, "top")
