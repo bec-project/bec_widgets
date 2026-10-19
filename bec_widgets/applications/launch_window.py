@@ -11,11 +11,13 @@ from qtpy.QtWidgets import (
     QApplication,
     QComboBox,
     QFileDialog,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QPushButton,
     QSizePolicy,
     QSpacerItem,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -25,7 +27,6 @@ from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.name_utils import pascal_to_snake
 from bec_widgets.utils.plugin_utils import get_plugin_auto_updates
-from bec_widgets.utils.round_frame import RoundedFrame
 from bec_widgets.utils.rpc_register import RPCRegister
 from bec_widgets.utils.screen_utils import apply_window_geometry, centered_geometry_for_app
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
@@ -46,7 +47,7 @@ MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 START_EMPTY_PROFILE_OPTION = "Start Empty (No Profile)"
 
 
-class LaunchTile(RoundedFrame):
+class LaunchTile(QFrame):
     DEFAULT_SIZE = (250, 300)
     open_signal = Signal()
 
@@ -60,7 +61,11 @@ class LaunchTile(RoundedFrame):
         show_selector: bool = False,
         tile_size: tuple[int, int] | None = None,
     ):
-        super().__init__(parent=parent, orientation="vertical")
+        super().__init__(parent=parent)
+        self.setProperty("skip_settings", True)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(5, 5, 5, 5)
 
         # Provide a per‑instance TILE_SIZE so the class can compute layout
         if tile_size is None:
@@ -573,15 +578,6 @@ class LaunchWindow(BECMainWindow):
         apply_window_geometry(window, geometry)
         window.show()
         return window
-
-    def apply_theme(self, theme: str):
-        """
-        Change the theme of the application.
-        """
-        for tile in self.tiles.values():
-            tile.apply_theme(theme)
-
-        super().apply_theme(theme)
 
     def _open_auto_update(self):
         """
