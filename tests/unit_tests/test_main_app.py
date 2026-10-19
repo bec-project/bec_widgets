@@ -1,10 +1,15 @@
+import threading
+
 import pytest
-from qtpy.QtCore import QRect
+from bec_lib import messages
+from bec_lib.endpoints import MessageEndpoints
+from qtpy.QtCore import QRect, Qt, QThread
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.applications.main_app import BECMainApp
 from bec_widgets.applications.views.view import ViewBase
 from bec_widgets.tests.client_mocks import mocked_client
+from bec_widgets.tests.utils import create_widget
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.containers.dock_area.profile_utils import (
     is_experimental_features_enabled,
@@ -12,6 +17,95 @@ from bec_widgets.widgets.containers.dock_area.profile_utils import (
 )
 
 ANIM_TEST_DURATION = 60  # ms
+
+
+@pytest.mark.parametrize("reason", ["", "server maintenance"])
+@pytest.mark.parametrize("visible", [False, True], ids=["hidden", "visible"])
+def test_server_restart_closes_main_app_and_other_windows(
+    qtbot, mocked_client, monkeypatch, tmp_path, reason, visible
+):
+    class OtherWindow(QWidget):
+        closed = False
+
+        def closeEvent(self, event):
+            self.closed = True
+            super().closeEvent(event)
+
+    monkeypatch.setenv("BECWIDGETS_PROFILE_DIR", str(tmp_path))
+    app = create_widget(qtbot, BECMainApp, client=mocked_client)
+    # Keep the window alive so qtbot can close it again during teardown.
+    app.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
+    other_window = create_widget(qtbot, OtherWindow)
+    if visible:
+        app.show()
+        other_window.show()
+    dispatcher = app.bec_dispatcher
+    quit_threads = []
+    monkeypatch.setattr(app.app, "quit", lambda: quit_threads.append(QThread.currentThread()))
+
+    restart_slot = next(
+        slot for slot in dispatcher._registered_slots if slot.cb == app._on_client_restart
+    )
+    assert MessageEndpoints.client_restart().endpoint in restart_slot.topics
+    message = messages.ClientRestartMessage(reason=reason)
+    # Deliver like the Redis worker, through the registered Qt dispatcher callback.
+    worker = threading.Thread(target=restart_slot, args=(message.content, message.metadata))
+    worker.start()
+    worker.join(timeout=1)
+    assert not worker.is_alive()
+
+    qtbot.waitUntil(lambda: len(quit_threads) == 1)
+    assert quit_threads == [app.app.thread()]
+    assert app._destroyed
+    assert other_window.closed
+    assert not other_window.isVisible()
+    assert not any(slot.cb == app._on_client_restart for slot in dispatcher._registered_slots)
+
+
+def test_closed_main_app_ignores_pending_restart(qtbot, mocked_client, monkeypatch, tmp_path):
+    monkeypatch.setenv("BECWIDGETS_PROFILE_DIR", str(tmp_path))
+    app = create_widget(qtbot, BECMainApp, client=mocked_client)
+    app.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
+    quit_calls = []
+    monkeypatch.setattr(app.app, "quit", lambda: quit_calls.append(True))
+    restart_slot = next(
+        slot for slot in app.bec_dispatcher._registered_slots if slot.cb == app._on_client_restart
+    )
+
+    app.close()
+    restart_slot({"reason": "server maintenance"}, {})
+
+    assert quit_calls == []
+    assert not restart_slot._active
+
+
+def test_server_restart_continues_after_rejected_close(qtbot, mocked_client, monkeypatch, tmp_path):
+    class RejectingWindow(QWidget):
+        reject_close = True
+
+        def closeEvent(self, event):
+            if self.reject_close:
+                event.ignore()
+            else:
+                super().closeEvent(event)
+
+    monkeypatch.setenv("BECWIDGETS_PROFILE_DIR", str(tmp_path))
+    app = create_widget(qtbot, BECMainApp, client=mocked_client)
+    app.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
+    app.show()
+    rejecting_window = create_widget(qtbot, RejectingWindow)
+    rejecting_window.show()
+    quit_calls = []
+    monkeypatch.setattr(app.app, "quit", lambda: quit_calls.append(True))
+    # Qt visits windows in an unspecified order; put the rejecting window first.
+    with monkeypatch.context() as patch:
+        patch.setattr(app.app, "topLevelWidgets", lambda: [rejecting_window, app])
+        try:
+            app._on_client_restart({}, {})
+            assert app._destroyed
+            assert quit_calls == [True]
+        finally:
+            rejecting_window.reject_close = False
 
 
 @pytest.fixture
