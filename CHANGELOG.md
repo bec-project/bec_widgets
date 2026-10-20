@@ -1,6 +1,31 @@
 # CHANGELOG
 
 
+## v3.40.6 (2026-10-20)
+
+### Bug Fixes
+
+- **scan_metadata**: Leave required numbers and yes/no fields empty until filled in
+  ([`04a6488`](https://github.com/bec-project/bec_widgets/commit/04a6488099e1a95f3e99546dfad8ef1ceb9d0186))
+
+### Refactoring
+
+- **colormap_selector**: Remove ColormapSelector in favour of BECColorMapWidget
+  ([`fdf1d77`](https://github.com/bec-project/bec_widgets/commit/fdf1d77c54bee99b1fba147c788804fbb68f2ce6))
+
+- **device_browser**: Remove the DeviceBrowser widget
+  ([`6ebaee8`](https://github.com/bec-project/bec_widgets/commit/6ebaee8648838f9087a62cf756042bb7c628d649))
+
+- **device_manager**: Remove unused available device resources package
+  ([`6692c7e`](https://github.com/bec-project/bec_widgets/commit/6692c7e547bf4b9e231059a9b7fddadd5b0aa91f))
+
+- **forms**: Remove the old TypedForm and PydanticModelForm stack
+  ([`480637f`](https://github.com/bec-project/bec_widgets/commit/480637f7cd0bb46c1d1594eadd165b818aae7ab5))
+
+- **scan_metadata**: Build the scan metadata form on PydanticWidgetForm
+  ([`ca63c61`](https://github.com/bec-project/bec_widgets/commit/ca63c614a6223743b2c689a43c61e2abfce57570))
+
+
 ## v3.40.5 (2026-10-17)
 
 ### Bug Fixes
