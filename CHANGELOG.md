@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.41.0 (2026-10-21)
+
+### Features
+
+- Close main app on server client restart requests
+  ([`10e203f`](https://github.com/bec-project/bec_widgets/commit/10e203f311c32f8e1143a87ad9d1a173e2cbc916))
+
+
 ## v3.40.6 (2026-10-20)
 
 ### Bug Fixes
