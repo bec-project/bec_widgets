@@ -12,6 +12,7 @@ from qtpy.QtWidgets import QWidget
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.colors import Colors, apply_theme
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.jpeg_frames import decode_jpeg_preview
 from bec_widgets.widgets.plots.image.image_base import ImageBase
 from bec_widgets.widgets.plots.image.image_item import ImageItem
 from bec_widgets.widgets.plots.image.toolbar_components.device_selection import (
@@ -118,6 +119,7 @@ class Image(ImageBase):
             config = ImageConfig(widget_class=self.__class__.__name__)
         self.gui_id = config.gui_id
         self.subscriptions: defaultdict[str, ImageLayerConfig] = defaultdict(ImageLayerConfig)
+        self.last_frame_metadata: dict = {}
         # Store signal configs separately (not serialized to QSettings)
         self._signal_configs: dict[str, dict] = {}
 
@@ -447,6 +449,8 @@ class Image(ImageBase):
                 self.bec_dispatcher.connect_slot(
                     self.on_image_update_2d,
                     MessageEndpoints.device_preview(self._config.device, self._config.signal),
+                    preprocess=decode_jpeg_preview,
+                    latest_only=True,
                 )
             elif signal_class in self.SUPPORTED_SIGNALS:
                 self.async_update = True
@@ -1003,6 +1007,11 @@ class Image(ImageBase):
         if data is None:
             logger.warning("No data received for image update from 2D.")
             return
+        self.last_frame_metadata = metadata
+        previous = image.raw_data
+        if previous is not None and np.shape(previous) != np.shape(data):
+            # e.g. the detector changed resolution: show the whole new frame
+            self._autorange_on_next_update = True
         if self._color_bar is not None:
             self._color_bar.blockSignals(True)
         image.set_data(data)

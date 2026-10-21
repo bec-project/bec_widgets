@@ -57,6 +57,7 @@ dev = [
   "pre_commit~=4.2",
 ]
 qtermwidget = ["pyside6_qtermwidget==0.6.6.11.1"]
+jpeg = ["simplejpeg~=1.8"]
 
 
 [build-system]

@@ -3,6 +3,7 @@ from __future__ import annotations
 import collections
 import random
 import string
+import threading
 import time
 import weakref
 from collections.abc import Callable
@@ -79,7 +80,14 @@ class QtThreadSafeCallback(QObject):
 
     cb_signal = pyqtSignal(dict, dict)
 
-    def __init__(self, cb: Callable, cb_info: dict | None = None, owner: object | None = None):
+    def __init__(
+        self,
+        cb: Callable,
+        cb_info: dict | None = None,
+        owner: object | None = None,
+        preprocess: Callable[[dict, dict], tuple[dict, dict]] | None = None,
+        latest_only: bool = False,
+    ):
         """
         Initialize the QtThreadSafeCallback.
 
@@ -89,9 +97,21 @@ class QtThreadSafeCallback(QObject):
                 Defaults to None.
             owner (object, optional): Lifetime anchor for non-method callables. Ignored for
                 bound methods (their ``__self__`` is the owner). Defaults to None.
+            preprocess (Callable, optional): Called with ``(msg_content, metadata)`` on the
+                receiving thread before the message is handed to the GUI thread; returns the
+                new ``(msg_content, metadata)``. Use it for slow, widget-free work such as
+                decoding compressed frames. Defaults to None.
+            latest_only (bool, optional): While a message waits for the GUI thread, a newer
+                one replaces it instead of queueing behind it, so a slow slot shows the newest
+                frame instead of falling further behind. Defaults to False.
         """
         super().__init__()
         self.cb_info = cb_info
+        self.preprocess = preprocess
+        self.latest_only = latest_only
+        self._pending: tuple[dict, dict] | None = None
+        self._pending_lock = threading.Lock()
+        self.dropped = 0
 
         if hasattr(cb, "__self__"):
             # Bound method: the owner is the method's instance; hold NO strong reference
@@ -118,12 +138,17 @@ class QtThreadSafeCallback(QObject):
         # make 2 differents QtThreadSafeCallback to look
         # identical when used as dictionary keys, if the
         # callback is the same
-        return f"{id(self.cb_ref)}{self.cb_info}".__hash__()
+        return f"{id(self.cb_ref)}{self.cb_info}{id(self.preprocess)}{self.latest_only}".__hash__()
 
     def __eq__(self, other):
         if not isinstance(other, QtThreadSafeCallback):
             return False
-        return self.cb_ref == other.cb_ref and self.cb_info == other.cb_info
+        return (
+            self.cb_ref == other.cb_ref
+            and self.cb_info == other.cb_info
+            and self.preprocess is other.preprocess
+            and self.latest_only == other.latest_only
+        )
 
     def invalidate(self) -> None:
         """Suppress pending deliveries and release any strongly held callback."""
@@ -135,6 +160,12 @@ class QtThreadSafeCallback(QObject):
         """Resolve and retain a live callback for the duration of this delivery."""
         if not self._active:
             return
+        if self.latest_only:
+            with self._pending_lock:
+                pending, self._pending = self._pending, None
+            if pending is None:
+                return
+            msg_content, metadata = pending
         owner = self.cb_owner() if self.cb_owner is not None else None
         if self.cb_owner is not None and owner is None:
             return
@@ -155,6 +186,19 @@ class QtThreadSafeCallback(QObject):
     def __call__(self, msg_content, metadata):
         if not self._active:
             return
+        if self.preprocess is not None:
+            try:
+                msg_content, metadata = self.preprocess(msg_content, metadata or {})
+            except Exception:  # pylint: disable=broad-except
+                logger.exception(f"Preprocessing a message for {self.cb_ref()} failed")
+                return
+        if self.latest_only:
+            with self._pending_lock:
+                replaced = self._pending is not None
+                self._pending = (msg_content, metadata)
+            if replaced:
+                self.dropped += 1
+                return
         self.cb_signal.emit(msg_content, metadata)
 
 
@@ -254,6 +298,8 @@ class BECDispatcher:
         topics: EndpointInfo | str | list[EndpointInfo] | list[str],
         cb_info: dict | None = None,
         owner: object | None = None,
+        preprocess: Callable[[dict, dict], tuple[dict, dict]] | None = None,
+        latest_only: bool = False,
         **kwargs,
     ) -> None:
         """Connect widget's qt slot, so that it is called on new pub/sub topic message.
@@ -267,6 +313,11 @@ class BECDispatcher:
             owner (object | None): Lifetime anchor for non-method callables (lambdas, partials,
                 module functions): the subscription is released when the owner is cleaned up or
                 destroyed. Bound methods already carry their owner and ignore this. Defaults to None.
+            preprocess (Callable | None): Runs on the receiving thread with
+                ``(msg_content, metadata)`` and returns the pair the slot gets, e.g. to decode
+                compressed frames without blocking the GUI. Defaults to None.
+            latest_only (bool): Deliver only the newest message when the slot falls behind;
+                older undelivered ones are dropped. Meant for live previews. Defaults to False.
         """
         if not hasattr(slot, "__self__") and owner is None:
             logger.warning(
@@ -277,7 +328,9 @@ class BECDispatcher:
         # Self-healing: reap subscriptions whose owners died without any close event
         # before adding new ones, so stale registrations never accumulate.
         self.cleanup_dead_slots()
-        qt_slot = QtThreadSafeCallback(cb=slot, cb_info=cb_info, owner=owner)
+        qt_slot = QtThreadSafeCallback(
+            cb=slot, cb_info=cb_info, owner=owner, preprocess=preprocess, latest_only=latest_only
+        )
         if not self.client.connector.any_stream_is_registered(topics, qt_slot):
             if qt_slot not in self._registered_slots:
                 self._registered_slots[qt_slot] = qt_slot
