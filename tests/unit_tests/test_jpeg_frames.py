@@ -189,3 +189,145 @@ def test_jpeg_view_shows_frame_and_colormap(qtbot, mocked_client):
     assert view._pixmap_item.pixmap().height() == 24
     view.set_colormap("gray")
     assert view._color_table is None
+
+
+def test_sensor_transform_maps_frame_to_sensor_pixels():
+    assert jpeg_frames.sensor_transform({}, (512, 256)) is None
+    assert jpeg_frames.sensor_shape({}, (512, 256)) == (512, 256)
+    metadata = {"sensor_shape": [4096, 2048]}
+    assert jpeg_frames.sensor_shape(metadata, (512, 256)) == (4096, 2048)
+    transform = jpeg_frames.sensor_transform(metadata, (512, 256))
+    # image item axes: x = row, y = column
+    assert transform.map(512.0, 256.0) == (4096.0, 2048.0)
+
+
+def test_image_draws_preview_in_sensor_pixels(qtbot, mocked_client):
+    view = create_widget(qtbot, Image, client=mocked_client)
+    metadata = {"sensor_shape": [400, 800]}
+    view.on_image_update_2d({"data": np.zeros((100, 200))}, metadata)
+    bounds = view.main_image.mapRectToView(view.main_image.boundingRect())
+    assert (bounds.width(), bounds.height()) == (400, 800)
+    view._autorange_on_next_update = False
+    with mock.patch.object(view, "auto_range") as auto_range:
+        # a new preview resolution of the same sensor keeps the zoom
+        view.on_image_update_2d({"data": np.zeros((50, 100))}, metadata)
+        auto_range.assert_not_called()
+    bounds = view.main_image.mapRectToView(view.main_image.boundingRect())
+    assert (bounds.width(), bounds.height()) == (400, 800)
+    # frames without a sensor shape are drawn in their own pixels again
+    view.on_image_update_2d({"data": np.zeros((10, 20))}, {})
+    bounds = view.main_image.mapRectToView(view.main_image.boundingRect())
+    assert (bounds.width(), bounds.height()) == (10, 20)
+
+
+def _show_frame(view, image, metadata):
+    content, metadata = qimage_preview(
+        {"data": np.frombuffer(_jpeg_bytes(image), np.uint8)}, {"encoding": "jpeg", **metadata}
+    )
+    view.on_frame(content, metadata)
+
+
+def test_jpeg_view_places_preview_on_sensor(qtbot, mocked_client):
+    view = create_widget(qtbot, JpegView, client=mocked_client)
+    _show_frame(view, _gradient(h=24, w=40), {"sensor_shape": [240, 80]})
+    bounds = view._pixmap_item.mapRectToParent(view._pixmap_item.boundingRect())
+    # rows along x, columns along y, scaled up to the sensor
+    assert (bounds.width(), bounds.height()) == (240, 80)
+    assert "sensor 80 x 240" in view.info_label.text()
+    # another preview resolution covers the same sensor area
+    _show_frame(view, _gradient(h=12, w=20), {"sensor_shape": [240, 80]})
+    bounds = view._pixmap_item.mapRectToParent(view._pixmap_item.boundingRect())
+    assert (bounds.width(), bounds.height()) == (240, 80)
+
+
+def test_jpeg_view_crosshair_reports_sensor_pixel(qtbot, mocked_client):
+    view = create_widget(qtbot, JpegView, client=mocked_client)
+    _show_frame(view, _gradient(h=24, w=40), {"sensor_shape": [240, 400]})
+    view.set_crosshair(True)
+    assert view.crosshair_button.isChecked()
+    view.update_crosshair(120.7, 33.2)
+    assert view.cursor_label.text() == "x 120  y 33"
+    assert view._v_line.value() == pytest.approx(120.7)
+    view.update_crosshair(-1, 10)
+    assert view.cursor_label.text() == "outside the sensor"
+    view.set_crosshair(False)
+    assert not view._v_line.isVisible() and view.cursor_label.text() == ""
+
+
+def test_jpeg_view_rois_in_sensor_pixels(qtbot, mocked_client):
+    view = create_widget(qtbot, JpegView, client=mocked_client)
+    _show_frame(view, _gradient(h=24, w=40), {"sensor_shape": [1000, 500]})
+    with qtbot.waitSignal(view.rois_changed) as blocker:
+        rect = view.add_roi("rect")
+    assert blocker.args[0][0]["x"] == (450, 550) and blocker.args[0][0]["y"] == (200, 300)
+    circle = view.add_roi("circle")
+    rect.setPos((10, 20))
+    rect.setSize((30, 40))
+    regions = view.roi_regions()
+    assert regions[0]["x"] == (10, 40) and regions[0]["y"] == (20, 60)
+    assert regions[1]["shape"] == "circle" and regions[1]["radius"] == 50
+    assert view.roi_table.rowCount() == 2
+    assert view.roi_table.item(0, 1).text() == "10"
+    # ROIs stay where they are when the preview resolution changes
+    _show_frame(view, _gradient(h=12, w=20), {"sensor_shape": [1000, 500]})
+    assert view.roi_regions()[0]["x"] == (10, 40)
+    view.remove_roi(circle)
+    assert len(view.roi_regions()) == 1
+    view.clear_rois()
+    assert view.roi_regions() == [] and view.roi_table.isHidden()
+    with pytest.raises(ValueError):
+        view.add_roi("polygon")
+
+
+@pytest.mark.parametrize("shape", [(5, 7), (300, 520), (300, 520, 3)])
+def test_column_first_keeps_values(shape):
+    image = np.random.default_rng(0).integers(0, 255, shape, dtype=np.uint8)
+    result = jpeg_frames.column_first(image, tile=256)
+    assert np.array_equal(result, image)
+    assert np.swapaxes(result, 0, 1).flags["C_CONTIGUOUS"]
+
+
+def test_decode_jpeg_preview_lays_frame_out_column_first():
+    payload = np.frombuffer(_jpeg_bytes(_gradient()), np.uint8)
+    content, _ = decode_jpeg_preview({"data": payload}, {"encoding": "jpeg", "channels": 1})
+    assert content["data"].shape == (24, 40)
+    assert content["data"].T.flags["C_CONTIGUOUS"]
+
+
+def _noisy_8bit(h=32, w=48):
+    return np.random.default_rng(1).integers(0, 60, (h, w), dtype=np.uint8)
+
+
+def test_image_fast_path_draws_jpeg_frames_as_they_are(qtbot, mocked_client):
+    view = create_widget(qtbot, Image, client=mocked_client)
+    frame = _noisy_8bit()
+    with mock.patch("bec_widgets.widgets.plots.image.image_item.ImageStats.from_data") as from_data:
+        view.on_image_update_2d({"data": frame}, {"encoding": "jpeg"})
+        from_data.assert_not_called()
+    image = view.main_image
+    assert np.shares_memory(image.image, frame)  # no processed copy
+    assert tuple(image.levels) == (0, 255) and image.autorange
+    # a manual range survives later frames
+    image.v_range = (10, 40)
+    view.on_image_update_2d({"data": _noisy_8bit()}, {"encoding": "jpeg"})
+    assert tuple(image.levels) == (10, 40)
+    # auto levels from the menu go back to the full 8-bit range
+    view.autorange = True
+    assert tuple(image.levels) == (0, 255)
+
+
+@pytest.mark.parametrize(
+    "setup, metadata",
+    [
+        (lambda view: setattr(view, "fast_8bit_preview", False), {"encoding": "jpeg"}),
+        (lambda view: None, {}),  # uint8 frames that are not JPEG previews
+        (lambda view: setattr(view.main_image, "log", True), {"encoding": "jpeg"}),
+    ],
+)
+def test_image_normal_path_when_fast_path_does_not_apply(qtbot, mocked_client, setup, metadata):
+    view = create_widget(qtbot, Image, client=mocked_client)
+    setup(view)
+    frame = _noisy_8bit()
+    view.on_image_update_2d({"data": frame}, metadata)
+    image = view.main_image
+    assert tuple(image.levels) != (0, 255)

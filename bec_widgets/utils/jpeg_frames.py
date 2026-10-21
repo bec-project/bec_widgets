@@ -5,6 +5,10 @@ A JPEG preview frame is a ``DevicePreviewMessage`` whose ``data`` is a flat uint
 the JPEG bytes, with message metadata ``{"encoding": "jpeg", "shape": [h, w], "channels": 1 | 3}``.
 Frames without that metadata are passed through untouched.
 
+A preview may be scaled down from a bigger sensor. ``"sensor_shape": [H, W]`` in the metadata
+says which sensor size the frame covers; ``sensor_transform`` maps frame pixels onto sensor
+pixels, so crosshair and ROI coordinates do not change with the preview resolution.
+
 The ``*_preview`` functions match the ``preprocess`` hook of ``BECDispatcher.connect_slot``:
 they run on the thread that receives Redis messages, so decoding never blocks the GUI thread.
 """
@@ -15,7 +19,7 @@ import time
 
 import numpy as np
 from qtpy.QtCore import QByteArray
-from qtpy.QtGui import QImage
+from qtpy.QtGui import QImage, QTransform
 
 try:  # libjpeg-turbo bindings; much faster than Qt's own JPEG plugin
     import simplejpeg
@@ -79,6 +83,30 @@ def decode_jpeg(data: bytes | np.ndarray, channels: int | None = None) -> np.nda
     return qimage_to_array(qimage)
 
 
+def column_first(image: np.ndarray, tile: int = 256) -> np.ndarray:
+    """
+    Copy a frame into column-first memory order; values and indexing stay the same.
+
+    pyqtgraph draws array rows along x and makes a transposed, contiguous copy of the frame
+    before every paint. For a frame already laid out column-first that copy is a no-op, so
+    calling this off the GUI thread takes the copy out of the paint. The copy runs in tiles,
+    which is several times faster than one strided copy of a large frame.
+
+    Args:
+        image (np.ndarray): (h, w) or (h, w, channels) frame.
+        tile (int): Tile edge in pixels.
+
+    Returns:
+        np.ndarray: The same frame, with ``np.swapaxes(result, 0, 1)`` C-contiguous.
+    """
+    h, w = image.shape[:2]
+    out = np.empty((w, h) + image.shape[2:], image.dtype)
+    for r in range(0, h, tile):
+        for c in range(0, w, tile):
+            out[c : c + tile, r : r + tile] = np.swapaxes(image[r : r + tile, c : c + tile], 0, 1)
+    return np.swapaxes(out, 0, 1)
+
+
 def decode_jpeg_preview(msg_content: dict, metadata: dict) -> tuple[dict, dict]:
     """
     Dispatcher preprocess hook: replace JPEG bytes in a preview message by the decoded array.
@@ -95,6 +123,7 @@ def decode_jpeg_preview(msg_content: dict, metadata: dict) -> tuple[dict, dict]:
     data = msg_content.get("data")
     t0 = time.perf_counter()
     image = decode_jpeg(data, metadata.get("channels"))
+    image = column_first(image)
     decode_ms = (time.perf_counter() - t0) * 1e3
     metadata = {**metadata, "decode_ms": decode_ms, "transfer_nbytes": int(np.size(data))}
     return {**msg_content, "data": image}, metadata
@@ -130,3 +159,37 @@ def qimage_preview(msg_content: dict, metadata: dict) -> tuple[dict, dict]:
     decode_ms = (time.perf_counter() - t0) * 1e3
     metadata = {**metadata, "decode_ms": decode_ms, "transfer_nbytes": int(np.asarray(data).nbytes)}
     return {**msg_content, "qimage": qimage}, metadata
+
+
+def sensor_shape(metadata: dict | None, frame_shape: tuple[int, ...]) -> tuple[int, int]:
+    """
+    Sensor height and width a preview frame covers.
+
+    Args:
+        metadata (dict | None): Preview message metadata.
+        frame_shape (tuple[int, ...]): Shape of the frame, rows first.
+
+    Returns:
+        tuple[int, int]: ``metadata["sensor_shape"]`` if given, otherwise the frame's own size.
+    """
+    shape = (metadata or {}).get("sensor_shape")
+    if shape is not None and len(shape) == 2 and min(shape) > 0:
+        return int(shape[0]), int(shape[1])
+    return int(frame_shape[0]), int(frame_shape[1])
+
+
+def sensor_transform(metadata: dict | None, frame_shape: tuple[int, ...]) -> QTransform | None:
+    """
+    Scale from frame pixels to sensor pixels for an image item with rows on the x axis.
+
+    Args:
+        metadata (dict | None): Preview message metadata.
+        frame_shape (tuple[int, ...]): Shape of the frame, rows first.
+
+    Returns:
+        QTransform | None: The scaling, or None if the frame has no ``sensor_shape``.
+    """
+    if not (metadata or {}).get("sensor_shape"):
+        return None
+    rows, cols = sensor_shape(metadata, frame_shape)
+    return QTransform.fromScale(rows / frame_shape[0], cols / frame_shape[1])

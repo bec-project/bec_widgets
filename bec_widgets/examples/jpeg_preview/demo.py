@@ -215,7 +215,7 @@ class CameraControl(QWidget):
         layout.setContentsMargins(4, 4, 4, 4)
         for label, widget in (
             (None, self.live_button),
-            ("Size", self.resolution_box),
+            ("Preview size", self.resolution_box),
             (None, self.width_spin),
             ("x", self.height_spin),
             ("Encoding", self.encoding_box),
@@ -346,6 +346,14 @@ class JpegPreviewDemo(QMainWindow):
         for check in (self.image_check, self.view_check):
             check.setChecked(True)
         self.image_check.toggled.connect(lambda on: self.enable_view("Image widget", on))
+        self.fast_check = QCheckBox("Fast 8-bit path", self)
+        self.fast_check.setToolTip(
+            "On: JPEG frames are drawn as 8-bit images with a fixed 0-255 range and no per-frame"
+            " statistics.\nOff: the normal Image widget path (statistics and mean +/- 2 std"
+            " autorange on every frame)."
+        )
+        self.fast_check.setChecked(self.image.fast_8bit_preview)
+        self.fast_check.toggled.connect(self.set_fast_path)
         self.view_check.toggled.connect(lambda on: self.enable_view("Picture view", on))
 
         left, right = QWidget(self), QWidget(self)
@@ -355,7 +363,12 @@ class JpegPreviewDemo(QMainWindow):
         ):
             column = QVBoxLayout(holder)
             column.setContentsMargins(0, 0, 0, 0)
-            column.addWidget(check)
+            header = QHBoxLayout()
+            header.addWidget(check)
+            if view is self.image:
+                header.addWidget(self.fast_check)
+            header.addStretch(1)
+            column.addLayout(header)
             column.addWidget(view)
         splitter = QSplitter(Qt.Orientation.Horizontal, self)
         splitter.addWidget(left)
@@ -411,6 +424,14 @@ class JpegPreviewDemo(QMainWindow):
             else:
                 self.jpeg_view.bec_dispatcher.disconnect_slot(self.jpeg_view.on_frame)
         self.trackers[name].clear()
+
+    @SafeSlot(bool)
+    def set_fast_path(self, enabled: bool) -> None:
+        """Switch the Image widget between its normal and its fast 8-bit path."""
+        self.fast_check.setChecked(enabled)
+        self.image.fast_8bit_preview = enabled
+        self.image.autorange = True
+        self.trackers["Image widget"].clear()
 
     @SafeSlot()
     def _on_view_frame(self):
@@ -475,6 +496,14 @@ class JpegPreviewDemo(QMainWindow):
         self.benchmark.start()
 
 
+# view name in the results -> (panel, Image widget fast 8-bit path)
+BENCHMARK_VIEWS = {
+    "Image widget": ("Image widget", False),
+    "Image widget (fast)": ("Image widget", True),
+    "Picture view": ("Picture view", False),
+}
+
+
 class BenchmarkRunner(QObject):
     """
     Steps through every size, encoding and view without blocking the GUI.
@@ -488,7 +517,7 @@ class BenchmarkRunner(QObject):
     ):
         super().__init__(demo)
         self.demo = demo
-        self.steps = list(itertools.product(sizes, encodings, ("Image widget", "Picture view")))
+        self.steps = list(itertools.product(sizes, encodings, BENCHMARK_VIEWS))
         self.frame_rate = frame_rate
         self.settle_s = settle_s
         self.measure_s = measure_s
@@ -500,6 +529,7 @@ class BenchmarkRunner(QObject):
         self._timer = QTimer(self)
         self._timer.setSingleShot(True)
         self._previous_views = (demo.image_check.isChecked(), demo.view_check.isChecked())
+        self._previous_fast = demo.fast_check.isChecked()
 
     def start(self):
         """Run the first step."""
@@ -515,8 +545,10 @@ class BenchmarkRunner(QObject):
         self.demo.benchmark_label.setText(
             f"Benchmark {self._index + 1}/{len(self.steps)}: {view}, {size} x {size}, {encoding}"
         )
-        self.demo.enable_view("Image widget", view == "Image widget")
-        self.demo.enable_view("Picture view", view == "Picture view")
+        panel, fast = BENCHMARK_VIEWS[view]
+        self.demo.set_fast_path(fast)
+        self.demo.enable_view("Image widget", panel == "Image widget")
+        self.demo.enable_view("Picture view", panel == "Picture view")
         self.demo.control.set_settings(
             width=size, height=size, encoding=encoding, frame_rate=self.frame_rate
         )
@@ -533,7 +565,8 @@ class BenchmarkRunner(QObject):
     def _record(self):
         self._timer.timeout.disconnect(self._record)
         size, encoding, view = self.steps[self._index]
-        summary = self.demo.summaries(since=self._measure_start).get(view, {})
+        panel = BENCHMARK_VIEWS[view][0]
+        summary = self.demo.summaries(since=self._measure_start).get(panel, {})
         row = {"view": view, "size": f"{size}x{size}", "encoding": encoding}
         row.update({key: round(summary.get(key, float("nan")), 2) for key in STAT_COLUMNS})
         self.rows.append(row)
@@ -551,6 +584,7 @@ class BenchmarkRunner(QObject):
         csv_path.with_suffix(".json").write_text(json.dumps(self.rows, indent=1))
         self.demo.benchmark_label.setText(f"Benchmark saved to {csv_path}")
         self.demo.benchmark_button.setEnabled(True)
+        self.demo.set_fast_path(self._previous_fast)
         self.demo.enable_view("Image widget", self._previous_views[0])
         self.demo.enable_view("Picture view", self._previous_views[1])
         print(f"Benchmark saved to {csv_path}")

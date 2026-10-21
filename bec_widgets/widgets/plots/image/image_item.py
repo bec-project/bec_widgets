@@ -88,6 +88,8 @@ class ImageItem(BECConnector, pg.ImageItem):
         else:
             self.parent_image = None
         self.image_transform = None
+        # Set by the owner for frames a camera already scaled to 8 bit (e.g. JPEG previews)
+        self.preview_8bit = False
         super().__init__(config=config, gui_id=gui_id, **kwargs)
 
         self.raw_data = None
@@ -197,6 +199,9 @@ class ImageItem(BECConnector, pg.ImageItem):
     def apply_autorange(self):
         if self.raw_data is None:
             return
+        if self._draws_8bit_as_is():
+            self._show_full_8bit_range()
+            return
         data = self.image
         if data is None:
             data = self.raw_data
@@ -227,6 +232,16 @@ class ImageItem(BECConnector, pg.ImageItem):
         if self.raw_data is None:
             return
 
+        if self._draws_8bit_as_is():
+            # The camera already scaled the frame: draw it as it is, without a processed copy
+            # or statistics over the whole frame. Autorange shows the full 0-255 range.
+            self.setImage(self.raw_data, autoLevels=False)
+            if self.image_transform is not None:
+                self.setTransform(self.image_transform)
+            if self.config.autorange:
+                self._show_full_8bit_range()
+            return
+
         if np.all(np.isnan(self.raw_data)):
             return
 
@@ -237,6 +252,20 @@ class ImageItem(BECConnector, pg.ImageItem):
         if self.image_transform is not None:
             self.setTransform(self.image_transform)
         self.autorange = autorange
+
+    def _draws_8bit_as_is(self) -> bool:
+        """Whether the current frame is an 8-bit preview frame that needs no processing."""
+        processing = self.config.processing
+        return (
+            self.preview_8bit
+            and getattr(self.raw_data, "dtype", None) == np.uint8
+            and not (processing.fft or processing.log or processing.transpose)
+            and not processing.num_rotation_90
+        )
+
+    def _show_full_8bit_range(self) -> None:
+        if self.levels is None or tuple(self.levels) != (0, 255):
+            self.set_v_range((0, 255), disable_autorange=False)
 
     @property
     def fft(self) -> bool:

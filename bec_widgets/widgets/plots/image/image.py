@@ -12,7 +12,12 @@ from qtpy.QtWidgets import QWidget
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.colors import Colors, apply_theme
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
-from bec_widgets.utils.jpeg_frames import decode_jpeg_preview
+from bec_widgets.utils.jpeg_frames import (
+    decode_jpeg_preview,
+    is_jpeg_frame,
+    sensor_shape,
+    sensor_transform,
+)
 from bec_widgets.widgets.plots.image.image_base import ImageBase
 from bec_widgets.widgets.plots.image.image_item import ImageItem
 from bec_widgets.widgets.plots.image.toolbar_components.device_selection import (
@@ -120,6 +125,9 @@ class Image(ImageBase):
         self.gui_id = config.gui_id
         self.subscriptions: defaultdict[str, ImageLayerConfig] = defaultdict(ImageLayerConfig)
         self.last_frame_metadata: dict = {}
+        self._frame_extent: tuple[int, int] | None = None
+        # Draw JPEG preview frames as 8-bit images without per-frame statistics
+        self.fast_8bit_preview = True
         # Store signal configs separately (not serialized to QSettings)
         self._signal_configs: dict[str, dict] = {}
 
@@ -1008,13 +1016,19 @@ class Image(ImageBase):
             logger.warning("No data received for image update from 2D.")
             return
         self.last_frame_metadata = metadata
-        previous = image.raw_data
-        if previous is not None and np.shape(previous) != np.shape(data):
+        # A preview scaled down from a bigger sensor is drawn in sensor pixels
+        transform = sensor_transform(metadata, np.shape(data))
+        extent = sensor_shape(metadata, np.shape(data))
+        if transform is None and image.image_transform is not None:
+            image.resetTransform()
+        if image.raw_data is not None and extent != self._frame_extent:
             # e.g. the detector changed resolution: show the whole new frame
             self._autorange_on_next_update = True
+        self._frame_extent = extent
         if self._color_bar is not None:
             self._color_bar.blockSignals(True)
-        image.set_data(data)
+        image.preview_8bit = self.fast_8bit_preview and is_jpeg_frame(metadata)
+        image.set_data(data, transform=transform)
         if self._color_bar is not None:
             self._color_bar.blockSignals(False)
         if self._autorange_on_next_update:
