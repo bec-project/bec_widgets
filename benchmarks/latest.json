@@ -1,46 +1,46 @@
 {
   "BEC IPython client with companion app": {
     "attempt_values": [
-      2.0530561082200003,
-      1.43955851168,
-      2.03186073966
+      1.95752307082,
+      2.01367571642,
+      1.3549394333999998
     ],
     "attempts": 3,
     "metric": "median-of-attempt-median-of-attempt-median",
     "unit": "s",
-    "value": 2.03186073966
+    "value": 1.95752307082
   },
   "BEC IPython client without companion app": {
     "attempt_values": [
-      2.08453182104,
-      1.43819126804,
-      2.0174855298
+      1.9951384983,
+      1.99751948678,
+      1.40801489222
     ],
     "attempts": 3,
     "metric": "median-of-attempt-median-of-attempt-median",
     "unit": "s",
-    "value": 2.0174855298
+    "value": 1.9951384983
   },
   "Import bec_widgets": {
     "attempt_values": [
-      0.013930463320000001,
-      0.009708173520000002,
-      0.014588593960000002
+      0.013878406260000002,
+      0.01375843702,
+      0.008817529700000002
     ],
     "attempts": 3,
     "metric": "median-of-attempt-median-of-attempt-median",
     "unit": "s",
-    "value": 0.013930463320000001
+    "value": 0.01375843702
   },
   "tests/unit_tests/benchmarks/test_dock_area_benchmark.py::test_add_waveform_to_dock_area": {
     "attempt_values": [
-      0.16753592999998546,
-      0.10143617449998032,
-      0.16270610899999838
+      0.14768597299999442,
+      0.14927714999998898,
+      0.08991403400000308
     ],
     "attempts": 3,
     "metric": "median-of-attempt-median-of-attempt-median",
     "unit": "s",
-    "value": 0.16270610899999838
+    "value": 0.14768597299999442
   }
 }
