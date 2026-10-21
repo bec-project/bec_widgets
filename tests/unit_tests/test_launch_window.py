@@ -292,6 +292,14 @@ def test_main_label_point_size_uniform(bec_launch_window):
     assert len(point_sizes) == 1, f"Non-uniform main-label point sizes: {point_sizes}"
 
 
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_launch_window_theme_update(bec_launch_window, theme):
+    """A theme change on the launcher must not log a slot error."""
+    with mock.patch("bec_widgets.utils.error_popups.logger") as error_logger:
+        bec_launch_window._update_theme(theme)
+    error_logger.error.assert_not_called()
+
+
 def test_launch_window_cleanup_deregisters_registry_callback(bec_launch_window):
     """The turn-off-the-lights callback must not survive the launcher's cleanup:
     a later registry broadcast would call into a dying window (shutdown scenario)."""
