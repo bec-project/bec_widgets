@@ -14,6 +14,7 @@ from bec_widgets.applications.views.admin_view.admin_view import AdminView
 from bec_widgets.applications.views.developer_view.developer_view import DeveloperView
 from bec_widgets.applications.views.device_manager_view.device_manager_view import DeviceManagerView
 from bec_widgets.applications.views.dock_area_view.dock_area_view import DockAreaView
+from bec_widgets.applications.views.sequencer_view.sequencer_view import SequencerView
 from bec_widgets.applications.views.view import ViewBase, WaveformViewInline, WaveformViewPopup
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.error_popups import SafeSlot
@@ -109,6 +110,14 @@ class BECMainApp(BECMainWindow):
             title="Device Manager",
             widget=self.device_manager,
             mini_text="DM",
+        )
+        self.sequencer_view = SequencerView(self)
+        self.add_view(
+            icon="account_tree",
+            title="Sequencer",
+            view_id="sequencer",
+            widget=self.sequencer_view,
+            mini_text="Seq",
         )
         if is_experimental_features_enabled():
             self.developer_view = DeveloperView(self)
