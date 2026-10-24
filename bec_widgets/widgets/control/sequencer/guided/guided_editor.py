@@ -7,16 +7,14 @@ the result to the Recipe editor for anything the sentence cannot say.
 
 from __future__ import annotations
 
+import copy
+
 from bec_qthemes import material_icon
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtWidgets import (
-    QAbstractSpinBox,
-    QComboBox,
-    QDoubleSpinBox,
     QFrame,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QListWidget,
     QListWidgetItem,
     QPushButton,
@@ -29,13 +27,21 @@ from bec_widgets.utils.colors import rgba
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.widgets.control.sequencer import model
 from bec_widgets.widgets.control.sequencer.editor_base import SequenceEditorBase
-from bec_widgets.widgets.control.sequencer.inspector import (
-    RangeDialog,
-    ScanSettingsDialog,
-    parse_values,
+from bec_widgets.widgets.control.sequencer.fields import (
+    NumberEdit,
+    ValuesEdit,
+    device_picker,
     values_text,
 )
-from bec_widgets.widgets.control.sequencer.style import card_qss, heading, hint, kind_icon, theme
+from bec_widgets.widgets.control.sequencer.inspector import RangeDialog, ScanSettingsDialog
+from bec_widgets.widgets.control.sequencer.style import (
+    card_qss,
+    heading,
+    hint,
+    kind_icon,
+    problem_label,
+    theme,
+)
 
 GOALS = [
     (
@@ -140,20 +146,21 @@ class GoalCard(QFrame):
         self.clicked.emit(self.key)
 
 
-class GuidedEditor(SequenceEditorBase):  # pylint: disable=too-many-ancestors
+class GuidedEditor(SequenceEditorBase):
     """Goal picker with fill-in-the-blanks sentences."""
+
+    # pylint: disable=too-many-ancestors, attribute-defined-outside-init
 
     CONCEPT_ID = "guided"
     CONCEPT_TITLE = "Guided"
     CONCEPT_TAGLINE = "Pick a goal and fill in the blanks of a sentence; no loops to think about."
 
-    open_in_recipe = Signal(dict)
-
     def build_editor(self, host: QWidget) -> None:
         self.goal = "positions"
-        self.scan = model.scan_node(
-            "line_scan", ["samy", -2, 2], {"steps": 20, "exp_time": 0.1, "relative": True}
-        )
+        self.scan = model.scan_node("")
+        # What was typed, kept when switching goals: device, values, repeat, …
+        self.memory: dict = {}
+        self._field_nodes: dict[str, str] = {}
         layout = QHBoxLayout(host)
         layout.setContentsMargins(16, 14, 16, 8)
         layout.setSpacing(16)
@@ -207,42 +214,45 @@ class GuidedEditor(SequenceEditorBase):  # pylint: disable=too-many-ancestors
         for card in self.goal_cards:
             card.set_selected(card.key == self.goal)
 
-    # --- sentences -------------------------------------------------------------------------
-    def _device_combo(self, current: str) -> QComboBox:
-        combo = QComboBox(self.sentence_card)
-        combo.setEditable(True)
-        combo.addItems(self.backend.device_names())
-        combo.setCurrentText(current)
-        combo.currentTextChanged.connect(self._compile)
-        return combo
+    # --- sentence fields -------------------------------------------------------------------
+    def _device(self, key: str, placeholder: str, settable: bool = False):
+        picker = device_picker(self.sentence_card, self.client, placeholder, settable=settable)
+        picker.setCurrentText(self.memory.get(key, ""))
+        picker.device_selected.connect(self._compile)
+        picker.lineEdit().editingFinished.connect(self._compile)
+        self.fields[key] = picker
+        return picker
 
-    def _spin(self, value: int, suffix: str = "") -> QSpinBox:
+    def _count_field(self, key: str, default: int) -> QSpinBox:
         spin = QSpinBox(self.sentence_card, minimum=1, maximum=100000)
-        spin.setValue(value)
-        spin.setSuffix(suffix)
+        spin.setValue(int(self.memory.get(key, default)))
+        spin.setSuffix(" ×")
         spin.valueChanged.connect(self._compile)
+        self.fields[key] = spin
         return spin
 
-    def _number(self, value: float) -> QDoubleSpinBox:
-        spin = QDoubleSpinBox(self.sentence_card, decimals=3, minimum=-1e9, maximum=1e9)
-        spin.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)
-        spin.setValue(value)
-        spin.valueChanged.connect(self._compile)
-        return spin
-
-    def _values(self, values: list) -> QLineEdit:
-        edit = QLineEdit(values_text(values), self.sentence_card)
-        edit.setPlaceholderText("1, 2, 3")
-        edit.textChanged.connect(self._compile)
+    def _number(self, key: str) -> NumberEdit:
+        edit = NumberEdit(self.sentence_card, "position")
+        edit.set_value(self.memory.get(key))
+        edit.edited.connect(self._compile)
+        self.fields[key] = edit
         return edit
 
-    def _fill_button(self, target: QLineEdit) -> QPushButton:
+    def _values(self, key: str) -> ValuesEdit:
+        edit = ValuesEdit(self.sentence_card)
+        edit.set_values(self.memory.get(key, []))
+        edit.textEdited.connect(self._compile)
+        self.fields[key] = edit
+        return edit
+
+    def _fill_button(self, target: ValuesEdit) -> QPushButton:
         button = QPushButton("Evenly spaced…", self.sentence_card)
 
         def fill():
             dialog = RangeDialog(self)
             if dialog.exec():
                 target.setText(values_text(dialog.values()))
+                self._compile()
 
         button.clicked.connect(fill)
         return button
@@ -250,19 +260,26 @@ class GuidedEditor(SequenceEditorBase):  # pylint: disable=too-many-ancestors
     def _scan_button(self) -> QPushButton:
         button = QPushButton(self.sentence_card)
         button.setIcon(kind_icon("scan_call", 18))
-        button.setText(model.sentence(self.scan, None, self.scan_entries())[4:])
-        button.setToolTip("Change the scan and its settings")
+        button.setToolTip("Choose the scan and its settings")
+        self.fields["scan"] = button
 
         def edit():
-            dialog = ScanSettingsDialog(self.scan, self.client, self)
+            dialog = ScanSettingsDialog(self.scan, self.client, self.scan_entries(), self)
             if dialog.exec():
                 name, positional, arguments = dialog.values()
-                self.scan.update(name=name, positional=positional, arguments=arguments)
-                button.setText(model.sentence(self.scan, None, self.scan_entries())[4:])
-                self._compile()
+                if name:
+                    self.scan.update(name=name, positional=positional, arguments=arguments)
+                    self._compile()
 
         button.clicked.connect(edit)
         return button
+
+    def _scan_text(self) -> str:
+        if not self.scan.get("name"):
+            return "Choose a scan…"
+        details = model.scan_details(self.scan, self.scan_entries())
+        title = model.scan_title(self.scan["name"]).lower()
+        return f"{title}: {details}" if details else title
 
     def _line(self) -> FlowRow:
         line = FlowRow(self.sentence_card)
@@ -273,89 +290,121 @@ class GuidedEditor(SequenceEditorBase):  # pylint: disable=too-many-ancestors
         while self.sentence_layout.count():
             item = self.sentence_layout.takeAt(0)
             if item.widget():
+                item.widget().hide()  # gone at once, deleted when Qt gets to it
                 item.widget().deleteLater()
-        f = self.fields = {}
+        self.fields = {}
         title = next(g for g in GOALS if g[0] == self.goal)[2]
         self.sentence_layout.addWidget(heading(title, self.sentence_card, 16))
-        if self.goal in ("positions", "values"):
-            device = "samx" if self.goal == "positions" else "samz"
-            f["device"] = self._device_combo(device)
-            f["values"] = self._values(
-                [1, -1] if self.goal == "positions" else [0.5, 1.0, 1.5, 2.0]
-            )
-            verb = "Move" if self.goal == "positions" else "Set"
-            noun = "positions" if self.goal == "positions" else "values"
-            self._line().words(verb).field(f["device"], 140).words(
-                f"to each of these {noun}:"
+        if self.goal == "positions":
+            self._line().words("Move").field(self._device("motor", "Choose a motor"), 170).words(
+                "to each of these positions:"
             ).end()
-            self._line().field(f["values"], 320).field(self._fill_button(f["values"])).end()
+            values = self._values("positions")
+            self._line().field(values, 320).field(self._fill_button(values)).end()
             self._line().words("and there run a").field(self._scan_button()).end()
-            f["repeat"] = self._spin(2, " times")
-            self._line().words("Do all of this").field(f["repeat"], 100).end()
+            self._line().words("Do all of this").field(self._count_field("repeat", 1), 90).end()
+        elif self.goal == "values":
+            self._line().words("Set").field(
+                self._device("setting", "Choose a setting", settable=True), 170
+            ).words("to each of these values:").end()
+            values = self._values("setting_values")
+            self._line().field(values, 320).field(self._fill_button(values)).end()
+            self._line().words("and at each value run a").field(self._scan_button()).end()
+            self._line().words("Do all of this").field(self._count_field("repeat", 1), 90).end()
         elif self.goal == "grid":
-            f["fast"] = self._device_combo("samx")
-            f["fast_values"] = self._values([0, 1, 2])
-            f["slow"] = self._device_combo("samy")
-            f["slow_values"] = self._values([0, 1])
-            self._line().words("For each").field(f["slow"], 120).words("position").field(
-                f["slow_values"], 200
-            ).field(self._fill_button(f["slow_values"])).end()
-            self._line().words("go through every").field(f["fast"], 120).words("position").field(
-                f["fast_values"], 200
-            ).field(self._fill_button(f["fast_values"])).end()
+            slow_values = self._values("slow_values")
+            self._line().words("For each").field(self._device("slow", "Choose a motor"), 150).words(
+                "position"
+            ).field(slow_values, 200).field(self._fill_button(slow_values)).end()
+            fast_values = self._values("fast_values")
+            self._line().words("go through every").field(
+                self._device("fast", "Choose a motor"), 150
+            ).words("position").field(fast_values, 200).field(self._fill_button(fast_values)).end()
             self._line().words("and run a").field(self._scan_button()).words("at each point.").end()
         elif self.goal == "repeat":
-            f["repeat"] = self._spin(5, " times")
             self._line().words("Run a").field(self._scan_button()).end()
-            self._line().field(f["repeat"], 100).words("in a row.").end()
+            self._line().field(self._count_field("count", 2), 90).words("in a row.").end()
         elif self.goal == "during":
-            f["device"] = self._device_combo("samx")
-            f["target"] = self._number(10)
-            self._line().words("Start moving").field(f["device"], 140).words("to").field(
-                f["target"], 100
-            ).end()
+            self._line().words("Start moving").field(
+                self._device("motor", "Choose a motor"), 170
+            ).words("to").field(self._number("target"), 110).end()
             self._line().words("and keep running a").field(self._scan_button()).end()
             self._line().words("until it has arrived.").end()
+        self.problem = problem_label(self.sentence_card)
+        self.sentence_layout.addWidget(self.problem)
         self.sentence_layout.addStretch(1)
         self._compile()
 
+    # --- building the sequence -------------------------------------------------------------
+    def _remember(self) -> None:
+        for key, widget in self.fields.items():
+            if isinstance(widget, ValuesEdit):
+                self.memory[key] = widget.values()
+            elif isinstance(widget, NumberEdit):
+                self.memory[key] = widget.value()
+            elif isinstance(widget, QSpinBox):
+                self.memory[key] = widget.value()
+            elif hasattr(widget, "currentText"):
+                self.memory[key] = widget.currentText().strip()
+
+    def _move(self, key: str, value) -> dict:
+        node = model.move_node(self.memory.get(key, ""), value)
+        self._field_nodes[node["id"]] = key
+        return node
+
+    def _loop(self, variable: str, key: str, children: list[dict]) -> dict:
+        node = model.for_each_node(variable, self.memory.get(key, []), children)
+        self._field_nodes[node["id"]] = key
+        return node
+
+    def _scan(self) -> dict:
+        node = model.clone(self.scan)
+        self._field_nodes[node["id"]] = "scan"
+        return node
+
     @SafeSlot()
     def _compile(self, *_args) -> None:
-        f = self.fields
-        scan = model.clone(self.scan)
+        self._remember()
+        self._field_nodes = {}
+        memory = self.memory
         doc = model.empty_document(f"guided_{self.goal}")
         steps: list[dict] = []
         if self.goal in ("positions", "values"):
-            variable = "position" if self.goal == "positions" else "value"
-            loop = model.for_each_node(
-                variable,
-                parse_values(f["values"].text()),
-                [model.move_node(f["device"].currentText(), model.ref(variable)), scan],
+            device_key, values_key = (
+                ("motor", "positions")
+                if self.goal == "positions"
+                else ("setting", "setting_values")
             )
-            repeat = f["repeat"].value()
+            variable = "position" if self.goal == "positions" else "value"
+            loop = self._loop(
+                variable, values_key, [self._move(device_key, model.ref(variable)), self._scan()]
+            )
+            repeat = int(memory.get("repeat", 1))
             steps = [model.repeat_node(repeat, [loop])] if repeat > 1 else [loop]
         elif self.goal == "grid":
-            fast, slow = f["fast"].currentText(), f["slow"].currentText()
-            inner = model.for_each_node(
-                fast,
-                parse_values(f["fast_values"].text()),
-                [model.move_node(fast, model.ref(fast)), scan],
+            inner = self._loop(
+                "fast_position",
+                "fast_values",
+                [self._move("fast", model.ref("fast_position")), self._scan()],
             )
             steps = [
-                model.for_each_node(
-                    slow,
-                    parse_values(f["slow_values"].text()),
-                    [model.move_node(slow, model.ref(slow)), inner],
+                self._loop(
+                    "slow_position",
+                    "slow_values",
+                    [self._move("slow", model.ref("slow_position")), inner],
                 )
             ]
         elif self.goal == "repeat":
-            steps = [model.repeat_node(f["repeat"].value(), [scan])]
+            steps = [model.repeat_node(int(memory.get("count", 2)), [self._scan()])]
         elif self.goal == "during":
-            target = f["target"].value()
-            steps = model.while_moving_nodes(
-                f["device"].currentText(), int(target) if target.is_integer() else target, [scan]
+            start, loop = model.while_moving_nodes(
+                memory.get("motor", ""), memory.get("target"), [self._scan()]
             )
+            self._field_nodes[start["id"]] = "motor"
+            steps = [start, loop]
         doc["root"]["children"] = steps
+        if "scan" in self.fields:
+            self.fields["scan"].setText(self._scan_text())
         self.document.set_document(doc)
 
     @SafeSlot()
@@ -363,34 +412,59 @@ class GuidedEditor(SequenceEditorBase):  # pylint: disable=too-many-ancestors
         if not hasattr(self, "preview"):
             return
         self.preview.clear()
-        items = model.timeline(self.document.root, self.scan_entries(), limit=200)
+        items = model.timeline(self.document.root, self.scan_entries(), limit=500)
         for index, item in enumerate(items, 1):
             text = f"{index}.  {item.text}"
             if item.context:
-                text += f"      — {item.context}"
+                text += f"      ({item.context})"
             self.preview.addItem(QListWidgetItem(kind_icon(item.kind, 16), text))
-        summary = model.summarize(self.document.root)
-        self.count.setText(summary.text())
+        if not items:
+            self.preview.addItem("Fill in the sentence to see every step here.")
+        self.count.setText(model.summarize(self.document.root).text())
 
     @SafeSlot(str)
     def _on_goal(self, key: str) -> None:
+        self._remember()
         self.goal = key
         self._style_goals()
         self._build_sentence()
 
+    def reset(self) -> None:
+        self.memory = {}
+        self.scan = model.scan_node("")
+        self._build_sentence()
+
+    def open_document(self, doc: dict) -> None:
+        """A sequence from a file can have any shape, so it opens in the Recipe editor."""
+        self.open_in_recipe.emit(doc)
+
     def save_state(self) -> dict:
-        return {"goal": self.goal, "scan": self.scan}
+        self._remember()
+        return {"goal": self.goal, "scan": copy.deepcopy(self.scan), "memory": dict(self.memory)}
 
     def restore_state(self, state: dict) -> None:
-        self.goal = state["goal"]
-        self.scan = state["scan"]
+        self.goal = state.get("goal", "positions")
+        self.scan = state.get("scan") or model.scan_node("")
+        self.memory = dict(state.get("memory", {}))
         self._style_goals()
         self._build_sentence()
 
     def show_problems(self, problems) -> None:
-        red = theme("ACCENT_EMERGENCY", "#e0534b")
-        self.count.setStyleSheet(f"color: {red.name()};" if problems else "")
-        if problems:
-            self.count.setText(
-                f"{model.summarize(self.document.root).text()} · {problems[0].message}"
+        red = theme("ACCENT_EMERGENCY", "#e0534b").name()
+        marked = {self._field_nodes.get(p.node_id) for p in problems}
+        for key, widget in self.fields.items():
+            if key == "scan" or not hasattr(widget, "setStyleSheet"):
+                continue
+            if isinstance(widget, (ValuesEdit, QSpinBox)):
+                widget.setStyleSheet(
+                    f"{type(widget).__name__} {{ border: 1px solid {red}; }}"
+                    if key in marked
+                    else ""
+                )
+        scan_button = self.fields.get("scan")
+        if scan_button is not None:
+            scan_button.setStyleSheet(
+                f"QPushButton {{ border: 1px solid {red}; }}" if "scan" in marked else ""
             )
+        self.problem.setText(problems[0].message if problems else "")
+        self.problem.setVisible(bool(problems))

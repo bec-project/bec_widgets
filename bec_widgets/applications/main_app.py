@@ -111,7 +111,7 @@ class BECMainApp(BECMainWindow):
             widget=self.device_manager,
             mini_text="DM",
         )
-        self.sequencer_view = SequencerView(self)
+        self.sequencer_view = SequencerView(self, keep_drafts=True)
         self.add_view(
             icon="account_tree",
             title="Sequencer",

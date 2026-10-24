@@ -65,10 +65,23 @@ class SequenceDocument(QObject):
         self._selected = node_id or ""
         self.selection_changed.emit(self._selected)
 
+    def new_nodes(self, kind: str) -> list[dict]:
+        """Blank nodes for a step kind, with a loop variable name not used yet."""
+        return model.new_step(kind, variable=model.unused_variable(self.root))
+
     def add(self, nodes: list[dict], parent_id: str | None = None, index: int = -1) -> None:
-        """Insert new steps and select the first one."""
+        """Insert new steps and select the first one.
+
+        A new move inside a "For each" loop goes to each value of the loop by default.
+        """
         self._remember()
         model.insert(self.root, nodes, parent_id, index)
+        for node in nodes:
+            for step in [node, *(n for n, _d, _p in model.walk(node))]:
+                if step.get("type") == "set" and step.get("value") is None:
+                    variables = model.visible_variables(self.root, step["id"])
+                    if variables and not step.get("bind_status"):
+                        step["value"] = model.ref(variables[-1])
         self.touch()
         if nodes:
             self.select(nodes[0]["id"])
@@ -156,7 +169,7 @@ class SequenceDocument(QObject):
         self._remember()
         siblings = model.children_of(parent)
         index = siblings.index(node)
-        loop = model.new_step(kind)[0]
+        loop = self.new_nodes(kind)[0]
         siblings[index] = loop
         model.children_of(loop).append(node)
         self.touch()

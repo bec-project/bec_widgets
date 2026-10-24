@@ -47,21 +47,6 @@ def empty_document(doc_id: str = "new_sequence") -> dict:
     }
 
 
-def example_document() -> dict:
-    """Return the shared example: two rounds over two sample positions, one scan at each.
-
-    Returns:
-        dict: Sequence document.
-    """
-    doc = empty_document("alternating_positions")
-    loop = for_each_node("position", [1, -1], [move_node("samx", ref("position"))])
-    loop["body"]["children"].append(
-        scan_node("line_scan", ["samy", -2, 2], {"steps": 20, "exp_time": 0.1, "relative": True})
-    )
-    doc["root"]["children"] = [repeat_node(2, [loop])]
-    return normalize(doc)
-
-
 # ---------------------------------------------------------------------------------------------
 # Node construction
 # ---------------------------------------------------------------------------------------------
@@ -152,30 +137,40 @@ def while_moving_nodes(device: str, value: Any, children: list[dict] | None = No
     return [start, loop]
 
 
-def new_step(kind: str, *, device: str = "samx", scan: str = "line_scan") -> list[dict]:
-    """Create default nodes for a step kind picked in an editor.
+def new_step(kind: str, variable: str = "position") -> list[dict]:
+    """Create blank nodes for a step kind picked in an editor.
+
+    Nothing is pre-filled: the motor, its position and the scan are chosen by the user, and
+    the checks point out what is still missing.
 
     Args:
         kind (str): One of the keys of ``KIND_TITLES`` (``while`` creates two nodes).
-        device (str): Default device for moves.
-        scan (str): Default scan name.
+        variable (str): Name for the value of a new "For each" loop.
 
     Returns:
         list[dict]: New nodes to insert.
     """
     if kind == "set":
-        return [move_node(device, 0)]
+        return [move_node("", None)]
     if kind == "scan_call":
-        return [scan_node(scan)]
+        return [scan_node("")]
     if kind == "repeat":
         return [repeat_node(2)]
     if kind == "for_each":
-        return [for_each_node("position", [0, 1])]
+        return [for_each_node(variable, [])]
     if kind == "while":
-        return while_moving_nodes(device, 5)
+        return while_moving_nodes("", None)
     if kind == "sequence":
         return [group_node()]
     raise ValueError(f"Unknown step kind: {kind}")
+
+
+def unused_variable(root: dict, base: str = "position") -> str:
+    """A loop variable name not used yet in the document, e.g. ``position2``."""
+    used = {n.get("variable") for n, _d, _p in walk(root) if n.get("type") == "for_each"}
+    if base not in used:
+        return base
+    return next(f"{base}{i}" for i in itertools.count(2) if f"{base}{i}" not in used)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -280,6 +275,15 @@ def visible_variables(root: dict, node_id: str) -> list[str]:
     return [n["variable"] for n in ancestors(root, node_id) if n.get("type") == "for_each"]
 
 
+def loop_values(root: dict, node_id: str, variable: str) -> list | None:
+    """Values a loop variable takes at a node (from the innermost loop that defines it)."""
+    for loop in reversed(ancestors(root, node_id)):
+        if loop.get("type") == "for_each" and loop.get("variable") == variable:
+            values = loop.get("values")
+            return values if isinstance(values, list) else None
+    return None
+
+
 def status_owner(root: dict, status: str) -> dict | None:
     """Return the Set node that binds a status name."""
     for node, _depth, _parent in walk(root):
@@ -328,6 +332,8 @@ def scan_title(name: str) -> str:
 
 def format_value(value: Any) -> str:
     """Show a value the way a scientist would write it."""
+    if value is None or value == "":
+        return "…"
     if is_ref(value):
         return f"each {value['ref']}"
     if isinstance(value, bool):
@@ -365,8 +371,16 @@ def scan_details(node: dict, entries: dict | None = None) -> str:
     elif positional:
         parts.append(", ".join(format_value(v) for v in positional))
     args = node.get("arguments") if isinstance(node.get("arguments"), dict) else {}
+    # leave out settings that are at the scan's own default, they only add noise
+    defaults = {
+        param.get("name"): param.get("default")
+        for param in info.get("signature") or []
+        if isinstance(param, dict) and param.get("default") != "_empty"
+    }
     for key, value in args.items():
         if key == "metadata" or value in (None, ""):
+            continue
+        if key in defaults and not is_ref(value) and value == defaults[key]:
             continue
         if key == "steps":
             parts.append(f"{format_value(value)} steps")
@@ -394,13 +408,15 @@ def sentence(node: dict, root: dict | None = None, entries: dict | None = None) 
     """
     kind = node.get("type")
     if kind == "set":
-        target = node.get("device", "?")
+        target = node.get("device") or "a motor"
         value = format_value(node.get("value"))
         verb = "Set" if "." in target else "Move"
         if node.get("wait", True):
             return f"{verb} {target} to {value}"
         return f"Start moving {target} to {value} (don't wait)"
     if kind == "scan_call":
+        if not node.get("name"):
+            return "Run a scan"
         details = scan_details(node, entries)
         return f"Run {scan_title(node.get('name', 'scan')).lower()}" + (
             f": {details}" if details else ""
@@ -414,7 +430,7 @@ def sentence(node: dict, root: dict | None = None, entries: dict | None = None) 
         status = while_status(node)
         owner = status_owner(root, status) if (root and status) else None
         if owner is not None:
-            return f"While {owner.get('device')} is still moving"
+            return f"While {owner.get('device') or 'the motor'} is still moving"
         return "While the condition holds"
     if kind == "component_call":
         definition = node.get("definition", {})

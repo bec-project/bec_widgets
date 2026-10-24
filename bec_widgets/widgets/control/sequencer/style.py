@@ -5,7 +5,7 @@ from __future__ import annotations
 from bec_qthemes import material_icon
 from qtpy.QtCore import Qt
 from qtpy.QtGui import QColor
-from qtpy.QtWidgets import QApplication, QFrame, QLabel, QWidget
+from qtpy.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from bec_widgets.utils.colors import get_theme_name, rgba
 
@@ -65,10 +65,14 @@ def kind_icon(kind: str, size: int = 18, color: QColor | str | None = None):
 
 
 def theme(key: str, fallback: str) -> QColor:
-    """Theme color by key, e.g. ``CARD_BG`` or ``BORDER``."""
+    """Theme color by key, e.g. ``CARD_BG`` or ``BORDER``.
+
+    Returns a copy: the theme hands out shared colors, and changing one (e.g. its alpha) would
+    change it for every widget that uses it later.
+    """
     app = QApplication.instance()
     if app is not None and hasattr(app, "theme"):
-        return app.theme.color(key, fallback)
+        return QColor(app.theme.color(key, fallback))
     return QColor(fallback)
 
 
@@ -82,8 +86,10 @@ def card_qss(selector: str, radius: int = 8) -> str:
 
 def chip_qss(color: QColor, selector: str = "QLabel") -> str:
     """Style sheet for a small tinted pill."""
+    # bright accents (yellow, green) need darker text to stay readable on a light background
+    text = color if is_dark() else QColor(color).darker(150)
     return (
-        f"{selector} {{ background: {rgba(color, 38)}; color: {color.name()};"
+        f"{selector} {{ background: {rgba(color, 38)}; color: {text.name()};"
         " border-radius: 9px; padding: 1px 8px; font-weight: 600; }"
     )
 
@@ -126,3 +132,47 @@ def hint(text: str, parent: QWidget | None = None) -> QLabel:
     label.setStyleSheet(f"color: {rgba(fg, 150)};")
     label.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
     return label
+
+
+def problem_label(parent: QWidget | None = None) -> QLabel:
+    """Red text that explains what a step still needs; hidden while empty."""
+    label = QLabel(parent)
+    label.setWordWrap(True)
+    label.setStyleSheet(f"color: {theme('ACCENT_EMERGENCY', '#e0534b').name()}; font-weight: 600;")
+    label.setVisible(False)
+    return label
+
+
+def empty_state(title: str, text: str, parent: QWidget | None = None, icon: str = "playlist_add"):
+    """A centered message for an empty sequence: icon, title and a hint."""
+    widget = QWidget(parent)
+    widget.setObjectName("SequencerEmptyState")
+    widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+    widget.setStyleSheet(
+        f"#SequencerEmptyState {{ background: {theme('CARD_BG', '#ffffff').name()};"
+        f" border: 2px dashed {theme('BORDER', '#d0d0d0').name()}; border-radius: 10px; }}"
+    )
+    layout = QVBoxLayout(widget)
+    layout.addStretch(1)
+    picture = QLabel(widget)
+    muted = theme("FG", "#333333")
+    muted.setAlpha(110)
+    picture.setPixmap(
+        material_icon(icon, size=(44, 44), color=muted.name(QColor.NameFormat.HexArgb))
+    )
+    picture.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    layout.addWidget(picture)
+    name = heading(title, widget, 14)
+    name.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    layout.addWidget(name)
+    explanation = hint(text, widget)
+    explanation.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    explanation.setMaximumWidth(420)
+    # stretches instead of an alignment flag, so the wrapped text gets the height it needs
+    row = QHBoxLayout()
+    row.addStretch(1)
+    row.addWidget(explanation, 4)
+    row.addStretch(1)
+    layout.addLayout(row)
+    layout.addStretch(1)
+    return widget

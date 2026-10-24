@@ -8,12 +8,13 @@ from __future__ import annotations
 
 from bec_qthemes import material_icon
 from qtpy.QtCore import Qt
-from qtpy.QtGui import QBrush, QColor
+from qtpy.QtGui import QBrush, QColor, QFontMetrics, QKeySequence, QShortcut
 from qtpy.QtWidgets import (
     QAbstractItemView,
     QHBoxLayout,
     QPushButton,
     QSplitter,
+    QStackedWidget,
     QToolButton,
     QTreeWidget,
     QTreeWidgetItem,
@@ -26,7 +27,14 @@ from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.widgets.control.sequencer import model
 from bec_widgets.widgets.control.sequencer.editor_base import SequenceEditorBase
 from bec_widgets.widgets.control.sequencer.inspector import StepInspector
-from bec_widgets.widgets.control.sequencer.style import heading, hint, kind_color, kind_icon, theme
+from bec_widgets.widgets.control.sequencer.style import (
+    empty_state,
+    heading,
+    hint,
+    kind_color,
+    kind_icon,
+    theme,
+)
 
 ID_ROLE = Qt.ItemDataRole.UserRole + 1
 
@@ -37,6 +45,7 @@ ADD_BUTTONS = [
     ("for_each", "For each value"),
     ("while", "While moving"),
 ]
+PROBLEM_WIDTH = 260
 
 
 class RecipeTree(QTreeWidget):
@@ -60,7 +69,8 @@ class RecipeTree(QTreeWidget):
         """Translate a drop into a document move."""
         source = self.currentItem()
         if source is None:
-            return event.ignore()
+            event.ignore()
+            return
         node_id = source.data(0, ID_ROLE)
         target = self.itemAt(event.position().toPoint())
         indicator = self.dropIndicatorPosition()
@@ -77,8 +87,9 @@ class RecipeTree(QTreeWidget):
             else:
                 siblings = model.children_of(target_parent)
                 index = siblings.index(target_node)
-                if indicator == QAbstractItemView.DropIndicatorPosition.BelowItem or (
-                    indicator == QAbstractItemView.DropIndicatorPosition.OnItem
+                if indicator in (
+                    QAbstractItemView.DropIndicatorPosition.BelowItem,
+                    QAbstractItemView.DropIndicatorPosition.OnItem,
                 ):
                     index += 1
                 source_node, source_parent = model.find(doc.root, node_id)
@@ -123,9 +134,17 @@ class RecipeEditor(SequenceEditorBase):
         add_row.addStretch(1)
         left_layout.addLayout(add_row)
 
+        self.stack = QStackedWidget(left)
+        self.empty = empty_state(
+            "No steps yet",
+            "Add a move, a scan or a loop with the buttons above. Steps run from top to bottom.",
+            self.stack,
+        )
+        self.stack.addWidget(self.empty)
         self.tree = RecipeTree(self)
         self.tree.itemSelectionChanged.connect(self._on_tree_selection)
-        left_layout.addWidget(self.tree, 1)
+        self.stack.addWidget(self.tree)
+        left_layout.addWidget(self.stack, 1)
 
         action_row = QHBoxLayout()
         action_row.setSpacing(2)
@@ -148,14 +167,23 @@ class RecipeEditor(SequenceEditorBase):
             self.action_buttons[key] = btn
         action_row.addStretch(1)
         left_layout.addLayout(action_row)
+        for keys, key in (
+            (QKeySequence.StandardKey.Delete, "delete"),
+            (QKeySequence.StandardKey.Undo, "undo"),
+            (QKeySequence("Ctrl+D"), "duplicate"),
+        ):
+            shortcut = QShortcut(QKeySequence(keys), self.tree)
+            shortcut.setContext(Qt.ShortcutContext.WidgetShortcut)
+            shortcut.activated.connect(lambda k=key: self._action(k))
 
-        self.inspector = StepInspector(self.document, splitter, client=self.client)
+        self.inspector = StepInspector(self.document, self.backend, splitter, client=self.client)
         self.inspector.setMinimumWidth(340)
         splitter.addWidget(left)
         splitter.addWidget(self.inspector)
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 2)
         self.document.selection_changed.connect(self._select_in_tree)
+        self.document.selection_changed.connect(self._update_actions)
         self._style_tree()
 
     def _style_tree(self) -> None:
@@ -214,13 +242,14 @@ class RecipeEditor(SequenceEditorBase):
 
         for index, child in enumerate(model.children_of(root), 1):
             add(child, None, f"{index}.")
-        self.tree.resizeColumnToContents(1)
-        self.tree.setColumnWidth(1, max(self.tree.columnWidth(1), 110))
+        self.stack.setCurrentWidget(self.tree if model.children_of(root) else self.empty)
+        self.tree.setColumnWidth(1, PROBLEM_WIDTH)
         self.tree.header().setStretchLastSection(False)
         self.tree.header().setSectionResizeMode(0, self.tree.header().ResizeMode.Stretch)
         self.tree.blockSignals(False)
         self._select_in_tree(self.document.selected)
         self.show_problems(self.problems)
+        self._update_actions()
 
     @staticmethod
     def _side_text(node: dict) -> str:
@@ -234,6 +263,9 @@ class RecipeEditor(SequenceEditorBase):
             return "until it arrives"
         if kind == "set":
             return "waits" if node.get("wait", True) else "keeps going"
+        if kind == "scan_call":
+            metadata = (node.get("arguments") or {}).get("metadata") or {}
+            return str(metadata.get("sample_name", ""))
         return ""
 
     def show_problems(self, problems) -> None:
@@ -247,18 +279,35 @@ class RecipeEditor(SequenceEditorBase):
             if node_id in bad:
                 item.setBackground(0, QBrush(QColor(red.red(), red.green(), red.blue(), 45)))
                 item.setToolTip(0, bad[node_id])
-                item.setText(1, "needs a fix")
+                item.setToolTip(1, bad[node_id])
+                metrics = QFontMetrics(item.font(1))
+                item.setText(
+                    1,
+                    metrics.elidedText(
+                        bad[node_id], Qt.TextElideMode.ElideRight, PROBLEM_WIDTH - 16
+                    ),
+                )
                 item.setForeground(1, QBrush(red))
             elif node_id:
+                node = self.document.node(node_id)
                 item.setBackground(0, QBrush())
                 item.setToolTip(0, "")
+                item.setToolTip(1, "")
+                if node is not None:
+                    item.setText(1, self._side_text(node))
+                    item.setForeground(1, QBrush(kind_color(node["type"])))
 
     # --- interaction -----------------------------------------------------------------------
     def add_step(self, kind: str) -> None:
-        """Add a new step next to the selection."""
-        devices = self.backend.device_names()
-        device = "samx" if "samx" in devices or not devices else devices[0]
-        self.document.add_next_to_selection(model.new_step(kind, device=device))
+        """Add a new step next to the selection (inside it when a loop is selected)."""
+        self.document.add_next_to_selection(self.document.new_nodes(kind))
+
+    @SafeSlot()
+    @SafeSlot(str)
+    def _update_actions(self, *_args) -> None:
+        selected = bool(self.document.selected)
+        for key, button in self.action_buttons.items():
+            button.setEnabled(self.document.can_undo() if key == "undo" else selected)
 
     @SafeSlot()
     def _on_tree_selection(self) -> None:
@@ -299,9 +348,3 @@ class RecipeEditor(SequenceEditorBase):
             doc.wrap(node_id, "for_each")
         elif key == "delete":
             doc.delete(node_id)
-
-    def screenshot_setup(self) -> None:
-        """Select the scan step (used for screenshots and the demo)."""
-        scans = [n for n, _d, _p in model.walk(self.document.root) if n["type"] == "scan_call"]
-        if scans:
-            self.document.select(scans[0]["id"])

@@ -12,10 +12,8 @@ from bec_qthemes import material_icon
 from qtpy.QtCore import QMimeData, QPoint, QRectF, Qt, Signal
 from qtpy.QtGui import QColor, QDrag, QPainter, QPainterPath, QPen
 from qtpy.QtWidgets import (
-    QAbstractSpinBox,
     QCheckBox,
     QComboBox,
-    QDoubleSpinBox,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -33,17 +31,32 @@ from bec_widgets.utils.colors import rgba
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.widgets.control.sequencer import model
 from bec_widgets.widgets.control.sequencer.editor_base import SequenceEditorBase
-from bec_widgets.widgets.control.sequencer.inspector import (
-    ScanSettingsDialog,
-    parse_values,
+from bec_widgets.widgets.control.sequencer.fields import (
+    NumberEdit,
+    ScanPicker,
+    ValuesEdit,
+    device_picker,
     values_text,
 )
-from bec_widgets.widgets.control.sequencer.style import heading, hint, kind_color, kind_icon, theme
+from bec_widgets.widgets.control.sequencer.inspector import (
+    RangeDialog,
+    ScanSettingsDialog,
+    rename_variable,
+    scan_arguments,
+)
+from bec_widgets.widgets.control.sequencer.style import (
+    heading,
+    hint,
+    kind_color,
+    kind_icon,
+    problem_label,
+    theme,
+)
 
 MIME = "application/x-bec-sequence-block"
 PALETTE = [
     ("set", "Move a motor", "Go to a position"),
-    ("scan_call", "Run a scan", "Any scan from scan control"),
+    ("scan_call", "Run a scan", "Any scan of this beamline"),
     ("repeat", "Repeat", "Do the inside N times"),
     ("for_each", "For each value", "Once per value in a list"),
     ("while", "While moving", "Repeat inside until a motor arrives"),
@@ -114,7 +127,7 @@ class PaletteTile(QFrame):
             self._press = None
             _start_drag(self, {"new": self.kind})
 
-    def mouseReleaseEvent(self, event):  # pylint: disable=invalid-name
+    def mouseReleaseEvent(self, _event):  # pylint: disable=invalid-name
         if self._press is not None:
             self.clicked.emit(self.kind)
         self._press = None
@@ -166,13 +179,15 @@ class BlockBody(QWidget):
     def dragEnterEvent(self, event):  # pylint: disable=invalid-name
         payload = _payload(event.mimeData())
         if payload is None or payload.get("move") == self.parent_id:
-            return event.ignore()
+            event.ignore()
+            return
         event.acceptProposedAction()
 
     def dragMoveEvent(self, event):  # pylint: disable=invalid-name
         payload = _payload(event.mimeData())
         if payload is None:
-            return event.ignore()
+            event.ignore()
+            return
         moving = payload.get("move")
         if moving and (
             moving == self.parent_id
@@ -181,7 +196,8 @@ class BlockBody(QWidget):
                 for a in model.ancestors(self.editor.document.root, self.parent_id)
             )
         ):
-            return event.ignore()
+            event.ignore()
+            return
         self._drop_y = self._line_y(self._index_at(int(event.position().y())))
         self.update()
         event.acceptProposedAction()
@@ -195,7 +211,8 @@ class BlockBody(QWidget):
         self._drop_y = None
         self.update()
         if payload is None:
-            return event.ignore()
+            event.ignore()
+            return
         index = self._index_at(int(event.position().y()))
         event.acceptProposedAction()
         self.editor.drop(payload, self.parent_id if self.parent_id != "root" else None, index)
@@ -241,6 +258,9 @@ class Block(QFrame):
         icon.setPixmap(kind_icon(self.kind, 20).pixmap(20, 20))
         self.row.addWidget(icon)
         self.outer.addWidget(self.header)
+        self.problem_text = problem_label(self)
+        self.problem_text.setContentsMargins(42, 0, 8, 6)
+        self.outer.addWidget(self.problem_text)
         getattr(self, f"_build_{self.kind}", self._build_other)()
         self.row.addStretch(1)
         delete = QToolButton(self.header)
@@ -250,6 +270,7 @@ class Block(QFrame):
         delete.clicked.connect(lambda: editor.document.delete(node["id"]))
         self.row.addWidget(delete)
 
+        self.set_problem(self.problem)
         if model.is_container(node):
             self.body = BlockBody(editor, node["id"], self)
             wrapper = QHBoxLayout()
@@ -259,6 +280,14 @@ class Block(QFrame):
             footer = QWidget(self)
             footer.setFixedHeight(14)
             self.outer.addWidget(footer)
+
+    def set_problem(self, message: str) -> None:
+        """Show what this step still needs (or nothing)."""
+        self.problem = message
+        self.problem_text.setText(message)
+        self.problem_text.setVisible(bool(message))
+        self.setToolTip(message)
+        self.update()
 
     # --- inline editors --------------------------------------------------------------------
     def _word(self, text: str, bold: bool = False) -> QLabel:
@@ -276,19 +305,20 @@ class Block(QFrame):
         self.row.addWidget(widget)
         return widget
 
-    def _number(self, value, width: int = 80) -> QDoubleSpinBox:
-        spin = QDoubleSpinBox(self.header, decimals=3, minimum=-1e9, maximum=1e9)
-        spin.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)
-        spin.setValue(float(value) if isinstance(value, (int, float)) else 0.0)
-        return self._field(spin, width)
+    def _number(self, value, width: int = 90) -> NumberEdit:
+        edit = NumberEdit(self.header, "position")
+        edit.set_value(value)
+        return self._field(edit, width)
 
-    def _device_combo(self, current: str) -> QComboBox:
-        combo = QComboBox(self.header)
-        combo.setEditable(True)
-        names = self.editor.backend.device_names()
-        combo.addItems(names)
+    def _device_combo(self, current: str, settable: bool = True):
+        combo = device_picker(self.header, self.editor.client, settable=settable)
         combo.setCurrentText(current)
-        return self._field(combo, 120)
+        return self._field(combo, 150)
+
+    @staticmethod
+    def _on_device(combo, commit) -> None:
+        combo.device_selected.connect(commit)
+        combo.lineEdit().editingFinished.connect(commit)
 
     def _build_set(self) -> None:
         node = self.node
@@ -298,18 +328,18 @@ class Block(QFrame):
         self._word("to")
         variables = model.visible_variables(self.editor.document.root, node["id"])
         source = QComboBox(self.header)
-        source.addItem("value", None)
-        for name in variables:
+        source.addItem("a value", None)
+        for name in reversed(variables):
             source.addItem(f"each {name}", name)
-        number = self._number(node.get("value"))
         if model.is_ref(node.get("value")) and source.findData(node["value"]["ref"]) >= 0:
             source.setCurrentIndex(source.findData(node["value"]["ref"]))
         if variables:
             self._field(source)
         else:
             source.hide()
+        number = self._number(node.get("value"))
         number.setVisible(source.currentData() is None)
-        wait = QCheckBox("wait", self.header)
+        wait = QCheckBox("wait until it arrives", self.header)
         wait.setChecked(bool(node.get("wait", True)))
         wait.setVisible(not bound)
         self.row.addWidget(wait)
@@ -317,53 +347,51 @@ class Block(QFrame):
         def commit(*_):
             number.setVisible(source.currentData() is None)
             value = model.ref(source.currentData()) if source.currentData() else number.value()
-            if isinstance(value, float) and value.is_integer():
-                value = int(value)
             self.editor.inline_update(
                 node["id"],
-                device=device.currentText().strip() or node.get("device"),
+                device=device.currentText().strip(),
                 value=value,
                 wait=True if bound else wait.isChecked(),
             )
 
-        device.currentTextChanged.connect(commit)
+        self._on_device(device, commit)
         source.currentIndexChanged.connect(commit)
-        number.valueChanged.connect(commit)
+        number.edited.connect(commit)
         wait.toggled.connect(commit)
 
     def _build_scan_call(self) -> None:
         node = self.node
         self._word("Run", True)
-        combo = QComboBox(self.header)
         entries = self.editor.scan_entries()
-        for name in sorted(entries):
-            combo.addItem(model.scan_title(name).lower(), name)
-        if combo.findData(node.get("name")) < 0:
-            combo.addItem(node.get("name", ""), node.get("name"))
-        combo.setCurrentIndex(combo.findData(node.get("name")))
-        self._field(combo)
-        details = QLabel(model.scan_details(node, entries) or "no settings yet", self.header)
+        picker = ScanPicker(entries, self.header)
+        picker.set_scan(node.get("name", ""))
+        self._field(picker)
+        details = QLabel(model.scan_details(node, entries) if node.get("name") else "", self.header)
         details.setStyleSheet(f"color: {rgba(theme('FG', '#333333'), 170)};")
         self.row.addWidget(details)
         settings = QPushButton("Settings…", self.header)
         settings.setIcon(material_icon("tune", size=(16, 16), convert_to_pixmap=False))
+        settings.setEnabled(bool(node.get("name")))
         self.row.addWidget(settings)
 
-        def change_scan(_index):
-            name = combo.currentData()
-            if name and name != node.get("name"):
-                self.editor.document.update(node["id"], name=name, positional=[], arguments={})
-
-        def open_settings():
-            dialog = ScanSettingsDialog(node, self.editor.client, self)
+        def open_settings(name: str | None = None):
+            shown = dict(node) if not name else {"name": name}
+            dialog = ScanSettingsDialog(shown, self.editor.client, entries, self)
             if dialog.exec():
-                name, positional, arguments = dialog.values()
-                self.editor.document.update(
-                    node["id"], name=name, positional=positional, arguments=arguments
-                )
+                chosen, positional, arguments = dialog.values()
+                if chosen:
+                    self.editor.document.update(
+                        node["id"], name=chosen, **scan_arguments(node, positional, arguments)
+                    )
+                    return
+            picker.set_scan(node.get("name", ""))
 
-        combo.currentIndexChanged.connect(change_scan)
-        settings.clicked.connect(open_settings)
+        def choose(name: str):
+            if name != node.get("name"):
+                open_settings(name)
+
+        picker.scan_chosen.connect(choose)
+        settings.clicked.connect(lambda _checked=False: open_settings())
 
     def _build_repeat(self) -> None:
         node = self.node
@@ -380,20 +408,28 @@ class Block(QFrame):
         name = QLineEdit(node.get("variable", ""), self.header)
         self._field(name, 90)
         self._word("in")
-        values = QLineEdit(values_text(node.get("values") or []), self.header)
-        values.setPlaceholderText("1, 2, 3")
+        values = ValuesEdit(self.header)
+        values.set_values(node.get("values") or [])
         self._field(values)
-        values.setMinimumWidth(160)
+        values.setMinimumWidth(180)
+        fill = QToolButton(self.header)
+        fill.setIcon(material_icon("linear_scale", size=(16, 16), convert_to_pixmap=False))
+        fill.setToolTip("Fill evenly spaced values")
+        fill.setAutoRaise(True)
+        self.row.addWidget(fill)
 
         def commit(*_):
-            self.editor.inline_update(
-                node["id"],
-                variable=name.text().strip() or node.get("variable"),
-                values=parse_values(values.text()),
-            )
+            self.editor.inline_update(node["id"], values=values.values())
+
+        def fill_values():
+            dialog = RangeDialog(self)
+            if dialog.exec():
+                values.setText(values_text(dialog.values()))
+                commit()
 
         name.editingFinished.connect(lambda: self.editor.rename_variable(node, name.text()))
-        values.textChanged.connect(commit)
+        values.textEdited.connect(commit)
+        fill.clicked.connect(fill_values)
 
     def _build_while(self) -> None:
         node = self.node
@@ -403,9 +439,7 @@ class Block(QFrame):
         if owner is None:
             self._word("the condition holds")
             return
-        self._word(
-            f"{owner.get('device')} is still moving to {model.format_value(owner.get('value'))}"
-        )
+        self._word(f"{owner.get('device') or 'the motor'} is moving, keep repeating:")
 
     def _build_other(self) -> None:
         self._word(model.sentence(self.node, self.editor.document.root), True)
@@ -449,8 +483,10 @@ class Block(QFrame):
         self._press = None
 
 
-class BlocksEditor(SequenceEditorBase):  # pylint: disable=too-many-ancestors
+class BlocksEditor(SequenceEditorBase):
     """Scratch-style block editor."""
+
+    # pylint: disable=too-many-ancestors, attribute-defined-outside-init
 
     CONCEPT_ID = "blocks"
     CONCEPT_TITLE = "Blocks"
@@ -498,6 +534,7 @@ class BlocksEditor(SequenceEditorBase):  # pylint: disable=too-many-ancestors
     def refresh(self) -> None:
         if not hasattr(self, "scroll") or self._inline:
             return
+        self._blocks: dict[str, Block] = {}
         position = self.scroll.verticalScrollBar().value()
         canvas = QWidget()
         canvas.setObjectName("BlocksCanvas")
@@ -526,32 +563,28 @@ class BlocksEditor(SequenceEditorBase):  # pylint: disable=too-many-ancestors
             )
         for child in children:
             block = Block(self, child, body)
+            self._blocks[child["id"]] = block
             body.add_block(block)
             if model.is_container(child):
                 self._fill(block.body, child)
 
     def show_problems(self, problems) -> None:
-        ids = {p.node_id for p in problems}
-        if ids != getattr(self, "_problem_ids", set()):
-            self._problem_ids = ids
-            self.refresh()
+        """Update the blocks in place, so typing in a block keeps its focus."""
+        messages = {p.node_id: p.message for p in problems}
+        for node_id, block in getattr(self, "_blocks", {}).items():
+            if block.problem != messages.get(node_id, ""):
+                block.set_problem(messages.get(node_id, ""))
 
     # --- actions ---------------------------------------------------------------------------
     @SafeSlot(str)
     def append(self, kind: str) -> None:
         """Add a block at the end of the sequence."""
-        self.document.add(model.new_step(kind, device=self._default_device()))
-
-    def _default_device(self) -> str:
-        devices = self.backend.device_names()
-        return "samx" if "samx" in devices or not devices else devices[0]
+        self.document.add(self.document.new_nodes(kind))
 
     def drop(self, payload: dict, parent_id: str | None, index: int) -> None:
         """Handle a dropped palette tile or block."""
         if "new" in payload:
-            self.document.add(
-                model.new_step(payload["new"], device=self._default_device()), parent_id, index
-            )
+            self.document.add(self.document.new_nodes(payload["new"]), parent_id, index)
             return
         node_id = payload.get("move")
         node, parent = model.find(self.document.root, node_id)
@@ -574,21 +607,7 @@ class BlocksEditor(SequenceEditorBase):  # pylint: disable=too-many-ancestors
     def rename_variable(self, loop: dict, new_name: str) -> None:
         """Rename a for-each variable and every use of it, then redraw."""
         new_name = new_name.strip()
-        old = loop.get("variable")
-        if not new_name or new_name == old:
+        if not new_name or new_name == loop.get("variable"):
             return
-
-        def visit(value):
-            if model.is_ref(value) and value["ref"] == old:
-                return model.ref(new_name)
-            if isinstance(value, list):
-                return [visit(v) for v in value]
-            if isinstance(value, dict):
-                return {k: visit(v) for k, v in value.items()}
-            return value
-
-        for node, _depth, _parent in model.walk(loop):
-            for key in ("value", "positional", "arguments"):
-                if key in node:
-                    node[key] = visit(node[key])
+        rename_variable(loop, loop.get("variable"), new_name)
         self.document.update(loop["id"], variable=new_name)

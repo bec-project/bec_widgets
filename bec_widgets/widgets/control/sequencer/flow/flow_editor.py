@@ -88,10 +88,10 @@ class StepBox(QGraphicsPathItem):
         label.setBrush(QBrush(theme("FG", "#222222")))
         label.setPos(rect.left() + 48, rect.center().y() - label.boundingRect().height() / 2)
         if problem:
-            badge = QGraphicsSimpleTextItem("needs a fix", self)
+            badge = QGraphicsSimpleTextItem(self._elide(problem, rect.width() * 0.6), self)
             badge.setFont(_font(8, True))
             badge.setBrush(QBrush(theme("ACCENT_EMERGENCY", "#e0534b")))
-            badge.setPos(rect.right() - badge.boundingRect().width() - 10, rect.top() + 3)
+            badge.setPos(rect.right() - badge.boundingRect().width() - 10, rect.top() + 2)
 
     @staticmethod
     def _elide(text: str, width: float) -> str:
@@ -192,7 +192,7 @@ class FlowEditor(SequenceEditorBase):  # pylint: disable=too-many-ancestors
         )
         left_layout.addWidget(self.timeline)
 
-        self.inspector = StepInspector(self.document, splitter, client=self.client)
+        self.inspector = StepInspector(self.document, self.backend, splitter, client=self.client)
         self.inspector.setMinimumWidth(340)
         splitter.addWidget(left)
         splitter.addWidget(self.inspector)
@@ -211,6 +211,12 @@ class FlowEditor(SequenceEditorBase):  # pylint: disable=too-many-ancestors
         y = self._terminal("Start", 0, theme("PRIMARY", "#2f6fdf"))
         y = self._column(root, 0, y, ROOT_WIDTH)
         self._terminal("Finish", y, theme("ACCENT_SUCCESS", "#59a869"))
+        if not model.children_of(root):
+            note = QGraphicsSimpleTextItem("Click + to add the first step")
+            note.setFont(_font(10))
+            note.setBrush(QBrush(theme("FG", "#333333")))
+            note.setPos(ROOT_WIDTH / 2 + 20, 32 + GAP / 2 - note.boundingRect().height() / 2)
+            self.scene.addItem(note)
         self.scene.setSceneRect(self.scene.itemsBoundingRect().adjusted(-20, -20, 20, 20))
         self._fill_timeline()
 
@@ -303,8 +309,8 @@ class FlowEditor(SequenceEditorBase):  # pylint: disable=too-many-ancestors
         items = model.timeline(self.document.root, self._entries)
         for index, item in enumerate(items, 1):
             short = item.text
-            if item.kind == "set":
-                short = short.replace("Move ", "").replace(" to ", " → ")
+            if item.kind == "set" and short.startswith("Move "):
+                short = short[len("Move ") :].replace(" to ", " → ")
             elif item.kind == "scan_call":
                 short = short.split(":")[0].replace("Run ", "")
             entry = QListWidgetItem(kind_icon(item.kind, 18), f"{index}. {short}\n{item.context}")
@@ -328,9 +334,7 @@ class FlowEditor(SequenceEditorBase):  # pylint: disable=too-many-ancestors
             action.setData(kind)
         chosen = menu.exec(screen_pos)
         if chosen is not None:
-            devices = self.backend.device_names()
-            device = "samx" if "samx" in devices or not devices else devices[0]
-            self.document.add(model.new_step(chosen.data(), device=device), parent_id, index)
+            self.document.add(self.document.new_nodes(chosen.data()), parent_id, index)
 
     def step_menu(self, node_id: str, screen_pos) -> None:
         """Right-click menu of a step."""
@@ -359,9 +363,3 @@ class FlowEditor(SequenceEditorBase):  # pylint: disable=too-many-ancestors
         chosen = menu.exec(screen_pos)
         if chosen in actions:
             actions[chosen]()
-
-    def screenshot_setup(self) -> None:
-        """Select the move step for screenshots."""
-        moves = [n for n, _d, _p in model.walk(self.document.root) if n["type"] == "set"]
-        if moves:
-            self.document.select(moves[0]["id"])

@@ -40,12 +40,17 @@ class SequencerView(ViewBase):
         parent (QWidget | None): Parent widget.
         concept (str | None): Concept to show right away. Without it, the view waits until it
             is opened and then shows ``BEC_SEQUENCER_CONCEPT`` or the first concept.
+        keep_drafts (bool): Keep each concept's work in a draft file, so it is still there
+            after the application was closed.
     """
 
     RPC = False
 
-    def __init__(self, parent=None, *, concept: str | None = None, **kwargs):
+    def __init__(
+        self, parent=None, *, concept: str | None = None, keep_drafts: bool = False, **kwargs
+    ):
         super().__init__(parent=parent, view_id="sequencer", title="Sequencer", **kwargs)
+        self.keep_drafts = keep_drafts
         content = QWidget(self)
         layout = QVBoxLayout(content)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -54,10 +59,10 @@ class SequencerView(ViewBase):
         self.top = QWidget(content)
         self.top.setObjectName("SequencerTop")
         self.top.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        bar = QHBoxLayout(self.top)
-        bar.setContentsMargins(16, 10, 16, 10)
-        bar.setSpacing(14)
-        bar.addWidget(heading("Sequencer", self.top, 16))
+        top_row = QHBoxLayout(self.top)
+        top_row.setContentsMargins(16, 10, 16, 10)
+        top_row.setSpacing(14)
+        top_row.addWidget(heading("Sequencer", self.top, 16))
         self.switcher = QButtonGroup(self.top)
         self.switcher.setExclusive(True)
         segments = QHBoxLayout()
@@ -69,11 +74,11 @@ class SequencerView(ViewBase):
             button.setToolTip(cls.CONCEPT_TAGLINE)
             self.switcher.addButton(button)
             segments.addWidget(button)
-        bar.addLayout(segments)
+        top_row.addLayout(segments)
         self.tagline = hint("", self.top)
-        bar.addWidget(self.tagline, 1)
-        self.prototype_note = QLabel("Prototype · 5 concepts to compare", self.top)
-        bar.addWidget(self.prototype_note)
+        top_row.addWidget(self.tagline, 1)
+        self.prototype_note = QLabel(f"{len(CONCEPTS)} layouts to compare", self.top)
+        top_row.addWidget(self.prototype_note)
         layout.addWidget(self.top)
         self._style_top()
 
@@ -111,9 +116,7 @@ class SequencerView(ViewBase):
                 f" border: 1px solid {primary.name()}; color: {primary.name()}; font-weight: 600; }}"
             )
         self.tagline.setStyleSheet(f"color: {rgba(theme('FG', '#333333'), 150)};")
-        self.prototype_note.setStyleSheet(
-            f"color: {theme('ACCENT_WARNING', '#eda200').name()}; font-weight: 600;"
-        )
+        self.prototype_note.setStyleSheet(f"color: {rgba(theme('FG', '#333333'), 150)};")
 
     def apply_theme(self, theme_name: str) -> None:
         """Restyle the view and rebuild the editors in the new colors, keeping their work."""
@@ -135,9 +138,8 @@ class SequencerView(ViewBase):
             self.show_concept(current)
 
     def _create(self, concept: str) -> QWidget:
-        editor = CONCEPTS[concept](self.stack)
-        if hasattr(editor, "open_in_recipe"):
-            editor.open_in_recipe.connect(self._open_in_recipe)
+        editor = CONCEPTS[concept](self.stack, draft_name=concept if self.keep_drafts else None)
+        editor.open_in_recipe.connect(self._open_in_recipe)
         self.editors[concept] = editor
         self.stack.addWidget(editor)
         return editor
@@ -191,7 +193,7 @@ def main():  # pragma: no cover - manual entry point
     apply_theme(args.theme)
     window = BECMainWindow()
     window.setWindowTitle("BEC Sequencer (prototype)")
-    view = SequencerView(window, concept=args.concept or next(iter(CONCEPTS)))
+    view = SequencerView(window, concept=args.concept or next(iter(CONCEPTS)), keep_drafts=True)
     window.setCentralWidget(view)
     window.resize(1400, 860)
     window.show()
