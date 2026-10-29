@@ -711,7 +711,14 @@ class Waveform(PlotBase):
     def x_mode(self, value: str):
         self.x_axis_mode["name"] = value
         if value not in ["timestamp", "index", "auto"]:
-            self.x_axis_mode["entry"] = self.entry_validator.validate_signal(value, None)
+            try:
+                self.x_axis_mode["entry"] = self.entry_validator.validate_signal(value, None)
+            except ValueError:
+                if value not in self.entry_validator.devices:
+                    raise
+                # No default signal (e.g. a device exposing only AsyncMultiSignal
+                # sub-signals): the x signal is chosen through signal_x.
+                self.x_axis_mode["entry"] = None
             self._current_x_device = (value, self.x_axis_mode["entry"])
         self._switch_x_axis_item(mode=value)
         self._current_x_device = None
