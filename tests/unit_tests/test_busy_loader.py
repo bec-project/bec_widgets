@@ -4,6 +4,7 @@ from qtpy.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from bec_widgets import BECWidget
 from bec_widgets.tests.client_mocks import mocked_client
+from bec_widgets.utils.busy_loader import BusyStateWidget
 from bec_widgets.widgets.utility.spinner.spinner import SpinnerWidget
 
 
@@ -139,3 +140,29 @@ def test_becwidget_busy_cycle_start_on_off_on(qtbot, widget_busy):
 
     # Geometry follows parent after re-show
     qtbot.waitUntil(lambda: overlay.geometry() == widget_busy.rect())
+
+
+def test_becwidget_default_busy_state_widget(widget_idle):
+    assert isinstance(widget_idle._busy_state_widget, BusyStateWidget)
+    assert widget_idle._busy_state_widget.label.text() == "Loading..."
+
+
+def test_busy_state_widget_without_text_hides_label(qtbot):
+    widget = BusyStateWidget(text=None, spinner_size=32)
+    qtbot.addWidget(widget)
+    assert widget.label.isHidden()
+    assert widget.spinner.width() == 32
+    assert widget.spinner.height() == 32
+
+
+def test_busy_state_widget_spinner_runs_only_while_visible(qtbot):
+    widget = BusyStateWidget()
+    qtbot.addWidget(widget)
+    assert widget.spinner._started is False
+
+    widget.show()
+    qtbot.waitExposed(widget)
+    assert widget.spinner._started is True
+
+    widget.hide()
+    assert widget.spinner._started is False
