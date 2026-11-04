@@ -1,27 +1,49 @@
-"""This module contains the BECStatusBox widget, which displays the status of different BEC services in a collapsible tree widget.
+"""This module contains the BECStatusBox widget, which displays the status of different BEC services.
 The widget automatically updates the status of all running BEC services, and displays their status.
 """
 
 from __future__ import annotations
 
-from collections import defaultdict
+import time
+import weakref
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from bec_lib.endpoints import MessageEndpoints
+from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import_from
 from pydantic import BaseModel
-from qtpy.QtCore import QObject, QTimer, Signal, Slot
-from qtpy.QtWidgets import QHBoxLayout, QTreeWidget, QTreeWidgetItem, QWidget
+from qtpy.QtCore import QObject, QThreadPool, QTimer, Signal
+from qtpy.QtWidgets import QHBoxLayout, QMessageBox, QWidget
 
+from bec_widgets.utils.bec_connector import Worker
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.widgets.services.bec_status_box.status_item import StatusItem
+from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.widgets.services.bec_status_box.status_box_widgets import StatusBoxWidgetView
+from bec_widgets.widgets.services.bec_status_box.status_model import (
+    RestartState,
+    ServiceStatusModel,
+    build_rows,
+    friendly_name,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.client import BECClient
-    from bec_lib.messages import BECStatus, ServiceMetricMessage, StatusMessage
+    from bec_lib.messages import (
+        BECStatus,
+        ServiceMetricMessage,
+        ServiceRequestMessage,
+        StatusMessage,
+    )
 else:
     # TODO : Put normal imports back when Pydantic gets faster
-    BECStatus = lazy_import_from("bec_lib.messages", ("BECStatus",))
+    BECStatus, ServiceRequestMessage = lazy_import_from(
+        "bec_lib.messages", ("BECStatus", "ServiceRequestMessage")
+    )
+
+logger = bec_logger.logger
+
+RESTART_TIMEOUT_S = 120
 
 
 @dataclass
@@ -35,43 +57,120 @@ class BECServiceInfoContainer:
 
 
 class BECServiceStatusMixin(QObject):
-    """Mixin to receive the latest service status from the BEC server and emit it via services_update signal.
+    """Polls the service status of the BEC server and emits it via the services_update signal.
+
+    The status boxes and server pills of one client share one poller (``shared``): it reads only
+    while at least one of them is shown (``add_viewer`` / ``remove_viewer``), every
+    POLL_INTERVAL_MS, and hands each new viewer the last result at once. A poller made directly
+    starts polling right away and is cleaned up by its owner.
 
     Args:
         client (BECClient): The client object to connect to the BEC server.
+        start (bool): Start polling right away. The shared poller waits for its first viewer.
     """
 
     services_update = Signal(dict, dict)
 
     ICON_NAME = "dns"
+    # the services publish their status every 3 s; polling faster would show nothing new
+    POLL_INTERVAL_MS = 3000
 
-    def __init__(self, parent, client: BECClient):
+    _shared: weakref.WeakKeyDictionary = weakref.WeakKeyDictionary()
+
+    def __init__(self, parent, client: BECClient, start: bool = True):
         super().__init__(parent)
         self.client = client
+        # the Redis reads run on the thread pool, one at a time, so a slow Redis never blocks the GUI
+        self._worker: Worker | None = None
+        self._viewers: set[int] = set()
+        self.last_update: tuple[dict, dict] | None = None
         self._service_update_timer = QTimer()
+        self._service_update_timer.setInterval(self.POLL_INTERVAL_MS)
         self._service_update_timer.timeout.connect(self._get_service_status)
-        self._service_update_timer.start(1000)
+        if start:
+            self._service_update_timer.start()
+
+    @classmethod
+    def shared(cls, client: BECClient) -> BECServiceStatusMixin:
+        """The poller shared by all status boxes and pills of a client."""
+        poller = cls._shared.get(client)
+        if poller is None:
+            poller = cls(None, client, start=False)
+            cls._shared[client] = poller
+        return poller
+
+    @classmethod
+    def reset_shared(cls) -> None:
+        """Stop and drop all shared pollers, e.g. between tests."""
+        for poller in list(cls._shared.values()):
+            poller.cleanup()
+        cls._shared.clear()
+
+    def add_viewer(self, viewer: QObject) -> None:
+        """Poll while this widget shows the status; the first viewer starts with a read."""
+        self._viewers.add(id(viewer))
+        if not self._service_update_timer.isActive():
+            self._service_update_timer.start()
+            self._get_service_status()
+
+    def remove_viewer(self, viewer: QObject) -> None:
+        """Stop polling once no widget shows the status any more."""
+        self._viewers.discard(id(viewer))
+        if not self._viewers:
+            self._service_update_timer.stop()
+
+    @property
+    def polling(self) -> bool:
+        """Whether the poller reads the service status periodically."""
+        return self._service_update_timer.isActive()
 
     def _get_service_status(self):
-        """Get the latest service status from the BEC server."""
+        """Read the latest service status from the BEC server off the GUI thread."""
+        if self._worker is not None:
+            return
         # pylint: disable=protected-access
-        self.client._update_existing_services()
-        self.services_update.emit(self.client._services_info, self.client._services_metric)
+        self._worker = Worker(self.client._update_existing_services)
+        self._worker.signals.completed.connect(self._on_service_status)
+        self._worker.signals.failed.connect(self._on_read_failed)
+        QThreadPool.globalInstance().start(self._worker)
+
+    @SafeSlot()
+    def _on_service_status(self):
+        self._worker = None
+        # pylint: disable=protected-access
+        self.last_update = (self.client._services_info, self.client._services_metric)
+        self.services_update.emit(*self.last_update)
+
+    @SafeSlot(str)
+    def _on_read_failed(self, _error: str):
+        self._worker = None
 
     def cleanup(self):
         """Cleanup the BECServiceStatusMixin."""
+        self._viewers.clear()
         self._service_update_timer.stop()
         self._service_update_timer.deleteLater()
+        if self._worker is not None:
+            for signal in (self._worker.signals.completed, self._worker.signals.failed):
+                try:
+                    signal.disconnect()
+                except (TypeError, RuntimeError):
+                    pass
 
 
 class BECStatusBox(BECWidget, QWidget):
     """An autonomous widget to display the status of BEC services.
 
+    The header shows the overall state of BEC, the list groups the core services and the other
+    services (clients, data processing). Clicking a service shows its host, user, uptime, load and
+    versions inline, with a button to copy them.
+
     Args:
         parent Optional : The parent widget for the BECStatusBox. Defaults to None.
         box_name Optional(str): The name of the top service label. Defaults to "BEC Server".
         client Optional(BECClient): The client object to connect to the BEC server. Defaults to None
-        config Optional(BECStatusBoxConfig | dict): The configuration for the status box. Defaults to None.
+        bec_service_status_mixin Optional(BECServiceStatusMixin): Source of the service updates.
+            Defaults to the poller shared by all status boxes of the client.
         gui_id Optional(str): The unique id for the widget. Defaults to None.
     """
 
@@ -93,226 +192,265 @@ class BECStatusBox(BECWidget, QWidget):
     ):
         super().__init__(parent=parent, client=client, gui_id=gui_id, **kwargs)
         self.main_layout = QHBoxLayout(self)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
 
         self.box_name = box_name
-        self.status_container = defaultdict(lambda: {"info": None, "item": None, "widget": None})
+        self.status_container: dict[str, BECServiceInfoContainer] = {}
+        self.core_state = "IDLE"
+        self.model = ServiceStatusModel(self)
 
+        # a poller handed in belongs to this box; the shared one only counts it as a viewer
+        self._owns_poller = bool(bec_service_status_mixin)
         if not bec_service_status_mixin:
-            bec_service_status_mixin = BECServiceStatusMixin(self, client=self.client)
+            bec_service_status_mixin = BECServiceStatusMixin.shared(self.client)
         self.bec_service_status = bec_service_status_mixin
 
-        self.init_ui()
+        self.view = StatusBoxWidgetView(self.model, self)
+        self.view.setMinimumSize(280, 220)
+        self.main_layout.addWidget(self.view)
+        self.model.restart_requested.connect(self.confirm_restart)
+        self._restart_requested_at: float | None = None
+        self._restart_timeout = QTimer(self)
+        self._restart_timeout.setSingleShot(True)
+        self._restart_timeout.timeout.connect(self._restart_timed_out)
+        self._restart_clear = QTimer(self)
+        self._restart_clear.setSingleShot(True)
+        self._restart_clear.timeout.connect(lambda: self.model.set_restart(RestartState.NONE))
         self.bec_service_status.services_update.connect(self.update_service_status)
+        self._poller_connected = True
         self.bec_core_state.connect(self.update_top_item_status)
-        self.tree.itemDoubleClicked.connect(self.on_tree_item_double_clicked)
-        self.main_layout.addWidget(self.tree)
+        last_update = getattr(self.bec_service_status, "last_update", None)
+        if isinstance(last_update, tuple):
+            self.update_service_status(*last_update)  # what another box already read
 
-    def init_ui(self) -> None:
-        """Init the UI for the BECStatusBox widget, should only take place once."""
-        self.init_ui_tree_widget()
-        top_label = self._create_status_widget(self.box_name, status=BECStatus.IDLE)
-        tree_item = QTreeWidgetItem()
-        tree_item.setExpanded(True)
-        tree_item.setDisabled(True)
-        self.status_container[self.box_name].update({"item": tree_item, "widget": top_label})
-        self.tree.addTopLevelItem(tree_item)
-        self.tree.setItemWidget(tree_item, 0, top_label)
-        self.service_update.connect(top_label.update_config)
-        self._initialized = True
+    def showEvent(self, event):  # pylint: disable=invalid-name
+        super().showEvent(event)
+        self.bec_service_status.add_viewer(self)
 
-    def init_ui_tree_widget(self) -> None:
-        """Initialise the tree widget for the status box."""
-        self.tree = QTreeWidget(self)
-        self.tree.setHeaderHidden(True)
-        # TODO probably here is a problem still with setting the stylesheet
-        self.tree.setStyleSheet(
-            "QTreeWidget::item:!selected "
-            "{ "
-            "border: 1px solid gainsboro; "
-            "border-left: none; "
-            "border-top: none; "
-            "}"
-            "QTreeWidget::item:selected {}"
-        )
+    def hideEvent(self, event):  # pylint: disable=invalid-name
+        super().hideEvent(event)
+        self.bec_service_status.remove_viewer(self)
 
     def get_server_state(self) -> str:
-        """Get the state ("RUNNING", "BUSY", "IDLE", "ERROR") of the BEC server"""
-        return self.status_container[self.box_name]["info"].status
+        """Get the state ("RUNNING", "BUSY", "IDLE", "ERROR", "NOTCONNECTED") of the BEC server"""
+        return self.core_state
 
-    def _create_status_widget(
-        self, service_name: str, status=BECStatus, info: dict = None, metrics: dict = None
-    ) -> StatusItem:
-        """Creates a StatusItem (QWidget) for the given service, and stores all relevant
-        information about the service in the status_container.
+    @SafeSlot(str)
+    def update_top_item_status(self, status: str) -> None:
+        """Update the combined state of the core services.
 
         Args:
-            service_name (str): The name of the service.
-            status (BECStatus): The status of the service.
-            info Optional(dict): The information about the service. Default is {}
-            metric Optional(dict): Metrics for the respective service. Default is None
-
-        Returns:
-            StatusItem: The status item widget.
+            status (str): The state of the core services.
         """
-        if info is None:
-            info = {}
-        self._update_status_container(service_name, status, info, metrics)
-        item = StatusItem(parent=self, config=self.status_container[service_name]["info"])
-        return item
-
-    @Slot(str)
-    def update_top_item_status(self, status: BECStatus) -> None:
-        """Method to update the status of the top item in the tree widget.
-        Gets the status from the Signal 'bec_core_state' and updates the StatusItem via the signal 'service_update'.
-
-        Args:
-            status (BECStatus): The state of the core services.
-        """
-        self.status_container[self.box_name]["info"].status = status
-        self.service_update.emit(self.status_container[self.box_name]["info"])
+        if status == self.core_state:
+            return
+        self.core_state = status
+        self._refresh_model()
 
     def _update_status_container(
-        self, service_name: str, status: BECStatus, info: dict, metrics: dict = None
+        self, service_name: str, status: BECStatus | str, info: dict, metrics: dict = None
     ) -> None:
-        """Update the status_container with the newest status and metrics for the BEC service.
-        If information about the service already exists, it will create a new entry.
+        """Store the newest status and metrics of a BEC service.
 
         Args:
             service_name (str): The name of the service.
-            status (BECStatus): The status of the service.
+            status (BECStatus | str): The status of the service.
             info (dict): The information about the service.
             metrics (dict): The metrics of the service.
         """
-        container = self.status_container[service_name].get("info", None)
-
+        status = status.name if isinstance(status, BECStatus) else status
+        container = self.status_container.get(service_name)
         if container:
-            container.status = status.name
+            container.status = status
             container.info = info
             container.metrics = metrics
-            return
-        service_info_item = BECServiceInfoContainer(
-            service_name=service_name,
-            status=status.name if isinstance(status, BECStatus) else status,
-            info=info,
-            metrics=metrics,
-        )
-        self.status_container[service_name].update({"info": service_info_item})
+        else:
+            container = BECServiceInfoContainer(
+                service_name=service_name, status=status, info=info, metrics=metrics
+            )
+            self.status_container[service_name] = container
+        self.service_update.emit(container)
 
-    @Slot(dict, dict)
+    @SafeSlot(dict, dict)
     def update_service_status(
         self,
         services_info: dict[str, StatusMessage],
         services_metric: dict[str, ServiceMetricMessage],
     ) -> None:
-        """Callback function services_metric from BECServiceStatusMixin.
-        It updates the status of all services.
+        """Callback for BECServiceStatusMixin.services_update. Updates the status of all services.
 
         Args:
-            services_info (dict): A dictionary containing the service status for all running BEC services.
-            services_metric (dict): A dictionary containing the service metrics for all running BEC services.
+            services_info (dict): The service status for all running BEC services.
+            services_metric (dict): The service metrics for all running BEC services.
         """
-        checked = [self.box_name]
+        services_info = dict(services_info)
+        checked = list(self.CORE_SERVICES)
         # FIXME: We simply replace the pydantic message with dict for now until we refactor the widget
         for val in services_info.values():
             val.info = val.info.model_dump() if isinstance(val.info, BaseModel) else val.info
-        services_info = self.update_core_services(services_info, services_metric)
-        checked.extend(self.CORE_SERVICES)
+        services_info = self.update_core_services(services_info, services_metric, refresh=False)
 
         for service_name, msg in sorted(services_info.items()):
             checked.append(service_name)
             metric_msg = services_metric.get(service_name, None)
             metrics = metric_msg.metrics if metric_msg else None
-            if service_name in self.status_container:
-                if not msg:
-                    self.add_tree_item(service_name, "NOTCONNECTED", {}, metrics)
-                    continue
-                self._update_status_container(service_name, msg.status, msg.info, metrics)
-                self.service_update.emit(self.status_container[service_name]["info"])
+            if not msg:
+                self._update_status_container(service_name, "NOTCONNECTED", {}, metrics)
                 continue
+            self._update_status_container(service_name, msg.status, msg.info, metrics)
+        self.remove_stale_services(checked)
+        self._refresh_model()
 
-            self.add_tree_item(service_name, msg.status, msg.info, metrics)
-        self.check_redundant_tree_items(checked)
-
-    def update_core_services(self, services_info: dict, services_metric: dict) -> dict:
-        """Update the core services of BEC, and emit the updated status to the BECStatusBox.
+    def update_core_services(
+        self, services_info: dict, services_metric: dict, refresh: bool = True
+    ) -> dict:
+        """Update the core services of BEC and emit their combined state.
 
         Args:
-            services_info (dict): A dictionary containing the service status of different services.
-            services_metric (dict): A dictionary containing the service metrics of different services.
+            services_info (dict): The service status of different services.
+            services_metric (dict): The service metrics of different services.
+            refresh (bool): Whether to refresh the view right away.
 
         Returns:
-            dict: The services_info dictionary after removing the info updates related to the CORE_SERVICES
+            dict: The services_info dictionary without the CORE_SERVICES entries.
         """
         core_state = BECStatus.RUNNING
-        for service_name in sorted(self.CORE_SERVICES):
+        for service_name in self.CORE_SERVICES:
             metric_msg = services_metric.get(service_name, None)
             metrics = metric_msg.metrics if metric_msg else None
             msg = services_info.pop(service_name, None)
-            if service_name not in self.status_container:
-                if not msg:
-                    self.add_tree_item(service_name, "NOTCONNECTED", {}, metrics)
-                    continue
-                self.add_tree_item(service_name, msg.status, msg.info, metrics)
-                continue
             if not msg:
-                self.status_container[service_name]["info"].status = "NOTCONNECTED"
+                self._update_status_container(service_name, "NOTCONNECTED", {}, metrics)
                 core_state = None
-            else:
-                self._update_status_container(service_name, msg.status, msg.info, metrics)
-                if core_state:
-                    core_state = msg.status if msg.status.value < core_state.value else core_state
+                continue
+            info = msg.info.model_dump() if isinstance(msg.info, BaseModel) else msg.info
+            self._update_status_container(service_name, msg.status, info, metrics)
+            if core_state and msg.status.value < core_state.value:
+                core_state = msg.status
 
-            self.service_update.emit(self.status_container[service_name]["info"])
-
-        self.bec_core_state.emit(core_state.name if core_state else "NOTCONNECTED")
+        self.core_state = core_state.name if core_state else "NOTCONNECTED"
+        self.bec_core_state.emit(self.core_state)
+        if refresh:
+            self._refresh_model()
         return services_info
 
-    def check_redundant_tree_items(self, checked: list) -> None:
-        """Utility method to check and remove redundant objects from the BECStatusBox.
+    def remove_stale_services(self, checked: list) -> None:
+        """Remove services that are no longer reported by BEC.
 
         Args:
-            checked (list): A list of services that are currently running.
+            checked (list): The services that are currently known.
         """
-        to_be_deleted = [key for key in self.status_container if key not in checked]
+        for key in [key for key in self.status_container if key not in checked]:
+            self.status_container.pop(key)
 
-        for key in to_be_deleted:
-            obj = self.status_container.pop(key)
-            item = obj["item"]
-            self.status_container[self.box_name]["item"].removeChild(item)
+    def _refresh_model(self) -> None:
+        rows = build_rows(self.status_container.values(), self.CORE_SERVICES)
+        self.model.set_rows(rows, self.core_state)
+        scihub = self.status_container.get("SciHub")
+        self.model.set_can_restart(scihub is not None and scihub.status != "NOTCONNECTED")
+        self._check_restart_progress()
 
-    def add_tree_item(
-        self, service_name: str, status: BECStatus, info: dict = None, metrics: dict = None
-    ) -> None:
-        """Method to add a new QTreeWidgetItem together with a StatusItem to the tree widget.
+    # ---- server restart -----------------------------------------------------------------------
+
+    @SafeSlot()
+    def confirm_restart(self) -> None:
+        """Ask the user to confirm, then request a restart of the BEC server."""
+        answer = QMessageBox.warning(
+            self,
+            "Restart BEC server",
+            "Restart all BEC server services?\n\n"
+            "A running scan is aborted, and devices are reloaded. "
+            "Clients stay connected and continue after the restart.",
+            QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Yes,
+            QMessageBox.StandardButton.Cancel,
+        )
+        if answer == QMessageBox.StandardButton.Yes:
+            self.request_restart()
+
+    def request_restart(self) -> None:
+        """Request a restart of all BEC server services through SciHub.
+
+        The progress is shown in the header: a service counts as restarted once it reports
+        RUNNING with a process start time after the request.
+        """
+        if not self.model.can_restart:
+            return
+        self._restart_requested_at = time.time()
+        self.client.connector.send(
+            MessageEndpoints.service_request(), ServiceRequestMessage(action="restart")
+        )
+        logger.info("BEC server restart requested from the status box")
+        self._restart_clear.stop()
+        self._restart_timeout.start(int(RESTART_TIMEOUT_S * 1000))
+        self.model.set_restart(
+            RestartState.RUNNING, f"Restarting BEC server · 0/{len(self.CORE_SERVICES)}"
+        )
+
+    def _restarted_services(self) -> list[str]:
+        restarted = []
+        for name in self.CORE_SERVICES:
+            container = self.status_container.get(name)
+            if container is None or container.status not in ("RUNNING", "BUSY"):
+                continue
+            started = (container.metrics or {}).get("create_time")
+            if started is not None and started >= self._restart_requested_at:
+                restarted.append(name)
+        return restarted
+
+    def _check_restart_progress(self) -> None:
+        if self._restart_requested_at is None:
+            return
+        done = len(self._restarted_services())
+        total = len(self.CORE_SERVICES)
+        if done < total:
+            self.model.set_restart(RestartState.RUNNING, f"Restarting BEC server · {done}/{total}")
+            return
+        self._restart_requested_at = None
+        self._restart_timeout.stop()
+        self.model.set_restart(RestartState.DONE, "BEC server restarted")
+        self._restart_clear.start(6000)
+        self.submit_task(self._reload_client)
+
+    def _reload_client(self) -> None:
+        """Reload scans and devices in this client after a restart (runs off the GUI thread)."""
+        # pylint: disable=protected-access
+        try:
+            self.client._load_scans()
+            self.client.device_manager._reload_action()
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.warning(f"Reloading the client after the server restart failed: {exc}")
+
+    def _restart_timed_out(self) -> None:
+        if self._restart_requested_at is None:
+            return
+        missing = [n for n in self.CORE_SERVICES if n not in self._restarted_services()]
+        self._restart_requested_at = None
+        names = ", ".join(friendly_name(n)[0] for n in missing)
+        self.model.set_restart(
+            RestartState.FAILED, f"Restart not finished: {names} did not come back"
+        )
+        self._restart_clear.start(15000)
+
+    @SafeSlot(str)
+    def apply_theme(self, theme: str):
+        """Restyle the view after a theme change.
 
         Args:
-            service_name (str): The name of the service.
-            status (BECStatus): The status of the service.
-            info (dict): The information about the service.
-            metrics (dict): The metrics of the service.
+            theme (str): The name of the new theme.
         """
-        item_widget = self._create_status_widget(service_name, status, info, metrics)
-        item = QTreeWidgetItem()
-        self.service_update.connect(item_widget.update_config)
-        self.status_container[self.box_name]["item"].addChild(item)
-        self.tree.setItemWidget(item, 0, item_widget)
-        self.status_container[service_name].update({"item": item, "widget": item_widget})
-
-    @Slot(QTreeWidgetItem, int)
-    def on_tree_item_double_clicked(self, item: QTreeWidgetItem, column: int) -> None:
-        """Callback function for double clicks on individual QTreeWidgetItems in the collapsed section.
-
-        Args:
-            item (QTreeWidgetItem): The item that was double clicked.
-            column (int): The column that was double clicked.
-        """
-        for _, objects in self.status_container.items():
-            if objects["item"] == item:
-                objects["widget"].show_popup()
+        self.view.apply_theme()
 
     def cleanup(self):
         """Cleanup the BECStatusBox widget."""
-        self.bec_service_status.cleanup()
+        self.bec_service_status.remove_viewer(self)
+        if self._poller_connected:
+            self._poller_connected = False
+            self.bec_service_status.services_update.disconnect(self.update_service_status)
+        if self._owns_poller:
+            self.bec_service_status.cleanup()
+        self._restart_timeout.stop()
+        self._restart_clear.stop()
+        self.view.cleanup()
         return super().cleanup()
 
 
