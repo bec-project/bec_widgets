@@ -13,6 +13,7 @@ from qtpy.QtWidgets import (
     QLabel,
     QMainWindow,
     QMessageBox,
+    QSizePolicy,
     QStyle,
     QVBoxLayout,
     QWidget,
@@ -34,6 +35,12 @@ from bec_widgets.widgets.containers.main_window.addons.notification_center.notif
     NotificationIndicator,
 )
 from bec_widgets.widgets.containers.main_window.addons.scroll_label import ScrollLabel
+from bec_widgets.widgets.containers.main_window.addons.status_pill import (
+    CardAlign,
+    HoverCard,
+    HoverCardController,
+    StatusPillItem,
+)
 from bec_widgets.widgets.containers.main_window.addons.web_links import BECWebLinksMixin
 from bec_widgets.widgets.progress.scan_progressbar.scan_progressbar import ScanProgressBar
 from bec_widgets.widgets.utility.feedback_dialog.feedback_dialog import FeedbackDialog
@@ -70,6 +77,7 @@ class BECMainWindow(BECWidget, QMainWindow):
         self._nc_margin = 16
         self._position_notification_centre()
         self._widget_hierarchy_dialog: WidgetHierarchyDialog | None = None
+        self._status_items: list[tuple[StatusPillItem, QWidget]] = []
 
         # Init ui
         self._init_ui()
@@ -182,16 +190,22 @@ class BECMainWindow(BECWidget, QMainWindow):
         self._client_info_label.setAlignment(
             Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
         )
-        # Full label used in the hover widget
-        self._client_info_label_full = QLabel(self)
+        # Full label shown in a card above the scrolling one on hover
+        self._client_info_label_full = QLabel()
         self._client_info_label_full.setAlignment(
             Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
         )
-        # Hover widget to show the full client info label
-        self._client_info_hover = HoverWidget(
-            self, simple=self._client_info_label, full=self._client_info_label_full
+        self._client_info_card = HoverCard(
+            self._client_info_label, self._client_info_label_full, object_name="client_info_card"
         )
-        self.status_bar.addWidget(self._client_info_hover, 1)
+        self._client_info_card.hide()
+        self._client_info_hover = HoverCardController(
+            self._client_info_label,
+            self._client_info_card,
+            can_open=lambda: bool(self._client_info_label_full.text()),
+            align=CardAlign.CENTER,
+        )
+        self.status_bar.addWidget(self._client_info_label, 1)
 
         # Timer to automatically clear client messages once they expire
         self._client_info_expire_timer = QTimer(self)
@@ -239,6 +253,80 @@ class BECMainWindow(BECWidget, QMainWindow):
         self._scan_progress_bar_with_separator.layout.addWidget(self._scan_progress_hover)
 
         self.status_bar.addWidget(self._scan_progress_bar_with_separator)
+
+    def add_status_item(self, item: StatusPillItem) -> QWidget:
+        """
+        Add a status pill to the status bar, after a separator. Every pill has a stretch, but only
+        one in the "fill" width mode uses it: the width mode sets the size policy of its holder.
+
+        Args:
+            item(StatusPillItem): The pill, e.g. the scan pill.
+
+        Returns:
+            QWidget: The status bar widget holding the separator and the pill.
+        """
+        holder = QWidget()
+        holder.layout = QHBoxLayout(holder)
+        holder.layout.setContentsMargins(0, 0, 0, 0)
+        holder.layout.setSpacing(0)
+        holder.layout.addWidget(self._add_separator(separate_object=True))
+        holder.layout.addWidget(item)
+        self._set_status_holder_fill(holder, item.width_mode == "fill")
+        self.status_bar.addWidget(holder, 1)
+        item.fill_changed.connect(
+            lambda fill, holder=holder: self._set_status_holder_fill(holder, fill)
+        )
+        item.dock_requested.connect(self.open_in_dock_area)
+        item.set_dock_handler(lambda: self.status_dock_area() is not None)
+        self._status_items.append((item, holder))
+        return holder
+
+    def status_dock_area(self):
+        """
+        The dock area the status pills open their widgets in: the central widget if it is a dock
+        area, else None (a double-click on a pill then does nothing).
+
+        Returns:
+            BECDockArea | None: The dock area.
+        """
+        # pylint: disable=import-outside-toplevel
+        from bec_widgets.widgets.containers.dock_area.dock_area import BECDockArea
+
+        central = self.centralWidget()
+        return central if isinstance(central, BECDockArea) else None
+
+    def show_dock_area(self) -> None:
+        """Bring the dock area of status_dock_area into view; for windows with several views."""
+
+    @SafeSlot(str)
+    def open_in_dock_area(self, widget: str) -> QWidget | None:
+        """
+        Show a widget in the dock area: raise the dock of one that is already there, else add a
+        new one.
+
+        Args:
+            widget(str): Class name of the widget, e.g. "ScanProgressBar".
+
+        Returns:
+            QWidget | None: The docked widget, or None without a dock area.
+        """
+        dock_area = self.status_dock_area()
+        if dock_area is None:
+            return None
+        self.show_dock_area()
+        for dock in dock_area.dock_list():
+            existing = dock.widget()
+            if type(existing).__name__ == widget:
+                dock.toggleView(True)
+                dock.raise_()
+                return existing
+        return dock_area.new(widget)
+
+    @staticmethod
+    def _set_status_holder_fill(holder: QWidget, fill: bool) -> None:
+        """Let a pill use its stretch in the status bar, or keep it at the width of the pill."""
+        policy = QSizePolicy.Policy.Expanding if fill else QSizePolicy.Policy.Fixed
+        holder.setSizePolicy(policy, holder.sizePolicy().verticalPolicy())
 
     def _add_separator(self, separate_object: bool = False) -> QWidget | None:
         """
@@ -529,9 +617,9 @@ class BECMainWindow(BECWidget, QMainWindow):
         # Status bar widgets cleanup
 
         # Client info label cleanup
+        self._client_info_hover.cleanup()
+        self._client_info_card.close()
         self._client_info_label.cleanup()
-        self._client_info_hover.close()
-        self._client_info_hover.deleteLater()
         # Scan progress bar cleanup
         self._scan_progress_bar_simple.close()
         self._scan_progress_bar_simple.deleteLater()
@@ -539,6 +627,11 @@ class BECMainWindow(BECWidget, QMainWindow):
         self._scan_progress_bar_full.deleteLater()
         self._scan_progress_hover.close()
         self._scan_progress_hover.deleteLater()
+        # Status pills cleanup
+        for item, _holder in self._status_items:
+            item.close()
+            item.deleteLater()
+        self._status_items.clear()
         super().cleanup()
 
 
