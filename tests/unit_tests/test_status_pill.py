@@ -106,9 +106,9 @@ def test_generic_item_saves_its_choices_under_its_prefix(generic_item, tmp_path)
 
 
 def _cursor_at(monkeypatch, point):
-    from bec_widgets.widgets.containers.main_window.addons import status_pill
+    from bec_widgets.utils import hover_card
 
-    monkeypatch.setattr(status_pill.QCursor, "pos", staticmethod(lambda: point))
+    monkeypatch.setattr(hover_card.QCursor, "pos", staticmethod(lambda: point))
 
 
 def _outer_rect(item):
@@ -250,3 +250,28 @@ def test_hover_cleanup_can_run_twice(generic_item, recwarn):
     generic_item.hover.cleanup()
     generic_item.hover.cleanup()
     assert not [w for w in recwarn if "Failed to disconnect" in str(w.message)]
+
+
+def test_late_enter_opens_no_card_for_a_hidden_or_cleaned_up_pill(generic_item, qtbot):
+    from qtpy.QtCore import QPointF
+    from qtpy.QtGui import QEnterEvent
+    from qtpy.QtWidgets import QApplication
+
+    item = generic_item
+
+    def enter():
+        point = QPointF(5, 5)
+        QApplication.sendEvent(item.pill, QEnterEvent(point, point, point))
+
+    enter()  # Qt can still deliver a queued Enter after the window was hidden or closed
+    assert not item.card.isVisible()
+
+    item.show()
+    qtbot.waitExposed(item)
+    enter()
+    assert item.card.isVisible()
+    item.close_card()
+
+    item.hover.cleanup()
+    enter()
+    assert not item.card.isVisible()

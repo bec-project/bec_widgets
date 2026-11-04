@@ -14,12 +14,11 @@ from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.bec_connector import Worker
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.hover_card import HoverCard
 from bec_widgets.widgets.containers.main_window.addons.status_pill import (  # noqa: F401
-    KEYBOARD_FOCUS_REASONS,
     PILL_FILL_MIN,
     PILL_MODES,
     PILL_WIDTHS,
-    HoverCard,
     Reveal,
     StatusPillItem,
     ToolIndicator,

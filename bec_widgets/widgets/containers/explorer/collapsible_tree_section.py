@@ -14,7 +14,7 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets.utils.error_popups import SafeProperty
-from bec_widgets.widgets.containers.main_window.addons.hover_widget import WidgetTooltip
+from bec_widgets.utils.hover_card import HoverCard
 
 
 class CollapsibleSection(QWidget):
@@ -44,7 +44,7 @@ class CollapsibleSection(QWidget):
         self.title = title
         self.content_widget = None
         self._help_text = tooltip
-        self._help_tooltip: WidgetTooltip | None = None
+        self._help_tooltip: HoverCard | None = None
         self.destroyed.connect(self._cleanup_help_tooltip)
         self.setAcceptDrops(True)
         self._expanded = True
@@ -187,7 +187,9 @@ class CollapsibleSection(QWidget):
             help_label.setWordWrap(True)
             help_label.setMinimumWidth(220)
             help_label.setMaximumWidth(320)
-            self._help_tooltip = WidgetTooltip(help_label)
+            self._help_tooltip = HoverCard(
+                self, help_label, object_name="section_help_card", hide_on_leave=True
+            )
 
         anchor = self.header_info_button.mapToGlobal(self.header_info_button.rect().center())
         self._help_tooltip.show_near(anchor)

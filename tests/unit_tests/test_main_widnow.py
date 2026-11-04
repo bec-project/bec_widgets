@@ -9,7 +9,6 @@ from qtpy.QtWidgets import QApplication, QFrame, QLabel, QMessageBox
 
 from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.containers.dock_area.profile_utils import SETTINGS_KEYS
-from bec_widgets.widgets.containers.main_window.addons.hover_widget import WidgetTooltip
 from bec_widgets.widgets.containers.main_window.addons.scroll_label import ScrollLabel
 from bec_widgets.widgets.containers.main_window.addons.web_links import BECWebLinksMixin
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
@@ -318,13 +317,13 @@ def test_bec_weblinks(monkeypatch):
 
 def test_client_info_opens_a_card_with_the_full_message(bec_main_window, qtbot, monkeypatch):
     """The scrolling client info shows the full message in a card on hover; empty: no card."""
-    from bec_widgets.widgets.containers.main_window.addons import status_pill
+    from bec_widgets.utils import hover_card
 
     label = bec_main_window._client_info_label
     card = bec_main_window._client_info_card
     hover = bec_main_window._client_info_hover
     centre = label.mapToGlobal(label.rect().center())
-    monkeypatch.setattr(status_pill.QCursor, "pos", staticmethod(lambda: centre))
+    monkeypatch.setattr(hover_card.QCursor, "pos", staticmethod(lambda: centre))
 
     hover.open()
     assert not card.isVisible()  # nothing to show yet
@@ -339,26 +338,8 @@ def test_client_info_opens_a_card_with_the_full_message(bec_main_window, qtbot, 
     )  # centred on the label unless clamped at a screen edge
 
     far = QPoint(-5000, -5000)
-    monkeypatch.setattr(status_pill.QCursor, "pos", staticmethod(lambda: far))
+    monkeypatch.setattr(hover_card.QCursor, "pos", staticmethod(lambda: far))
     qtbot.waitUntil(lambda: not card.isVisible(), timeout=2000)
-
-
-def test_widget_tooltip_show_and_hide(qtbot):
-    """
-    WidgetTooltip should appear when show_above is called and hide on Leave.
-    """
-    full_lbl = QLabel("Standalone tooltip content")
-    tooltip = create_widget(qtbot, WidgetTooltip, content=full_lbl)
-
-    # Show above an arbitrary point
-    pos = QPoint(200, 200)
-    tooltip.show_above(pos)
-    assert tooltip.isVisible()
-
-    # Send a synthetic Leave event
-    QApplication.sendEvent(tooltip, QEvent(QEvent.Leave))
-    qtbot.waitUntil(lambda: not tooltip.isVisible(), timeout=500)
-    assert not tooltip.isVisible()
 
 
 def test_status_bar_holds_several_pills_each_with_its_own_fill(bec_main_window, qtbot, tmp_path):
