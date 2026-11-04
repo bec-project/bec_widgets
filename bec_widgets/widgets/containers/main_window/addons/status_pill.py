@@ -22,17 +22,18 @@ from qtpy.QtCore import (
     QPropertyAnimation,
     QRectF,
     QSettings,
+    QSize,
     Qt,
     QTimer,
     Signal,
 )
-from qtpy.QtGui import QAction, QActionGroup, QPainter, QPen
+from qtpy.QtGui import QAction, QActionGroup, QColor, QFont, QFontMetrics, QPainter, QPen
 from qtpy.QtWidgets import QGraphicsOpacityEffect, QHBoxLayout, QMenu, QSizePolicy, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.hover_card import KEYBOARD_FOCUS_REASONS, HoverCard, HoverCardController
-from bec_widgets.utils.theme_utils import theme_colors
+from bec_widgets.utils.theme_utils import DPR_EVENTS, crisp_pixmap, theme_colors
 from bec_widgets.widgets.progress.stage_bar import BarMode, Chip, StageBar, Tone
 
 logger = bec_logger.logger
@@ -103,6 +104,33 @@ def _default_settings() -> QSettings:
     from bec_widgets.widgets.containers.dock_area.profile_utils import _app_settings
 
     return _app_settings()
+
+
+class PillStyle(StrEnum):
+    """How a status pill shows its indicator."""
+
+    BAR = "bar"  # a bar that fills with the progress, with a label; width modes apply
+    ICON = "icon"  # a state icon and a short label, as wide as its content
+
+
+# icon pill: severity -> (material icon, theme colour key); something active shows ACTIVE_ICON
+SEVERITY_ICONS = {
+    ToolSeverity.OK: ("check_circle", "ok"),
+    ToolSeverity.INFO: ("pending", "muted"),
+    ToolSeverity.WARNING: ("warning", "warn"),
+    ToolSeverity.CRITICAL: ("error", "bad"),
+}
+ACTIVE_ICON = ("sync", "primary")
+
+
+def indicator_icon(indicator: "ToolIndicator") -> tuple[str, str, bool]:
+    """
+    The icon of an indicator on an icon pill: (material icon, theme colour key, spinning). An
+    active indicator shows a turning sync icon, unless it is critical.
+    """
+    if indicator.active and indicator.severity != ToolSeverity.CRITICAL:
+        return (*ACTIVE_ICON, True)
+    return (*SEVERITY_ICONS[ToolSeverity(indicator.severity)], False)
 
 
 class Reveal(QObject):
@@ -266,6 +294,143 @@ class StatusBarPill(StageBar):
         painter.end()
 
 
+def with_alpha(color: QColor, alpha: float) -> QColor:
+    """A copy of a colour with another alpha (0..1)."""
+    result = QColor(color)
+    result.setAlphaF(alpha)
+    return result
+
+
+class StatusIconPill(StatusBarPill):
+    """
+    The icon style of the status-bar pill: a state icon and a short label in a rounded frame, as
+    wide as its content. Hover outline, settings menu and double-click as on the bar pill.
+    """
+
+    PAD = 7  # px left of the icon and right of the label
+    GAP = 4  # px between icon and label
+    SPIN_MS = 60
+
+    def __init__(self, parent: QWidget | None = None):
+        super().__init__(parent)
+        self.setMinimumWidth(0)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self._icon = "pending"
+        self._color_key = "muted"
+        self._spinning = False
+        self._angle = 0.0
+        self._spin_timer = QTimer(self)
+        self._spin_timer.setInterval(self.SPIN_MS)
+        self._spin_timer.timeout.connect(self._advance_spin)
+
+    @property
+    def icon_name(self) -> str:
+        """The material icon shown."""
+        return self._icon
+
+    @property
+    def spinning(self) -> bool:
+        """Whether the icon turns."""
+        return self._spinning
+
+    def set_icon(self, name: str, color_key: str, spinning: bool = False) -> None:
+        """Show a material icon in a theme colour, optionally turning."""
+        if (name, color_key, spinning) == (self._icon, self._color_key, self._spinning):
+            return
+        self._icon, self._color_key, self._spinning = name, color_key, spinning
+        if not spinning:
+            self._angle = 0.0
+        self._sync_spin()
+        self.update()
+
+    def set_text(self, text: str) -> None:
+        """Set the label; the pill resizes to fit it."""
+        if text != self._text:
+            self._text = text
+            self.updateGeometry()
+            self.update()
+
+    def _icon_size(self) -> int:
+        return max(12, round(self.get_bar_height() * 0.64))
+
+    def _label_font(self) -> QFont:
+        font = QFont(self.font())
+        font.setPixelSize(self.label_pixel_size or 12)
+        font.setWeight(QFont.Weight.DemiBold)
+        return font
+
+    def sizeHint(self) -> QSize:
+        text_width = QFontMetrics(self._label_font()).horizontalAdvance(self._text)
+        gap = self.GAP if self._text else 0
+        return QSize(2 * self.PAD + self._icon_size() + gap + text_width, self.get_bar_height())
+
+    def minimumSizeHint(self) -> QSize:
+        return self.sizeHint()
+
+    def _sync_spin(self) -> None:
+        # like the bar's stripes: only while shown, not in a minimized window
+        if self._spinning and self.isVisible() and not self.window().isMinimized():
+            if not self._spin_timer.isActive():
+                self._spin_timer.start()
+        else:
+            self._spin_timer.stop()
+
+    def _advance_spin(self) -> None:
+        self._angle = (self._angle + 18.0) % 360
+        self.update()
+
+    def showEvent(self, event):  # pylint: disable=invalid-name
+        super().showEvent(event)
+        self._sync_spin()
+
+    def hideEvent(self, event):  # pylint: disable=invalid-name
+        super().hideEvent(event)
+        self._spin_timer.stop()
+
+    def changeEvent(self, event):  # pylint: disable=invalid-name
+        super().changeEvent(event)
+        if event.type() in DPR_EVENTS:
+            self.update()
+
+    def paintEvent(self, _event):  # pylint: disable=invalid-name
+        colors = theme_colors()
+        accent = colors[self._color_key]
+        rect = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+        radius = min(self.corner_radius or 5, rect.height() / 2)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        outline = self._hovered or self._keyboard_focus
+        painter.setPen(QPen(colors["primary"] if outline else with_alpha(accent, 0.45), 1))
+        painter.setBrush(with_alpha(accent, 0.12))
+        painter.drawRoundedRect(rect, radius, radius)
+
+        size = self._icon_size()
+        pixmap = crisp_pixmap(self._icon, size, accent, filled=True, widget=self)
+        top = (self.height() - size) / 2
+        if self._angle:
+            painter.save()
+            painter.translate(self.PAD + size / 2, top + size / 2)
+            painter.rotate(self._angle)
+            painter.drawPixmap(
+                QRectF(-size / 2, -size / 2, size, size), pixmap, QRectF(pixmap.rect())
+            )
+            painter.restore()
+        else:
+            painter.drawPixmap(QRectF(self.PAD, top, size, size), pixmap, QRectF(pixmap.rect()))
+        if self._text:
+            painter.setPen(colors["fg"])
+            painter.setFont(self._label_font())
+            left = self.PAD + size + self.GAP
+            text_rect = QRectF(left, 0, self.width() - left - self.PAD + 1, self.height())
+            painter.drawText(text_rect, int(Qt.AlignmentFlag.AlignVCenter), self._text)
+        painter.end()
+
+    def cleanup(self) -> None:
+        """Stop the icon animation."""
+        self._spin_timer.stop()
+        super().cleanup()
+
+
 class StatusPillItem(BECWidget, QWidget):
     """
     A status-bar pill with a badge chip and optional widgets next to it, and a card with the full
@@ -273,7 +438,9 @@ class StatusPillItem(BECWidget, QWidget):
     apply_sizes() once their own widgets exist.
 
     The pill width (compact, normal, wide, fill) and the large size are chosen in its right-click
-    menu and saved per user under the settings prefix.
+    menu and saved per user under the settings prefix. An icon-style pill (PILL_STYLE) shows a
+    state icon and a short label instead of a bar and is as wide as its content; only the large
+    size applies to it.
 
     Signals:
         fill_changed(bool): The pill switched to or from filling the status bar.
@@ -283,6 +450,9 @@ class StatusPillItem(BECWidget, QWidget):
     RPC = False
     PLUGIN = False
     GRACE_MS = HoverCardController.GRACE_MS
+    # the width mode until the user picks one
+    DEFAULT_WIDTH_MODE = "normal"
+    PILL_STYLE = PillStyle.BAR
 
     fill_changed = Signal(bool)
     indicator_changed = Signal(object)
@@ -305,18 +475,20 @@ class StatusPillItem(BECWidget, QWidget):
         super().__init__(parent=parent, client=client, **kwargs)
         self._settings_factory = settings or _default_settings
         self._settings_prefix = settings_prefix
-        self._width_mode = "normal"
+        self._width_mode = self.DEFAULT_WIDTH_MODE
         self._large = False
         self._indicator = ToolIndicator()
         self._load_settings()
+        if self.PILL_STYLE == PillStyle.ICON:
+            self._width_mode = "compact"  # fits its content; never fills the status bar
 
         self.row = QHBoxLayout(self)
         self.row.setContentsMargins(6, 0, 6, 0)
         self.row.setSpacing(6)
-        self.pill = StatusBarPill(self)
+        self.pill = StatusIconPill(self) if self.icon_style else StatusBarPill(self)
         self.pill.menu_requested.connect(self._show_menu)
         self.badge_chip = Chip("", Tone.NEUTRAL, self)
-        self.row.addWidget(self.pill, 1)
+        self.row.addWidget(self.pill, 0 if self.icon_style else 1)
         self.row.addWidget(self.badge_chip)
         self.badge_reveal = Reveal(self.badge_chip, self)
         self._reveals: list[Reveal] = [self.badge_reveal]
@@ -374,12 +546,12 @@ class StatusPillItem(BECWidget, QWidget):
     def _load_settings(self) -> None:
         try:
             settings = self._settings_factory()
-            mode = str(settings.value(self._settings_key("pill_width"), "normal"))
+            mode = str(settings.value(self._settings_key("pill_width"), self.DEFAULT_WIDTH_MODE))
             self._large = settings.value(self._settings_key("large"), False, type=bool)
         except Exception:  # pylint: disable=broad-except
             logger.debug(f"Could not read the {self._settings_prefix} pill settings")
             return
-        self._width_mode = mode if mode in PILL_MODES else "normal"
+        self._width_mode = mode if mode in PILL_MODES else self.DEFAULT_WIDTH_MODE
 
     def _save_settings(self) -> None:
         try:
@@ -395,9 +567,14 @@ class StatusPillItem(BECWidget, QWidget):
         """compact, normal, wide or fill."""
         return self._width_mode
 
+    @property
+    def icon_style(self) -> bool:
+        """Whether the pill shows an icon and a short label instead of a bar."""
+        return self.PILL_STYLE == PillStyle.ICON
+
     def set_width_mode(self, mode: str) -> None:
-        """Choose the pill width and save it."""
-        if mode not in PILL_MODES or mode == self._width_mode:
+        """Choose the pill width and save it; an icon-style pill keeps its content width."""
+        if self.icon_style or mode not in PILL_MODES or mode == self._width_mode:
             return
         was_fill = self._width_mode == "fill"
         self._width_mode = mode
@@ -422,6 +599,9 @@ class StatusPillItem(BECWidget, QWidget):
     def build_menu(self) -> QMenu:
         """The pill's right-click menu: width choice and the large size."""
         menu = QMenu(self)
+        if self.icon_style:
+            menu.addAction(self._large_action(menu))
+            return menu
         menu.addSection("Pill width")
         group = QActionGroup(menu)
         group.setExclusive(True)
@@ -434,12 +614,15 @@ class StatusPillItem(BECWidget, QWidget):
             group.addAction(action)
             menu.addAction(action)
         menu.addSeparator()
+        menu.addAction(self._large_action(menu))
+        return menu
+
+    def _large_action(self, menu: QMenu) -> QAction:
         large = QAction("Large status bar", menu)
         large.setCheckable(True)
         large.setChecked(self._large)
         large.toggled.connect(self.set_large)
-        menu.addAction(large)
-        return menu
+        return large
 
     @SafeSlot(QPoint)
     def _show_menu(self, pos: QPoint) -> None:
@@ -463,7 +646,10 @@ class StatusPillItem(BECWidget, QWidget):
         self.pill.set_bar_height(height)
         self.pill.setFixedHeight(height)
         self.pill.label_pixel_size = 15 if self._large else 12
-        if self._width_mode == "fill":
+        if self.icon_style:
+            self.pill.updateGeometry()
+            self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        elif self._width_mode == "fill":
             self.pill.setMinimumWidth(PILL_FILL_MIN)
             self.pill.setMaximumWidth(16777215)
             self.pill.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -507,8 +693,14 @@ class StatusPillItem(BECWidget, QWidget):
     def render_indicator(self) -> None:
         """Draw the current indicator on the pill and the badge."""
         indicator = self._indicator
-        mode, fraction = stage_mode(indicator)
-        self.pill.set_state(mode, fraction, self.pill_text())
+        if self.icon_style:
+            self.pill.set_icon(*indicator_icon(indicator))
+            self.pill.set_text(self.pill_text())
+            # the label is short; screen readers get the full state
+            self.pill.setAccessibleName(indicator.summary or self.pill_text())
+        else:
+            mode, fraction = stage_mode(indicator)
+            self.pill.set_state(mode, fraction, self.pill_text())
         self._update_tooltip()
         if indicator.badge:
             self.badge_chip.setText(indicator.badge)
@@ -602,5 +794,6 @@ class StatusPillItem(BECWidget, QWidget):
         self.hover.cleanup()
         for widget_reveal in self._reveals:
             widget_reveal.stop()
+        self.pill.cleanup()
         self.card.close()
         super().cleanup()
