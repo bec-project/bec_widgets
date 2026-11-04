@@ -334,11 +334,11 @@ class BECMainApp(BECMainWindow):
             tour_steps.append(client_info_step)
 
         # Register the scan progress bar if available
-        if hasattr(self, "_scan_progress_hover"):
+        if hasattr(self, "_scan_status_item"):
             progress_step = self.guided_tour.register_widget(
-                widget=self._scan_progress_hover,
+                widget=self._scan_status_item,
                 title="Scan Progress",
-                text="Monitor the progress of ongoing scans. Hover over the progress bar to see detailed information including elapsed time and estimated completion.",
+                text="Monitor the running scan. Hover over the bar to see its steps, metadata and Stop; right-click it to change its width.",
             )
             tour_steps.append(progress_step)
 

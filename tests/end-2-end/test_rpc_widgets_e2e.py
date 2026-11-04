@@ -74,8 +74,8 @@ def test_available_widgets(qtbot, connected_client_gui_obj):
     """This test checks that all widgets that are available via gui.available_widgets can be created and removed."""
     gui = connected_client_gui_obj
     dock_area = gui.bec
-    # Number of top level widgets, should be 4
-    top_level_widgets_count = 6
+    # Only the dock area and the launcher; the status bar pills register no RPC widgets
+    top_level_widgets_count = 2
     assert len(gui._server_registry) == top_level_widgets_count
     names = set(list(gui._server_registry.keys()))
     # Number of widgets with parent_id == None, should be 2
