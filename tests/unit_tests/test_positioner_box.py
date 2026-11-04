@@ -9,6 +9,7 @@ from qtpy.QtWidgets import QPushButton
 
 from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.tests.fake_devices import Positioner
+from bec_widgets.widgets.control.buttons.stop_button.stop_button import StopButton
 from bec_widgets.widgets.control.device_control.positioner_box import (
     PositionerBox,
     PositionerControlLine,
@@ -186,3 +187,31 @@ def test_positioner_box_device_without_precision(qtbot, positioner_box):
             assert positioner_box.ui.step_size.value() == 10**-mock_return * 10
         else:
             assert positioner_box.ui.step_size.value() == 10**-8 * 10
+
+
+@pytest.mark.parametrize("box_class", [PositionerBox, PositionerControlLine])
+def test_stop_only_stops_the_motor(qtbot, mocked_client, box_class):
+    """The Stop looks like the Scan Control Stop without its menu and only stops samx."""
+    with mock.patch(
+        "bec_widgets.widgets.control.device_control.positioner_box.positioner_box_base.PositionerBoxBase._check_device_is_valid",
+        return_value=True,
+    ):
+        box = create_widget(qtbot, box_class, device="samx", client=mocked_client)
+    stop = box.ui.stop
+    assert isinstance(stop, StopButton)
+    assert stop.device_stop and stop.arrow.isHidden()
+    assert stop.toolTip() == "Stop"
+    stop.setEnabled(True)
+    with (
+        mock.patch.object(box.client.connector, "send") as send,
+        mock.patch.object(stop.queue, "request_scan_abortion") as abort,
+        mock.patch.object(stop.queue, "request_scan_halt") as halt,
+    ):
+        stop.button.click()
+        stop.button.click()
+    assert send.call_args_list == 2 * [
+        mock.call(MessageEndpoints.stop_devices(), VariableMessage(value=["samx"]))
+    ]
+    abort.assert_not_called()
+    halt.assert_not_called()
+    assert stop.button.text() == "Stop"

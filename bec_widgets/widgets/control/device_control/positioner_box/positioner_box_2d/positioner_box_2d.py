@@ -122,6 +122,8 @@ class PositionerBox2D(PositionerBoxBase):
         _init_ui(self.setpoint_validator_hor, "horizontal")
         _init_ui(self.setpoint_validator_ver, "vertical")
 
+        # the button stops the two motors and leaves the scan queue alone
+        self.ui.stop_button.device_stop = True
         self.ui.stop_button.button.clicked.connect(self.on_stop)
 
         self.ui.step_decrease_hor.clicked.connect(self.on_step_dec_hor)
