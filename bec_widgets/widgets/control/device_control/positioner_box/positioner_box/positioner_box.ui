@@ -115,12 +115,9 @@
        </widget>
       </item>
       <item row="4" column="0" colspan="3">
-       <widget class="QPushButton" name="stop">
+       <widget class="StopButton" name="stop">
         <property name="enabled">
          <bool>false</bool>
-        </property>
-        <property name="text">
-         <string>Stop</string>
         </property>
        </widget>
       </item>
@@ -226,6 +223,11 @@
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>StopButton</class>
+   <extends>QWidget</extends>
+   <header>stop_button</header>
+  </customwidget>
   <customwidget>
    <class>PositionIndicator</class>
    <extends>QWidget</extends>

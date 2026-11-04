@@ -11,7 +11,7 @@ from qtpy.QtCore import Qt, Signal
 from qtpy.QtGui import QDoubleValidator
 from qtpy.QtWidgets import QDoubleSpinBox
 
-from bec_widgets.utils.colors import apply_theme, get_accent_colors
+from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.ui_loader import UILoader
 from bec_widgets.widgets.control.device_control.positioner_box.positioner_box_base import (
@@ -80,11 +80,10 @@ class PositionerBox(PositionerBoxBase):
         db.setFixedWidth(self.dimensions[1])
 
         self.ui.step_size.setStepType(QDoubleSpinBox.AdaptiveDecimalStepType)
-        self.ui.stop.clicked.connect(self.on_stop)
+        # the button stops the motor and leaves the scan queue alone
+        self.ui.stop.device_stop = True
+        self.ui.stop.button.clicked.connect(self.on_stop)
         self.ui.stop.setToolTip("Stop")
-        self.ui.stop.setStyleSheet(
-            f"QPushButton {{background-color: {get_accent_colors().emergency.name()}; color: white;}}"
-        )
         self.ui.tweak_right.clicked.connect(self.on_tweak_right)
         self.ui.tweak_right.setToolTip("Tweak right")
         self.ui.tweak_left.clicked.connect(self.on_tweak_left)
