@@ -153,11 +153,7 @@
        </layout>
       </item>
       <item>
-       <widget class="QPushButton" name="stop">
-        <property name="text">
-         <string>Stop</string>
-        </property>
-       </widget>
+       <widget class="StopButton" name="stop"/>
       </item>
       <item>
        <widget class="QToolButton" name="tweak_left">
@@ -252,6 +248,11 @@
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>StopButton</class>
+   <extends>QWidget</extends>
+   <header>stop_button</header>
+  </customwidget>
   <customwidget>
    <class>PositionIndicator</class>
    <extends></extends>
