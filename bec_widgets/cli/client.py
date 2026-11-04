@@ -480,7 +480,7 @@ class BECProgressBar(RPCBase):
 
 
 class BECQueue(RPCBase):
-    """Widget to display the BEC queue."""
+    """Live scan queue with the running scan, the scans up next and the finished scans."""
 
     _IMPORT_MODULE = "bec_widgets.widgets.services.bec_queue.bec_queue"
 

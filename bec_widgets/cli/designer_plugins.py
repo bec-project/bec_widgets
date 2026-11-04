@@ -117,7 +117,7 @@ widget_icons = {
     "BECColorMapWidget": "palette",
     "BECMainWindow": "widgets",
     "BECProgressBar": "page_control",
-    "BECQueue": "edit_note",
+    "BECQueue": "view_list",
     "BECShell": "hub",
     "BECSpinBox": "123",
     "BECStatusBox": "widgets",
