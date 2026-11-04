@@ -15,7 +15,6 @@ import sys
 
 import pytest
 import shiboken6
-from bec_lib import messages
 from qtpy.QtCore import QEvent
 from qtpy.QtWidgets import (
     QApplication,
@@ -30,10 +29,8 @@ from qtpy.QtWidgets import (
 
 from bec_widgets.tests.client_mocks import dap_plugin_message, mocked_client, mocked_client_with_dap
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.widgets.control.buttons.button_abort.button_abort import AbortButton
 from bec_widgets.widgets.plots.waveform.settings.curve_settings.curve_tree import CurveTree
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
-from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
 
 from .conftest import create_widget
 
@@ -90,44 +87,6 @@ class ViewHost(BECWidget, QWidget):
         return (self.table, self.tree, self.list)
 
 
-def _queue_entry(scan_number: int, rid: str, status: str = "PENDING") -> dict:
-    """Build a single primary-queue entry with one request block."""
-    msg = messages.ScanQueueMessage(
-        metadata={"RID": rid}, scan_type="line_scan", parameter={"args": {}, "kwargs": {}}
-    )
-    return {
-        "queue_id": f"queue-{scan_number}",
-        "scan_id": [f"scan-{scan_number}"],
-        "is_scan": [True],
-        "request_blocks": [
-            {
-                "msg": msg,
-                "RID": rid,
-                "readout_priority": {"monitored": [], "baseline": [], "on_request": []},
-                "is_scan": True,
-                "scan_number": scan_number,
-                "scan_id": f"scan-{scan_number}",
-            }
-        ],
-        "scan_number": [scan_number],
-        "status": status,
-    }
-
-
-def _three_row_queue_content() -> dict:
-    content = {
-        "primary": {
-            "info": [
-                _queue_entry(1001, "rid-1001", status="RUNNING"),
-                _queue_entry(1002, "rid-1002"),
-                _queue_entry(1003, "rid-1003"),
-            ],
-            "status": "RUNNING",
-        }
-    }
-    return messages.ScanQueueStatusMessage(metadata={}, queue=content).content
-
-
 #####################################################################
 # Scenarios, executed only inside the child process
 #####################################################################
@@ -173,24 +132,6 @@ def test_inner_nested_view_close_releases_cell_widgets(qtbot, mocked_client):
 
 
 @inner_only
-def test_inner_bec_queue_close_then_relayout(qtbot, mocked_client):
-    queue = BECQueue(client=mocked_client, refresh_upon_start=False)
-    qtbot.addWidget(queue)
-    qtbot.waitExposed(queue)
-    queue.update_queue(_three_row_queue_content(), {})
-    assert queue.table.rowCount() == 3
-    buttons = [queue.table.cellWidget(row, 4) for row in range(3)]
-    assert all(isinstance(button, AbortButton) for button in buttons)
-
-    queue.close()
-    _flush_deferred_deletes()
-    queue.table.updateEditorGeometries()  # SIGSEGV on the deleted abort buttons
-
-    assert not any(shiboken6.isValid(button) for button in buttons)
-    assert all(queue.table.cellWidget(row, 4) is None for row in range(3))
-
-
-@inner_only
 def test_inner_curve_tree_close_then_relayout(qtbot, mocked_client_with_dap):
     """Guard: CurveTree keeps BEC combo boxes in tree cells and removes its rows on cleanup."""
     wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
@@ -222,7 +163,6 @@ def test_inner_curve_tree_close_then_relayout(qtbot, mocked_client_with_dap):
     [
         "test_inner_view_host_close_releases_cell_widgets",
         "test_inner_nested_view_close_releases_cell_widgets",
-        "test_inner_bec_queue_close_then_relayout",
         "test_inner_curve_tree_close_then_relayout",
     ],
 )

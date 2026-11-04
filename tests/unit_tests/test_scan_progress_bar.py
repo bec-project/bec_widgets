@@ -1044,6 +1044,102 @@ def test_unstretched_stop_has_the_bar_height_on_both_segments(qtbot, mocked_clie
     qtbot.waitUntil(lambda: not bar.stretched and aligned(34), timeout=1000)
 
 
+def test_hook_broadcasts_reach_every_scan_progress_in_the_app(qtbot, mocked_client, tmp_path):
+    """A docked ScanProgressBar, the queue's running card and the status-bar pill side by side."""
+    from qtpy.QtCore import QSettings
+
+    from bec_widgets.widgets.containers.main_window.addons.scan_status_item import ScanStatusItem
+    from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
+
+    docked = create_widget(qtbot, ScanProgressBar, client=mocked_client)
+    queue = create_widget(qtbot, BECQueue, client=mocked_client)
+    pill = create_widget(
+        qtbot,
+        ScanStatusItem,
+        client=mocked_client,
+        settings=lambda: QSettings(str(tmp_path / "pill.ini"), QSettings.Format.IniFormat),
+    )
+    pill.set_width_mode("wide")
+    trackers = [docked.tracker, queue.progress.tracker, pill.tracker]
+    progresses = [docked, queue.progress]
+
+    def send(method, *args):
+        for tracker in trackers:
+            getattr(tracker, method)(*args)
+
+    send("on_scan_status", *status(num_points=10))
+    staging = [{"device": ["samx", "bpm4i"], "action": "stage", "parameter": {}}]
+    send("on_scan_hook", *hook("stage", 1.0, instructions=staging))
+    for progress in progresses:
+        assert progress.state_chip.text() == "Staging"
+        assert progress.bar.mode == BarMode.BUSY
+        assert progress.instruction_label.full_text() == "Staging samx, bpm4i"
+    assert pill.pill.mode == BarMode.BUSY and "Staging" in pill.pill.text
+
+    move = [{"device": "samx", "action": "set", "parameter": {"value": -5.0}}]
+    send(
+        "on_scan_hook",
+        *hook("scan_core", 2.0, instructions=move, waiting=True, wait_started_at=2.0),
+    )
+    send("on_scan_progress", {"value": 3, "max_value": 10, "done": False}, {"scan_id": "s1"})
+    for progress in progresses:
+        assert progress.state_chip.text() == "Measuring"
+        assert progress.bar.mode == BarMode.PROGRESS
+        assert progress.instruction_label.full_text() == "Waiting for samx to reach -5"
+    assert pill.pill.mode == BarMode.PROGRESS
+    assert "Point 3 of 10" in pill.pill.text  # the pill shows points; the card has the line
+
+
+def test_every_stop_button_has_the_same_colours(qtbot, mocked_client, tmp_path):
+    """ScanControl, the status bar pill, the queue's running card and a docked progress bar."""
+    from bec_lib import messages
+    from bec_lib.endpoints import MessageEndpoints
+    from qtpy.QtCore import QSettings
+
+    from bec_widgets.utils.colors import apply_theme
+    from bec_widgets.widgets.containers.main_window.addons.scan_status_item import ScanStatusItem
+    from bec_widgets.widgets.control.scan_control.scan_control import ScanControl
+    from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
+
+    def stops():
+        return {
+            "scan_control": scan_control.button_stop_scan,
+            "pill": pill.stop_button,
+            "queue": queue.progress.stop_button,
+            "progress": docked.stop_button,
+        }
+
+    def resolved(stop):
+        return {k: v.name(v.NameFormat.HexArgb) for k, v in stop.style_colors().items()}
+
+    mocked_client.connector.set_and_publish(
+        MessageEndpoints.available_scans(), messages.AvailableResourceMessage(resource={})
+    )
+    scan_control = create_widget(qtbot, ScanControl, client=mocked_client)
+    pill = create_widget(
+        qtbot,
+        ScanStatusItem,
+        client=mocked_client,
+        settings=lambda: QSettings(str(tmp_path / "pill.ini"), QSettings.Format.IniFormat),
+    )
+    queue = create_widget(qtbot, BECQueue, client=mocked_client)
+    docked = create_widget(qtbot, ScanProgressBar, client=mocked_client)
+    try:
+        for theme in ("light", "dark"):
+            apply_theme(theme)
+            looks = {name: resolved(stop) for name, stop in stops().items()}
+            assert all(look == looks["scan_control"] for look in looks.values()), looks
+            # rest and hover rules in each style sheet carry the same colours
+            for stop in stops().values():
+                colors = stop.style_colors()
+                sheet = stop.button.styleSheet()
+                for key in ("background", "hover_background", "hover_text"):
+                    color = colors[key]
+                    assert f"rgba({color.red()}, {color.green()}, {color.blue()}," in sheet
+    finally:
+        apply_theme("light")
+
+
 def test_the_scan_is_shown_by_its_own_name(progress):
     progress.tracker.on_scan_status(*status(user_metadata={"scan_name": "My Scan"}))
     assert progress.title_label.full_text() == "#12 My Scan"
