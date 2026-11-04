@@ -342,6 +342,15 @@ class BECMainApp(BECMainWindow):
             )
             tour_steps.append(progress_step)
 
+        # Register the BEC server pill if available
+        if hasattr(self, "_server_status_item"):
+            server_step = self.guided_tour.register_widget(
+                widget=self._server_status_item,
+                title="BEC Server Status",
+                text="Shows whether the BEC core services are running. Hover over it to see every service with its details and to restart the BEC server.",
+            )
+            tour_steps.append(server_step)
+
         # Register the notification indicator in the status bar
         if hasattr(self, "notification_indicator"):
             notif_step = self.guided_tour.register_widget(

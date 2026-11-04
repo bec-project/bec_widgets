@@ -377,7 +377,7 @@ def test_status_bar_holds_several_pills_each_with_its_own_fill(bec_main_window, 
     second.apply_sizes()
     holder = bec_main_window.add_status_item(second)
     items = [item for item, _ in bec_main_window._status_items]
-    assert items == [bec_main_window._scan_status_item, second]
+    assert items == [bec_main_window._scan_status_item, bec_main_window._server_status_item, second]
     scan_holder = bec_main_window._scan_progress_bar_with_separator
     bec_main_window.resize(1400, 300)
     bec_main_window.show()
