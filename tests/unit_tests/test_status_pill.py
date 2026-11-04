@@ -1,12 +1,16 @@
 import pytest
 from qtpy.QtCore import QSettings, Qt
-from qtpy.QtWidgets import QLabel
+from qtpy.QtWidgets import QLabel, QSizePolicy
 
 from bec_widgets.tests.utils import create_widget
 from bec_widgets.widgets.containers.main_window.addons.status_pill import (
+    PILL_WIDTHS,
+    PillStyle,
+    StatusIconPill,
     StatusPillItem,
     ToolIndicator,
     ToolSeverity,
+    indicator_icon,
     stage_mode,
 )
 from bec_widgets.widgets.progress.stage_bar import BarMode, Tone
@@ -275,3 +279,92 @@ def test_late_enter_opens_no_card_for_a_hidden_or_cleaned_up_pill(generic_item, 
     item.hover.cleanup()
     enter()
     assert not item.card.isVisible()
+
+
+@pytest.mark.parametrize(
+    "indicator, expected",
+    [
+        (ToolIndicator(severity=ToolSeverity.OK), ("check_circle", "ok", False)),
+        (ToolIndicator(severity=ToolSeverity.INFO), ("pending", "muted", False)),
+        (ToolIndicator(severity=ToolSeverity.WARNING), ("warning", "warn", False)),
+        (ToolIndicator(severity=ToolSeverity.CRITICAL), ("error", "bad", False)),
+        (ToolIndicator(severity=ToolSeverity.INFO, active=True), ("sync", "primary", True)),
+        (ToolIndicator(severity=ToolSeverity.OK, active=True), ("sync", "primary", True)),
+        # an error wins over something that still runs
+        (ToolIndicator(severity=ToolSeverity.CRITICAL, active=True), ("error", "bad", False)),
+    ],
+)
+def test_indicator_maps_to_an_icon(indicator, expected):
+    assert indicator_icon(indicator) == expected
+
+
+class IconPill(StatusPillItem):
+    PILL_STYLE = PillStyle.ICON
+
+    def pill_text(self) -> str:
+        return "BEC"
+
+
+@pytest.fixture
+def icon_item(qtbot, mocked_client, tmp_path):
+    widget = create_widget(
+        qtbot,
+        IconPill,
+        client=mocked_client,
+        settings=lambda: QSettings(str(tmp_path / "icon.ini"), QSettings.Format.IniFormat),
+        settings_prefix="icon_pill",
+        card_content=QLabel("details"),
+    )
+    widget.apply_sizes()
+    yield widget
+
+
+def test_icon_pill_shows_icon_and_short_label_at_content_width(icon_item):
+    pill = icon_item.pill
+    assert isinstance(pill, StatusIconPill)
+    icon_item.set_indicator(
+        ToolIndicator(severity=ToolSeverity.CRITICAL, summary="Scan server: error", badge="1 down")
+    )
+    assert (pill.icon_name, pill.text) == ("error", "BEC")
+    assert pill.accessibleName() == "Scan server: error"
+    assert icon_item.badge_chip.text() == "1 down"
+    narrow = pill.sizeHint().width()
+    assert narrow < PILL_WIDTHS["compact"][0]  # much smaller than the smallest bar pill
+    assert pill.sizePolicy().horizontalPolicy() == QSizePolicy.Policy.Fixed
+    icon_item.set_large(True)
+    assert pill.sizeHint().width() > narrow and pill.height() == 34
+
+
+def test_icon_pill_has_no_width_modes(icon_item):
+    assert icon_item.width_mode == "compact"
+    icon_item.set_width_mode("fill")
+    assert icon_item.width_mode == "compact"
+    menu = icon_item.build_menu()
+    assert [a.text() for a in menu.actions() if a.text()] == ["Large status bar"]
+    menu.deleteLater()
+
+
+def test_icon_pill_spins_only_while_active_and_shown(icon_item, qtbot):
+    pill = icon_item.pill
+    icon_item.set_indicator(ToolIndicator(severity=ToolSeverity.INFO, active=True))
+    assert pill.spinning and not pill._spin_timer.isActive()  # not shown yet
+    icon_item.show()
+    qtbot.waitExposed(icon_item)
+    assert pill._spin_timer.isActive()
+    icon_item.hide()
+    assert not pill._spin_timer.isActive()
+    icon_item.show()
+    assert pill._spin_timer.isActive()
+    icon_item.set_indicator(ToolIndicator(severity=ToolSeverity.OK))
+    assert not pill.spinning and not pill._spin_timer.isActive()
+
+
+def test_icon_pill_paints_in_both_themes(icon_item):
+    from bec_widgets.utils.colors import apply_theme
+
+    icon_item.set_indicator(ToolIndicator(severity=ToolSeverity.OK))
+    for theme in ("light", "dark"):
+        apply_theme(theme)
+        image = icon_item.pill.grab().toImage()
+        assert not image.isNull() and image.width() == icon_item.pill.width()
+    apply_theme("light")
