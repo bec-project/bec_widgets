@@ -150,7 +150,7 @@ widget_icons = {
     "ScanControl": "tune",
     "ScanIndexComboBox": "history",
     "ScanMetadata": "list_alt",
-    "ScanProgressBar": "timelapse",
+    "ScanProgressBar": "av_timer",
     "ScatterWaveform": "scatter_plot",
     "SignalComboBox": "list_alt",
     "SignalLabel": "scoreboard",

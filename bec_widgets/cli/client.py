@@ -5356,7 +5356,7 @@ class ScanControl(RPCBase):
 
 
 class ScanProgressBar(RPCBase):
-    """Widget to display a progress bar that is hooked up to the scan progress of a scan."""
+    """Live progress of the running scan."""
 
     _IMPORT_MODULE = "bec_widgets.widgets.progress.scan_progressbar.scan_progressbar"
 
