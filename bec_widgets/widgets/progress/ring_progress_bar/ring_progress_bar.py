@@ -9,10 +9,10 @@ from qtpy.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import Colors
 from bec_widgets.utils.error_popups import SafeProperty
+from bec_widgets.utils.hover_card import HoverCard
 from bec_widgets.utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.toolbars.actions import MaterialIconAction
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
-from bec_widgets.widgets.containers.main_window.addons.hover_widget import WidgetTooltip
 from bec_widgets.widgets.progress.ring_progress_bar.ring import Ring
 from bec_widgets.widgets.progress.ring_progress_bar.ring_progress_settings_cards import RingSettings
 
@@ -37,7 +37,10 @@ class RingProgressContainerWidget(QWidget):
         self._hover_tooltip_label.setTextFormat(Qt.TextFormat.PlainText)
         self._hover_tooltip_label.setMaximumWidth(260)
         self._hover_tooltip_label.setStyleSheet("font-size: 12px;")
-        self._hover_tooltip = WidgetTooltip(self._hover_tooltip_label)
+        self._hover_tooltip = HoverCard(
+            self, self._hover_tooltip_label, object_name="ring_hover_card", hide_on_leave=True
+        )
+        self._hover_tooltip.hide()
         self.setLayout(QHBoxLayout())
         self.setMouseTracking(True)
         self.initialize_bars()
@@ -250,7 +253,6 @@ class RingProgressContainerWidget(QWidget):
         if self._last_hover_global_pos is None:
             return
         self._hover_tooltip_label.setText(text)
-        self._hover_tooltip.apply_theme()
         self._hover_tooltip.show_near(self._last_hover_global_pos)
 
     @staticmethod

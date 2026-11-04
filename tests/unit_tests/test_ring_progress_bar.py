@@ -799,3 +799,19 @@ def test_set_progress_state_clamps_and_ignores_out_of_range_index(ring_progress_
     # value above max clamps to 100; out-of-range index is ignored, not an error
     ring_progress_bar.set_progress_state({0: 150.0, 99: 42.0})
     assert rings[0].config.value == 100.0
+
+
+def test_hover_tooltip_is_a_hover_card_next_to_the_cursor(qtbot, container):
+    from bec_widgets.utils.hover_card import HoverCard
+
+    ring = container.add_ring()
+    tooltip = container._hover_tooltip
+    assert isinstance(tooltip, HoverCard) and tooltip.hide_on_leave
+    assert not tooltip.isVisible()
+    container._last_hover_global_pos = QPoint(100, 100)
+    container.refresh_hover_tooltip(ring)
+    assert tooltip.isVisible()
+    assert tooltip.content is container._hover_tooltip_label
+    frame = tooltip.card.geometry().translated(tooltip.pos())
+    assert frame.left() >= 100 and frame.top() >= 100  # below and right of the cursor
+    tooltip.hide()
