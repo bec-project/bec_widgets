@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
-from qtpy.QtCore import QEvent, QPoint, QPointF, QSettings
+from qtpy.QtCore import QEvent, QPoint, QPointF, QSettings, Qt
 from qtpy.QtGui import QEnterEvent
 from qtpy.QtWidgets import QApplication, QFrame, QLabel, QMessageBox
 
@@ -333,6 +333,33 @@ def test_hover_widget_tooltip(qtbot):
     assert hover._tooltip is None
 
 
+def test_client_info_opens_a_card_with_the_full_message(bec_main_window, qtbot, monkeypatch):
+    """The scrolling client info shows the full message in a card on hover; empty: no card."""
+    from bec_widgets.widgets.containers.main_window.addons import status_pill
+
+    label = bec_main_window._client_info_label
+    card = bec_main_window._client_info_card
+    hover = bec_main_window._client_info_hover
+    centre = label.mapToGlobal(label.rect().center())
+    monkeypatch.setattr(status_pill.QCursor, "pos", staticmethod(lambda: centre))
+
+    hover.open()
+    assert not card.isVisible()  # nothing to show yet
+
+    message = "Scan 12 needs the shutter open before it can continue"
+    bec_main_window.display_client_message({"message": message, "expire": 0}, {})
+    hover.open()
+    assert card.isVisible() and card.content.text() == message
+    card_centre = card.frameGeometry().center().x()
+    assert abs(card_centre - centre.x()) <= 2 or not card.screen().availableGeometry().contains(
+        card.frameGeometry().adjusted(-60, 0, 60, 0)
+    )  # centred on the label unless clamped at a screen edge
+
+    far = QPoint(-5000, -5000)
+    monkeypatch.setattr(status_pill.QCursor, "pos", staticmethod(lambda: far))
+    qtbot.waitUntil(lambda: not card.isVisible(), timeout=2000)
+
+
 def test_widget_tooltip_show_and_hide(qtbot):
     """
     WidgetTooltip should appear when show_above is called and hide on Leave.
@@ -371,3 +398,85 @@ def test_hover_widget_mouse_events(qtbot):
     assert hover._tooltip is not None
     assert hover._tooltip.isVisible()
     assert hover._tooltip.content is full
+
+
+def test_status_bar_holds_several_pills_each_with_its_own_fill(bec_main_window, qtbot, tmp_path):
+    from qtpy.QtCore import QSettings
+    from qtpy.QtWidgets import QLabel
+
+    from bec_widgets.widgets.containers.main_window.addons.status_pill import StatusPillItem
+
+    def pill(name):
+        item = StatusPillItem(
+            bec_main_window,
+            client=bec_main_window.client,
+            settings=lambda: QSettings(str(tmp_path / f"{name}.ini"), QSettings.Format.IniFormat),
+            settings_prefix=name,
+            card_content=QLabel("details"),
+        )
+        item.apply_sizes()
+        return item
+
+    first, second = pill("first_pill"), pill("second_pill")
+    first_holder = bec_main_window.add_status_item(first)
+    holder = bec_main_window.add_status_item(second)
+    items = [item for item, _ in bec_main_window._status_items]
+    assert items == [first, second]
+    bec_main_window.resize(1400, 300)
+    bec_main_window.show()
+    qtbot.waitExposed(bec_main_window)
+    qtbot.waitUntil(lambda: holder.width() == holder.sizeHint().width(), timeout=2000)
+    width, first_width = holder.width(), first_holder.width()
+    label = bec_main_window._client_info_label
+    assert label.width() > width  # the client info label takes the spare room
+
+    second.set_width_mode("fill")  # stays in place with its stretch; the other pill is untouched
+    qtbot.waitUntil(lambda: holder.width() > width, timeout=2000)
+    assert holder.isVisible() and holder.x() > first_holder.x()
+    assert first_holder.width() == first_width
+    shared_width = label.width()  # the pill and the label share the spare room
+
+    second.set_width_mode("normal")
+    qtbot.waitUntil(lambda: holder.width() == width and label.width() > shared_width, timeout=2000)
+
+
+def test_open_in_dock_area_adds_one_dock_then_raises_it(bec_main_window, qtbot, tmp_path):
+    from qtpy.QtCore import QSettings
+    from qtpy.QtWidgets import QLabel
+
+    from bec_widgets.widgets.containers.dock_area.dock_area import BECDockArea
+    from bec_widgets.widgets.containers.main_window.addons.status_pill import StatusPillItem
+    from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
+
+    class QueuePill(StatusPillItem):
+        DOCK_WIDGET = "BECQueue"
+
+    item = QueuePill(
+        bec_main_window,
+        client=bec_main_window.client,
+        settings=lambda: QSettings(str(tmp_path / "queue.ini"), QSettings.Format.IniFormat),
+        settings_prefix="queue_pill",
+        card_content=QLabel("queue"),
+    )
+    item.apply_sizes()
+    bec_main_window.add_status_item(item)
+    item._prepare_card()
+    assert item.card.hint.isHidden()  # no dock area as central widget yet
+    assert bec_main_window.open_in_dock_area("BECQueue") is None
+
+    dock_area = BECDockArea(parent=bec_main_window, client=bec_main_window.client)
+    bec_main_window.setCentralWidget(dock_area)
+    item._prepare_card()
+    assert not item.card.hint.isHidden()
+
+    def docked():
+        return [w for w in dock_area.widget_list() if isinstance(w, BECQueue)]
+
+    with qtbot.waitSignal(item.dock_requested):
+        qtbot.mouseDClick(item.pill, Qt.MouseButton.LeftButton)
+    assert len(docked()) == 1
+    first = docked()[0]
+    # a second double-click raises the docked one instead of adding another
+    qtbot.mouseDClick(item.pill, Qt.MouseButton.LeftButton)
+    assert len(docked()) == 1
+    assert bec_main_window.open_in_dock_area("BECQueue") is first

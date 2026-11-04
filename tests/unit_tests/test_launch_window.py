@@ -155,7 +155,7 @@ def test_launch_window_notifies_launcher_ready(qtbot, bec_launch_window, monkeyp
         (["launcher", "dock_area", "scan_progress"], False),
         (["launcher", "dock_area", "scan_progress_simple", "scan_progress_full"], False),
         (
-            ["launcher", "dock_area", "scan_progress_simple", "scan_progress_full", "hover_widget"],
+            ["launcher", "dock_area", "scan_progress_simple", "scan_progress_full", "status_card"],
             False,
         ),
         (["launcher", "external_window"], True),
@@ -164,8 +164,8 @@ def test_launch_window_notifies_launcher_ready(qtbot, bec_launch_window, monkeyp
 def test_gui_server_turns_off_the_lights(bec_launch_window, qtbot, connection_names, hide):
     connections = {}
     for name in connection_names:
-        if name == "hover_widget":
-            conn = _unparented_connection("HoverWidget")
+        if name == "status_card":
+            conn = _unparented_connection("HoverCard")
         elif name == "external_window":
             conn = _top_level_connection(qtbot, "external_window")
         else:
@@ -199,14 +199,14 @@ def test_launcher_detects_external_main_window(bec_launch_window, qtbot):
 
 
 def test_launcher_logs_unparented_non_window_connection_once(bec_launch_window):
-    connection = _unparented_connection("HoverWidget")
+    connection = _unparented_connection("HoverCard")
 
     with mock.patch("bec_widgets.applications.launch_window.logger.warning") as mock_warning:
         bec_launch_window._turn_off_the_lights({"window": connection})
         bec_launch_window._turn_off_the_lights({"window": connection})
 
     mock_warning.assert_called_once()
-    assert "HoverWidget" in mock_warning.call_args.args[0]
+    assert "HoverCard" in mock_warning.call_args.args[0]
 
 
 @pytest.mark.parametrize(
@@ -218,7 +218,7 @@ def test_launcher_logs_unparented_non_window_connection_once(bec_launch_window):
         (["launcher", "dock_area", "scan_progress"], True),
         (["launcher", "dock_area", "scan_progress_simple", "scan_progress_full"], True),
         (
-            ["launcher", "dock_area", "scan_progress_simple", "scan_progress_full", "hover_widget"],
+            ["launcher", "dock_area", "scan_progress_simple", "scan_progress_full", "status_card"],
             True,
         ),
         (["launcher", "external_window"], False),
@@ -232,8 +232,8 @@ def test_launch_window_closes(bec_launch_window, qtbot, connection_names, close_
     """
     connections = {}
     for name in connection_names:
-        if name == "hover_widget":
-            conn = _unparented_connection("HoverWidget")
+        if name == "status_card":
+            conn = _unparented_connection("HoverCard")
         elif name == "external_window":
             conn = _top_level_connection(qtbot, "external_window")
         else:
