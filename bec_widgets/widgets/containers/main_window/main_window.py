@@ -28,12 +28,12 @@ from bec_widgets.widgets.containers.dock_area.profile_utils import (
     is_experimental_features_enabled,
     set_experimental_features_enabled,
 )
-from bec_widgets.widgets.containers.main_window.addons.hover_widget import HoverWidget
 from bec_widgets.widgets.containers.main_window.addons.notification_center.notification_banner import (
     BECNotificationBroker,
     NotificationCentre,
     NotificationIndicator,
 )
+from bec_widgets.widgets.containers.main_window.addons.scan_status_item import ScanStatusItem
 from bec_widgets.widgets.containers.main_window.addons.scroll_label import ScrollLabel
 from bec_widgets.widgets.containers.main_window.addons.status_pill import (
     CardAlign,
@@ -42,7 +42,6 @@ from bec_widgets.widgets.containers.main_window.addons.status_pill import (
     StatusPillItem,
 )
 from bec_widgets.widgets.containers.main_window.addons.web_links import BECWebLinksMixin
-from bec_widgets.widgets.progress.scan_progressbar.scan_progressbar import ScanProgressBar
 from bec_widgets.widgets.utility.feedback_dialog.feedback_dialog import FeedbackDialog
 from bec_widgets.widgets.utility.widget_hierarchy_tree.widget_hierarchy_tree import (
     WidgetHierarchyDialog,
@@ -59,8 +58,6 @@ logger = bec_logger.logger
 class BECMainWindow(BECWidget, QMainWindow):
     RPC = True
     PLUGIN = True
-    SCAN_PROGRESS_WIDTH = 120  # px
-    SCAN_PROGRESS_HEIGHT = 20  # px
 
     def __init__(self, parent=None, window_title: str = "BEC", **kwargs):
         super().__init__(parent=parent, **kwargs)
@@ -218,41 +215,11 @@ class BECMainWindow(BECWidget, QMainWindow):
     ################################################################################
     # Progress‑bar helpers
     def _add_scan_progress_bar(self):
-
-        # Setting HoverWidget for the scan progress bar - minimal and full version
-        self._scan_progress_bar_simple = ScanProgressBar(
-            self,
-            one_line_design=True,
-            rpc_exposed=False,
-            rpc_passthrough_children=False,
-            enable_dynamic_stylesheet=True,
+        # Scan pill: live progress, Stop and the waiting count; the full ScanProgressBar on hover
+        self._scan_status_item = ScanStatusItem(
+            self, rpc_exposed=False, rpc_passthrough_children=False
         )
-        self._scan_progress_bar_simple.show_elapsed_time = False
-        self._scan_progress_bar_simple.show_remaining_time = False
-        self._scan_progress_bar_simple.show_source_label = False
-        self._scan_progress_bar_simple.progressbar.label_template = ""
-        self._scan_progress_bar_simple.progressbar.setFixedHeight(self.SCAN_PROGRESS_HEIGHT)
-        self._scan_progress_bar_simple.progressbar.setFixedWidth(self.SCAN_PROGRESS_WIDTH)
-        # This one do not need dynamic styling on hover ScanProgressBar since user will hover on it probably later, when progress bar is big enough
-        self._scan_progress_bar_full = ScanProgressBar(
-            self, rpc_exposed=False, rpc_passthrough_children=False, enable_dynamic_stylesheet=False
-        )
-        self._scan_progress_hover = HoverWidget(
-            self, simple=self._scan_progress_bar_simple, full=self._scan_progress_bar_full
-        )
-
-        # Bundle the progress bar with a separator
-        separator = self._add_separator(separate_object=True)
-        self._scan_progress_bar_with_separator = QWidget()
-        self._scan_progress_bar_with_separator.layout = QHBoxLayout(
-            self._scan_progress_bar_with_separator
-        )
-        self._scan_progress_bar_with_separator.layout.setContentsMargins(0, 0, 0, 0)
-        self._scan_progress_bar_with_separator.layout.setSpacing(0)
-        self._scan_progress_bar_with_separator.layout.addWidget(separator)
-        self._scan_progress_bar_with_separator.layout.addWidget(self._scan_progress_hover)
-
-        self.status_bar.addWidget(self._scan_progress_bar_with_separator)
+        self._scan_progress_bar_with_separator = self.add_status_item(self._scan_status_item)
 
     def add_status_item(self, item: StatusPillItem) -> QWidget:
         """
@@ -620,13 +587,6 @@ class BECMainWindow(BECWidget, QMainWindow):
         self._client_info_hover.cleanup()
         self._client_info_card.close()
         self._client_info_label.cleanup()
-        # Scan progress bar cleanup
-        self._scan_progress_bar_simple.close()
-        self._scan_progress_bar_simple.deleteLater()
-        self._scan_progress_bar_full.close()
-        self._scan_progress_bar_full.deleteLater()
-        self._scan_progress_hover.close()
-        self._scan_progress_hover.deleteLater()
         # Status pills cleanup
         for item, _holder in self._status_items:
             item.close()
