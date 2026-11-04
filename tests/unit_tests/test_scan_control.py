@@ -2037,3 +2037,21 @@ def test_case_insensitive_typing_is_not_flagged_invalid(scan_control, qtbot):
     qtbot.keyClick(combo.lineEdit(), Qt.Key_Return)
     assert scan_control.current_scan == "grid_scan"
     assert combo.currentText() == "grid_scan"
+
+
+def test_scan_control_uses_the_shared_stop_button(scan_control):
+    from unittest.mock import MagicMock
+
+    from bec_widgets.widgets.control.buttons.stop_button.stop_button import StopButton
+
+    stop = scan_control.button_stop_scan
+    assert isinstance(stop, StopButton)
+    stop.queue = MagicMock()
+    # the same light red look as every other Stop, filling with red under the cursor
+    assert stop.style_colors()["hover_background"] == stop.style_colors()["text"]
+    stop.button.click()
+    stop.queue.request_scan_abortion.assert_called_once_with(request_id=None)
+    assert stop.finish_action.text() == "Finish scan now"
+    # same metrics as Start next to it
+    assert stop.button.height() == scan_control.button_run_scan.height()
+    assert stop.button.font().pointSizeF() == scan_control.button_run_scan.font().pointSizeF()
