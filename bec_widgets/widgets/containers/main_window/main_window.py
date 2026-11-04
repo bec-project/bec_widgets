@@ -23,6 +23,7 @@ import bec_widgets
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.hover_card import CardAlign, HoverCard, HoverCardController
 from bec_widgets.utils.ui_loader import UILoader
 from bec_widgets.widgets.containers.dock_area.profile_utils import (
     is_experimental_features_enabled,
@@ -35,12 +36,7 @@ from bec_widgets.widgets.containers.main_window.addons.notification_center.notif
 )
 from bec_widgets.widgets.containers.main_window.addons.scan_status_item import ScanStatusItem
 from bec_widgets.widgets.containers.main_window.addons.scroll_label import ScrollLabel
-from bec_widgets.widgets.containers.main_window.addons.status_pill import (
-    CardAlign,
-    HoverCard,
-    HoverCardController,
-    StatusPillItem,
-)
+from bec_widgets.widgets.containers.main_window.addons.status_pill import StatusPillItem
 from bec_widgets.widgets.containers.main_window.addons.web_links import BECWebLinksMixin
 from bec_widgets.widgets.utility.feedback_dialog.feedback_dialog import FeedbackDialog
 from bec_widgets.widgets.utility.widget_hierarchy_tree.widget_hierarchy_tree import (

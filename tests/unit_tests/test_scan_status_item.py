@@ -171,9 +171,9 @@ def test_stop_only_when_stoppable_and_uses_the_shared_stop(item, qtbot):
 
 
 def _cursor_at(monkeypatch, point):
-    from bec_widgets.widgets.containers.main_window.addons import status_pill
+    from bec_widgets.utils import hover_card
 
-    monkeypatch.setattr(status_pill.QCursor, "pos", staticmethod(lambda: point))
+    monkeypatch.setattr(hover_card.QCursor, "pos", staticmethod(lambda: point))
 
 
 def test_hover_card_and_outline_clear_without_a_leave_event(item, qtbot, monkeypatch):
