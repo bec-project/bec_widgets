@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Level 3 · Adept: angular, visor, starting to look dangerous -->
+  <defs>
+    <filter id="g3" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="1.2" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <line x1="22" y1="15" x2="17" y2="6" stroke="#311B92" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="42" y1="15" x2="47" y2="6" stroke="#311B92" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="17" cy="5" r="2.5" fill="#E040FB"/>
+  <circle cx="47" cy="5" r="2.5" fill="#E040FB"/>
+  <path d="M15 14 H49 L57 23 V44 L48 55 H16 L7 44 V23 Z" fill="#7E57C2" stroke="#311B92" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M12 24 H52 L47 35 H17 Z" fill="#1A0B3D"/>
+  <rect x="18" y="28" width="28" height="3" rx="1.5" fill="#E040FB" filter="url(#g3)"/>
+  <rect x="21" y="27" width="6" height="5" rx="1" fill="#F3B6FF" filter="url(#g3)"/>
+  <rect x="37" y="27" width="6" height="5" rx="1" fill="#F3B6FF" filter="url(#g3)"/>
+  <rect x="21" y="40" width="22" height="9" rx="1.5" fill="#1A0B3D"/>
+  <g stroke="#9575CD" stroke-width="1.6">
+    <line x1="25.5" y1="41" x2="25.5" y2="48"/>
+    <line x1="30" y1="41" x2="30" y2="48"/>
+    <line x1="34" y1="41" x2="34" y2="48"/>
+    <line x1="38.5" y1="41" x2="38.5" y2="48"/>
+  </g>
+  <circle cx="12.5" cy="40" r="1.8" fill="#311B92"/>
+  <circle cx="51.5" cy="40" r="1.8" fill="#311B92"/>
+</svg>
