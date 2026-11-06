@@ -133,8 +133,4 @@ if __name__ == "__main__":
         exclusive=True,
     )
     _app.show()
-    # developer_view.show()
-    # developer_view.setWindowTitle("Developer View")
-    # developer_view.resize(1920, 1080)
-    # developer_view.set_stretch(horizontal=[1, 3, 2], vertical=[5, 5]) #can be set during runtime
     sys.exit(app.exec_())
