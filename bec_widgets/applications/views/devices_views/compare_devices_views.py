@@ -216,6 +216,46 @@ def build(view: str, page: str, client):
     return widget
 
 
+def fake_atlas_sign_in(deployment: str = "demo") -> None:
+    """Replace the BEC Atlas round trip so the lock screen works offline.
+
+    Any user name signs in, except with the password ``wrong``, which shows the refusal.
+    Only for this showcase: the real views always ask BEC Atlas.
+    """
+    # pylint: disable=import-outside-toplevel, protected-access
+    from qtpy.QtCore import QTimer
+
+    from bec_widgets.applications.views.devices_views import staff_access
+
+    def login(service, username: str, password: str) -> None:
+        if password == "wrong":
+            QTimer.singleShot(
+                600, lambda: service.failed.emit("User name or password is not correct.")
+            )
+        else:
+            QTimer.singleShot(600, lambda: service.authenticated.emit({"email": username}))
+
+    staff_access._GateAtlasService.login = login
+    staff_access._GateAtlasService.logout = lambda service: None
+    original_init = staff_access.StaffAccess.__init__
+
+    def init(access, *args, **kwargs):
+        original_init(access, *args, **kwargs)
+        access.deployment = deployment
+
+    staff_access.StaffAccess.__init__ = init
+
+
+def build_app(view: str):
+    """The real BEC main app on the demo session, with the new device views switched on."""
+    # pylint: disable=import-outside-toplevel
+    os.environ["BEC_DEVICE_VIEWS"] = view
+    fake_atlas_sign_in()
+    from bec_widgets.applications.main_app import BECMainApp
+
+    return BECMainApp()
+
+
 def _settle(app, ms: int = 300) -> None:
     end = time.perf_counter() + ms / 1000
     while time.perf_counter() < end:
@@ -483,7 +523,12 @@ def main() -> None:
     """Command-line entry point."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--view", choices=["qml", "qwidget", "legacy"], default="qml")
-    parser.add_argument("--page", choices=["devices", "config"], default="config")
+    parser.add_argument(
+        "--page",
+        choices=["devices", "config", "app"],
+        default="config",
+        help="app opens the main app with both views and a demo sign-in (password 'wrong' fails)",
+    )
     parser.add_argument("--theme", choices=["light", "dark"], default="dark")
     parser.add_argument("--screenshots", type=Path)
     parser.add_argument("--bench", action="store_true")
@@ -512,6 +557,11 @@ def main() -> None:
         print(json.dumps(bench(app, client), indent=2))
     if args.screenshots or args.bench or args.popups:
         os._exit(0)  # pylint: disable=protected-access
+    if args.page == "app":
+        widget = build_app("qwidget" if args.view == "qwidget" else "qml")
+        widget.resize(1600, 960)
+        widget.show()
+        sys.exit(app.exec())
     widget = build(args.view, args.page, client)
     widget.resize(1500, 900)
     widget.show()
