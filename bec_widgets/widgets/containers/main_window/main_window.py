@@ -36,6 +36,7 @@ from bec_widgets.widgets.containers.main_window.addons.notification_center.notif
 )
 from bec_widgets.widgets.containers.main_window.addons.scan_status_item import ScanStatusItem
 from bec_widgets.widgets.containers.main_window.addons.scroll_label import ScrollLabel
+from bec_widgets.widgets.containers.main_window.addons.server_status_item import ServerStatusItem
 from bec_widgets.widgets.containers.main_window.addons.status_pill import StatusPillItem
 from bec_widgets.widgets.containers.main_window.addons.web_links import BECWebLinksMixin
 from bec_widgets.widgets.utility.feedback_dialog.feedback_dialog import FeedbackDialog
@@ -149,6 +150,9 @@ class BECMainWindow(BECWidget, QMainWindow):
         # Add scan_progress bar with display logic
         self._add_scan_progress_bar()
 
+        # BEC server pill: the overall state of the core services, the full status box on hover
+        self._add_server_status_item()
+
         # Setup NotificationIndicator to bottom right of the status bar
         self._add_notification_indicator()
 
@@ -216,6 +220,12 @@ class BECMainWindow(BECWidget, QMainWindow):
             self, rpc_exposed=False, rpc_passthrough_children=False
         )
         self._scan_progress_bar_with_separator = self.add_status_item(self._scan_status_item)
+
+    def _add_server_status_item(self):
+        self._server_status_item = ServerStatusItem(
+            self, rpc_exposed=False, rpc_passthrough_children=False
+        )
+        self.add_status_item(self._server_status_item)
 
     def add_status_item(self, item: StatusPillItem) -> QWidget:
         """

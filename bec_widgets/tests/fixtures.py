@@ -64,6 +64,7 @@ __all__ = [
     "rpc_register",
     "bec_dispatcher",
     "clean_singleton",
+    "service_status_poller_reset",
     "suppress_message_box",
     "mocked_client",
     "mocked_client_with_dap",
@@ -159,6 +160,16 @@ def notification_broker_reset(bec_dispatcher):
     """Tear down the app-wide notification broker before the dispatcher it is bound to."""
     yield
     BECNotificationBroker.reset_singleton()
+
+
+@pytest.fixture(autouse=True)
+def service_status_poller_reset(bec_dispatcher):
+    """Drop the service status poller the status boxes of a client share, with its last result."""
+    yield
+    # pylint: disable=import-outside-toplevel
+    from bec_widgets.widgets.services.bec_status_box.bec_status_box import BECServiceStatusMixin
+
+    BECServiceStatusMixin.reset_shared()
 
 
 @pytest.fixture(autouse=True)
