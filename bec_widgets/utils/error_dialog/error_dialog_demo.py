@@ -1,17 +1,20 @@
 """Interactive demo of the error dialog: raises realistic errors through ``SafeSlot``.
 
-Run with ``python -m bec_widgets.utils.error_dialog.error_dialog_demo [qwidget|qml|legacy]``.
+Run with ``python -m bec_widgets.utils.error_dialog.error_dialog_demo [qwidget|qml|legacy]
+[--theme dark|light] [--fire]``, or use ``launch_error_dialog_demo.sh`` next to this file.
 The errors go through the real ``SafeSlot(popup_error=True)`` path, so the dialog shows exactly
 what a user would see.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sys
 
 from pydantic import BaseModel, Field
+from qtpy.QtCore import QTimer
 from qtpy.QtWidgets import QApplication, QPushButton, QVBoxLayout, QWidget
 
 from bec_widgets.utils.colors import apply_theme
@@ -120,13 +123,35 @@ class ErrorDemo(QWidget):
         apply_theme("light" if theme.theme == "dark" else "dark")
 
 
-if __name__ == "__main__":  # pragma: no cover
-    ui = sys.argv[1] if len(sys.argv) > 1 else "qwidget"
-    if ui != "legacy":
-        os.environ["BEC_ERROR_DIALOG"] = ui
-    app = QApplication(sys.argv)
-    apply_theme("dark")
+def main(argv: list[str] | None = None) -> int:  # pragma: no cover
+    """Start the demo window; ``--fire`` raises the sample errors right after start."""
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("ui", nargs="?", default="qwidget", choices=["qwidget", "qml", "legacy"])
+    parser.add_argument("--theme", default="dark", choices=["dark", "light"])
+    parser.add_argument(
+        "--fire", action="store_true", help="raise the sample errors as soon as the window is up"
+    )
+    args = parser.parse_args(argv)
+    if args.ui == "legacy":
+        os.environ.pop("BEC_ERROR_DIALOG", None)
+    else:
+        os.environ["BEC_ERROR_DIALOG"] = args.ui
+    app = QApplication.instance() or QApplication(sys.argv)
+    apply_theme(args.theme)
     demo = ErrorDemo()
-    demo.setWindowTitle(f"Error dialog demo ({ui})")
+    demo.setWindowTitle(f"Error dialog demo ({args.ui})")
     demo.show()
-    sys.exit(app.exec_())
+    if args.fire:
+        if args.ui == "legacy":
+            # the old box is modal: one is enough to see it
+            QTimer.singleShot(400, demo.on_setpoint_change)
+        else:
+            for delay, slot in enumerate(
+                (demo.on_setpoint_change, demo.on_scan_clicked, demo.on_curve_update, demo.burst)
+            ):
+                QTimer.singleShot(400 + 150 * delay, slot)
+    return app.exec_()
+
+
+if __name__ == "__main__":  # pragma: no cover
+    sys.exit(main())
