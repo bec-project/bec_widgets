@@ -720,3 +720,24 @@ def test_ide_explorer_refresh_macro_file_no_sections(ide_explorer, qtbot):
     # Should handle gracefully without error
     ide_explorer.refresh_macro_file("/some/path/test.py")
     # Test passes if no exception is raised
+
+
+def test_section_help_popup_toggles_and_hides_on_leave(ide_explorer, qtbot):
+    """The help is a hover card next to the info button: a second click or leaving it hides it."""
+    from qtpy.QtCore import QEvent
+    from qtpy.QtWidgets import QApplication
+
+    from bec_widgets.utils.hover_card import HoverCard
+
+    section = ide_explorer.main_explorer.get_section("SCRIPTS")
+    section.header_info_button.click()
+    card = section._help_tooltip
+    assert isinstance(card, HoverCard) and card.parent() is section
+    qtbot.waitUntil(card.isVisible, timeout=1000)
+    section.header_info_button.click()
+    assert not card.isVisible()
+    section.header_info_button.click()
+    assert card.isVisible()
+    QApplication.sendEvent(card, QEvent(QEvent.Type.Leave))
+    assert not card.isVisible()
+    section._cleanup_help_tooltip()

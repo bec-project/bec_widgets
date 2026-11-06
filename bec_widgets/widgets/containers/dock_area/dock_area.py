@@ -385,7 +385,7 @@ class BECDockArea(DockAreaWidget):
             ),
             "scan_progress_bar": (
                 widget_icons["ScanProgressBar"],
-                "Scan Progress Bar",
+                "Scan Progress",
                 "ScanProgressBar",
             ),
             "terminal": (widget_icons["BecConsole"], "Terminal", "BecConsole"),

@@ -13,6 +13,7 @@ from qtpy.QtWidgets import (
     QLabel,
     QMainWindow,
     QMessageBox,
+    QSizePolicy,
     QStyle,
     QVBoxLayout,
     QWidget,
@@ -22,20 +23,21 @@ import bec_widgets
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.hover_card import CardAlign, HoverCard, HoverCardController
 from bec_widgets.utils.ui_loader import UILoader
 from bec_widgets.widgets.containers.dock_area.profile_utils import (
     is_experimental_features_enabled,
     set_experimental_features_enabled,
 )
-from bec_widgets.widgets.containers.main_window.addons.hover_widget import HoverWidget
 from bec_widgets.widgets.containers.main_window.addons.notification_center.notification_banner import (
     BECNotificationBroker,
     NotificationCentre,
     NotificationIndicator,
 )
+from bec_widgets.widgets.containers.main_window.addons.scan_status_item import ScanStatusItem
 from bec_widgets.widgets.containers.main_window.addons.scroll_label import ScrollLabel
+from bec_widgets.widgets.containers.main_window.addons.status_pill import StatusPillItem
 from bec_widgets.widgets.containers.main_window.addons.web_links import BECWebLinksMixin
-from bec_widgets.widgets.progress.scan_progressbar.scan_progressbar import ScanProgressBar
 from bec_widgets.widgets.utility.feedback_dialog.feedback_dialog import FeedbackDialog
 from bec_widgets.widgets.utility.widget_hierarchy_tree.widget_hierarchy_tree import (
     WidgetHierarchyDialog,
@@ -52,8 +54,6 @@ logger = bec_logger.logger
 class BECMainWindow(BECWidget, QMainWindow):
     RPC = True
     PLUGIN = True
-    SCAN_PROGRESS_WIDTH = 120  # px
-    SCAN_PROGRESS_HEIGHT = 20  # px
 
     def __init__(self, parent=None, window_title: str = "BEC", **kwargs):
         super().__init__(parent=parent, **kwargs)
@@ -70,6 +70,7 @@ class BECMainWindow(BECWidget, QMainWindow):
         self._nc_margin = 16
         self._position_notification_centre()
         self._widget_hierarchy_dialog: WidgetHierarchyDialog | None = None
+        self._status_items: list[tuple[StatusPillItem, QWidget]] = []
 
         # Init ui
         self._init_ui()
@@ -182,16 +183,22 @@ class BECMainWindow(BECWidget, QMainWindow):
         self._client_info_label.setAlignment(
             Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
         )
-        # Full label used in the hover widget
-        self._client_info_label_full = QLabel(self)
+        # Full label shown in a card above the scrolling one on hover
+        self._client_info_label_full = QLabel()
         self._client_info_label_full.setAlignment(
             Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
         )
-        # Hover widget to show the full client info label
-        self._client_info_hover = HoverWidget(
-            self, simple=self._client_info_label, full=self._client_info_label_full
+        self._client_info_card = HoverCard(
+            self._client_info_label, self._client_info_label_full, object_name="client_info_card"
         )
-        self.status_bar.addWidget(self._client_info_hover, 1)
+        self._client_info_card.hide()
+        self._client_info_hover = HoverCardController(
+            self._client_info_label,
+            self._client_info_card,
+            can_open=lambda: bool(self._client_info_label_full.text()),
+            align=CardAlign.CENTER,
+        )
+        self.status_bar.addWidget(self._client_info_label, 1)
 
         # Timer to automatically clear client messages once they expire
         self._client_info_expire_timer = QTimer(self)
@@ -204,41 +211,85 @@ class BECMainWindow(BECWidget, QMainWindow):
     ################################################################################
     # Progress‑bar helpers
     def _add_scan_progress_bar(self):
+        # Scan pill: live progress, Stop and the waiting count; the full ScanProgressBar on hover
+        self._scan_status_item = ScanStatusItem(
+            self, rpc_exposed=False, rpc_passthrough_children=False
+        )
+        self._scan_progress_bar_with_separator = self.add_status_item(self._scan_status_item)
 
-        # Setting HoverWidget for the scan progress bar - minimal and full version
-        self._scan_progress_bar_simple = ScanProgressBar(
-            self,
-            one_line_design=True,
-            rpc_exposed=False,
-            rpc_passthrough_children=False,
-            enable_dynamic_stylesheet=True,
-        )
-        self._scan_progress_bar_simple.show_elapsed_time = False
-        self._scan_progress_bar_simple.show_remaining_time = False
-        self._scan_progress_bar_simple.show_source_label = False
-        self._scan_progress_bar_simple.progressbar.label_template = ""
-        self._scan_progress_bar_simple.progressbar.setFixedHeight(self.SCAN_PROGRESS_HEIGHT)
-        self._scan_progress_bar_simple.progressbar.setFixedWidth(self.SCAN_PROGRESS_WIDTH)
-        # This one do not need dynamic styling on hover ScanProgressBar since user will hover on it probably later, when progress bar is big enough
-        self._scan_progress_bar_full = ScanProgressBar(
-            self, rpc_exposed=False, rpc_passthrough_children=False, enable_dynamic_stylesheet=False
-        )
-        self._scan_progress_hover = HoverWidget(
-            self, simple=self._scan_progress_bar_simple, full=self._scan_progress_bar_full
-        )
+    def add_status_item(self, item: StatusPillItem) -> QWidget:
+        """
+        Add a status pill to the status bar, after a separator. Every pill has a stretch, but only
+        one in the "fill" width mode uses it: the width mode sets the size policy of its holder.
 
-        # Bundle the progress bar with a separator
-        separator = self._add_separator(separate_object=True)
-        self._scan_progress_bar_with_separator = QWidget()
-        self._scan_progress_bar_with_separator.layout = QHBoxLayout(
-            self._scan_progress_bar_with_separator
-        )
-        self._scan_progress_bar_with_separator.layout.setContentsMargins(0, 0, 0, 0)
-        self._scan_progress_bar_with_separator.layout.setSpacing(0)
-        self._scan_progress_bar_with_separator.layout.addWidget(separator)
-        self._scan_progress_bar_with_separator.layout.addWidget(self._scan_progress_hover)
+        Args:
+            item(StatusPillItem): The pill, e.g. the scan pill.
 
-        self.status_bar.addWidget(self._scan_progress_bar_with_separator)
+        Returns:
+            QWidget: The status bar widget holding the separator and the pill.
+        """
+        holder = QWidget()
+        holder.layout = QHBoxLayout(holder)
+        holder.layout.setContentsMargins(0, 0, 0, 0)
+        holder.layout.setSpacing(0)
+        holder.layout.addWidget(self._add_separator(separate_object=True))
+        holder.layout.addWidget(item)
+        self._set_status_holder_fill(holder, item.width_mode == "fill")
+        self.status_bar.addWidget(holder, 1)
+        item.fill_changed.connect(
+            lambda fill, holder=holder: self._set_status_holder_fill(holder, fill)
+        )
+        item.dock_requested.connect(self.open_in_dock_area)
+        item.set_dock_handler(lambda: self.status_dock_area() is not None)
+        self._status_items.append((item, holder))
+        return holder
+
+    def status_dock_area(self):
+        """
+        The dock area the status pills open their widgets in: the central widget if it is a dock
+        area, else None (a double-click on a pill then does nothing).
+
+        Returns:
+            BECDockArea | None: The dock area.
+        """
+        # pylint: disable=import-outside-toplevel
+        from bec_widgets.widgets.containers.dock_area.dock_area import BECDockArea
+
+        central = self.centralWidget()
+        return central if isinstance(central, BECDockArea) else None
+
+    def show_dock_area(self) -> None:
+        """Bring the dock area of status_dock_area into view; for windows with several views."""
+
+    @SafeSlot(str)
+    def open_in_dock_area(self, widget: str) -> QWidget | None:
+        """
+        Show a widget in the dock area: raise the dock of one that is already there, else add a
+        new one.
+
+        Args:
+            widget(str): Class name of the widget, e.g. "ScanProgressBar".
+
+        Returns:
+            QWidget | None: The docked widget, or None without a dock area.
+        """
+        dock_area = self.status_dock_area()
+        if dock_area is None:
+            return None
+        self.show_dock_area()
+        for dock in dock_area.dock_list():
+            existing = dock.widget()
+            if type(existing).__name__ == widget:
+                dock.toggleView(True)
+                dock.raise_()
+                return existing
+        return dock_area.new(widget)
+
+    @staticmethod
+    def _set_status_holder_fill(holder: QWidget, fill: bool) -> None:
+        """Let a pill use its stretch in the status bar, or keep it at the width of the pill."""
+        policy = QSizePolicy.Policy.Expanding if fill else QSizePolicy.Policy.Fixed
+        holder.setSizePolicy(policy, holder.sizePolicy().verticalPolicy())
 
     def _add_separator(self, separate_object: bool = False) -> QWidget | None:
         """
@@ -529,16 +580,14 @@ class BECMainWindow(BECWidget, QMainWindow):
         # Status bar widgets cleanup
 
         # Client info label cleanup
+        self._client_info_hover.cleanup()
+        self._client_info_card.close()
         self._client_info_label.cleanup()
-        self._client_info_hover.close()
-        self._client_info_hover.deleteLater()
-        # Scan progress bar cleanup
-        self._scan_progress_bar_simple.close()
-        self._scan_progress_bar_simple.deleteLater()
-        self._scan_progress_bar_full.close()
-        self._scan_progress_bar_full.deleteLater()
-        self._scan_progress_hover.close()
-        self._scan_progress_hover.deleteLater()
+        # Status pills cleanup
+        for item, _holder in self._status_items:
+            item.close()
+            item.deleteLater()
+        self._status_items.clear()
         super().cleanup()
 
 

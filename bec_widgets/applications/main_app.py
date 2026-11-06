@@ -155,6 +155,15 @@ class BECMainApp(BECMainWindow):
         # Add guided tour to Help menu
         self._add_guided_tour_to_menu()
 
+    def status_dock_area(self):
+        """The status pills open their widgets in the dock area view."""
+        view = getattr(self, "dock_area", None)  # None while the main window builds its status bar
+        return view.dock_area if view is not None else None
+
+    def show_dock_area(self) -> None:
+        """Switch to the dock area view."""
+        self.set_current("dock_area")
+
     # --- Public API ------------------------------------------------------
     def add_section(self, title: str, id: str, position: int | None = None):
         return self.sidebar.add_section(title, id, position)
@@ -316,20 +325,20 @@ class BECMainApp(BECMainWindow):
             tour_steps.append(dark_mode_step)
 
         # Register the client info label
-        if hasattr(self, "_client_info_hover"):
+        if hasattr(self, "_client_info_label"):
             client_info_step = self.guided_tour.register_widget(
-                widget=self._client_info_hover,
+                widget=self._client_info_label,
                 title="Client Status",
                 text="Displays status messages and information from the BEC Server.",
             )
             tour_steps.append(client_info_step)
 
         # Register the scan progress bar if available
-        if hasattr(self, "_scan_progress_hover"):
+        if hasattr(self, "_scan_status_item"):
             progress_step = self.guided_tour.register_widget(
-                widget=self._scan_progress_hover,
+                widget=self._scan_status_item,
                 title="Scan Progress",
-                text="Monitor the progress of ongoing scans. Hover over the progress bar to see detailed information including elapsed time and estimated completion.",
+                text="Monitor the running scan. Hover over the bar to see its steps, metadata and Stop; right-click it to change its width.",
             )
             tour_steps.append(progress_step)
 

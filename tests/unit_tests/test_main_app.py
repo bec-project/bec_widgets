@@ -399,3 +399,26 @@ def test_guided_tour_can_start_and_stop(app_with_spies, qtbot):
 
     # Check that tour is stopped
     assert not app.guided_tour._active
+
+
+def test_status_pill_opens_its_widget_in_the_dock_area_view(
+    qtbot, mocked_client, monkeypatch, tmp_path
+):
+    from bec_widgets.widgets.progress.scan_progressbar.scan_progressbar import ScanProgressBar
+
+    monkeypatch.setenv("BECWIDGETS_PROFILE_DIR", str(tmp_path))
+    app = create_widget(qtbot, BECMainApp, client=mocked_client)
+    dock_area = app.dock_area.dock_area
+    assert app.status_dock_area() is dock_area
+    item = app._scan_status_item
+    item._prepare_card()
+    assert not item.card.hint.isHidden()
+    switched = []
+    monkeypatch.setattr(app, "set_current", lambda view_id: switched.append(view_id))
+    before = [w for w in dock_area.widget_list() if isinstance(w, ScanProgressBar)]
+    qtbot.mouseDClick(item.pill, Qt.MouseButton.LeftButton)
+    after = [w for w in dock_area.widget_list() if isinstance(w, ScanProgressBar)]
+    assert len(after) == len(before) + 1
+    assert switched == ["dock_area"]
+    qtbot.mouseDClick(item.pill, Qt.MouseButton.LeftButton)
+    assert [w for w in dock_area.widget_list() if isinstance(w, ScanProgressBar)] == after

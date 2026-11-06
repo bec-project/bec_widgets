@@ -135,3 +135,23 @@ def test_disable_enable_controls_and_persist_across_device_change(
     # Re-enable and verify UI
     positioner_box_2d.enable_controls_ver = True
     qtbot.waitUntil(lambda: all(w.isEnabled() for w in _ver_buttons(positioner_box_2d)))
+
+
+def test_stop_only_stops_both_motors(positioner_box_2d):
+    """The Stop stops samx and samy; it shows no scan menu and leaves the scan queue alone."""
+    stop = positioner_box_2d.ui.stop_button
+    assert stop.device_stop and stop.arrow.isHidden()
+    stop.setEnabled(True)
+    with (
+        mock.patch.object(positioner_box_2d.client.connector, "send") as send,
+        mock.patch.object(stop.queue, "request_scan_abortion") as abort,
+        mock.patch.object(stop.queue, "request_scan_halt") as halt,
+    ):
+        stop.button.click()
+        stop.button.click()
+    assert send.call_args_list == 2 * [
+        mock.call(MessageEndpoints.stop_devices(), VariableMessage(value=["samx", "samy"]))
+    ]
+    abort.assert_not_called()
+    halt.assert_not_called()
+    assert stop.button.text() == "Stop"
