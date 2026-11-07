@@ -74,14 +74,16 @@ class ListRow(AnimatedRow):
             self.lead.setFont(mono_font(-1))
             self.lead.setFixedWidth(20)
             self.lead.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        self.name_label = QLabel(self)
+        is_rpc = bool(entry.rpc_command)
+        self.name_label = ElidedLabel(parent=self) if is_rpc else QLabel(self)
+        self.name_label.setTextFormat(Qt.TextFormat.PlainText)
         self.name_label.setFont(mono_font(0, bold=not finished))
         self.meta_label = ElidedLabel(parent=self)
         self.tail_label = QLabel(self)
         self.tail_label.setFont(mono_font(-1))
         self.tail_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         line.addWidget(self.lead)
-        line.addWidget(self.name_label)
+        line.addWidget(self.name_label, int(is_rpc))
         line.addWidget(self.meta_label, 1)
         line.addWidget(self.tail_label)
         self.buttons: list[IconButton] = []
@@ -154,11 +156,16 @@ class ListRow(AnimatedRow):
         set_style(self.tail_label, f"color: {tail_color};")
         self.tail_label.setVisible(bool(self.tail_label.text()))
         self.name_label.setText(entry.title)
+        if isinstance(self.name_label, ElidedLabel):
+            self.name_label.setMaximumWidth(
+                self.name_label.fontMetrics().horizontalAdvance(entry.title) + 2
+            )
         # a scan with its own name keeps its type visible, muted, before the metadata
         scan_type = [entry.scan_type] if entry.scan_type and entry.scan_type != entry.name else []
         parts = scan_type + [value for _, value in entry.metadata]
-        if self.owner.show_details and entry.args:
-            parts.append(entry.args)
+        arguments = entry.rpc_arguments if entry.rpc_command else entry.args
+        if self.owner.show_details and arguments:
+            parts.append(arguments)
         self.meta_label.setText(" · ".join(parts))
         set_style(self.meta_label, f"color: {muted};")
         if self.toolTip() != entry.args:  # also restores it after a failure note
@@ -231,6 +238,7 @@ class DetailDrawer(QFrame):
         layout.addLayout(head)
         self.name_label = QLabel(self)
         self.name_label.setFont(mono_font(1.5, bold=True))
+        self.name_label.setTextFormat(Qt.TextFormat.PlainText)
         self.name_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         layout.addWidget(self.name_label)
         self.details = QWidget(self)
@@ -421,7 +429,10 @@ class DetailDrawer(QFrame):
         if not has:
             return
         self.name_label.setText(entry.title)
+        self.name_label.setWordWrap(bool(entry.rpc_command))
         arguments, metadata = entry_detail_columns(entry)
+        self.details.setVisible(bool(arguments or metadata))
+        self.args_box.setVisible(bool(arguments) or not entry.rpc_command)
         self.args_grid.set_items(arguments)
         self.meta_grid.set_items(metadata)
         self.meta_box.setVisible(bool(metadata))

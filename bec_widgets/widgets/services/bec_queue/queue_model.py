@@ -23,6 +23,7 @@ from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.widgets.progress.scan_progressbar.scan_ui import (
     args_summary,
     metadata_items,
+    rpc_call,
     scan_bundle_names,
     scan_display_name,
 )
@@ -96,8 +97,23 @@ class QueueEntry:
         return self.queue_id
 
     @property
+    def rpc_command(self) -> str:
+        """Formatted command for a device RPC with a known target."""
+        if self.scan_type != "device_rpc":
+            return ""
+        parameter = getattr(self.request, "parameter", None) or {}
+        return rpc_call(parameter.get("kwargs"))
+
+    @property
+    def rpc_arguments(self) -> str:
+        """Formatted arguments without the command name or outer parentheses."""
+        return self.rpc_command.partition("(")[2][:-1]
+
+    @property
     def title(self) -> str:
         """Display title, such as "#12 line_scan" or "line_scan +2"."""
+        if command := self.rpc_command:
+            return command.partition("(")[0]
         number = f"#{self.scan_number} " if self.scan_number is not None else ""
         more = f" +{self.blocks - 1}" if self.blocks > 1 else ""
         return f"{number}{self.name}{more}"
