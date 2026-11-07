@@ -317,9 +317,12 @@ def entry_detail_columns(entry: QueueEntry) -> tuple[list[tuple[str, str]], list
     The details of an entry split in two: (scan arguments and request info, user metadata).
     Every argument is its own row.
     """
-    arguments = args_items(getattr(entry.request, "parameter", None), entry.bundle_names)
-    if not arguments and entry.args:
-        arguments = [("args", entry.args)]
+    if entry.rpc_command:
+        arguments = [("args", entry.rpc_arguments)] if entry.rpc_arguments else []
+    else:
+        arguments = args_items(getattr(entry.request, "parameter", None), entry.bundle_names)
+        if not arguments and entry.args:
+            arguments = [("args", entry.args)]
     if entry.scan_type and entry.scan_type != entry.name:
         arguments.append(("scan", entry.scan_type))
     if entry.blocks > 1:
