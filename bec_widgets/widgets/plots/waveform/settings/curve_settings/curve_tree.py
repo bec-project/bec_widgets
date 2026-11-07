@@ -722,10 +722,12 @@ class CurveTree(BECWidget, QWidget):
             self.waveform.color_palette = self.color_palette
         data = self.export_all_curves()
         if self.waveform is not None:
-            custom_labels = {c.name() for c in self.waveform.curves if c.config.source == "custom"}
+            custom_labels = {
+                c.name() for c in self.waveform.configured_curves if c.config.source == "custom"
+            }
             data.extend(
                 c.config.model_dump()
-                for c in self.waveform.curves
+                for c in self.waveform.configured_curves
                 if c.config.source == "dap" and c.config.parent_label in custom_labels
             )
         json_data = json.dumps(data, indent=2)
@@ -772,8 +774,10 @@ class CurveTree(BECWidget, QWidget):
         self.tree.clear()
         self.all_items = []
 
-        top_curves = [c for c in self.waveform.curves if c.config.source in ("device", "history")]
-        dap_curves = [c for c in self.waveform.curves if c.config.source == "dap"]
+        top_curves = [
+            c for c in self.waveform.configured_curves if c.config.source in ("device", "history")
+        ]
+        dap_curves = [c for c in self.waveform.configured_curves if c.config.source == "dap"]
         for dev in top_curves:
             dr = CurveRow(
                 self.tree,
