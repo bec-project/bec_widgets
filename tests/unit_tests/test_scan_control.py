@@ -2,20 +2,26 @@
 from copy import deepcopy
 from threading import Event, get_ident
 from types import SimpleNamespace
+from typing import Literal
 from unittest.mock import MagicMock, call, patch
 
+import numpy as np
 import pytest
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.messages import AvailableResourceMessage, ScanHistoryMessage
 from bec_lib.scan_history import ScanHistory
-from qtpy.QtCore import QPoint, Qt
-from qtpy.QtWidgets import QCheckBox, QComboBox, QDialog, QLineEdit, QStyle
+from bec_lib.signature_serializer import signature_to_dict
+from qtpy.QtCore import QCoreApplication, QEvent, QPoint, Qt
+from qtpy.QtWidgets import QApplication, QCheckBox, QComboBox, QDialog, QLineEdit, QStyle, QWidget
 
 from bec_widgets.tests.client_mocks import mocked_client
+from bec_widgets.tests.utils import create_widget
+from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.control.scan_control import ScanControl
 from bec_widgets.widgets.control.scan_control import scan_control as scan_control_module
+from bec_widgets.widgets.control.scan_control.path_preview import PathPreview
 from bec_widgets.widgets.control.scan_control.scan_control import ScanControlConfig
 from bec_widgets.widgets.control.scan_control.scan_info_adapter import ScanInfoAdapter
 from bec_widgets.widgets.control.scan_control.scan_selection_dialog import ScanSelectionDialog
@@ -590,6 +596,7 @@ def test_scan_selector_settings_properties_are_profile_safe(scan_control):
     # unset filter, so future scans keep appearing after a profile round trip.
     assert exported["allowed_scans"] == ["line_scan", "grid_scan"]
     assert exported["hide_scan_selector_settings_button"] is False
+    assert exported["hide_path_preview"] is False
 
     scan_control.load_settings(exported)
     assert scan_control.config.allowed_scans is None
@@ -2037,3 +2044,181 @@ def test_case_insensitive_typing_is_not_flagged_invalid(scan_control, qtbot):
     qtbot.keyClick(combo.lineEdit(), Qt.Key_Return)
     assert scan_control.current_scan == "grid_scan"
     assert combo.currentText() == "grid_scan"
+
+
+def test_grid_path_preview_updates_scan_bounds(qtbot, mocked_client):
+    """A region move changes the submitted form and regenerates the shared grid path."""
+    pytest.importorskip("bec_lib.scan_preview")
+
+    def grid_signature(*args, snaked=True, **kwargs):
+        pass
+
+    scans = deepcopy(available_scans_message.resource)
+    scans["grid_scan"].update(
+        signature=signature_to_dict(grid_signature),
+        arg_bundle_size={"bundle": 4},
+        position_preview="bec_lib.position_generators.nd_grid_positions",
+        position_preview_parameter_mapping={"axes": {"bundle": [1, 2, 3]}, "snaked": "snaked"},
+    )
+    scans["plugin_grid"] = deepcopy(scans["grid_scan"])
+    scans["plugin_grid"]["position_preview_parameter_mapping"]["axes"]["bundle"] = [2, 3, 1]
+    mocked_client.connector.set_and_publish(
+        MessageEndpoints.available_scans(), AvailableResourceMessage(resource=scans)
+    )
+    widget = create_widget(qtbot, ScanControl, client=mocked_client, default_scan="grid_scan")
+    widget.arg_box.set_parameters(["samx", 2, -2, 3, "samy", -1, 1, 2])
+    widget.resize(850, 840)
+    widget.show()
+    widget._preview_button.click()
+    preview = widget._path_preview
+    qtbot.waitUntil(lambda: "6 points" in preview._status.text(), timeout=3000)
+    np.testing.assert_allclose(preview._path.xData, [2, 0, -2, -2, 0, 2])
+
+    preview._region.sigRegionChangeStarted.emit(preview._region)
+    preview._region.setPos((-1, -2))
+    args, _ = widget.get_scan_parameters(bec_object=False)
+    assert args[1:3] == [3, -1]
+    assert args[5:7] == [-2, 0]
+    qtbot.waitUntil(
+        lambda: preview._path.xData is not None and preview._path.xData[0] == 3, timeout=3000
+    )
+
+    widget.arg_box.set_parameters(["samx", -2, 2, 100, "samy", -1, 1, 100])
+    assert preview._path.xData is None
+    assert not preview._region.isEnabled()
+    assert "Updating path" in preview._status.text()
+    qtbot.waitUntil(lambda: "path line hidden" in preview._status.text(), timeout=3000)
+    assert len(preview._path.xData) == 5_000
+    curve = preview._path.curve.getPath()
+    assert all(not curve.elementAt(i).isLineTo() for i in range(curve.elementCount()))
+
+    old_background = preview._plot.backgroundBrush().color()
+    apply_theme("dark")
+    assert preview._plot.backgroundBrush().color() == preview.palette().base().color()
+    assert preview._plot.backgroundBrush().color() != old_background
+
+    assert widget.setProperty("hide_path_preview", True)
+    assert widget.property("hide_path_preview") is True
+    assert widget._preview_button.isHidden()
+    assert preview.isHidden()
+    assert not preview._timer.isActive()
+
+    widget.current_scan = "line_scan"
+    widget.current_scan = "grid_scan"
+    assert widget._preview_button.isHidden()
+
+    assert widget.setProperty("hide_path_preview", False)
+    assert not widget._preview_button.isHidden()
+    assert preview.isHidden()
+    widget._preview_button.click()
+    assert not preview.isHidden()
+
+    widget.current_scan = "plugin_grid"
+    assert widget._preview_button.isHidden()
+    assert preview.isHidden()
+
+    widget.current_scan = "line_scan"
+    assert widget._preview_button.isHidden()
+    assert preview.isHidden()
+
+
+def test_fermat_path_preview_uses_named_bounds(qtbot, mocked_client):
+    """Fermat previews keep relative offsets and update the named scan fields."""
+    generators = pytest.importorskip("bec_lib.position_generators")
+    pytest.importorskip("bec_lib.scan_preview")
+
+    def fermat_signature(
+        motor1: str,
+        start_motor1: float,
+        stop_motor1: float,
+        motor2: str,
+        start_motor2: float,
+        stop_motor2: float,
+        step: float = 0.5,
+        *,
+        relative: bool = True,
+        spiral_type: float = 0,
+        optim_trajectory: Literal["corridor", "shell", "nearest", None] = None,
+    ):
+        pass
+
+    mapping = {
+        "m1_start": "start_motor1",
+        "m1_stop": "stop_motor1",
+        "m2_start": "start_motor2",
+        "m2_stop": "stop_motor2",
+        "step": "step",
+        "spiral_type": "spiral_type",
+    }
+    signature = signature_to_dict(fermat_signature)
+    for entry in signature:
+        if entry["name"] in ("motor1", "motor2"):
+            entry["annotation"] = "DeviceBase"
+    info = {
+        "signature": signature,
+        "gui_visibility": {"Path settings": [entry["name"] for entry in signature]},
+        "position_preview": "bec_lib.position_generators.fermat_spiral_pos",
+        "position_preview_parameter_mapping": mapping,
+    }
+    mocked_client.connector.set_and_publish(
+        MessageEndpoints.available_scans(), AvailableResourceMessage(resource={"fermat_scan": info})
+    )
+    widget = create_widget(qtbot, ScanControl, client=mocked_client, default_scan="fermat_scan")
+    widget.kwarg_boxes[0].set_parameters(
+        dict(
+            motor1="samx",
+            start_motor1=-2,
+            stop_motor1=2,
+            motor2="samy",
+            start_motor2=-1,
+            stop_motor2=1,
+        )
+    )
+    widget._preview_button.click()
+    preview = widget._path_preview
+    expected = generators.fermat_spiral_pos(-2, 2, -1, 1, step=0.5)
+    qtbot.waitUntil(lambda: preview._path.xData is not None, timeout=3000)
+    np.testing.assert_allclose(preview._path.xData, expected[:, 0])
+    assert preview._plot.getAxis("bottom").labelText == "samx offset"
+
+    optimizer = pytest.importorskip("bec_lib.path_optimization").PathOptimizerMixin()
+    settings = widget.kwarg_boxes[0]
+    for method, points in (
+        (
+            "corridor",
+            optimizer.optimize_corridor(
+                expected.copy(),
+                num_iterations=5,
+                fast_axis=0,
+                first_corridor_direction=generators.Direction.ASCENDING,
+                snaked=True,
+            ),
+        ),
+        ("shell", optimizer.optimize_shell(expected.copy(), num_iterations=5)),
+        ("nearest", optimizer.optimize_nearest_neighbor(expected.copy())),
+    ):
+        settings.set_parameters({"optim_trajectory": method})
+        qtbot.waitUntil(lambda: f"Trajectory: {method}" in preview._status.text(), timeout=3000)
+        np.testing.assert_allclose(
+            np.column_stack((preview._path.xData, preview._path.yData)), points
+        )
+        np.testing.assert_allclose(
+            np.column_stack((preview._endpoints.xData, preview._endpoints.yData)), points[[0, -1]]
+        )
+
+    preview._region.sigRegionChangeStarted.emit(preview._region)
+    preview._region.setSize((3, 1))
+    _, kwargs = widget.get_scan_parameters(bec_object=False)
+    assert (kwargs["stop_motor1"], kwargs["stop_motor2"]) == (1, 0)
+
+
+def test_path_preview_menus_follow_parent_destruction():
+    """Qt parent deletion removes plot menus even if Python still holds the preview."""
+    app = QApplication.instance()
+    before = set(app.topLevelWidgets())
+    parent = QWidget()
+    preview = PathPreview(lambda: None, parent)
+    assert preview.parent() is parent
+    parent.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+    assert set(app.topLevelWidgets()) == before
