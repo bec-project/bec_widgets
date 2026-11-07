@@ -183,6 +183,7 @@ class ScanGroupBox(QGroupBox):
     }
 
     device_selected = Signal(str)
+    parameters_changed = Signal()
     reference_units_changed = Signal(object, str, object)
 
     def __init__(
@@ -339,6 +340,16 @@ class ScanGroupBox(QGroupBox):
             bundle_widgets.append(widget)
             self._widget_labels[widget] = label
             self._widget_bundle_indexes[widget] = bundle_index
+            if isinstance(widget, QComboBox):
+                widget.currentTextChanged.connect(self.parameters_changed)
+            elif isinstance(widget, (QSpinBox, QDoubleSpinBox)):
+                widget.valueChanged.connect(self.parameters_changed)
+            elif isinstance(widget, QCheckBox):
+                widget.toggled.connect(self.parameters_changed)
+            elif isinstance(widget, QLineEdit):
+                widget.textChanged.connect(self.parameters_changed)
+
+        self.parameters_changed.emit()
 
     @Slot(str)
     def emit_device_selected(self, device_name):
@@ -376,12 +387,14 @@ class ScanGroupBox(QGroupBox):
 
         selected_devices_str = " ".join(self.selected_devices.values())
         self.device_selected.emit(selected_devices_str.strip())
+        self.parameters_changed.emit()
 
     def remove_all_widget_bundles(self):
         """Remove every widget bundle from the scan control layout."""
         while self._bundle_widgets:
             self._remove_bundle(len(self._bundle_widgets) - 1)
         self.device_selected.emit("")
+        self.parameters_changed.emit()
 
     def _remove_bundle(self, bundle_index: int) -> None:
         bundle_widgets = self._bundle_widgets.pop(bundle_index)
