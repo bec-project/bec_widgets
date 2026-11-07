@@ -461,6 +461,32 @@ def test_a_device_rpc_is_shown_as_a_call():
     assert args_items(parameter) == [("call", "samx.set(5, wait=True)")]
 
 
+def test_device_rpc_title_keeps_arguments_separate(qtbot, mocked_client):
+    request = {
+        "scan_type": "device_rpc",
+        "args": [],
+        "kwargs": {
+            "device": "bpm4i",
+            "func": "sim.select_model",
+            "func_kwargs": {"model": "ConstantModel"},
+        },
+    }
+    push_state(mocked_client, [], history=[history_msg("rpc", **request)])
+    widget = create_queue(qtbot, mocked_client)
+    row = widget.finished_rows.rows["rpc"]
+    title = "bpm4i.sim.select_model"
+    arguments = "model='ConstantModel'"
+    assert row.name_label.full_text() == title
+    assert row.meta_label.full_text() == arguments
+    assert row.toolTip() == f"{title}({arguments})"
+    widget.show_details = False
+    assert row.name_label.full_text() == title
+    assert row.meta_label.full_text() == ""
+    widget.select("rpc")
+    assert widget.drawer.name_label.text() == title
+    assert entry_detail_columns(widget.model.finished[0])[0] == [("args", arguments)]
+
+
 def test_show_details_off_hides_the_arguments_in_the_rows_only(qtbot, mocked_client, queue_infos):
     push_state(mocked_client, queue_infos, history=[history_msg("h-1", scan_number=11)])
     widget = create_queue(qtbot, mocked_client)
