@@ -25,6 +25,7 @@ from bec_widgets.tests.client_mocks import (
 )
 from bec_widgets.widgets.plots.plot_base import UIMode
 from bec_widgets.widgets.plots.waveform.curve import DeviceSignal
+from bec_widgets.widgets.plots.waveform.settings.curve_settings.curve_tree import CurveTree
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
 from bec_widgets.widgets.services.scan_history_browser.scan_history_browser import (
     ScanHistoryBrowser,
@@ -590,6 +591,101 @@ def test_on_scan_status(qtbot, mocked_client, monkeypatch, mode, calls):
 
     assert sync_spy.call_count == calls[0], "sync_signal_update should be called exactly once"
     assert async_spy.call_count == calls[1], "async_signal_update should be called exactly once"
+
+
+def test_accumulate_scans_overlays_previous_device_data(
+    qtbot, mocked_client, monkeypatch, scan_history_factory
+):
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    inject_scan_history(wf, scan_history_factory, ("saved", 10))
+    wf.x_mode = "index"
+    saved = wf.plot("bpm4i", scan_id="saved")
+    live = wf.plot("bpm4i")
+    static = wf.plot(x=[0, 1], y=[0, 1], label="reference")
+    action = wf.toolbar.components.get_action("accumulate_scans").action
+    scans = {str(i): create_dummy_scan_item(scan_id=str(i), scan_number=i) for i in range(1, 6)}
+    monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", scans.get)
+
+    def start_scan(number):
+        wf.on_scan_status({"scan_id": str(number)}, {})
+
+    def overlays():
+        return [
+            curve
+            for curve in wf.curves
+            if curve.config.source == "history" and curve.name() != saved.name()
+        ]
+
+    assert not action.isChecked()
+    start_scan(1)
+    live.setData([0, 1], [1, 2])
+    start_scan(2)
+    assert overlays() == []
+
+    action.trigger()
+    assert action.isChecked()
+    live.setData([0, 1], [2, 3])
+    start_scan(3)
+    start_scan(3)
+    live.setData([0, 1], [3, 4])
+    start_scan(4)
+    live.setData([0, 1], [4, 5])
+
+    first, second = overlays()
+    assert [first.config.scan_id, second.config.scan_id] == ["2", "3"]
+    assert [first.name(), second.name()] == [f"bpm4i-bpm4i-scan-{i}" for i in (2, 3)]
+    np.testing.assert_array_equal(first.get_data()[1], [2, 3])
+    np.testing.assert_array_equal(second.get_data()[1], [3, 4])
+
+    # Applying the curve configuration before these scans are saved keeps their snapshots.
+    tree = create_widget(qtbot, CurveTree, waveform=wf)
+    tree.refresh_from_waveform()
+    assert tree.tree.topLevelItemCount() == 2
+    tree.send_curve_json()
+    assert overlays() == [first, second]
+    live = wf.get_curve("bpm4i-bpm4i")
+    live.setData([0, 1], [4, 5])
+
+    action.trigger()
+    assert overlays() == []
+    np.testing.assert_array_equal(live.get_data()[1], [4, 5])
+    np.testing.assert_array_equal(static.get_data()[1], [0, 1])
+    start_scan(5)
+    assert overlays() == []
+    assert wf.get_curve(saved.name()) is not None
+
+
+def test_accumulated_scan_uses_saved_points_and_hides_on_incompatible_auto_axis(
+    qtbot, mocked_client, monkeypatch, scan_history_factory
+):
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    live = wf.plot("bpm4i")
+    scans = {str(i): create_dummy_scan_item(scan_id=str(i), scan_number=i) for i in (1, 2, 3)}
+    for i, motor in ((1, "samx"), (2, "samy"), (3, "samx")):
+        scans[str(i)].metadata["bec"]["scan_report_devices"] = [motor]
+        scans[str(i)].status_message.info["scan_report_devices"] = [motor]
+    monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", scans.get)
+
+    wf.toolbar.components.get_action("accumulate_scans").action.trigger()
+    wf.on_scan_status({"scan_id": "1"}, {})
+    wf.update_sync_curves()
+    # The next scan starts before the previous scan's final point is rendered.
+    live.setData([10, 20], [5, 6])
+    wf.on_scan_status({"scan_id": "2"}, {})
+    wf.update_sync_curves()
+    overlay = wf.get_curve("bpm4i-bpm4i-scan-1")
+    assert not overlay.isVisible()
+    assert len(overlay.get_data()[1]) == 2
+
+    saved = scan_history_factory(scan_id="1", scan_number=1, num_points=3)
+    wf._on_overlay_scan_saved(saved.content, {})
+    qtbot.waitUntil(lambda: len(overlay.get_data()[1]) == 3)
+    assert not overlay.isVisible()
+
+    wf.on_scan_status({"scan_id": "3"}, {})
+    wf.update_sync_curves()
+    assert overlay.isVisible()
+    assert not wf.get_curve("bpm4i-bpm4i-scan-2").isVisible()
 
 
 def test_on_scan_status_ignored_without_device_curves(qtbot, mocked_client_with_dap, monkeypatch):

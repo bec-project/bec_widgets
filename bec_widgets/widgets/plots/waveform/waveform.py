@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
@@ -63,6 +64,16 @@ else:
     lmfit = lazy_import("lmfit")
 
 
+_OverlayAxis = Literal["index", "timestamp"] | tuple[str, str]
+
+
+@dataclass
+class _ScanOverlay:
+    auto_axis: _OverlayAxis
+    axis: _OverlayAxis | None
+    requested_axis: _OverlayAxis
+
+
 # noinspection PyDataclass
 class WaveformConfig(ConnectionConfig):
     color_palette: str | None = Field(
@@ -123,6 +134,7 @@ class Waveform(PlotBase):
     dap_summary_update = Signal(dict, dict)
     new_scan = Signal()
     new_scan_id = Signal(str)
+    _overlay_data_loaded = Signal(object, object, object)
 
     roi_changed = Signal(tuple)
     roi_active = Signal(bool)
@@ -160,6 +172,7 @@ class Waveform(PlotBase):
         self.old_scan_id = None
         self.scan_id = None
         self.scan_item = None
+        self._accumulated_curves: dict[Curve, _ScanOverlay] = {}
         self.x_axis_mode = {
             "name": "auto",
             "entry": None,
@@ -183,6 +196,8 @@ class Waveform(PlotBase):
         self._enable_roi_toolbar_action(False)  # default state where are no dap curves
         self._init_curve_dialog()
         self._init_alignment_mode()
+        self._init_scan_accumulation()
+        self._overlay_data_loaded.connect(self._apply_overlay_data)
         self.curve_settings_dialog = None
 
         # Large‑dataset guard
@@ -212,8 +227,192 @@ class Waveform(PlotBase):
         self._connect_viewbox_menu_actions()
 
         self.toolbar.show_bundles(
-            ["plot_export", "mouse_interaction", "roi", "alignment_mode", "axis_popup"]
+            [
+                "plot_export",
+                "mouse_interaction",
+                "roi",
+                "alignment_mode",
+                "scan_accumulation",
+                "axis_popup",
+            ]
         )
+
+    def _init_scan_accumulation(self) -> None:
+        action = MaterialIconAction(
+            icon_name="layers", tooltip="Accumulate Scans", checkable=True, parent=self
+        )
+        self._accumulate_scans_action = action.action
+        self.toolbar.components.add_safe("accumulate_scans", action)
+        bundle = ToolbarBundle("scan_accumulation", self.toolbar.components)
+        bundle.add_action("accumulate_scans")
+        self.toolbar.add_bundle(bundle)
+        action.action.toggled.connect(self._on_accumulate_scans_toggled)
+
+    @SafeSlot(bool)
+    def _on_accumulate_scans_toggled(self, checked: bool) -> None:
+        endpoint = MessageEndpoints.scan_history()
+        if checked:
+            self.bec_dispatcher.connect_slot(self._on_overlay_scan_saved, endpoint)
+        else:
+            self.bec_dispatcher.disconnect_slot(self._on_overlay_scan_saved, endpoint)
+            self._clear_accumulated_curves()
+
+    def _clear_accumulated_curves(self) -> None:
+        for curve in tuple(self._accumulated_curves):
+            self.plot_item.removeItem(curve)
+            self._curve_clean_up(curve)
+        self._refresh_crosshair_markers()
+
+    def _accumulate_current_scan(self) -> None:
+        if self.scan_id is None or self.scan_item is None:
+            return
+        if isinstance(self.scan_item, ScanDataContainer):
+            scan_number = self.scan_item.metadata.get("bec", {}).get("scan_number")
+        else:
+            status = getattr(self.scan_item, "status_message", None)
+            scan_number = getattr(status, "scan_number", None)
+        scan_label = self.scan_id if scan_number is None else scan_number
+        live_data = getattr(self.scan_item, "live_data", None)
+        auto_axis = self._scan_auto_axis()
+        for live in self.curves:
+            if live.config.source != "device" or not live.isVisible():
+                continue
+            signal = live.config.signal
+            label = f"{signal.device}-{signal.signal}-scan-{scan_label}"
+            if self._check_curve_id(label):
+                continue
+            x, y = live.get_data()
+            has_data = x is not None and y is not None and len(y) > 0
+            in_live_data = live_data is not None and signal.signal in live_data.get(
+                signal.device, {}
+            )
+            if live_data is not None and live in self._sync_curves and not in_live_data:
+                continue
+            if not has_data and not in_live_data:
+                continue
+            axis = self._overlay_axis() if has_data or self.x_mode != "auto" else auto_axis
+            if live in self._async_curves and self.x_mode in ("auto", "timestamp"):
+                axis = "index"
+            config = CurveConfig(
+                label=label,
+                widget_class="Curve",
+                parent_id=self.gui_id,
+                source="history",
+                signal=DeviceSignal(device=signal.device, signal=signal.signal),
+                scan_id=self.scan_id,
+                scan_number=scan_number,
+                current_x_mode=self.x_mode,
+                color=self._generate_color_from_palette(),
+                symbol=live.config.symbol,
+                symbol_size=live.config.symbol_size,
+                pen_width=live.config.pen_width,
+                pen_style=live.config.pen_style,
+            )
+            # Seed the history curve from the displayed data. The scan file may
+            # still be writing when the next scan starts.
+            curve = self._add_curve_object(name=label, config=config)
+            if has_data:
+                curve.setData(x.copy(), y.copy())
+            self._history_curves.append(curve)
+            self._accumulated_curves[curve] = _ScanOverlay(
+                auto_axis, axis if has_data else None, axis
+            )
+            self._load_overlay(curve, axis)
+        self._update_overlay_visibility()
+
+    def _scan_auto_axis(self) -> _OverlayAxis:
+        if self._async_curves:
+            return "index"
+        status = getattr(self.scan_item, "status_message", None)
+        if status is None:
+            return self._current_x_device or "index"
+        devices = self._ensure_str_list(status.info.get("scan_report_devices") or [])
+        if devices:
+            device = devices[0]
+            return device, self.entry_validator.validate_signal(device, None)
+        return "index"
+
+    def _overlay_axis(self) -> _OverlayAxis:
+        mode = self.x_mode
+        if mode == "auto":
+            return self._current_x_device or "index"
+        if mode in ("index", "timestamp"):
+            return mode
+        return mode, self.x_axis_mode["entry"]
+
+    def _update_overlay_visibility(self) -> None:
+        axis = self._overlay_axis()
+        for curve, state in self._accumulated_curves.items():
+            curve.setVisible(state.axis == axis)
+
+    @SafeSlot(dict, dict)
+    def _on_overlay_scan_saved(self, msg: dict, meta: dict) -> None:
+        for curve, state in self._accumulated_curves.items():
+            if curve.config.scan_id == msg["scan_id"]:
+                self._load_overlay(curve, state.requested_axis, msg["file_path"])
+
+    def _load_overlay(self, curve: Curve, axis: _OverlayAxis, file_path: str | None = None) -> None:
+        scan_id = curve.config.scan_id
+        signal = curve.config.signal
+        history = self.client.history
+        size_limit = None if self.skip_large_dataset_check else self.config.max_dataset_size_mb
+        dataset_size_mb = self._dataset_size_mb
+        emit = self._overlay_data_loaded.emit
+
+        def load():
+            if file_path is not None:
+                scan = ScanDataContainer(file_path=file_path)
+            else:
+                scan = history.get_by_scan_id(scan_id) if history is not None else None
+            if scan is None:
+                return
+
+            def get_entry(device_name, entry_name):
+                device = scan.devices.get(device_name)
+                if device is None:
+                    return None
+                if size_limit is not None and dataset_size_mb(device, entry_name) > size_limit:
+                    # Automatic refresh keeps the snapshot if loading needs user approval.
+                    return None
+                return device.get(entry_name)
+
+            entry = get_entry(signal.device, signal.signal)
+            if entry is None:
+                return
+            data = entry.read()
+            y = np.asarray(data["value"])
+            if y.ndim > 1:
+                y = y[-1]
+            if not y.size:
+                return
+            if axis == "index":
+                x = np.arange(y.size)
+            elif axis == "timestamp":
+                x = np.asarray(data["timestamp"])
+            else:
+                device_x, signal_x = axis
+                x_entry = get_entry(device_x, signal_x)
+                if x_entry is None:
+                    return
+                x = np.asarray(x_entry.read()["value"])
+            if x.shape == y.shape:
+                try:
+                    emit(curve, axis, (x, y))
+                except RuntimeError:
+                    # The widget can be deleted while a file is being read.
+                    return
+
+        self.submit_task(load)
+
+    @SafeSlot(object, object, object)
+    def _apply_overlay_data(self, curve: Curve, axis: _OverlayAxis, data: tuple) -> None:
+        state = self._accumulated_curves.get(curve)
+        if state is None or state.requested_axis != axis or curve.config.source != "history":
+            return
+        curve.set_data(*data)
+        curve.config.current_x_mode = self.x_mode
+        state.axis = axis
+        self._update_overlay_visibility()
 
     def _connect_viewbox_menu_actions(self):
         """Connect the viewbox menu action ViewAll to the custom reset_view method."""
@@ -777,13 +976,23 @@ class Waveform(PlotBase):
         for i, curve in enumerate(self.curves):
             curve.set_color(colors[i])
 
+    @property
+    def configured_curves(self) -> list[Curve]:
+        """Curves managed by Curve Settings, excluding automatic scan overlays and their fits."""
+        labels = {curve.name() for curve in self._accumulated_curves}
+        return [
+            curve
+            for curve in self.curves
+            if curve not in self._accumulated_curves and curve.config.parent_label not in labels
+        ]
+
     @SafeProperty(str, designable=False, popup_error=True)
     def curve_json(self) -> str:
         """
-        A JSON string property that serializes all curves' pydantic configs.
+        Serialize the configured device, history and fit curves.
         """
         raw_list = []
-        for c in self.curves:
+        for c in self.configured_curves:
             if c.config.source == "custom":  # Do not serialize custom curves
                 continue
             cfg_dict = c.config.model_dump()
@@ -795,21 +1004,24 @@ class Waveform(PlotBase):
         """
         Load curves from a JSON string and add them to the plot, omitting custom source curves.
 
-        The serialized curves replace all device, history and DAP curves. Custom curves hold
-        data that cannot be serialized, so the existing ones are kept unchanged (configuration
-        and data) and custom entries in the JSON are not loaded. The JSON is rejected before
-        any curve is removed if one of its curves is invalid, refers to a scan that is not in
-        the history, or would get a label that a kept custom curve or another entry already uses.
+        The serialized curves replace configured device, history and DAP curves. Custom curves
+        and automatic scan overlays stay on the plot. Reject the JSON before removing any curves
+        if an entry is invalid, refers to missing scan history, or uses a label that is taken.
         """
         try:
             curve_configs = json.loads(json_data)
-            custom_labels = {c.name() for c in self.curves if c.config.source == "custom"}
+            configured = self.configured_curves
+            kept_labels = {
+                curve.name()
+                for curve in self.curves
+                if curve not in configured or curve.config.source == "custom"
+            }
             # Build and check every serialized curve before anything is removed, so a curve
             # that cannot be added does not leave the plot half-loaded
             configs = []
             for cfg_dict in curve_configs:
                 if cfg_dict.get("source") == "custom":
-                    if cfg_dict.get("label") not in custom_labels:
+                    if cfg_dict.get("label") not in kept_labels:
                         logger.warning(f"Custom source curve '{cfg_dict.get('label')}' not loaded.")
                     continue
                 config = CurveConfig(**cfg_dict)
@@ -817,19 +1029,21 @@ class Waveform(PlotBase):
                     self._resolve_history_config(config)
                 configs.append(config)
             labels = [config.label for config in configs if config.label]
-            taken = custom_labels & set(labels)
+            taken = kept_labels & set(labels)
             if taken:
-                raise ValueError(f"Labels {sorted(taken)} are already used by custom curves.")
+                raise ValueError(
+                    f"Labels {sorted(taken)} are already used by curves kept on the plot."
+                )
             duplicates = {label for label in labels if labels.count(label) > 1}
             if duplicates:
                 raise ValueError(f"Labels {sorted(duplicates)} are used by more than one curve.")
-            # Like clear_all, but keep custom curves and their colors (remove_curve recolors)
-            self._dap_curves = []
-            self._history_curves = []
+            # Keep automatic overlays and their fits registered while replacing configured curves.
+            self._dap_curves = [curve for curve in self._dap_curves if curve not in configured]
+            self._history_curves = list(self._accumulated_curves)
             self._sync_curves = []
             self._async_curves = []
-            for curve in self.curves:
-                if curve.name() not in custom_labels:
+            for curve in configured:
+                if curve.config.source != "custom":
                     self._remove_curve_by_name(curve.name())
             if self.crosshair is not None:
                 self.crosshair.clear_markers()
@@ -1178,6 +1392,7 @@ class Waveform(PlotBase):
 
         # Actually create the Curve item
         curve = self._add_curve_object(name=label, config=config, scan_item=scan_item)
+        self._categorise_device_curves()
 
         # If custom => set initial data
         if config.source == "custom" and x_data is not None and y_data is not None:
@@ -1248,7 +1463,6 @@ class Waveform(PlotBase):
         self.plot_item.addItem(curve)
         if scan_item is not None:
             self._fetch_history_data_for_curve(curve, scan_item)
-        self._categorise_device_curves()
         curve.visibleChanged.connect(self._refresh_crosshair_markers)
         curve.visibleChanged.connect(self.auto_range)
         return curve
@@ -1398,6 +1612,13 @@ class Waveform(PlotBase):
         """
         self._history_curves = [c for c in self._history_curves if c.config.source == "history"]
         for curve in list(self._history_curves):
+            state = self._accumulated_curves.get(curve)
+            if state is not None:
+                axis = state.auto_axis if self.x_mode == "auto" else self._overlay_axis()
+                if state.requested_axis != axis:
+                    state.requested_axis = axis
+                    self._load_overlay(curve, axis)
+                continue
             scan_item = self.get_history_scan_item(
                 scan_id=curve.config.scan_id, scan_index=curve.config.scan_number
             )
@@ -1405,6 +1626,7 @@ class Waveform(PlotBase):
                 self._fetch_history_data_for_curve(curve, scan_item)
             else:
                 logger.warning(f"Scan item for curve {curve.name()} not found.")
+        self._update_overlay_visibility()
 
     def _refresh_crosshair_markers(self):
         """
@@ -1475,7 +1697,9 @@ class Waveform(PlotBase):
     def _update_curve_visibility(self) -> None:
         """Show or hide curves according to `_is_curve_compatible`."""
         for c in self.curves:
-            c.setVisible(self._is_curve_compatible(c))
+            # Accumulated history already has its X data and only reloads on axis changes.
+            if c not in self._accumulated_curves:
+                c.setVisible(self._is_curve_compatible(c))
 
     def clear_all(self):
         """
@@ -1571,6 +1795,7 @@ class Waveform(PlotBase):
         curve.rpc_register.remove_rpc(curve)
 
         # Stop tracking the removed curve, so history refreshes and DAP requests skip it
+        self._accumulated_curves.pop(curve, None)
         if curve in self._history_curves:
             self._history_curves.remove(curve)
         if curve in self._dap_curves:
@@ -1643,6 +1868,14 @@ class Waveform(PlotBase):
             return
 
         if current_scan_id != self.scan_id:
+            if self._accumulate_scans_action.isChecked():
+                self._accumulate_current_scan()
+                device_curves = [c for c in self.curves if c.config.source == "device"]
+                device_labels = {c.name() for c in device_curves}
+                for curve in device_curves + [
+                    c for c in self._dap_curves if c.config.parent_label in device_labels
+                ]:
+                    curve.clear_data()
             self.reset()
             self.new_scan.emit()
             self.new_scan_id.emit(current_scan_id)
@@ -1756,6 +1989,8 @@ class Waveform(PlotBase):
 
         """
         data, access_key = self._fetch_scan_data_and_access()
+        if data is None:
+            return
 
         for curve in self._async_curves:
             device_name = curve.config.signal.device
@@ -2384,6 +2619,7 @@ class Waveform(PlotBase):
 
         self.x_axis_mode["label_suffix"] = new_suffix
         self.set_x_label_suffix(new_suffix)
+        self._update_overlay_visibility()
 
     def _switch_x_axis_item(self, mode: str):
         """
@@ -2570,6 +2806,15 @@ class Waveform(PlotBase):
     ################################################################################
 
     # Large dataset handling helpers
+    @staticmethod
+    def _dataset_size_mb(dataset_obj, device_entry: str) -> float:
+        info = dataset_obj._info
+        mem_bytes = info.get(device_entry, {}).get("value", {}).get("mem_size", 0)
+        if mem_bytes == 0 and info:
+            first_key = next(iter(info))
+            mem_bytes = info[first_key]["value"]["mem_size"]
+        return mem_bytes / (1024 * 1024)
+
     def _check_dataset_size_and_confirm(self, dataset_obj, device_entry: str) -> bool:
         """
         Check the size of the dataset and confirm with the user if it exceeds the limit.
@@ -2583,13 +2828,7 @@ class Waveform(PlotBase):
                   False if the dataset exceeds the size limit and user declined to load it.
         """
         try:
-            info = dataset_obj._info
-            mem_bytes = info.get(device_entry, {}).get("value", {}).get("mem_size", 0)
-            # Fallback – grab first entry if lookup failed
-            if mem_bytes == 0 and info:
-                first_key = next(iter(info))
-                mem_bytes = info[first_key]["value"]["mem_size"]
-            size_mb = mem_bytes / (1024 * 1024)
+            size_mb = self._dataset_size_mb(dataset_obj, device_entry)
             logger.info(f"Dataset size: {size_mb:.1f} MB")
         except Exception as exc:  # noqa: BLE001
             logger.error(f"Unable to evaluate dataset size: {exc}")
