@@ -4,7 +4,6 @@ The widget automatically updates the status of all running BEC services, and dis
 
 from __future__ import annotations
 
-import time
 import weakref
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -209,7 +208,7 @@ class BECStatusBox(BECWidget, QWidget):
         self.view.setMinimumSize(280, 220)
         self.main_layout.addWidget(self.view)
         self.model.restart_requested.connect(self.confirm_restart)
-        self._restart_requested_at: float | None = None
+        self._restart_baseline: dict[str, float | None] | None = None
         self._restart_timeout = QTimer(self)
         self._restart_timeout.setSingleShot(True)
         self._restart_timeout.timeout.connect(self._restart_timed_out)
@@ -372,11 +371,11 @@ class BECStatusBox(BECWidget, QWidget):
         """Request a restart of all BEC server services through SciHub.
 
         The progress is shown in the header: a service counts as restarted once it reports
-        RUNNING with a process start time after the request.
+        RUNNING from a different process than before the request.
         """
         if not self.model.can_restart:
             return
-        self._restart_requested_at = time.time()
+        self._restart_baseline = {name: self._process_start(name) for name in self.CORE_SERVICES}
         self.client.connector.send(
             MessageEndpoints.service_request(), ServiceRequestMessage(action="restart")
         )
@@ -387,26 +386,30 @@ class BECStatusBox(BECWidget, QWidget):
             RestartState.RUNNING, f"Restarting BEC server · 0/{len(self.CORE_SERVICES)}"
         )
 
+    def _process_start(self, service_name: str) -> float | None:
+        container = self.status_container.get(service_name)
+        return (container.metrics or {}).get("create_time") if container else None
+
     def _restarted_services(self) -> list[str]:
         restarted = []
         for name in self.CORE_SERVICES:
             container = self.status_container.get(name)
             if container is None or container.status not in ("RUNNING", "BUSY"):
                 continue
-            started = (container.metrics or {}).get("create_time")
-            if started is not None and started >= self._restart_requested_at:
+            started = self._process_start(name)
+            if started is not None and started != self._restart_baseline[name]:
                 restarted.append(name)
         return restarted
 
     def _check_restart_progress(self) -> None:
-        if self._restart_requested_at is None:
+        if self._restart_baseline is None:
             return
         done = len(self._restarted_services())
         total = len(self.CORE_SERVICES)
         if done < total:
             self.model.set_restart(RestartState.RUNNING, f"Restarting BEC server · {done}/{total}")
             return
-        self._restart_requested_at = None
+        self._restart_baseline = None
         self._restart_timeout.stop()
         self.model.set_restart(RestartState.DONE, "BEC server restarted")
         self._restart_clear.start(6000)
@@ -422,10 +425,10 @@ class BECStatusBox(BECWidget, QWidget):
             logger.warning(f"Reloading the client after the server restart failed: {exc}")
 
     def _restart_timed_out(self) -> None:
-        if self._restart_requested_at is None:
+        if self._restart_baseline is None:
             return
         missing = [n for n in self.CORE_SERVICES if n not in self._restarted_services()]
-        self._restart_requested_at = None
+        self._restart_baseline = None
         names = ", ".join(friendly_name(n)[0] for n in missing)
         self.model.set_restart(
             RestartState.FAILED, f"Restart not finished: {names} did not come back"

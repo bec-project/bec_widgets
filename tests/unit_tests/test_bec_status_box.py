@@ -268,7 +268,8 @@ def test_restart_confirm_cancel(status_box, send):
 
 
 def test_restart_progress_and_done(qtbot, status_box, send):
-    status_box.update_service_status(*_all_services())
+    old_start = time.time() - 100
+    status_box.update_service_status(*_restarted(old_start))
     with (
         mock.patch(
             "bec_widgets.widgets.services.bec_status_box.bec_status_box.QMessageBox.warning",
@@ -284,7 +285,7 @@ def test_restart_progress_and_done(qtbot, status_box, send):
         assert model.restart_state == RestartState.RUNNING
         assert not model.can_restart
         # old processes are still reporting: nothing counts as restarted yet
-        status_box.update_service_status(*_restarted(time.time() - 100))
+        status_box.update_service_status(*_restarted(old_start))
         assert model.restart_text.endswith("0/5")
         status_box.update_service_status(*_all_services(skip=BECStatusBox.CORE_SERVICES))
         assert model.restart_state == RestartState.RUNNING
@@ -294,6 +295,16 @@ def test_restart_progress_and_done(qtbot, status_box, send):
         # the client reload runs on the thread pool
         qtbot.waitUntil(lambda: reload_client.called)
     reload_client.assert_called_once()
+
+
+def test_restart_is_detected_when_the_server_clock_lags(qtbot, status_box, send):
+    status_box.update_service_status(*_restarted(time.time() - 100))
+    with mock.patch.object(status_box, "_reload_client") as reload_client:
+        status_box.request_restart()
+        # the new processes report a start time before the GUI host's request time
+        status_box.update_service_status(*_restarted(time.time() - 5))
+        assert status_box.model.restart_state == RestartState.DONE
+        qtbot.waitUntil(lambda: reload_client.called)
 
 
 def test_restart_timeout(status_box, send):
