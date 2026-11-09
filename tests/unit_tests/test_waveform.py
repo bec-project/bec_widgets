@@ -622,6 +622,308 @@ def test_on_scan_status_ignored_without_device_curves(qtbot, mocked_client_with_
     assert setup_dap_spy.call_count == calls_before
 
 
+def _async_readback_subscriptions(wf) -> list[tuple[str, object]]:
+    """(endpoint, dispatcher wrapper) of every subscription of wf.on_async_readback."""
+    subscriptions = [
+        (topic, slot)
+        for slot in wf.bec_dispatcher._registered_slots.values()
+        if slot.cb == wf.on_async_readback
+        for topic in slot.topics
+    ]
+    return sorted(subscriptions, key=lambda subscription: subscription[0])
+
+
+def _async_readback_endpoints(wf) -> list[str]:
+    return [endpoint for endpoint, _ in _async_readback_subscriptions(wf)]
+
+
+def _deliver_async_readback(wf, endpoint: str, values: dict, update_type: str = "replace"):
+    """Deliver an async message like the dispatcher: through the wrapper subscribed to endpoint."""
+    [wrapper] = [slot for topic, slot in _async_readback_subscriptions(wf) if topic == endpoint]
+    msg = {"signals": {signal: {"value": value} for signal, value in values.items()}}
+    wrapper(msg, {"async_update": {"type": update_type}})
+
+
+def _async_readback_endpoint(scan_id: str, device: str) -> str:
+    from bec_lib.endpoints import MessageEndpoints
+
+    return MessageEndpoints.device_async_readback(scan_id, device).endpoint
+
+
+def test_async_subscription_bound_when_scan_item_arrives_after_scan_status(
+    qtbot, mocked_client, monkeypatch
+):
+    """
+    Regression for #1297: the first scan status arrived before the ScanItem existed, so no
+    async subscription could be set up. A later status of the same scan must bind the live
+    async endpoint, so that async readbacks reach the plot.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    curve = wf.plot(arg1="async_device")
+    scan_storage = {}
+    monkeypatch.setattr(
+        wf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: scan_storage.get(scan_id)
+    )
+
+    wf.on_scan_status({"scan_id": "scan-1", "status": "open"}, {})
+    assert wf.scan_id == "scan-1"
+    assert _async_readback_endpoints(wf) == []
+
+    scan_storage["scan-1"] = create_dummy_scan_item(scan_id="scan-1")
+    wf.on_scan_status({"scan_id": "scan-1", "status": "open"}, {})
+
+    endpoint = _async_readback_endpoint("scan-1", "async_device")
+    assert _async_readback_endpoints(wf) == [endpoint]
+    _deliver_async_readback(wf, endpoint, {"async_device": [4, 5, 6]})
+    np.testing.assert_array_equal(curve.get_data()[1], [4, 5, 6])
+
+
+def test_async_subscription_follows_live_history_live_switch(
+    qtbot, mocked_client, monkeypatch, scan_history_factory
+):
+    """
+    Regression for #1298: switching from a live scan to a history scan must release the live
+    async subscription (registered under the live scan ID), and the next live scan must end up
+    with exactly one subscription, its own.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.plot(arg1="async_device")
+    scan_storage = {
+        scan_id: create_dummy_scan_item(scan_id=scan_id) for scan_id in ("live-1", "live-2")
+    }
+    monkeypatch.setattr(
+        wf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: scan_storage.get(scan_id)
+    )
+    inject_scan_history(wf, scan_history_factory, ("hist-1", 1))
+    history_item = wf.client.history.get_by_scan_id("hist-1")
+    # Stored scans carry the readout priority of the scan in their BEC metadata
+    history_item.metadata["bec"]["readout_priority"] = {
+        "monitored": ["bpm4i"],
+        "async": ["async_device"],
+    }
+    monkeypatch.setattr(wf.client.history, "get_by_scan_id", lambda scan_id: history_item)
+
+    wf.on_scan_status({"scan_id": "live-1", "status": "open"}, {})
+    assert _async_readback_endpoints(wf) == [_async_readback_endpoint("live-1", "async_device")]
+
+    wf.update_with_scan_history(scan_id="hist-1")
+    assert wf.scan_id == "hist-1"
+    assert _async_readback_endpoints(wf) == []
+
+    wf.on_scan_status({"scan_id": "live-2", "status": "open"}, {})
+    assert _async_readback_endpoints(wf) == [_async_readback_endpoint("live-2", "async_device")]
+
+
+def test_async_readback_of_previous_scan_is_ignored(qtbot, mocked_client, monkeypatch):
+    """
+    Regression for #1299: an async readback of the previous scan that is delivered after the
+    scan changed (already in flight) must not overwrite the data of the current scan.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    curve = wf.plot(arg1="async_device")
+    scan_storage = {
+        scan_id: create_dummy_scan_item(scan_id=scan_id) for scan_id in ("scan-1", "scan-2")
+    }
+    monkeypatch.setattr(
+        wf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: scan_storage.get(scan_id)
+    )
+
+    wf.on_scan_status({"scan_id": "scan-1", "status": "open"}, {})
+    [(_, previous_subscription)] = _async_readback_subscriptions(wf)
+    wf.on_scan_status({"scan_id": "scan-2", "status": "open"}, {})
+    _deliver_async_readback(
+        wf, _async_readback_endpoint("scan-2", "async_device"), {"async_device": [1, 2, 3]}
+    )
+
+    previous_subscription(
+        {"signals": {"async_device": {"value": [99]}}}, {"async_update": {"type": "replace"}}
+    )
+
+    np.testing.assert_array_equal(curve.get_data()[1], [1, 2, 3])
+
+
+@pytest.mark.parametrize(
+    "async_signal", [False, True], ids=["device_async_readback", "device_async_signal"]
+)
+def test_async_readback_updates_only_curves_of_its_device(
+    qtbot, mocked_client, monkeypatch, async_signal
+):
+    """
+    Regression for #1300: two async devices expose a signal with the same entry name. A
+    readback of one device must update that device's curve only.
+    """
+    from bec_lib.device import ReadoutPriority
+    from bec_lib.endpoints import MessageEndpoints
+
+    from bec_widgets.tests.fake_devices import FakeDevice
+
+    for name in ("async_a", "async_b"):
+        device = FakeDevice(name, readout_priority=ReadoutPriority.ASYNC)
+        device._info["signals"] = {
+            "value": {
+                "kind_str": "hinted",
+                "component_name": "value",
+                "obj_name": "value",
+                "signal_class": "AsyncSignal",
+            }
+        }
+        monkeypatch.setitem(mocked_client.device_manager.devices, name, device)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    if async_signal:
+        # Both signals are published as BEC async signal streams named after the signal
+        monkeypatch.setattr(wf, "_check_async_signal_found", lambda name, signal: (True, signal))
+    curve_a = wf.plot(device_y="async_a", signal_y="value", label="curve_a")
+    curve_b = wf.plot(device_y="async_b", signal_y="value", label="curve_b")
+    scan_item = create_dummy_scan_item(scan_id="scan-1")
+    monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: scan_item)
+
+    wf.on_scan_status({"scan_id": "scan-1", "status": "open"}, {})
+
+    def endpoint(device: str) -> str:
+        if async_signal:
+            return MessageEndpoints.device_async_signal("scan-1", device, "value").endpoint
+        return MessageEndpoints.device_async_readback("scan-1", device).endpoint
+
+    assert _async_readback_endpoints(wf) == [endpoint("async_a"), endpoint("async_b")]
+    _deliver_async_readback(wf, endpoint("async_b"), {"value": [7, 8]})
+    _deliver_async_readback(wf, endpoint("async_a"), {"value": [1, 2, 3]})
+
+    np.testing.assert_array_equal(curve_a.get_data()[1], [1, 2, 3])
+    np.testing.assert_array_equal(curve_b.get_data()[1], [7, 8])
+
+
+@pytest.mark.parametrize("change", ["remove_dap_curve", "remove_history_curve", "add_curve"])
+def test_curve_changes_mid_scan_keep_live_async_stream_and_data(
+    qtbot, mocked_client_with_dap, monkeypatch, scan_history_factory, change
+):
+    """
+    DAP and history curves share the DeviceSignal of their live counterpart. Adding or removing
+    such a curve (or any other curve) during a live scan re-categorises the curves; the live
+    async stream must stay subscribed without being registered again, and the live curve must
+    keep the data it already received.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    live = wf.plot(arg1="bpm4i")
+    inject_scan_history(wf, scan_history_factory, ("hist-1", 1))
+    scan_item = create_dummy_scan_item(scan_id="scan-1")
+    # bpm4i is read out asynchronously in this scan
+    scan_item.status_message.info["readout_priority"] = {"monitored": [], "async": ["bpm4i"]}
+    monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: scan_item)
+    wf.on_scan_status({"scan_id": "scan-1", "status": "open"}, {})
+    endpoint = _async_readback_endpoint("scan-1", "bpm4i")
+    [(_, subscription)] = _async_readback_subscriptions(wf)
+    _deliver_async_readback(wf, endpoint, {"bpm4i": [1, 2, 3]}, update_type="add")
+
+    connector = wf.client.connector
+    register_spy = mock.patch.object(connector, "register", wraps=connector.register)
+    unregister_spy = mock.patch.object(connector, "unregister", wraps=connector.unregister)
+    with register_spy as register, unregister_spy as unregister:
+        if change == "remove_dap_curve":
+            # The fit request is not under test (it cannot serialise the mocked scan item)
+            monkeypatch.setattr(wf, "request_dap", lambda *args, **kwargs: None)
+            dap_curve = wf.add_dap_curve(device_label=live.name(), dap_name="GaussianModel")
+            wf.remove_curve(dap_curve.name())
+        elif change == "remove_history_curve":
+            history_curve = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist-1")
+            wf.remove_curve(history_curve.name())
+        else:
+            wf.plot(arg1="samx")
+        live_stream_calls = [
+            call
+            for call in register.call_args_list + unregister.call_args_list
+            if getattr(call.args[0], "endpoint", call.args[0]) == endpoint
+        ]
+
+    assert live_stream_calls == []
+    assert _async_readback_subscriptions(wf) == [(endpoint, subscription)]
+    np.testing.assert_array_equal(live.get_data()[1], [1, 2, 3])
+    _deliver_async_readback(wf, endpoint, {"bpm4i": [4]}, update_type="add")
+    np.testing.assert_array_equal(live.get_data()[1], [1, 2, 3, 4])
+
+
+def test_removing_curve_named_like_its_device_keeps_shared_async_stream(
+    qtbot, mocked_client, monkeypatch
+):
+    """
+    Removing one of two curves fed by the same async stream must keep the stream subscribed for
+    the other one, also when the removed curve's label equals the device name (which is what
+    the old per-curve disconnect derived the endpoint from).
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.plot(arg1="async_device", label="async_device")
+    remaining = wf.plot(arg1="async_device", label="async_device_copy")
+    scan_item = create_dummy_scan_item(scan_id="scan-1")
+    monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: scan_item)
+    wf.on_scan_status({"scan_id": "scan-1", "status": "open"}, {})
+    endpoint = _async_readback_endpoint("scan-1", "async_device")
+    _deliver_async_readback(wf, endpoint, {"async_device": [1, 2]}, update_type="add")
+
+    wf.remove_curve("async_device")
+
+    assert _async_readback_endpoints(wf) == [endpoint]
+    _deliver_async_readback(wf, endpoint, {"async_device": [3]}, update_type="add")
+    np.testing.assert_array_equal(remaining.get_data()[1], [1, 2, 3])
+
+
+@pytest.mark.parametrize("removal", ["remove_curve", "clear_all"])
+def test_removed_curves_release_async_streams_and_tracking(
+    qtbot, mocked_client_with_dap, monkeypatch, scan_history_factory, removal
+):
+    """
+    Regression for #1301: removing every curve of a live scan (one by one or with clear_all)
+    must release the async stream and leave no curve in any tracking list.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    # The fit request is not under test (it cannot serialise the mocked scan item)
+    monkeypatch.setattr(wf, "request_dap", lambda *args, **kwargs: None)
+    inject_scan_history(wf, scan_history_factory, ("hist-1", 1))
+    async_curve = wf.plot(arg1="async_device")
+    sync_curve = wf.plot(arg1="bpm4i")
+    dap_curve = wf.add_dap_curve(device_label=sync_curve.name(), dap_name="GaussianModel")
+    history_curve = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist-1")
+    scan_item = create_dummy_scan_item(scan_id="scan-1")
+    monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: scan_item)
+    wf.on_scan_status({"scan_id": "scan-1", "status": "open"}, {})
+    assert _async_readback_endpoints(wf) == [_async_readback_endpoint("scan-1", "async_device")]
+    assert (wf._async_curves, wf._sync_curves) == ([async_curve], [sync_curve])
+    assert (wf._dap_curves, wf._history_curves) == ([dap_curve], [history_curve])
+
+    if removal == "remove_curve":
+        # The DAP curve goes with its parent
+        for curve in (async_curve, sync_curve, history_curve):
+            wf.remove_curve(curve.name())
+    else:
+        wf.clear_all()
+
+    assert wf.curves == []
+    assert _async_readback_endpoints(wf) == []
+    assert wf._async_streams_setup == {}
+    assert wf._async_curves == wf._sync_curves == wf._dap_curves == wf._history_curves == []
+
+
+def test_removed_curve_leaves_tracking_when_curves_cannot_be_recategorised(
+    qtbot, mocked_client, monkeypatch
+):
+    """
+    Regression for #1301: when remove_curve cannot re-categorise the curves (the scan carries
+    no readout priority), the removed curve must still leave the sync and async lists, so the
+    next updates do not touch it.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    async_curve = wf.plot(arg1="async_device")
+    sync_curve = wf.plot(arg1="bpm4i")
+    scan_item = create_dummy_scan_item(scan_id="scan-1")
+    monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: scan_item)
+    wf.on_scan_status({"scan_id": "scan-1", "status": "open"}, {})
+    assert (wf._async_curves, wf._sync_curves) == ([async_curve], [sync_curve])
+    scan_item.status_message.info.pop("readout_priority")
+
+    wf.remove_curve(async_curve.name())
+    wf.remove_curve(sync_curve.name())
+
+    assert wf._async_curves == wf._sync_curves == []
+
+
 def test_request_dap_skips_unchanged_static_parent(qtbot, mocked_client_with_dap, monkeypatch):
     """
     DAP curves whose parent is a static custom curve must not be resubmitted by
@@ -1419,7 +1721,7 @@ def test_on_async_readback_through_dispatcher(qtbot, mocked_client):
     wrapper = next(
         slot
         for slot in wf.bec_dispatcher._registered_slots.values()
-        if slot.cb == wf.on_async_readback and slot.cb_info == {"scan_id": wf.scan_id}
+        if slot.cb == wf.on_async_readback and slot.cb_info["scan_id"] == wf.scan_id
     )
     msg = {"signals": {"async_device": {"value": [123, 456]}}}
     metadata = {"async_update": {"type": "replace"}}
