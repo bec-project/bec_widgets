@@ -109,6 +109,14 @@ def test_all_core_running(status_box):
     assert rows[5].subtitle == "e12345@console · #abcdef"
 
 
+def test_service_info_is_stored_as_dict_without_changing_the_message(status_box):
+    services_info, services_metric = _all_services(extra=["CLIBECClient/abcdef123"])
+    status_box.update_service_status(services_info, services_metric)
+    for name, msg in services_info.items():
+        assert isinstance(msg.info, ServiceInfo)
+        assert status_box.status_container[name].info == msg.info.model_dump()
+
+
 def test_core_service_missing(status_box):
     status_box.update_service_status(*_all_services(skip=["ScanBundler"]))
     model = status_box.model
