@@ -1,6 +1,30 @@
 # CHANGELOG
 
 
+## v3.43.0 (2026-11-09)
+
+### Bug Fixes
+
+- **bec_status_box**: Detect restarted services by process start change
+  ([`4ce1195`](https://github.com/bec-project/bec_widgets/commit/4ce119560fd5c38e04b7f8ad56bb0ce6dbc0220d))
+
+### Features
+
+- **bec_status_box**: Show grouped service rows with details and a server restart
+  ([`277f15f`](https://github.com/bec-project/bec_widgets/commit/277f15fb5d95b9bfb258f81a94d143c8b1a85b49))
+
+- **main_window**: Add a BEC server pill with the status box on hover to the status bar
+  ([`23e5f5f`](https://github.com/bec-project/bec_widgets/commit/23e5f5f3f9df82974710f72483d4250f85330812))
+
+- **main_window**: Add a compact icon style for status bar pills
+  ([`559565e`](https://github.com/bec-project/bec_widgets/commit/559565e4a1c73b9d686a991f9d8001915857e0f5))
+
+### Refactoring
+
+- **bec_status_box**: Convert service info without changing the status messages
+  ([`0889add`](https://github.com/bec-project/bec_widgets/commit/0889addc25d7324742ebef8b3ac16c3b5b08c6fb))
+
+
 ## v3.42.0 (2026-11-09)
 
 ### Features
