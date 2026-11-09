@@ -4,8 +4,8 @@ import os
 
 from bec_lib import bec_logger, messages
 from bec_lib.endpoints import MessageEndpoints
-from qtpy.QtCore import QSize, Qt, QTimer
-from qtpy.QtGui import QAction, QActionGroup, QIcon
+from qtpy.QtCore import Qt, QTimer
+from qtpy.QtGui import QAction, QActionGroup, QColorSpace, QIcon, QImage, QPixmap
 from qtpy.QtWidgets import (
     QApplication,
     QFrame,
@@ -268,11 +268,11 @@ class BECMainWindow(BECWidget, QMainWindow):
     def _init_bec_icon(self):
         icon = self.app.windowIcon()
         if icon.isNull():
-            icon = QIcon()
-            icon.addFile(
-                os.path.join(MODULE_PATH, "assets", "app_icons", "bec_widgets_icon.png"),
-                size=QSize(48, 48),
-            )
+            image = QImage(os.path.join(MODULE_PATH, "assets", "app_icons", "bec_widgets_icon.png"))
+            # Qt's macOS icon conversion can crash in CoreGraphics with this PNG's
+            # embedded color profile. Drop the profile before creating the native icon.
+            image.setColorSpace(QColorSpace())
+            icon = QIcon(QPixmap.fromImage(image))
             self.app.setWindowIcon(icon)
 
     def load_ui(self, ui_file):

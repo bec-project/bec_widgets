@@ -5,9 +5,10 @@ from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 from qtpy.QtCore import QEvent, QPoint, QPointF, QSettings
-from qtpy.QtGui import QEnterEvent
+from qtpy.QtGui import QEnterEvent, QIcon
 from qtpy.QtWidgets import QApplication, QFrame, QLabel, QMessageBox
 
+from bec_widgets.applications.companion_app import GUIServer
 from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.containers.dock_area.profile_utils import SETTINGS_KEYS
 from bec_widgets.widgets.containers.main_window.addons.hover_widget import (
@@ -32,6 +33,23 @@ def bec_main_window(qtbot, mocked_client):
 #################################################################
 # Tests for BECMainWindow Initialization and Functionality
 #################################################################
+
+
+@pytest.mark.parametrize(
+    "install_icon",
+    [BECMainWindow._init_bec_icon, GUIServer.setup_bec_icon],
+    ids=["main-window", "companion-server"],
+)
+def test_application_icon_has_no_embedded_color_profile(qapp, install_icon):
+    previous_icon = qapp.windowIcon()
+    try:
+        qapp.setWindowIcon(QIcon())
+        install_icon(SimpleNamespace(app=qapp))
+        icon = qapp.windowIcon()
+        assert not icon.isNull()
+        assert not icon.pixmap(48, 48).toImage().colorSpace().isValid()
+    finally:
+        qapp.setWindowIcon(previous_icon)
 
 
 def test_bec_main_window_initialization(bec_main_window):
