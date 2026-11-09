@@ -29,7 +29,13 @@ from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.control.buttons.stop_button.stop_button import StopButton
+from bec_widgets.widgets.control.scan_control.path_preview import (
+    PathInputs,
+    PathPreview,
+    supports_preview,
+)
 from bec_widgets.widgets.control.scan_control.scan_docstring import render_scan_tooltip_html
 from bec_widgets.widgets.control.scan_control.scan_group_box import ScanGroupBox
 from bec_widgets.widgets.control.scan_control.scan_info_adapter import ScanInfoAdapter
@@ -134,6 +140,9 @@ class ScanControl(BECWidget, QWidget):
         self._selected_scan: str = ""
         self._scan_name_typed = False
 
+        self._hide_path_preview = False
+        self._path_preview: PathPreview | None = None
+
         # Create and set main layout
         self._init_UI()
 
@@ -178,6 +187,11 @@ class ScanControl(BECWidget, QWidget):
         )
         self.last_scan_button.clicked.connect(self.request_last_executed_scan_parameters)
         self.scan_selection_group.layout().addWidget(self.last_scan_button)
+        self._preview_button = QPushButton("Show path preview", self.scan_selection_group)
+        self._preview_button.setCheckable(True)
+        self._preview_button.hide()
+        self._preview_button.toggled.connect(self._toggle_path_preview)
+        self.scan_selection_group.layout().addWidget(self._preview_button)
         self.scan_selection_group.setSizePolicy(
             QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed
         )
@@ -312,6 +326,7 @@ class ScanControl(BECWidget, QWidget):
         if not self._selected_scan:
             return
         self._selected_scan = ""
+        self._update_path_preview_visibility({})
         self.reset_layout()
 
     def _update_run_button_state(self) -> None:
@@ -820,6 +835,10 @@ class ScanControl(BECWidget, QWidget):
         self.reset_layout()
         selected_scan_info = self.available_scans.get(scan_name, {})
 
+        self._update_path_preview_visibility(selected_scan_info)
+        if self._path_preview is not None:
+            self._path_preview.request_update()
+
         gui_config = self._scan_info_adapter.build_scan_ui_config(selected_scan_info)
         arg_group = gui_config.get("arg_group", None)
         kwarg_groups = gui_config.get("kwarg_groups", [])
@@ -859,6 +878,7 @@ class ScanControl(BECWidget, QWidget):
         for group in groups:
             box = ScanGroupBox(box_type="kwargs", config=group)
             box.reference_units_changed.connect(self._apply_reference_units_to_other_boxes)
+            box.parameters_changed.connect(self._request_path_update)
             self.layout.insertWidget(position + len(self.kwarg_boxes), box)
             self.kwarg_boxes.append(box)
             box.setVisible(not self._hide_kwarg_boxes)
@@ -871,6 +891,7 @@ class ScanControl(BECWidget, QWidget):
         """
         self.arg_box = ScanGroupBox(box_type="args", config=group)
         self.arg_box.device_selected.connect(self.emit_device_selected)
+        self.arg_box.parameters_changed.connect(self._request_path_update)
         self.arg_box.reference_units_changed.connect(self._apply_reference_units_to_other_boxes)
         self.arg_box.hide_add_remove_buttons = self._hide_add_remove_buttons
         self.layout.insertWidget(self.ARG_BOX_POSITION, self.arg_box)
@@ -1002,12 +1023,79 @@ class ScanControl(BECWidget, QWidget):
             self.scan_started.emit()
             scan_function(*args, **kwargs)
 
+    @SafeProperty(bool)
+    def hide_path_preview(self) -> bool:
+        """Whether the scan path preview and its toggle are hidden."""
+        return self._hide_path_preview
+
+    @hide_path_preview.setter
+    def hide_path_preview(self, hide: bool) -> None:
+        self._hide_path_preview = hide
+        self._update_path_preview_visibility(self.available_scans.get(self.current_scan, {}))
+
+    def _update_path_preview_visibility(self, scan_info: dict) -> None:
+        available = not self._hide_path_preview and supports_preview(scan_info)
+        self._preview_button.setVisible(available)
+        if not available:
+            self._preview_button.setChecked(False)
+
+    @SafeSlot(bool)
+    def _toggle_path_preview(self, show: bool) -> None:
+        self._preview_button.setText("Hide path preview" if show else "Show path preview")
+        if show and self._path_preview is None:
+            self._path_preview = PathPreview(self._read_path_form, self)
+            self._path_preview.bounds_changed.connect(self._apply_path_bounds)
+            self.layout.insertWidget(self.layout.indexOf(self._metadata_group), self._path_preview)
+        if self._path_preview is not None:
+            self._path_preview.set_active(show)
+
+    @SafeSlot()
+    def _request_path_update(self) -> None:
+        if self._path_preview is not None:
+            self._path_preview.request_update()
+
+    def _read_path_form(self) -> PathInputs:
+        info = self.available_scans.get(self.current_scan, {})
+        args, kwargs = self.get_scan_parameters(bec_object=False)
+        return PathInputs.from_form(info, args, kwargs)
+
+    @SafeSlot(object, object)
+    def _apply_path_bounds(
+        self, inputs: PathInputs, bounds: tuple[float, float, float, float]
+    ) -> None:
+        if inputs.uses_bundles:
+            if self.arg_box is None or self.arg_box.count_arg_rows() != 2:
+                return
+            widgets = [
+                widget for row in range(2) for widget in self.arg_box.get_bundle_widgets(row)[1:3]
+            ]
+        else:
+            by_name = {
+                widget.arg_name: widget for box in self.kwarg_boxes for widget in box.widgets
+            }
+            names = ("start_motor1", "stop_motor1", "start_motor2", "stop_motor2")
+            widgets = [by_name[name] for name in names if name in by_name]
+        if len(widgets) == len(bounds):
+            for widget, value in zip(widgets, bounds):
+                WidgetIO.set_value(widget, value)
+
+    def apply_theme(self, theme: str) -> None:
+        """Apply theme changes to an open path preview."""
+        super().apply_theme(theme)
+        preview = getattr(self, "_path_preview", None)
+        if preview is not None:
+            preview.apply_palette()
+
     def cleanup(self):
         """Cleanup the scan control widget."""
         # Invalidate any in-flight fetch so a late result is dropped instead of being
         # applied to (or logged against) a widget that is going away.
         self._last_scan_fetch_generation += 1
         self._last_scan_fetch_watchdog.stop()
+        if self._path_preview is not None:
+            self._path_preview.cleanup()
+            self._path_preview.deleteLater()
+            self._path_preview = None
         if self._scan_info_dialog is not None:
             self._scan_info_dialog.close()
             self._scan_info_dialog.deleteLater()
