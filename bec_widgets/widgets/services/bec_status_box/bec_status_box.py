@@ -248,17 +248,22 @@ class BECStatusBox(BECWidget, QWidget):
         self._refresh_model()
 
     def _update_status_container(
-        self, service_name: str, status: BECStatus | str, info: dict, metrics: dict = None
+        self,
+        service_name: str,
+        status: BECStatus | str,
+        info: BaseModel | dict,
+        metrics: dict = None,
     ) -> None:
         """Store the newest status and metrics of a BEC service.
 
         Args:
             service_name (str): The name of the service.
             status (BECStatus | str): The status of the service.
-            info (dict): The information about the service.
+            info (BaseModel | dict): The information about the service. The container keeps a dict.
             metrics (dict): The metrics of the service.
         """
         status = status.name if isinstance(status, BECStatus) else status
+        info = info.model_dump() if isinstance(info, BaseModel) else info
         container = self.status_container.get(service_name)
         if container:
             container.status = status
@@ -285,9 +290,6 @@ class BECStatusBox(BECWidget, QWidget):
         """
         services_info = dict(services_info)
         checked = list(self.CORE_SERVICES)
-        # FIXME: We simply replace the pydantic message with dict for now until we refactor the widget
-        for val in services_info.values():
-            val.info = val.info.model_dump() if isinstance(val.info, BaseModel) else val.info
         services_info = self.update_core_services(services_info, services_metric, refresh=False)
 
         for service_name, msg in sorted(services_info.items()):
@@ -323,8 +325,7 @@ class BECStatusBox(BECWidget, QWidget):
                 self._update_status_container(service_name, "NOTCONNECTED", {}, metrics)
                 core_state = None
                 continue
-            info = msg.info.model_dump() if isinstance(msg.info, BaseModel) else msg.info
-            self._update_status_container(service_name, msg.status, info, metrics)
+            self._update_status_container(service_name, msg.status, msg.info, metrics)
             if core_state and msg.status.value < core_state.value:
                 core_state = msg.status
 
