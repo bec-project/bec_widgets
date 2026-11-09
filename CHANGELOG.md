@@ -1,6 +1,35 @@
 # CHANGELOG
 
 
+## v3.42.0 (2026-11-09)
+
+### Features
+
+- **bec_queue**: Replace the scan queue with a list and detail view
+  ([`63bb68d`](https://github.com/bec-project/bec_widgets/commit/63bb68dbce5e8b266f9ce3e058bd4b11749c12d3))
+
+- **main_window**: Add generic status bar pills with an interactive hover card
+  ([`8615cd0`](https://github.com/bec-project/bec_widgets/commit/8615cd037c8a635b790ee34d2017d8b0f16530e3))
+
+- **positioner_box**: Use the stop button as a plain device stop in all positioner boxes
+  ([`9a01751`](https://github.com/bec-project/bec_widgets/commit/9a01751246b8fbb970a1918b09fa6db6310bc5d7))
+
+- **scan_progressbar**: Replace the scan progress bar with live scan hook steps, also in the status
+  bar
+  ([`ad99f80`](https://github.com/bec-project/bec_widgets/commit/ad99f801ee0ef0c9cac3ebfa43d8adb8bd779a95))
+
+- **stop_button**: Add finish-scan option and new look to the stop button
+  ([`c35539f`](https://github.com/bec-project/bec_widgets/commit/c35539f7791c74ce33eecd79c51a333ece43deef))
+
+### Refactoring
+
+- **hover_widget**: Replace WidgetTooltip with the shared hover card
+  ([`d918df7`](https://github.com/bec-project/bec_widgets/commit/d918df79d91df459f0e7436580e8caf4c173c3b5))
+
+- **queue**: Separate RPC method names from arguments
+  ([`c410f13`](https://github.com/bec-project/bec_widgets/commit/c410f134688aade5ed799f0d8ff62ada086b68a7))
+
+
 ## v3.41.1 (2026-11-09)
 
 ### Bug Fixes
