@@ -1,6 +1,27 @@
 # CHANGELOG
 
 
+## v3.41.1 (2026-11-09)
+
+### Bug Fixes
+
+- Strip the embedded color profile from BEC app icons
+  ([`d984ba9`](https://github.com/bec-project/bec_widgets/commit/d984ba91a9654bff33278450666c93119b1b1f3e))
+
+### Refactoring
+
+- **busy_loader**: Share BusyStateWidget and build CustomBusyWidget on it
+  ([`ea468d7`](https://github.com/bec-project/bec_widgets/commit/ea468d79df7b23fb53457cbcecb3f3fc493f1c69))
+
+- **round_frame**: Replace RoundedFrame with theme-styled QFrame
+  ([`4afaf20`](https://github.com/bec-project/bec_widgets/commit/4afaf20e34c52f2f31fdc46b9ff2d09a8e2d6ba1))
+
+### Testing
+
+- **device_manager**: Check the busy progress card follows the theme
+  ([`f1c7887`](https://github.com/bec-project/bec_widgets/commit/f1c78875e0b1a5d40b25fada3889d5ae196bd4f5))
+
+
 ## v3.41.0 (2026-10-21)
 
 ### Features
