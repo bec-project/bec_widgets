@@ -500,8 +500,9 @@ class ImageBase(PlotBase):
             self._remove_color_bar()
 
             def disable_autorange():
-                logger.info("Disabling autorange")
-                self.setProperty("autorange", False)
+                # A drag emits on every mouse move; switch autorange off only once.
+                if self.autorange:
+                    self.setProperty("autorange", False)
 
             if style == "simple":
                 cmap = Colors.get_colormap(self.config.color_map)
@@ -515,7 +516,17 @@ class ImageBase(PlotBase):
                 self._color_bar.setImageItem(main_image)
                 self.config.color_bar = "full"
                 self._apply_colormap_to_colorbar(self.config.color_map)
-                self._color_bar.sigLevelsChanged.connect(disable_autorange)
+                region = self._color_bar.region
+
+                def disable_autorange_on_drag():
+                    # sigLevelsChanged also fires on every rendered frame:
+                    # HistogramLUTItem.imageChanged snaps the region to the
+                    # current image levels on each setImage. Only a mouse drag
+                    # of the region (or one of its edge lines) is user intent.
+                    if region.moving or any(line.moving for line in region.lines):
+                        disable_autorange()
+
+                self._color_bar.sigLevelsChanged.connect(disable_autorange_on_drag)
 
             # Custom colorbar context menu (replaces pyqtgraph's default menus).
             self._color_bar.sigColorMapChangeRequested.connect(self._set_colormap_from_menu)
@@ -1014,7 +1025,9 @@ class ImageBase(PlotBase):
                 self._color_bar.setLevels(min=vmin, max=vmax)
                 self._color_bar.setHistogramRange(vmin - 0.1 * vmin, vmax + 0.1 * vmax)
 
-        # self.toolbar.components.get_action("image_autorange").set_state_all(False)
+        if disable_autorange:
+            # Manual levels switch autorange off; show that on the toolbar.
+            self._sync_autorange_switch()
 
     @SafeSlot(str)
     def _set_colormap_from_menu(self, color_map: str):
@@ -1126,7 +1139,6 @@ class ImageBase(PlotBase):
                 # if sync:
                 self._sync_colorbar_levels()
         self._sync_autorange_switch()
-        logger.info(f"Autorange set to {enabled}")
 
     @SafeProperty(str)
     def autorange_mode(self) -> str:
