@@ -697,6 +697,32 @@ def test_accumulate_scans_evicts_oldest_overlays(
     assert wf.get_curve(live.name()) is live
 
 
+def test_accumulated_scan_keeps_the_live_symbol_limit(
+    qtbot, mocked_client, monkeypatch, scan_history_factory
+):
+    """The overlay copies the live curve's symbol limit along with its symbol."""
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_mode = "index"
+    live = wf.plot("bpm4i")
+    live.config.symbol_point_limit = None
+    monkeypatch.setattr(wf, "_load_overlay", mock.Mock())
+    monkeypatch.setattr(
+        wf.queue.scan_storage,
+        "find_scan_by_ID",
+        lambda scan_id: create_dummy_scan_item(scan_id=scan_id, scan_number=int(scan_id)),
+    )
+    wf.toolbar.components.get_action("accumulate_scans").action.trigger()
+    wf.on_scan_status({"scan_id": "1"}, {})
+    live.setData(np.arange(1001.0), np.arange(1001.0))
+    assert live.opts["symbol"] == "o"
+    wf.on_scan_status({"scan_id": "2"}, {})
+
+    overlay = wf.get_curve("bpm4i-bpm4i-scan-1")
+    assert overlay.config.symbol_point_limit is None
+    assert len(overlay.yData) == 1001
+    assert overlay.opts["symbol"] == "o"
+
+
 def test_accumulated_scan_uses_saved_points_and_hides_on_incompatible_auto_axis(
     qtbot, mocked_client, monkeypatch, scan_history_factory
 ):

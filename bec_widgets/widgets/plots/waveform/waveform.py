@@ -317,6 +317,7 @@ class Waveform(PlotBase):
                 ),
                 symbol=live.config.symbol,
                 symbol_size=live.config.symbol_size,
+                symbol_point_limit=live.config.symbol_point_limit,
                 pen_width=live.config.pen_width,
                 pen_style=live.config.pen_style,
             )
@@ -2293,10 +2294,12 @@ class Waveform(PlotBase):
     ) -> None:
         """
         Based on the length of the data this method will adjust the plotting settings of
-        Curve items, by deactivating the symbol and activating downsampling auto, method='mean',
+        Curve items, by thinning the pen and activating downsampling auto, method='mean',
         if the data length exceeds N points. If the data length is less than N points, the
-        symbol will be activated and downsampling will be deactivated. Maximum points will be
-        5x the limit.
+        pen is restored and downsampling deactivated. Maximum points will be 5x the limit.
+
+        The symbol is not handled here: `Curve.updateItems` hides it above
+        `CurveConfig.symbol_point_limit` for every curve, sync or async.
 
         Args:
             curve(Curve): The curve to adjust.
@@ -2308,14 +2311,11 @@ class Waveform(PlotBase):
             logger.warning("Limit must be greater than 1.")
             return
         if data_length > limit:
-            if curve.config.symbol is not None:
-                curve.set_symbol(None)
             if curve.config.pen_width > 3:
                 curve.set_pen_width(3)
             curve.setDownsampling(ds=None, auto=True, method=method)
             curve.setClipToView(True)
         elif data_length <= limit:
-            curve.set_symbol("o")
             curve.set_pen_width(4)
             curve.setDownsampling(ds=1, auto=None, method=method)
             curve.setClipToView(True)
