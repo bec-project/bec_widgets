@@ -400,6 +400,33 @@ def test_signal_combobox_get_signal_config(device_signal_combobox):
     assert device_signal_combobox.get_signal_config() == expected_config
 
 
+def test_signal_combobox_get_signal_config_follows_the_displayed_signal(device_signal_combobox):
+    """On the editable combobox, setCurrentText does not move the current index; the
+    returned config must still be the one of the displayed signal."""
+    combo = device_signal_combobox
+    combo.include_normal_signals = True
+    combo.include_hinted_signals = True
+    combo.include_config_signals = True
+    combo.set_device("samx")
+    combo.setCurrentText("velocity")
+    config = combo.get_signal_config()
+    assert config is not None and config.get("obj_name") == "samx_velocity"
+
+
+def test_signal_combobox_get_signal_config_none_for_unknown_text(device_signal_combobox):
+    """A typed signal that is not in the list has no config, even though the current
+    index still points at the previously selected signal."""
+    combo = device_signal_combobox
+    combo.include_normal_signals = True
+    combo.include_hinted_signals = True
+    combo.include_config_signals = True
+    combo.set_device("samx")
+    combo.setCurrentIndex(combo.findText("velocity"))
+    combo.setEditText("not_a_signal")
+    assert combo.currentIndex() == combo.findText("velocity")
+    assert combo.get_signal_config() is None
+
+
 def test_signal_combobox_get_signal_config_disabled(qtbot, mocked_client):
     combobox = create_widget(
         qtbot=qtbot, widget=SignalComboBox, client=mocked_client, store_signal_config=False
