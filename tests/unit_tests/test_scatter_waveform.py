@@ -1,6 +1,7 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
+from bec_lib.data_api import SCAN_GROUP, CorrelationGroup
 from bec_lib.scan_data_container import ScanDataContainer
 
 from bec_widgets.tests.client_mocks import (
@@ -55,8 +56,66 @@ def test_scatter_waveform_color_map(qtbot, mocked_client):
     assert swf.color_map == "plasma"
 
 
-def test_scatter_waveform_update_with_scan_history(qtbot, mocked_client, scan_history_factory):
-    """History scans are read from the HDF5-backed ScanDataContainer, not from live data."""
+def _fake_bridge_factory(monkeypatch):
+    created = []
+
+    class _FakeBridge:
+        def __init__(self, client, sources, scan="live", parent=None, min_emit_interval=0.1):
+            self.client = client
+            self.sources = list(sources)
+            self.scan = scan
+            self.healthy = True
+            # What the widgets read of a real bridge about its binding.
+            self.groups = {}
+            self.routes = {}
+            self.unbound_sources = []
+            self.closed = False
+            self.updated = MagicMock()
+
+        def close(self):
+            self.closed = True
+
+    def factory(client, sources, scan="live", parent=None, min_emit_interval=0.1):
+        bridge = _FakeBridge(client, sources, scan=scan)
+        created.append(bridge)
+        return bridge
+
+    monkeypatch.setattr(
+        "bec_widgets.widgets.plots.scatter_waveform.scatter_waveform.QtDataSubscription", factory
+    )
+    return created
+
+
+def _make_update(scan_id="dummy"):
+    from bec_lib.data_api.models import SourceData, SubscriptionUpdate
+
+    columns = {"samx": [10, 20, 30], "samy": [5, 10, 15], "bpm4i": [1, 2, 3]}
+    sources = {}
+    for dev, values in columns.items():
+        sources[(dev, dev)] = SourceData(
+            device=dev,
+            entry=dev,
+            kind="monitored",
+            ordinals=(0, 1, 2),
+            values=tuple(values),
+            timestamps=(1.0, 2.0, 3.0),
+            complete=True,
+        )
+    return SubscriptionUpdate(
+        scan_id=scan_id,
+        reason="live",
+        sources=sources,
+        aligned_ordinals=(0, 1, 2),
+        complete=True,
+        metadata={"group": SCAN_GROUP},
+    )
+
+
+def test_scatter_waveform_update_with_scan_history(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    """History scans flow through a scan-id-bound DataAPI subscription."""
+    bridges = _fake_bridge_factory(monkeypatch)
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
     inject_scan_history(swf, scan_history_factory, ("dummy", 24))
 
@@ -64,34 +123,31 @@ def test_scatter_waveform_update_with_scan_history(qtbot, mocked_client, scan_hi
     swf.update_with_scan_history(scan_id="dummy")
     qtbot.waitUntil(lambda: isinstance(swf.scan_item, ScanDataContainer), timeout=500)
 
-    def _has_points():
-        x_data = swf.main_curve.getData()[0]
-        return x_data is not None and len(x_data) > 0
-
-    qtbot.waitUntil(_has_points, timeout=2000)
+    assert bridges[-1].scan == "dummy"
+    swf._on_data_update(_make_update("dummy"))
 
     x_data, y_data = swf.main_curve.getData()
     assert len(x_data) == len(y_data) > 0
     assert swf.scan_id == "dummy"
-    assert [label.text for _, label in swf.info_label.items] == [
-        "Scan: 24 (history)",
-        "Scan Name: line_scan",
-    ]
+    rows = [label.text for _, label in swf.info_label.items]
+    # x/y/z have one row per monitored readout in the history file: they pair by scan
+    # point, so no warning is shown.
+    assert rows == ["Scan: 24 (history)", "Scan Name: line_scan"]
 
 
 def test_scatter_waveform_live_update(qtbot, mocked_client, monkeypatch):
+    bridges = _fake_bridge_factory(monkeypatch)
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
 
     dummy_scan = create_dummy_scan_item(scan_number=13, scan_name="line_scan")
     monkeypatch.setattr(swf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: dummy_scan)
 
     swf.plot("samx", "samy", "bpm4i", label="live_curve")
+    assert bridges[-1].scan == "live"
+    assert bridges[-1].sources == [("samx", "samx"), ("samy", "samy"), ("bpm4i", "bpm4i")]
 
-    # Simulate scan status indicating new scan start
-    msg = {"scan_id": "dummy"}
-    meta = {}
-    swf.on_scan_status(msg, meta)
-
+    # Scan status only performs per-scan bookkeeping now.
+    swf.on_scan_status({"scan_id": "dummy"}, {})
     assert swf.scan_id == "dummy"
     assert swf.scan_item == dummy_scan
     assert [label.text for _, label in swf.info_label.items] == [
@@ -99,35 +155,21 @@ def test_scatter_waveform_live_update(qtbot, mocked_client, monkeypatch):
         "Scan Name: line_scan",
     ]
 
-    qtbot.wait(500)
-
+    swf._on_data_update(_make_update("dummy"))
     x_data, y_data = swf.main_curve.getData()
     np.testing.assert_array_equal(x_data, [10, 20, 30])
     np.testing.assert_array_equal(y_data, [5, 10, 15])
 
 
-def test_scatter_waveform_scan_progress(qtbot, mocked_client, monkeypatch):
+def test_scatter_waveform_plot_replaces_subscription(qtbot, mocked_client, monkeypatch):
+    bridges = _fake_bridge_factory(monkeypatch)
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
 
-    dummy_scan = create_dummy_scan_item()
-    monkeypatch.setattr(swf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: dummy_scan)
-
     swf.plot("samx", "samy", "bpm4i")
-
-    # Simulate scan status indicating scan progress
-    swf.scan_id = "dummy"
-    swf.scan_item = dummy_scan
-
-    msg = {"progress": 50}
-    meta = {}
-    swf.on_scan_progress(msg, meta)
-    qtbot.wait(500)
-
-    # swf.update_sync_curves()
-
-    x_data, y_data = swf.main_curve.getData()
-    np.testing.assert_array_equal(x_data, [10, 20, 30])
-    np.testing.assert_array_equal(y_data, [5, 10, 15])
+    first = bridges[-1]
+    swf.plot("samx", "samy", "samx")
+    assert first.closed is True
+    assert bridges[-1].sources == [("samx", "samx"), ("samy", "samy")]  # deduplicated
 
 
 # def test_scatter_waveform_settings_popup(qtbot, mocked_client):
@@ -588,69 +630,6 @@ def test_z_gradient_uses_shared_brush_pool(qtbot, mocked_client):
     assert brushes_first[-1].color().getRgb()[:3] == hi.getRgb()[:3]
 
 
-def test_scatter_waveform_live_update_unequal_lengths(qtbot, mocked_client, monkeypatch):
-    """Device buffers fill independently during a live scan, so one of them can
-    be a point ahead when the update slot fires; the data must be trimmed to the
-    common length instead of handing pyqtgraph mismatched arrays."""
-    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
-
-    dummy_scan = create_dummy_scan_item()
-    # samx is one point ahead of samy and bpm4i
-    dummy_scan.live_data["samx"]["samx"].val = [10, 20, 30, 40]
-    monkeypatch.setattr(swf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: dummy_scan)
-
-    swf.plot("samx", "samy", "bpm4i", label="live_curve")
-    swf.scan_id = "dummy"
-    swf.scan_item = dummy_scan
-
-    swf.update_sync_curves()
-
-    x_data, y_data = swf.main_curve.getData()
-    np.testing.assert_array_equal(x_data, [10, 20, 30])
-    np.testing.assert_array_equal(y_data, [5, 10, 15])
-
-
-def test_scatter_waveform_live_update_incomplete_data(qtbot, mocked_client, monkeypatch):
-    """Missing or empty device buffers skip the update instead of erroring."""
-    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
-
-    dummy_scan = create_dummy_scan_item()
-    dummy_scan.live_data["samy"] = {}  # y signal not delivered yet
-    monkeypatch.setattr(swf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: dummy_scan)
-
-    swf.plot("samx", "samy", "bpm4i", label="live_curve")
-    swf.scan_id = "dummy"
-    swf.scan_item = dummy_scan
-
-    swf.update_sync_curves()
-    assert swf.main_curve.getData() == (None, None)
-
-    dummy_scan.live_data["samy"] = {"samy": DummyData(val=[], timestamps=[])}
-    swf.update_sync_curves()
-    assert swf.main_curve.getData() == (None, None)
-
-
-def test_scatter_waveform_live_update_scalar_readback(qtbot, mocked_client, monkeypatch):
-    """The first live update can deliver bare scalar readbacks instead of buffers;
-    they must be plotted as a single point, not raise TypeError on len()."""
-    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
-
-    dummy_scan = create_dummy_scan_item()
-    for device in ("samx", "samy", "bpm4i"):
-        dummy_scan.live_data[device][device] = DummyData(val=5.0, timestamps=100)
-    monkeypatch.setattr(swf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: dummy_scan)
-
-    swf.plot("samx", "samy", "bpm4i", label="live_curve")
-    swf.scan_id = "dummy"
-    swf.scan_item = dummy_scan
-
-    swf.update_sync_curves()
-
-    x_data, y_data = swf.main_curve.getData()
-    np.testing.assert_array_equal(x_data, [5.0])
-    np.testing.assert_array_equal(y_data, [5.0])
-
-
 def test_z_gradient_flat_and_empty_z(qtbot, mocked_client):
     """Degenerate z inputs keep returning None (no gradient)."""
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
@@ -665,58 +644,191 @@ def test_z_gradient_flat_and_empty_z(qtbot, mocked_client):
     assert mixed is not None and len(mixed) == 3
 
 
-def test_scatter_waveform_cleanup_detaches_update_proxy(qtbot, mocked_client):
-    """
-    A curve update still queued in proxy_update_sync when the ScatterWaveform is cleaned
-    up, or requested afterwards, must not reach update_sync_curves after cleanup() has
-    removed the main curve.
-    """
-    with patch.object(ScatterWaveform, "update_sync_curves") as update_sync_curves:
-        swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
-        qtbot.wait(100)  # let anything queued during construction drain
-        update_sync_curves.reset_mock()
+def test_scatter_switches_history_bound_bridge_to_live_on_new_scan(
+    qtbot, mocked_client, monkeypatch
+):
+    """Same live regression as the heatmap: a bridge bound to the latest
+    finished scan at idle startup must switch to live-follow when a scan
+    starts."""
+    bridges = _fake_bridge_factory(monkeypatch)
+    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+    swf.plot("samx", "samy", "bpm4i")
+    swf._setup_data_api_subscription(scan="old-finished-scan")
+    assert bridges[-1].scan == "old-finished-scan"
 
-        proxy = swf.proxy_update_sync
-        swf.sync_signal_update.emit()  # queued in the proxy
-        assert proxy.timer.timer.isActive()  # pg's ThreadsafeTimer wraps a QTimer
-        swf.close()  # closeEvent -> cleanup()
-        swf.sync_signal_update.emit()  # requested after cleanup
+    swf.on_scan_status({"scan_id": "new-live-scan"}, {})
+    assert bridges[-1].scan == "live"
 
-        qtbot.wait(200)
-        update_sync_curves.assert_not_called()
-        assert not proxy.timer.timer.isActive()
-        assert proxy.args is None
+    bridge_count = len(bridges)
+    swf.on_scan_status({"scan_id": "another-scan"}, {})
+    assert len(bridges) == bridge_count
 
 
-def test_scatter_waveform_scan_done_runs_delayed_sync_refreshes(qtbot, mocked_client):
-    """
-    A finished scan triggers one proxied sync update plus the two delayed final refreshes
-    (100 ms and 300 ms) while the ScatterWaveform is open.
-    """
-    with patch.object(ScatterWaveform, "update_sync_curves") as update_sync_curves:
-        swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
-        qtbot.wait(100)  # let anything queued during construction drain
-        update_sync_curves.reset_mock()
+def test_scatter_waveform_update_skips_incomplete_columns(qtbot, mocked_client, monkeypatch):
+    """A source that has not delivered yet, or delivered nothing, must skip the
+    render instead of erroring. Unequal buffer lengths cannot reach the widget
+    any more: ``aligned()`` only returns ordinals present in every source."""
+    from dataclasses import replace
 
-        swf.on_scan_progress({"done": True}, {})
+    _fake_bridge_factory(monkeypatch)
+    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+    swf.plot("samx", "samy", "bpm4i", label="live_curve")
 
-        qtbot.waitUntil(lambda: update_sync_curves.call_count == 3, timeout=2000)
-        qtbot.wait(100)
-        assert update_sync_curves.call_count == 3
+    partial = _make_update("dummy")
+    partial.sources.pop(("samy", "samy"))
+    swf._on_data_update(partial)
+    assert swf.main_curve.getData() == (None, None)
+
+    empty = _make_update("dummy")
+    for key, source in list(empty.sources.items()):
+        empty.sources[key] = replace(source, ordinals=(), values=(), timestamps=())
+    object.__setattr__(empty, "aligned_ordinals", ())
+    swf._on_data_update(empty)
+    assert swf.main_curve.getData() == (None, None)
 
 
-def test_scatter_waveform_scan_done_refreshes_skipped_after_cleanup(qtbot, mocked_client):
-    """
-    The delayed final refreshes scheduled when a scan is done must not run into a
-    ScatterWaveform that has been closed (cleaned up) before they fire.
-    """
-    with patch.object(ScatterWaveform, "update_sync_curves") as update_sync_curves:
-        swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
-        qtbot.wait(100)  # let anything queued during construction drain
-        update_sync_curves.reset_mock()
+def test_scatter_waveform_warns_about_sources_in_different_groups(
+    qtbot, mocked_client, monkeypatch
+):
+    """x/y/z from different correlation groups get a visible warning, not an empty plot."""
+    _fake_bridge_factory(monkeypatch)
+    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+    groups = {
+        SCAN_GROUP: [("samx", "samx"), ("samy", "samy")],
+        CorrelationGroup.standalone("bpm4i", "bpm4i"): [("bpm4i", "bpm4i")],
+    }
+    monkeypatch.setattr(
+        mocked_client.data_api,
+        "correlation_groups",
+        lambda sources, scan=None: groups,
+        raising=False,
+    )
+    swf.plot("samx", "samy", "bpm4i")
+    rows = [label.text for _, label in swf.info_label.items]
+    assert any(row.startswith("Warning:") and "bpm4i" in row for row in rows)
+    assert swf.info_label.isVisible()
 
-        swf.on_scan_progress({"done": True}, {})  # schedules the refreshes in 100 ms and 300 ms
-        swf.close()  # closeEvent -> cleanup() before they fire
+    groups = {SCAN_GROUP: [("samx", "samx"), ("samy", "samy"), ("bpm4i", "bpm4i")]}
+    swf.plot("samx", "samy", "bpm4i")
+    assert not any(label.text.startswith("Warning:") for _, label in swf.info_label.items)
 
-        qtbot.wait(450)
-        update_sync_curves.assert_not_called()
+
+def test_compatible_devices_filters_by_the_anchor_group(qtbot, mocked_client, monkeypatch):
+    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+
+    def groups(sources, scan=None):
+        scan_group = [key for key in sources if key[0] in ("samx", "samy", "bpm4i")]
+        return {
+            SCAN_GROUP: scan_group,
+            **{
+                CorrelationGroup.standalone(d, e): [(d, e)]
+                for d, e in sources
+                if (d, e) not in scan_group
+            },
+        }
+
+    monkeypatch.setattr(mocked_client.data_api, "correlation_groups", groups, raising=False)
+    compatible = swf.compatible_devices([("samx", "samx")])
+    assert set(compatible) >= {"samx", "samy", "bpm4i"}
+    assert all(name in ("samx", "samy", "bpm4i") for name in compatible)
+
+
+def test_expand_sample_columns():
+    from bec_widgets.widgets.plots.plot_base import expand_sample_columns
+
+    scalars = expand_sample_columns(np.array([1.0, 2.0]), np.array([3.0, 4.0]))
+    assert scalars == ([1.0, 2.0], [3.0, 4.0])
+    chunks = np.empty(2, dtype=object)
+    chunks[:] = [np.array([1.0, 2.0]), np.array([3.0])]
+    tens = np.empty(2, dtype=object)
+    tens[:] = [np.array([10.0, 20.0]), np.array([30.0])]
+    assert expand_sample_columns(chunks, tens) == ([1.0, 2.0, 3.0], [10.0, 20.0, 30.0])
+    assert expand_sample_columns(np.array([[1, 2], [3, 4]]), np.array([[5, 6], [7, 8]])) == (
+        [1, 2, 3, 4],
+        [5, 6, 7, 8],
+    )
+    # Rows whose sources carry different numbers of samples cannot be paired.
+    assert expand_sample_columns(chunks, np.array([1.0, 2.0])) is None
+
+
+def test_compatible_devices_offer_the_sub_signals_of_one_multi_signal(
+    qtbot, mocked_client, monkeypatch
+):
+    """An async device qualifies through its AsyncMultiSignal sub-signals, not only
+    through a main signal named like the device."""
+    from bec_lib.device import ReadoutPriority
+
+    from bec_widgets.tests.fake_devices import FakeDevice
+
+    gauss = FakeDevice("gauss", readout_priority=ReadoutPriority.ASYNC)
+    gauss._info["signals"] = {
+        f"data.{name}": {
+            "component_name": "data",
+            "signal_class": "AsyncMultiSignal",
+            "obj_name": f"gauss_data_{name}",
+            "storage_name": "gauss_data",
+            "kind_str": "normal",
+        }
+        for name in ("x", "y", "intensity")
+    }
+    monkeypatch.setitem(mocked_client.device_manager.devices, "gauss", gauss)
+    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+
+    def groups(sources, scan=None):
+        multi = [key for key in sources if key[1].startswith("gauss_data_")]
+        return {
+            CorrelationGroup.multi("gauss", "gauss_data"): multi,
+            **{
+                CorrelationGroup.standalone(d, e): [(d, e)]
+                for d, e in sources
+                if (d, e) not in multi
+            },
+        }
+
+    monkeypatch.setattr(mocked_client.data_api, "correlation_groups", groups, raising=False)
+    assert swf.compatible_devices([("gauss", "gauss_data_x")]) == ["gauss"]
+
+
+def test_scatter_waveform_alignment_warning_follows_the_bound_scan(
+    qtbot, mocked_client, monkeypatch
+):
+    """A warning guessed while idle must not outlive the binding: once the subscription
+    is bound, the scan's own groups decide (grid scans promote baseline motors)."""
+    bridges = _fake_bridge_factory(monkeypatch)
+    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+    idle_groups = {
+        CorrelationGroup.standalone("samx", "samx"): [("samx", "samx")],
+        CorrelationGroup.standalone("samy", "samy"): [("samy", "samy")],
+        SCAN_GROUP: [("bpm4i", "bpm4i")],
+    }
+    monkeypatch.setattr(
+        mocked_client.data_api,
+        "correlation_groups",
+        lambda sources, scan=None: idle_groups,
+        raising=False,
+    )
+    swf.plot("samx", "samy", "bpm4i")
+    assert any(label.text.startswith("Warning:") for _, label in swf.info_label.items)
+
+    bridges[-1].groups = {SCAN_GROUP: [("samx", "samx"), ("samy", "samy"), ("bpm4i", "bpm4i")]}
+    bridges[-1].unbound_sources = []
+    swf._on_data_update(_make_update("scan_809"))
+    assert not any(label.text.startswith("Warning:") for _, label in swf.info_label.items)
+    x_data, _ = swf.main_curve.getData()
+    assert len(x_data) == 3
+
+
+def test_scatter_waveform_bound_groups_ignore_sources_without_data(
+    qtbot, mocked_client, monkeypatch
+):
+    """A source the bound scan did not record is not an alignment problem."""
+    bridges = _fake_bridge_factory(monkeypatch)
+    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+    swf.plot("samx", "samy", "bpm4i")
+    bridges[-1].groups = {
+        SCAN_GROUP: [("samx", "samx"), ("bpm4i", "bpm4i")],
+        CorrelationGroup.standalone("samy", "samy"): [("samy", "samy")],
+    }
+    bridges[-1].unbound_sources = [("samy", "samy")]
+    swf._on_data_update(_make_update("scan_1"))
+    assert not any(label.text.startswith("Warning:") for _, label in swf.info_label.items)
