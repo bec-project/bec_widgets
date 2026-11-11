@@ -72,6 +72,13 @@ class CurveConfig(ConnectionConfig):
 
 # pylint: disable-next=too-many-public-methods
 class Curve(BECConnector, pg.PlotDataItem):
+    # Class-level defaults: pg.PlotDataItem.__init__ calls setData before Curve.__init__
+    # has set its own state.
+    _data_version = 0
+    #: The full data of a curve that is drawn decimated, and the slice shown of it
+    #: (see Waveform._apply_lod_windows).
+    _lod_raw: tuple | None = None
+    _lod_window: tuple[int, int] | None = None
     USER_ACCESS = [
         "remove",
         "_rpc_id",
@@ -116,7 +123,6 @@ class Curve(BECConnector, pg.PlotDataItem):
         self.apply_config()
         self.dap_params = None
         self.dap_summary = None
-        self.slice_index = None
         self._data_version = 0
         self._last_dap_request_fingerprint: tuple | None = None
         if kwargs:
@@ -434,9 +440,17 @@ class Curve(BECConnector, pg.PlotDataItem):
     def get_data(self) -> tuple[np.ndarray | None, np.ndarray | None]:
         """
         Get the data of the curve.
+
+        A curve of more than a million points is drawn reduced; its data is the series
+        it retains, not the points on the screen, so an export or a fit sees every
+        sample at its own x.
+
         Returns:
             tuple[np.ndarray,np.ndarray]: X and Y data of the curve.
         """
+        if self._lod_raw is not None:
+            x_data, y_data = self._lod_raw
+            return (np.arange(len(y_data)) if x_data is None else x_data), y_data
         try:
             x_data, y_data = self.getOriginalDataset()
         except TypeError:
@@ -445,8 +459,11 @@ class Curve(BECConnector, pg.PlotDataItem):
 
     def clear_data(self):
         """
-        Clear the data of the curve.
+        Clear the data of the curve, including the samples it kept for redrawing: a zoom
+        or pan must not bring back what was cleared.
         """
+        self._lod_raw = None
+        self._lod_window = None
         self.setData([], [])
 
     def remove(self):
