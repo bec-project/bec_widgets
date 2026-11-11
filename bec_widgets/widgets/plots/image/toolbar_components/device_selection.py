@@ -6,20 +6,33 @@ from bec_widgets.utils.toolbars.connections import BundleConnection
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import SignalComboBox
 
+#: Signal classes supported by the DataAPI-backed plot widgets.
+DEFAULT_SIGNAL_CLASSES = ["PreviewSignal", "AsyncSignal", "AsyncMultiSignal", "DynamicSignal"]
+
 
 class DeviceSelection(QWidget):
-    """Device and signal selection widget for image toolbar."""
+    """Device and signal selection widget for plot widget toolbars.
 
-    def __init__(self, parent=None, client=None):
+    Args:
+        parent: Optional parent widget.
+        client: The BEC client instance.
+        signal_classes: Signal class names offered in the comboboxes. Defaults to
+            ``DEFAULT_SIGNAL_CLASSES``.
+        ndim_filter: Dimensionality filter for the signal combobox. Defaults to ``[1, 2]``.
+    """
+
+    def __init__(
+        self,
+        parent=None,
+        client=None,
+        signal_classes: list[str] | None = None,
+        ndim_filter: list[int] | None = None,
+    ):
         super().__init__(parent=parent)
 
         self.client = client
-        self.supported_signals = [
-            "PreviewSignal",
-            "AsyncSignal",
-            "AsyncMultiSignal",
-            "DynamicSignal",
-        ]
+        self.supported_signals = list(signal_classes or DEFAULT_SIGNAL_CLASSES)
+        ndim_filter = list(ndim_filter or [1, 2])
 
         # Create device combobox with signal class filter
         # This will only show devices that have signals matching the supported signal classes
@@ -32,18 +45,13 @@ class DeviceSelection(QWidget):
         self.device_combo_box.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.device_combo_box.lineEdit().setPlaceholderText("Select Device")
 
-        # Configure SignalComboBox to filter by PreviewSignal and supported async signals
-        # Also filter by ndim (1D and 2D only) for Image widget
+        # Configure SignalComboBox to filter by the supported signal classes and the
+        # requested dimensionality.
         self.signal_combo_box = SignalComboBox(
             parent=self,
             client=self.client,
-            signal_class_filter=[
-                "PreviewSignal",
-                "AsyncSignal",
-                "AsyncMultiSignal",
-                "DynamicSignal",
-            ],
-            ndim_filter=[1, 2],  # Only show 1D and 2D signals for Image widget
+            signal_class_filter=self.supported_signals,
+            ndim_filter=ndim_filter,
             store_signal_config=True,
             require_device=True,
         )
@@ -90,7 +98,7 @@ class DeviceSelection(QWidget):
 
                 # Sync signal combobox selection
                 if signal:
-                    # Try to find the signal by component_name (which is what's displayed)
+                    # Try to find the signal by display text, component_name or obj_name
                     found = False
                     for i in range(self.signal_combo_box.count()):
                         text = self.signal_combo_box.itemText(i)
@@ -99,7 +107,8 @@ class DeviceSelection(QWidget):
                         # Check if this matches our signal
                         if config_data:
                             component_name = config_data.get("component_name", "")
-                            if text == component_name or text == signal:
+                            obj_name = config_data.get("obj_name", "")
+                            if signal in (text, component_name, obj_name):
                                 self.signal_combo_box.setCurrentIndex(i)
                                 found = True
                                 break
@@ -144,9 +153,11 @@ class DeviceSelection(QWidget):
         self.signal_combo_box.deleteLater()
 
 
-def device_selection_bundle(components: ToolbarComponents, client=None) -> ToolbarBundle:
+def device_selection_bundle(
+    components: ToolbarComponents, client=None, **selection_kwargs
+) -> ToolbarBundle:
     """
-    Creates a device selection toolbar bundle for Image widget.
+    Creates a device selection toolbar bundle for plot widgets.
 
     Includes a resizable splitter after the device selection. All subsequent bundles'
     actions will appear compactly after the splitter with no gaps.
@@ -154,11 +165,15 @@ def device_selection_bundle(components: ToolbarComponents, client=None) -> Toolb
     Args:
         components (ToolbarComponents): The components to be added to the bundle.
         client: The BEC client instance.
+        **selection_kwargs: Additional keyword arguments passed to ``DeviceSelection``
+            (e.g. ``ndim_filter``).
 
     Returns:
         ToolbarBundle: The device selection toolbar bundle.
     """
-    device_selection_widget = DeviceSelection(parent=components.toolbar, client=client)
+    device_selection_widget = DeviceSelection(
+        parent=components.toolbar, client=client, **selection_kwargs
+    )
     components.add_safe(
         "device_selection", WidgetAction(widget=device_selection_widget, adjust_size=False)
     )
