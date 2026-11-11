@@ -1,13 +1,80 @@
+from dataclasses import replace
 from unittest import mock
+from unittest.mock import MagicMock, patch
 
+import pytest
 import shiboken6
+from bec_lib import messages
+from bec_lib.data_api import CONTINUOUS_GROUP
+from bec_lib.data_api.models import SourceData, SubscriptionUpdate
+from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtTest import QSignalSpy
 
 from bec_widgets.tests.client_mocks import mocked_client
-from bec_widgets.widgets.plots.motor_map.motor_map import MotorMap
+from bec_widgets.widgets.plots.motor_map.motor_map import MotorConfig, MotorMap, MotorMapConfig
 from bec_widgets.widgets.plots.motor_map.settings.motor_map_settings import MotorMapSettings
 
 from .conftest import create_widget
+
+##################################################
+# Test helpers (DataAPI fake bridge + updates)
+##################################################
+
+
+def _fake_bridge_factory(monkeypatch):
+    created = []
+
+    class _FakeBridge:
+        def __init__(self, client, sources=None, scan="live", parent=None, **kwargs):
+            self.client = client
+            self.sources = list(sources) if sources is not None else None
+            self.devices = list(kwargs.get("devices") or [])
+            self.correlation = kwargs.get("correlation", "ordinal")
+            self.scan = scan
+            self.max_points = kwargs.get("max_points")
+            self.healthy = True
+            # What the widgets read of a real bridge about its binding.
+            self.groups = {}
+            self.routes = {}
+            self.unbound_sources = []
+            self.closed = False
+            self.updated = MagicMock()
+
+        def close(self):
+            self.closed = True
+
+    def factory(client, sources=None, scan="live", parent=None, **kwargs):
+        bridge = _FakeBridge(client, sources, scan=scan, **kwargs)
+        created.append(bridge)
+        return bridge
+
+    monkeypatch.setattr("bec_widgets.widgets.plots.motor_map.motor_map.QtDataSubscription", factory)
+    return created
+
+
+def _pair_update(xs, ys, start=0):
+    """Build a full-state continuous (sample-and-hold) snapshot of both motors."""
+    ordinals = tuple(range(start, start + len(xs)))
+    sources = {}
+    for motor, values in (("samx", xs), ("samy", ys)):
+        sources[(motor, motor)] = SourceData(
+            device=motor,
+            entry=motor,
+            kind="unindexed",
+            ordinals=ordinals,
+            values=tuple(values),
+            timestamps=tuple(float(ordinal) for ordinal in ordinals),
+            complete=True,
+            metadata={"stream": "readback"},
+        )
+    return SubscriptionUpdate(
+        scan_id="",
+        reason="live",
+        sources=sources,
+        aligned_ordinals=ordinals,
+        complete=True,
+        metadata={"group": CONTINUOUS_GROUP},
+    )
 
 
 def test_motor_map_initialization(qtbot, mocked_client):
@@ -98,22 +165,73 @@ def test_motor_map_get_limits(qtbot, mocked_client):
         assert actual_limit == expected_limit
 
 
-def test_motor_map_get_init_position(qtbot, mocked_client):
-    """Test getting the initial position of motors."""
+def test_motor_map_initial_position_comes_from_data_api(qtbot, mocked_client):
+    """An idle motor is initialized by the API's Redis backfill, without Device.read()."""
+    for device, value in (("samx", 2.5), ("samy", -1.25)):
+        mocked_client.connector.set_and_publish(
+            MessageEndpoints.device_readback(device),
+            messages.DeviceMessage(signals={device: {"value": value, "timestamp": 1.0}}),
+        )
+    mm = create_widget(qtbot, MotorMap, client=mocked_client)
+    with (
+        patch.object(mm.dev["samx"], "read", side_effect=AssertionError("direct read")),
+        patch.object(mm.dev["samy"], "read", side_effect=AssertionError("direct read")),
+    ):
+        mm.map("samx", "samy")
+        qtbot.waitUntil(lambda: mm._buffer == {"x": [2.5], "y": [-1.25]})
+    assert mm.v_line.value() == 2.5
+    assert mm.h_line.value() == -1.25
+
+
+@pytest.mark.parametrize("preconfigured", [False, True])
+def test_motor_map_selected_devices_start_data_delivery(qtbot, mocked_client, preconfigured):
+    for device, value in (("samx", 2.5), ("samy", -1.25)):
+        mocked_client.connector.set_and_publish(
+            MessageEndpoints.device_readback(device),
+            messages.DeviceMessage(signals={device: {"value": value, "timestamp": 1.0}}),
+        )
+    config = MotorMapConfig(
+        widget_class="MotorMap",
+        device_x=MotorConfig(device="samx"),
+        device_y=MotorConfig(device="samy"),
+    )
+    mm = create_widget(
+        qtbot, MotorMap, client=mocked_client, config=config if preconfigured else None
+    )
+    selection = mm.toolbar.components.get_action("motor_selection").widget
+    selection.motor_x.setCurrentText("samx")
+    selection.motor_y.setCurrentText("samy")
+    assert selection.motor_x.currentText() == "samx"
+    assert selection.motor_y.currentText() == "samy"
+    assert mm._data_bridge is not None
+    qtbot.waitUntil(lambda: mm._buffer == {"x": [2.5], "y": [-1.25]})
+    assert mm.v_line.value() == 2.5
+    assert mm.h_line.value() == -1.25
+
+
+def test_motor_map_partial_config_starts_when_second_motor_is_selected(qtbot, mocked_client):
+    config = MotorMapConfig(widget_class="MotorMap", device_x=MotorConfig(device="samx"))
+    mm = create_widget(qtbot, MotorMap, client=mocked_client, config=config)
+    assert mm._data_bridge is None
+    selection = mm.toolbar.components.get_action("motor_selection").widget
+    selection.motor_y.setCurrentText("samy")
+    assert mm._data_bridge is not None
+    assert mm._data_bridge.sources == [("samx", "samx"), ("samy", "samy")]
+
+
+def test_motor_map_waits_for_both_readbacks(qtbot, mocked_client, monkeypatch):
+    _fake_bridge_factory(monkeypatch)
     mm = create_widget(qtbot, MotorMap, client=mocked_client)
     mm.map("samx", "samy")
-    mm.precision = 2
-
-    motor_map_dev = mm.client.device_manager.devices
-
-    expected_positions = {
-        ("samx", "samx"): motor_map_dev["samx"].read()["samx"]["value"],
-        ("samy", "samy"): motor_map_dev["samy"].read()["samy"]["value"],
-    }
-
-    for (motor_name, entry), expected_position in expected_positions.items():
-        actual_position = mm._get_motor_init_position(motor_name, 2)
-        assert actual_position == expected_position
+    mm._on_data_update(_pair_update([], []))
+    mm.reset_history()
+    mm._update_plot()
+    assert mm._buffer == {"x": [], "y": []}
+    assert mm.v_line is None
+    assert mm.h_line is None
+    mm._on_data_update(_pair_update([3.0], [4.0]))
+    assert mm.v_line.value() == 3.0
+    assert mm.h_line.value() == 4.0
 
 
 def test_motor_map_reset_history(qtbot, mocked_client):
@@ -134,32 +252,64 @@ def test_motor_map_reset_history(qtbot, mocked_client):
     assert mm._buffer["y"][0] == 8.0
 
 
-def test_motor_map_on_device_readback(qtbot, mocked_client):
-    """Test the motor map updates when receiving device readback."""
+def test_motor_map_on_data_update(qtbot, mocked_client):
+    """The trail is the continuous group's paired (x, y) columns."""
     mm = create_widget(qtbot, MotorMap, client=mocked_client)
     mm.map(device_x="samx", device_y="samy")
+    mm._on_data_update(_pair_update([1.0], [2.0]))
 
-    # Clear the buffer and add initial position
-    mm._buffer = {"x": [1.0], "y": [2.0]}
+    # A held sample (the other motor has not delivered yet) carries no rows.
+    mm._on_data_update(_pair_update([], []))
+    assert mm._buffer == {"x": [1.0], "y": [2.0]}
 
-    # Simulate device readback for x motor
-    msg_x = {"signals": {"samx": {"value": 3.0}}}
-    mm.on_device_readback(msg_x, {})
-    qtbot.wait(200)  # Allow time for the update to process
+    mm._on_data_update(_pair_update([1.0, 3.0], [2.0, 2.0]))
+    assert mm._buffer == {"x": [1.0, 3.0], "y": [2.0, 2.0]}
+    assert mm._last_row == 1
 
-    assert len(mm._buffer["x"]) == 2
-    assert len(mm._buffer["y"]) == 2
-    assert mm._buffer["x"][1] == 3.0
-    assert mm._buffer["y"][1] == 2.0  # Y should remain the same
+    # Full-state snapshots replace the trail; a repeated snapshot changes nothing.
+    mm._on_data_update(_pair_update([1.0, 3.0, 3.0], [2.0, 2.0, 4.0]))
+    mm._on_data_update(_pair_update([1.0, 3.0, 3.0], [2.0, 2.0, 4.0]))
+    assert mm._buffer == {"x": [1.0, 3.0, 3.0], "y": [2.0, 2.0, 4.0]}
 
-    # Simulate device readback for y motor
-    msg_y = {"signals": {"samy": {"value": 4.0}}}
-    mm.on_device_readback(msg_y, {})
+    # Retention window slid (oldest row dropped by the backend).
+    mm._on_data_update(_pair_update([3.0, 3.0, 3.5], [2.0, 4.0, 4.0], start=1))
+    assert mm._buffer == {"x": [3.0, 3.0, 3.5], "y": [2.0, 4.0, 4.0]}
 
-    assert len(mm._buffer["x"]) == 3
-    assert len(mm._buffer["y"]) == 3
-    assert mm._buffer["x"][2] == 3.0  # X should remain the same
-    assert mm._buffer["y"][2] == 4.0
+
+def test_motor_map_reset_history_hides_earlier_rows(qtbot, mocked_client):
+    mm = create_widget(qtbot, MotorMap, client=mocked_client)
+    mm.map(device_x="samx", device_y="samy")
+    mm._on_data_update(_pair_update([1.0, 2.0, 3.0], [1.0, 1.0, 2.0]))
+    mm.reset_history()
+    assert mm._buffer == {"x": [3.0], "y": [2.0]} and mm._trail_start == 3
+    # The next snapshot still carries the old rows: they stay hidden.
+    mm._on_data_update(_pair_update([1.0, 2.0, 3.0, 4.0], [1.0, 1.0, 2.0, 2.5]))
+    assert mm._buffer == {"x": [4.0], "y": [2.5]}
+    mm._on_data_update(_pair_update([2.0, 3.0], [1.0, 2.0], start=1))  # nothing new
+    assert mm._buffer == {"x": [4.0], "y": [2.5]}
+
+
+def test_motor_map_bridge_lifecycle(qtbot, mocked_client, monkeypatch):
+    """map() creates one continuous scan-less readback bridge; re-map replaces it."""
+    bridges = _fake_bridge_factory(monkeypatch)
+    mm = create_widget(qtbot, MotorMap, client=mocked_client)
+
+    mm.map(device_x="samx", device_y="samy")
+    assert len(bridges) == 1
+    assert bridges[-1].devices == ["samx", "samy"] and bridges[-1].sources is None
+    assert bridges[-1].correlation == "continuous"
+    assert bridges[-1].scan is None
+    assert bridges[-1].max_points == mm.config.max_points
+
+    first = bridges[-1]
+    mm.map(device_x="samx", device_y="samz")
+    assert first.closed is True
+    assert bridges[-1].devices == ["samx", "samz"]
+
+    mm._cleanup_data_api_subscription()
+    assert bridges[-1].closed is True
+    assert mm._data_bridge is None
+    assert mm._trail_start == 0 and mm._last_row is None
 
 
 def test_motor_map_max_points_limit(qtbot, mocked_client):
@@ -323,8 +473,7 @@ def test_motor_properties_partial_then_complete_map(qtbot, mocked_client):
     assert mm.config.device_y.device == "samy"
     assert mm._trace is not None  # map called once both valid
     assert spy.at(1) == ["device_y", "samy"]
-    assert len(mm._buffer["x"]) == 1
-    assert len(mm._buffer["y"]) == 1
+    assert mm._buffer == {"x": [], "y": []}
 
 
 def test_set_motor_name_emits_and_syncs_toolbar(qtbot, mocked_client):
@@ -450,3 +599,37 @@ def test_motor_map_cleanup_closes_settings_popup(qtbot, mocked_client):
     finally:
         if shiboken6.isValid(dialog) and dialog.isVisible():
             dialog.reject()  # keep a failure on main from leaking the popup into later tests
+
+
+def test_motor_switch_disconnects_old_limit_endpoints(qtbot, mocked_client):
+    """Switching motors must disconnect the previously connected limits
+    endpoints, not the ones derived from the already-updated config."""
+    from unittest import mock
+
+    mm = create_widget(qtbot, MotorMap, client=mocked_client)
+    mm.map("samx", "samy")
+    first_endpoints = list(mm._connected_limit_endpoints)
+    assert first_endpoints
+
+    with mock.patch.object(mm.bec_dispatcher, "disconnect_slot") as disc:
+        mm.map("samx", "samz")
+    disc.assert_called_once_with(mm.on_device_limits, first_endpoints)
+
+
+def test_motor_map_rebind_resets_history_cutoff(qtbot, mocked_client, monkeypatch):
+    _fake_bridge_factory(monkeypatch)
+    mm = create_widget(qtbot, MotorMap, client=mocked_client)
+    mm.map("samx", "samy")
+    mm._on_data_update(_pair_update([1.0, 2.0], [3.0, 4.0]))
+    mm.reset_history()
+    assert mm._trail_start == 2
+
+    mm._on_data_update(replace(_pair_update([], []), generation=1))
+    assert mm._buffer == {"x": [], "y": []}
+    assert not mm.v_line.isVisible()
+    mm._on_data_update(replace(_pair_update([5.0], [6.0]), generation=1))
+    mm._update_plot()
+    assert mm._buffer == {"x": [5.0], "y": [6.0]}
+    assert mm._trail_start == 0
+    assert mm.v_line.isVisible()
+    assert mm.v_line.value() == 5.0
