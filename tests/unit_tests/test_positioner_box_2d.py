@@ -2,7 +2,7 @@ from unittest import mock
 
 import pytest
 from bec_lib.endpoints import MessageEndpoints
-from bec_lib.messages import VariableMessage
+from bec_lib.messages import DeviceMessage, VariableMessage
 
 from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox2D
@@ -13,6 +13,11 @@ from .conftest import create_widget
 @pytest.fixture
 def positioner_box_2d(qtbot, mocked_client):
     """Fixture for PositionerBox widget"""
+    for name in ("samx", "samy"):
+        mocked_client.connector.set_and_publish(
+            MessageEndpoints.device_readback(name),
+            DeviceMessage(signals=mocked_client.device_manager.devices[name].signals),
+        )
     with mock.patch(
         "bec_widgets.widgets.control.device_control.positioner_box.positioner_box_base.PositionerBoxBase._check_device_is_valid",
         return_value=True,
@@ -20,6 +25,7 @@ def positioner_box_2d(qtbot, mocked_client):
         db = create_widget(
             qtbot, PositionerBox2D, device_hor="samx", device_ver="samy", client=mocked_client
         )
+        qtbot.waitUntil(lambda: db.ui.setpoint_hor.text() != "" and db.ui.setpoint_ver.text() != "")
         yield db
 
 
@@ -155,3 +161,27 @@ def test_stop_only_stops_both_motors(positioner_box_2d):
     abort.assert_not_called()
     halt.assert_not_called()
     assert stop.button.text() == "Stop"
+
+
+def test_positioner_axes_receive_independent_data_api_updates(qtbot, positioner_box_2d):
+    widget = positioner_box_2d
+    widget.client.connector.set_and_publish(
+        MessageEndpoints.device_readback("samx"), DeviceMessage(signals={"samx": {"value": 6.0}})
+    )
+    qtbot.waitUntil(lambda: widget.ui.readback_hor.text() == "6.000")
+    assert widget.ui.readback_ver.text() == "3.000"
+    subscriptions = list(widget._readback_subscriptions.values())
+    widget.close()
+    assert all(subscription._closed for subscription in subscriptions)
+
+
+def test_positioner_clearing_one_axis_keeps_other_subscription(positioner_box_2d):
+    widget = positioner_box_2d
+    horizontal = widget._readback_subscriptions[widget.ui.readback_hor]
+    vertical = widget._readback_subscriptions[widget.ui.readback_ver]
+    widget.device_hor = ""
+    assert horizontal._closed
+    assert not vertical._closed
+    assert widget.ui.readback_ver.text() == "3.000"
+    assert all(not button.isEnabled() for button in _hor_buttons(widget))
+    assert widget.ui.stop_button.isEnabled()
