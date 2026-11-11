@@ -71,6 +71,13 @@ class CurveConfig(ConnectionConfig):
 
 
 class Curve(BECConnector, pg.PlotDataItem):
+    # Class-level defaults: pg.PlotDataItem.__init__ calls setData before Curve.__init__
+    # has set its own state.
+    _data_version = 0
+    #: The full data of a curve that is drawn decimated, and the slice shown of it
+    #: (see Waveform._apply_lod_windows).
+    _lod_raw: tuple | None = None
+    _lod_window: tuple[int, int] | None = None
     USER_ACCESS = [
         "remove",
         "_rpc_id",
@@ -114,7 +121,6 @@ class Curve(BECConnector, pg.PlotDataItem):
         self.apply_config()
         self.dap_params = None
         self.dap_summary = None
-        self.slice_index = None
         self._data_version = 0
         self._last_dap_request_fingerprint: tuple | None = None
         if kwargs:

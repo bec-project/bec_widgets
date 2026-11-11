@@ -2,18 +2,21 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from html import escape
+from numbers import Integral
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pyqtgraph as pg
 from bec_lib import bec_logger, messages
+from bec_lib.data_api import AxisMode, ScanTarget, SourceKind
 from bec_lib.device import Positioner
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.lmfit_serializer import serialize_lmfit_params, serialize_param_object
 from bec_lib.scan_data_container import ScanDataContainer
 from bec_lib.utils.import_utils import lazy_import
 from pydantic import Field, ValidationError, field_validator
-from qtpy.QtCore import Qt, Signal
+from qtpy.QtCore import Qt, QTimer, Signal
 from qtpy.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -23,22 +26,20 @@ from qtpy.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMainWindow,
+    QProgressBar,
     QVBoxLayout,
     QWidget,
 )
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
-from bec_widgets.utils.bec_signal_proxy import BECSignalProxy, cleanup_signal_proxy
-from bec_widgets.utils.colors import Colors, apply_theme
+from bec_widgets.utils.bec_signal_proxy import BECSignalProxy
+from bec_widgets.utils.colors import Colors, apply_theme, get_accent_colors
 from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.qt_data_subscription import QtDataSubscription
 from bec_widgets.utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.side_panel import SidePanel
-from bec_widgets.utils.signal_classification import (
-    ASYNC_SIGNAL_CLASSES,
-    SignalCategory,
-    classify_device_signal,
-)
+from bec_widgets.utils.signal_classification import SignalCategory, classify_device_signal
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import MaterialIconAction
 from bec_widgets.widgets.dap.lmfit_dialog.lmfit_dialog import LMFitDialog
@@ -74,6 +75,8 @@ class _ScanOverlay:
     axis: _OverlayAxis | None
     requested_axis: _OverlayAxis
     is_async: bool
+    # The DataAPI draws an async signal against time when it has one timestamp per sample.
+    async_timestamps: bool = False
 
 
 # noinspection PyDataclass
@@ -91,7 +94,88 @@ class WaveformConfig(ConnectionConfig):
     _validate_color_palette = field_validator("color_palette")(Colors.validate_color_map)
 
 
+#: Curves above this many points are decimated to a min/max envelope before
+#: rendering: pyqtgraph's per-paint work is O(points) with a large constant,
+#: and a pixel column can only ever show a vertical range.
+DISPLAY_POINT_LIMIT = 1_000_000
+#: Envelope bins of a decimated display (output length = 2 * bins).
+DISPLAY_ENVELOPE_BINS = 250_000
+
+
+def _numeric_column(column) -> np.ndarray:
+    """
+    Return a data column as an array pyqtgraph can draw.
+
+    DataAPI columns are numpy arrays; columns of exact Python values (ints,
+    bools, mixed) are object arrays, which ``np.asarray`` keeps as objects —
+    convert them through ``tolist()`` so numbers become a numeric array.
+    """
+    array = np.asarray(column)
+    if array.dtype == object and array.ndim == 1:
+        try:
+            converted = np.asarray(array.tolist())
+        except (TypeError, ValueError):
+            return array
+        if converted.dtype != object:
+            return converted
+    return array
+
+
+def _decimate_envelope(
+    y_data: np.ndarray, x_data: np.ndarray | None = None, offset: int = 0
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Reduce a long series to an interleaved per-bin (min, max) envelope.
+
+    Every bin contributes its true extremes, so outliers stay visible at any
+    zoom level — unlike point skipping. The raw data is NOT modified; callers
+    keep it for zoom-window re-decimation.
+
+    Args:
+        y_data (np.ndarray): Raw values.
+        x_data (np.ndarray | None): Optional x column parallel to ``y_data``;
+            ``None`` means sample-index x (offset by ``offset``).
+        offset (int): Index of ``y_data[0]`` in the full series (window mode).
+
+    Returns:
+        tuple[np.ndarray, np.ndarray]: Decimated (x, y) columns.
+    """
+    n = len(y_data)
+    bin_size = int(np.ceil(n / DISPLAY_ENVELOPE_BINS))
+    n_bins = n // bin_size
+    body = y_data[: n_bins * bin_size].reshape(n_bins, bin_size)
+    mins = body.min(axis=1)
+    maxs = body.max(axis=1)
+    tail = y_data[n_bins * bin_size :]
+    if tail.size:
+        mins = np.append(mins, tail.min())
+        maxs = np.append(maxs, tail.max())
+        n_bins += 1
+    y_out = np.empty(2 * n_bins, dtype=mins.dtype)
+    y_out[0::2] = mins
+    y_out[1::2] = maxs
+    center_idx = np.minimum(np.arange(n_bins, dtype=np.int64) * bin_size + bin_size // 2, n - 1)
+    if x_data is None:
+        centers = (center_idx + offset).astype(np.float64)
+    else:
+        centers = np.asarray(x_data)[center_idx]
+    return np.repeat(centers, 2), y_out
+
+
 class Waveform(PlotBase):
+    #: 15 Hz: above typical device message rates while leaving paint headroom
+    #: for multi-million-point async curves (benchmarked).
+    DEFAULT_UPDATE_RATE = 15.0
+    # Scan shown by the live curves (legend suffix "LIVE <scan number>"). Class-level
+    # defaults: PlotBase.__init__ applies the theme, which refreshes the legend, before
+    # Waveform.__init__ sets its own state.
+    _live_legend_scan_id: str | None = None
+    _live_legend_running: bool | None = None
+    # The same holds for the state below, which is created on first use.
+    _data_api_scan: str = ScanTarget.LIVE
+    _lod_timer: QTimer | None = None
+    _lod_applying = False
+    _load_progress_row: QWidget | None = None
     """
     Widget for plotting waveforms.
     """
@@ -128,8 +212,6 @@ class Waveform(PlotBase):
         "clear_all",
     ]
 
-    sync_signal_update = Signal()
-    async_signal_update = Signal()
     request_dap_update = Signal()
     unblock_dap_proxy = Signal()
     dap_params_update = Signal(dict, dict)
@@ -160,17 +242,23 @@ class Waveform(PlotBase):
         # Curve data
         self._sync_curves = []
         self._async_curves = []
-        # Async streams already subscribed in the current scan. Keyed by
-        # (device, stream) (stream is None for the old per-device endpoint); the value
-        # is the list of signal entries that share that single subscription.
-        self._async_streams_setup: dict = {}
         self._history_curves = []
-        self._slice_index = None
         self._dap_curves = []
         self._mode = None
 
+        # Data delivery through the DataAPI: one bridge follows the widget's
+        # scan (live or a history scan pinned via update_with_scan_history),
+        # plus one bridge per scan pinned by individual history curves.
+        self._data_bridge: QtDataSubscription | None = None
+        self._data_bridge_scan: str | None = None  # the scan target the bridge was made for
+        self._data_api_scan: str = ScanTarget.LIVE
+        self._history_bridges: dict[str, QtDataSubscription] = {}
+        self._history_x_keys: dict[str, tuple[str, str] | None] = {}
+        # History curves whose data has not arrived yet; the view ranges to it once.
+        self._history_curves_awaiting_data: set[str] = set()
+        self._shutting_down = False
+
         # Scan data
-        self._scan_done = True  # means scan is not running
         self.old_scan_id = None
         self.scan_id = None
         self.scan_item = None
@@ -203,21 +291,16 @@ class Waveform(PlotBase):
         self._overlay_data_loaded.connect(self._apply_overlay_data)
         self.curve_settings_dialog = None
 
-        # Large‑dataset guard
+        # Large-dataset guard
         self._skip_large_dataset_warning = False  # session flag
+        self._size_confirmed_sources: set = set()  # (scan_id, source) confirm memo
         self._skip_large_dataset_check = False  # per-plot flag, to skip the warning for this plot
 
-        # Scan status update loop
+        # Scan status is only used for per-scan bookkeeping (reset, scan_id,
+        # categorisation, DAP triggering); the data flows through the DataAPI.
         self.bec_dispatcher.connect_slot(self.on_scan_status, MessageEndpoints.scan_status())
-        self.bec_dispatcher.connect_slot(self.on_scan_progress, MessageEndpoints.scan_progress())
 
-        # Curve update loop
-        self.proxy_update_sync = pg.SignalProxy(
-            self.sync_signal_update, rateLimit=25, slot=self.update_sync_curves
-        )
-        self.proxy_update_async = pg.SignalProxy(
-            self.async_signal_update, rateLimit=25, slot=self.update_async_curves
-        )
+        # DAP update loop
         self.proxy_dap_request = BECSignalProxy(
             self.request_dap_update, rateLimit=25, slot=self.request_dap, timeout=10.0
         )
@@ -269,11 +352,14 @@ class Waveform(PlotBase):
     def _accumulate_current_scan(self) -> None:
         if self.scan_id is None or self.scan_item is None:
             return
-        if isinstance(self.scan_item, ScanDataContainer):
-            scan_number = self.scan_item.metadata.get("bec", {}).get("scan_number")
-        else:
-            status = getattr(self.scan_item, "status_message", None)
-            scan_number = getattr(status, "scan_number", None)
+        # The number comes from the status message (live scan) or the history message
+        # (finished scan): reading the metadata of a scan file would block the GUI thread.
+        status = getattr(self.scan_item, "status_message", None)
+        scan_number = getattr(status, "scan_number", None)
+        if scan_number is None:
+            scan_number = getattr(getattr(self.scan_item, "_msg", None), "scan_number", None)
+        if not isinstance(scan_number, Integral):
+            scan_number = None
         scan_label = self.scan_id if scan_number is None else scan_number
         live_data = getattr(self.scan_item, "live_data", None)
         auto_axis = self._scan_auto_axis()
@@ -294,8 +380,13 @@ class Waveform(PlotBase):
             if not has_data and not in_live_data:
                 continue
             is_async = live in self._async_curves
-            axis = auto_axis if self.x_mode == "auto" else self._overlay_axis(is_async)
             snapshot_axis = self._curve_data_axes.get(live)
+            async_timestamps = is_async and snapshot_axis == "timestamp"
+            axis = (
+                auto_axis
+                if self.x_mode == "auto"
+                else self._overlay_axis(is_async, async_timestamps)
+            )
             oldest = (
                 next(iter(self._accumulated_curves))
                 if len(self._accumulated_curves) >= _MAX_ACCUMULATED_CURVES
@@ -331,34 +422,24 @@ class Waveform(PlotBase):
                 self._curve_clean_up(oldest)
             self._history_curves.append(curve)
             self._accumulated_curves[curve] = _ScanOverlay(
-                auto_axis, snapshot_axis if has_data else None, axis, is_async
+                auto_axis, snapshot_axis if has_data else None, axis, is_async, async_timestamps
             )
             self._load_overlay(curve, axis)
         self._update_overlay_visibility()
 
     def _scan_auto_axis(self) -> _OverlayAxis:
-        if self._async_curves:
-            return "index"
-        try:
-            devices = self.scan_item.metadata["bec"]["scan_report_devices"]
-        except (AttributeError, KeyError, TypeError):
-            status = getattr(self.scan_item, "status_message", None)
-            devices = status.info.get("scan_report_devices") if status is not None else None
-        devices = self._ensure_str_list(devices or [])
-        if devices:
-            device = devices[0]
-            return device, self.entry_validator.validate_signal(device, None)
-        return "index"
+        """The x axis the auto mode resolves to for the current scan."""
+        return self._auto_x_source_key() or "index"
 
-    def _overlay_axis(self, is_async: bool = False) -> _OverlayAxis:
+    def _overlay_axis(self, is_async: bool = False, async_timestamps: bool = False) -> _OverlayAxis:
         mode = self.x_mode
-        if is_async and mode == "timestamp":
+        if is_async and mode == "timestamp" and not async_timestamps:
             return "index"
         if mode == "auto":
             return self._current_x_device or "index"
         if mode in ("index", "timestamp"):
             return mode
-        return mode, self.x_axis_mode["entry"]
+        return self._x_source_key() or (mode, self.x_axis_mode["entry"])
 
     def _update_overlay_visibility(self) -> None:
         if not self._accumulated_curves:
@@ -471,6 +552,7 @@ class Waveform(PlotBase):
             theme(str, optional): The theme to be applied.
         """
         self._refresh_colors()
+        self._refresh_live_legend()
         alignment_panel = getattr(self, "_alignment_panel", None)
         alignment_controller = getattr(self, "_alignment_controller", None)
         if alignment_panel is not None:
@@ -611,16 +693,11 @@ class Waveform(PlotBase):
                     low, high = high, low
                 parsed_limits = (low, high)
 
-        data = self.dev[positioner_name].read(cached=True)
-        value = data.get(positioner_name, {}).get("value")
-        readback = None if value is None else float(value)
-
         return AlignmentContext(
             visible=self._alignment_panel_visible,
             positioner_name=positioner_name,
             precision=precision,
             limits=parsed_limits,
-            readback=readback,
             has_dap_curves=bool(self._dap_curves),
             force_readback=force_readback,
         )
@@ -943,14 +1020,21 @@ class Waveform(PlotBase):
     def x_mode(self, value: str):
         self.x_axis_mode["name"] = value
         if value not in ["timestamp", "index", "auto"]:
-            self.x_axis_mode["entry"] = self.entry_validator.validate_signal(value, None)
+            try:
+                self.x_axis_mode["entry"] = self.entry_validator.validate_signal(value, None)
+            except ValueError:
+                if value not in self.entry_validator.devices:
+                    raise
+                # No default signal (e.g. a device exposing only AsyncMultiSignal
+                # sub-signals): the x signal is chosen through signal_x.
+                self.x_axis_mode["entry"] = None
             self._current_x_device = (value, self.x_axis_mode["entry"])
         self._switch_x_axis_item(mode=value)
         self._current_x_device = None
         self._refresh_history_curves()
         self._update_curve_visibility()
-        self.async_signal_update.emit()
-        self.sync_signal_update.emit()
+        # Rebuild the DataAPI subscription so the x source follows the new mode.
+        self._setup_data_api_subscription(scan=self._data_api_scan)
         self.plot_item.enableAutoRange(x=True)
         self._refresh_alignment_state(force_readback=True)
 
@@ -978,8 +1062,8 @@ class Waveform(PlotBase):
         self._switch_x_axis_item(mode="device")
         self._refresh_history_curves()
         self._update_curve_visibility()
-        self.async_signal_update.emit()
-        self.sync_signal_update.emit()
+        # Rebuild the DataAPI subscription so the x source follows the new signal.
+        self._setup_data_api_subscription(scan=self._data_api_scan)
         self.plot_item.enableAutoRange(x=True)
         self._refresh_alignment_state(force_readback=True)
 
@@ -1425,19 +1509,18 @@ class Waveform(PlotBase):
                 raise ValueError("For 'custom' curves, x_data and y_data must be provided.")
 
         # Actually create the Curve item
-        curve = self._add_curve_object(name=label, config=config, scan_item=scan_item)
+        curve = self._add_curve_object(name=label, config=config)
         self._categorise_device_curves()
 
         # If custom => set initial data
         if config.source == "custom" and x_data is not None and y_data is not None:
             curve.setData(x_data, y_data)
 
-        # If device => schedule BEC updates
+        # If device => let the DataAPI subscription deliver the data
         if config.source == "device":
             if self.scan_item is None:
                 self.update_with_scan_history(-1)
-            self.async_signal_update.emit()
-            self.sync_signal_update.emit()
+            self._setup_data_api_subscription(scan=self._data_api_scan)
         if config.source == "dap":
             self._dap_curves.append(curve)
             self._update_overlay_visibility()
@@ -1445,12 +1528,17 @@ class Waveform(PlotBase):
             self.roi_enable.emit(True)  # Enable the ROI toolbar action
             self.request_dap()  # Request DAP update directly without blocking proxy
         if config.source == "history":
+            self._validate_history_curve(curve, scan_item)
             self._history_curves.append(curve)
+            self._history_curves_awaiting_data.add(curve.name())
+            self._sync_history_curve_state(curve)
+            self._setup_history_curve_subscriptions()
             self._update_overlay_visibility()
 
         # Autorange with a delay to ensure the plot is updated; skipped if the widget is closed.
         self._call_later(150, self.auto_range)
         self._refresh_alignment_state()
+        self._refresh_live_legend()
 
         return curve
 
@@ -1481,190 +1569,173 @@ class Waveform(PlotBase):
         config.label = f"{config.signal.device}-{config.signal.signal}-scan-{config.scan_number}"
         return scan_item
 
-    def _add_curve_object(
-        self, name: str, config: CurveConfig, scan_item: ScanDataContainer | None = None
-    ) -> Curve | None:
+    def _add_curve_object(self, name: str, config: CurveConfig) -> Curve:
         """
         Low-level creation of the PlotDataItem (Curve) from a `CurveConfig`.
 
         Args:
             name (str): The name/label of the curve.
             config (CurveConfig): Configuration model describing the curve.
-            scan_item (ScanDataContainer | None): Optional scan item for history curves.
 
         Returns:
             Curve: The newly created curve object, added to the plot.
         """
         curve = Curve(config=config, name=name, parent_item=self)
         self.plot_item.addItem(curve)
-        if scan_item is not None:
-            self._fetch_history_data_for_curve(curve, scan_item)
         curve.visibleChanged.connect(self._refresh_crosshair_markers)
         curve.visibleChanged.connect(self.auto_range)
         return curve
 
-    def _fetch_history_data_for_curve(
-        self, curve: Curve, scan_item: ScanDataContainer
-    ) -> Curve | None:
-        # Check if the data are already set
-        device = curve.config.signal.device
-        entry = curve.config.signal.signal
+    def _validate_history_curve(self, curve: Curve, scan_item: ScanDataContainer) -> None:
+        """
+        Metadata-level validation of a new history curve (no file I/O).
 
-        all_devices_used = getattr(
+        Args:
+            curve(Curve): The freshly created history curve.
+            scan_item(ScanDataContainer): The resolved scan item.
+
+        Raises:
+            ValueError: If the scan item carries no stored-data info or the
+                requested device/entry is not part of the scan. The curve is
+                removed from the plot before raising.
+        """
+        stored_data_info = getattr(
             getattr(scan_item, "_msg", None), "stored_data_info", None
         ) or getattr(scan_item, "stored_data_info", None)
-        if all_devices_used is None:
+        device = curve.config.signal.device
+        entry = curve.config.signal.signal
+        if stored_data_info is None:
             curve.remove()
             raise ValueError(
                 f"No stored data info found in scan item ID:{curve.config.scan_id} for curve '{curve.name()}'. "
                 f"Upgrade BEC to the latest version."
             )
-
-        # 1. get y data
-        x_data, y_data = None, None
-        if device not in all_devices_used:
+        if device not in stored_data_info:
+            curve.remove()
             raise ValueError(f"Device '{device}' not found in scan item ID:{curve.config.scan_id}.")
-        if entry not in all_devices_used[device]:
+        if entry not in stored_data_info[device]:
+            curve.remove()
             raise ValueError(
                 f"Entry '{entry}' not found in device '{device}' in scan item ID:{curve.config.scan_id}."
             )
-        y_shape = all_devices_used.get(device).get(entry).shape[0]
 
-        # Determine X-axis data
-        if self.x_axis_mode["name"] == "index":
-            x_data = np.arange(y_shape)
-            curve.config.current_x_mode = "index"
-            self._update_x_label_suffix(" (index)")
-        elif self.x_axis_mode["name"] == "timestamp":
-            y_device = scan_item.devices.get(device)
-            x_data = y_device.get(entry).read().get("timestamp")
-            curve.config.current_x_mode = "timestamp"
-            self._update_x_label_suffix(" (timestamp)")
-        elif self.x_axis_mode["name"] not in ("index", "timestamp", "auto"):  # Custom device mode
-            if self.x_axis_mode["name"] not in all_devices_used:
-                logger.warning(
-                    f"Custom device '{self.x_axis_mode['name']}' not found in scan item of history curve '{curve.name()}'; scan ID: {curve.config.scan_id}."
-                )
-                curve.setVisible(False)
-                return
-            signal_x_custom = self.x_axis_mode.get("entry")
-            if signal_x_custom is None:
-                signal_x_custom = self.entry_validator.validate_signal(
-                    self.x_axis_mode["name"], None
-                )
-            if signal_x_custom not in all_devices_used[self.x_axis_mode["name"]]:
-                logger.warning(
-                    f"Custom entry '{signal_x_custom}' for device '{self.x_axis_mode['name']}' not found in scan item of history curve '{curve.name()}'; scan ID: {curve.config.scan_id}."
-                )
-                curve.setVisible(False)
-                return
-            x_shape = (
-                scan_item._msg.stored_data_info.get(self.x_axis_mode["name"])
-                .get(signal_x_custom)
-                .shape[0]
-            )
-            if x_shape != y_shape:
-                logger.warning(
-                    f"Shape mismatch for x data '{x_shape}' and y data '{y_shape}' in history curve '{curve.name()}'; scan ID: {curve.config.scan_id}."
-                )
-                curve.setVisible(False)
-                return
-            x_device = scan_item.devices.get(self.x_axis_mode["name"])
-            x_data = x_device.get(signal_x_custom).read().get("value")
-            curve.config.current_x_mode = self.x_axis_mode["name"]
-            self._update_x_label_suffix(f" (custom: {self.x_axis_mode['name']}-{signal_x_custom})")
-        elif self.x_axis_mode["name"] == "auto":
-            if (
-                self._current_x_device is None
-            ):  # Scenario where no x device is set yet, because there was no live scan done in this widget yet
-                # If no current x device, use the first motor from scan item
-                scan_motors = self._ensure_str_list(
-                    scan_item.metadata.get("bec").get("scan_report_devices")
-                )
-                if not scan_motors:  # scan was done without reported motor from whatever reason
-                    x_data = np.arange(y_shape)  # Fallback to index
-                    y_data = scan_item.devices.get(device).get(entry).read().get("value")
-                    curve.set_data(x=x_data, y=y_data)
-                    self._update_x_label_suffix(" (auto: index)")
-                    return curve
-                signal_x = self.entry_validator.validate_signal(scan_motors[0], None)
-                if signal_x not in all_devices_used.get(scan_motors[0], {}):
-                    logger.warning(
-                        f"Auto x entry '{signal_x}' for device '{scan_motors[0]}' not found in scan item of history curve '{curve.name()}'; scan ID: {curve.config.scan_id}."
-                    )
-                    curve.setVisible(False)
-                    return
-                if y_shape != all_devices_used.get(scan_motors[0]).get(signal_x, {}).shape[0]:
-                    logger.warning(
-                        f"Shape mismatch for x data '{all_devices_used.get(scan_motors[0]).get(signal_x, {}).get('shape', [0])[0]}' and y data '{y_shape}' in history curve '{curve.name()}'; scan ID: {curve.config.scan_id}."
-                    )
-                    curve.setVisible(False)
-                    return
-                x_data = scan_item.devices.get(scan_motors[0]).get(signal_x).read().get("value")
-                self._current_x_device = (scan_motors[0], signal_x)
-                self._update_x_label_suffix(f" (auto: {scan_motors[0]}-{signal_x})")
-                curve.config.current_x_mode = "auto"
-                self._update_x_label_suffix(f" (auto: {scan_motors[0]}-{signal_x})")
-            else:  # Scan in auto mode was done and live scan already set the current x device
-                if self._current_x_device[0] not in all_devices_used:
-                    logger.warning(
-                        f"Auto x data for device '{self._current_x_device[0]}' "
-                        f"and entry '{self._current_x_device[1]}'"
-                        f" not found in scan item of the history curve {curve.name()}."
-                    )
-                    curve.setVisible(False)
-                    return
-                x_device = scan_item.devices.get(self._current_x_device[0])
-                x_data = x_device.get(self._current_x_device[1]).read().get("value")
-                curve.config.current_x_mode = "auto"
-                self._update_x_label_suffix(
-                    f" (auto: {self._current_x_device[0]}-{self._current_x_device[1]})"
-                )
-        if x_data is None:
+    @staticmethod
+    def _history_num_points(scan_item) -> int | None:
+        """Number of monitored readouts of a history scan, if known."""
+        msg = getattr(scan_item, "_msg", None)
+        return getattr(msg, "num_monitored_readouts", None) or getattr(msg, "num_points", None)
+
+    def _is_monitored_shaped(self, scan_item, info) -> bool:
+        """
+        Whether a stored dataset holds exactly one value per scan point.
+
+        Only such datasets can be plotted against a monitored x device; every
+        other shape is detector data plotted against its sample index.
+        """
+        shape = tuple(getattr(info, "shape", None) or ())
+        num_points = self._history_num_points(scan_item)
+        return len(shape) == 1 and num_points is not None and shape[0] == num_points
+
+    def _history_curve_compatible(self, curve: Curve) -> bool:
+        """
+        Whether a history curve can be shown with the current x-axis mode.
+
+        Answered from the scan's stored-data info (no file data reads): the
+        x device/entry must exist in the scan and match the y shape. Index and
+        timestamp modes are always compatible; auto falls back to index when
+        no x device can be resolved.
+
+        Args:
+            curve(Curve): The history curve to check.
+
+        Returns:
+            bool: True if the curve is compatible with the current x mode.
+        """
+        mode = self.x_axis_mode.get("name") or "auto"
+        if mode in ("index", "timestamp"):
+            return True
+        scan_item = self.get_history_scan_item(
+            scan_id=curve.config.scan_id, scan_index=curve.config.scan_number
+        )
+        if scan_item is None:
+            logger.warning(f"Scan item for curve {curve.name()} not found.")
+            return False
+        stored_data_info = getattr(
+            getattr(scan_item, "_msg", None), "stored_data_info", None
+        ) or getattr(scan_item, "stored_data_info", None)
+        if not stored_data_info:
+            return True  # cannot verify; let the delivered data decide
+        signal = curve.config.signal
+        y_info = stored_data_info.get(signal.device, {}).get(signal.signal) if signal else None
+        if y_info is None:
+            return False
+        if not self._is_monitored_shaped(scan_item, y_info):
+            # Detector/async data: one row per acquisition, not per scan point.
+            # It is rendered against the sample index (with an index fallback
+            # when an x device has a different length), so an x/y row-count
+            # difference is expected and must not hide the curve.
+            return True
+        x_key = self._history_x_source_key(scan_item)
+        if x_key is None:
+            # Auto mode falls back to index plotting; an unresolvable custom
+            # device hides the curve.
+            return mode == "auto"
+        x_info = stored_data_info.get(x_key[0], {}).get(x_key[1])
+        if x_info is None:
             logger.warning(
-                f"X data for curve '{curve.name()}' could not be determined. "
-                f"Check if the x_mode '{self.x_axis_mode['name']}' is valid for the scan item."
+                f"X device '{x_key[0]}-{x_key[1]}' not found in scan item of history curve "
+                f"'{curve.name()}'; scan ID: {curve.config.scan_id}."
             )
-            curve.setVisible(False)
-            return
-        if y_data is None:
-            y_data = scan_item.devices.get(device).get(entry).read().get("value")
-            if y_data is None:
-                logger.warning(
-                    f"Y data for curve '{curve.name()}' could not be determined. "
-                    f"Check if the device '{device}' and entry '{entry}' are valid for the scan item."
+            return False
+        try:
+            if tuple(x_info.shape)[0] != tuple(y_info.shape)[0]:
+                # x and y of one scan pair by scan point: the aligned common points
+                # are drawn, so a different row count (e.g. an aborted scan) must not
+                # hide the curve.
+                logger.debug(
+                    f"x has {x_info.shape[0]} rows and y {y_info.shape[0]} in history curve "
+                    f"'{curve.name()}'; drawing the points both recorded."
                 )
-                curve.setVisible(False)
-                return
-        curve.set_data(x=x_data, y=y_data)
-        self._curve_data_axes[curve] = self._overlay_axis()
-        return curve
+        except (TypeError, IndexError):
+            pass
+        return True
+
+    def _sync_history_curve_state(self, curve: Curve) -> None:
+        """
+        Sync visibility and the recorded x mode of one history curve with the
+        current x-axis mode.
+
+        Args:
+            curve(Curve): The history curve to sync.
+        """
+        compatible = self._history_curve_compatible(curve)
+        curve.setVisible(compatible)
+        if compatible:
+            curve.config.current_x_mode = self.x_axis_mode["name"]
 
     def _refresh_history_curves(self):
         """
-        Reload the data of all history curves from their scans, e.g. after an x-axis change.
-
-        Curves whose source is no longer 'history' are dropped from the history tracking
-        instead of being filled with scan data they do not accept.
+        Re-sync history curves after an x-mode change: visibility comes from
+        the stored-data metadata, the data itself is re-delivered through
+        fresh scan-bound DataAPI subscriptions. Curves whose source is no
+        longer 'history' are dropped from the history tracking.
         """
         self._history_curves = [c for c in self._history_curves if c.config.source == "history"]
         for curve in list(self._history_curves):
             state = self._accumulated_curves.get(curve)
             if state is not None:
+                # Scan overlays keep their data and only reload when their x axis changes.
                 axis = (
-                    state.auto_axis if self.x_mode == "auto" else self._overlay_axis(state.is_async)
+                    state.auto_axis
+                    if self.x_mode == "auto"
+                    else self._overlay_axis(state.is_async, state.async_timestamps)
                 )
                 if state.requested_axis != axis:
                     state.requested_axis = axis
                     self._load_overlay(curve, axis)
                 continue
-            scan_item = self.get_history_scan_item(
-                scan_id=curve.config.scan_id, scan_index=curve.config.scan_number
-            )
-            if scan_item is not None:
-                self._fetch_history_data_for_curve(curve, scan_item)
-            else:
-                logger.warning(f"Scan item for curve {curve.name()} not found.")
+            self._sync_history_curve_state(curve)
+        self._setup_history_curve_subscriptions()
         self._update_overlay_visibility()
 
     def _refresh_crosshair_markers(self):
@@ -1712,27 +1783,19 @@ class Waveform(PlotBase):
         Return True when *curve* can be shown with the current x-axis mode.
 
         - ‘index’, ‘timestamp’ are always compatible.
-        - For history curves we check whether the requested motor
-          (self.x_axis_mode["name"]) exists in the cached
-          history_data_buffer["x"] dictionary.
+        - History curves are checked against their scan's stored-data info.
         - DAP is done by checking if the parent curve is visible.
-        - Device curves are fetched by update sync/async curves, which solves the compatibility there.
+        - Device curves are rendered from the DataAPI updates, which resolve
+          the compatibility (index fallback) there.
         """
         mode = self.x_axis_mode.get("name", "index")
         if mode in ("index", "timestamp"):  # always compatible - wild west mode
             return True
         if curve.config.source == "history":
-            scan_item = self.get_history_scan_item(
-                scan_id=curve.config.scan_id, scan_index=curve.config.scan_number
-            )
-            curve = self._fetch_history_data_for_curve(curve, scan_item)
-            if curve is None:
-                return False
+            return self._history_curve_compatible(curve)
         if curve.config.source == "dap":
             parent_curve = self._find_curve_by_label(curve.config.parent_label)
-            if parent_curve.isVisible():
-                return True
-            return False  # DAP curve is not compatible if parent curve is not visible
+            return bool(parent_curve is not None and parent_curve.isVisible())
         return True
 
     def _update_curve_visibility(self) -> None:
@@ -1771,9 +1834,7 @@ class Waveform(PlotBase):
             if curve < len(self.curves):
                 return self.curves[curve]
         elif isinstance(curve, str):
-            for c in self.curves:
-                if c.name() == curve:
-                    return c
+            return self._find_curve_by_label(curve)
         return None
 
     @SafeSlot(int, popup_error=True)
@@ -1792,6 +1853,7 @@ class Waveform(PlotBase):
 
         self._refresh_colors()
         self._categorise_device_curves()
+        self._refresh_data_subscriptions()
         self._update_overlay_visibility()
         self._refresh_alignment_state()
 
@@ -1802,11 +1864,10 @@ class Waveform(PlotBase):
         Args:
             name(str): Name of the curve to be removed.
         """
-        for curve in self.curves:
-            if curve.name() == name:
-                self.plot_item.removeItem(curve)
-                self._curve_clean_up(curve)
-                return
+        curve = self._find_curve_by_label(name)
+        if curve is not None:
+            self.plot_item.removeItem(curve)
+            self._curve_clean_up(curve)
 
     def _remove_curve_by_order(self, N: int):
         """
@@ -1826,15 +1887,11 @@ class Waveform(PlotBase):
 
     def _curve_clean_up(self, curve: Curve):
         """
-        Clean up the curve by disconnecting the async update signal (even for sync curves).
+        Clean up the curve bookkeeping and RPC registration.
 
         Args:
             curve(Curve): The curve to clean up.
         """
-        self.bec_dispatcher.disconnect_slot(
-            self.on_async_readback,
-            MessageEndpoints.device_async_readback(self.scan_id, curve.name()),
-        )
         curve.rpc_register.remove_rpc(curve)
 
         # Stop tracking the removed curve, so history refreshes and DAP requests skip it
@@ -1842,6 +1899,7 @@ class Waveform(PlotBase):
         self._curve_data_axes.pop(curve, None)
         if curve in self._history_curves:
             self._history_curves.remove(curve)
+        self._history_curves_awaiting_data.discard(curve.name())
         if curve in self._dap_curves:
             self._dap_curves.remove(curve)
 
@@ -1889,6 +1947,9 @@ class Waveform(PlotBase):
         for c in self.curves:
             if c.name() == label:
                 return c
+        if " " in label:
+            # Legend text ("bpm4i-bpm4i LIVE 809"): the name is the part before the space.
+            return self._find_curve_by_label(label.split(" ", 1)[0])
         return None
 
     ################################################################################
@@ -1898,7 +1959,8 @@ class Waveform(PlotBase):
     def on_scan_status(self, msg: dict, meta: dict):
         """
         Initial scan status message handler, which is triggered at the begging and end of scan.
-        Used for triggering the update of the sync and async curves.
+        Used only for per-scan bookkeeping (reset, scan id tracking, curve
+        categorisation, DAP triggering); the data flows through the DataAPI.
 
         Args:
             msg(dict): The message content.
@@ -1931,359 +1993,850 @@ class Waveform(PlotBase):
             self.scan_id = current_scan_id
             self.scan_item = self.queue.scan_storage.find_scan_by_ID(self.scan_id)  # live scan
             self.update_scan_info_from_source(self.scan_item)
-            self._slice_index = None  # Reset the slice index
             self._update_curve_visibility()
             self._mode = self._categorise_device_curves()
-
-            # First trigger to sync and async data. Async curve subscriptions
-            # were already set up by _categorise_device_curves above (it calls
-            # _setup_async_curve per async curve for live scans); repeating it
-            # here cleared each curve's data a second time and re-attempted
-            # the stream registration for every new scan.
-            if self._mode == "sync":
-                self.sync_signal_update.emit()
-                logger.info("Scan status: Sync mode")
-            elif self._mode == "async":
-                self.async_signal_update.emit()
-                logger.info("Scan status: Async mode")
-            else:
-                self.sync_signal_update.emit()
-                self.async_signal_update.emit()
-                logger.info("Scan status: Mixed mode")
-                logger.warning("Mixed mode - integrity of x axis cannot be guaranteed.")
+            # Rebuild the subscription so the per-scan source resolution
+            # (e.g. the auto x device) follows the new scan.
+            self._setup_data_api_subscription(scan=ScanTarget.LIVE)
+        if current_scan_id == self.scan_id:
+            status = msg.get("status")
+            self._refresh_live_legend(
+                current_scan_id, running=None if status is None else status == "open"
+            )
         self.setup_dap_for_scan()
 
-    @SafeSlot(dict, dict)
-    def on_scan_progress(self, msg: dict, meta: dict):
-        """
-        Slot for handling scan progress messages. Used for triggering the update of the sync curves.
+    ################################################################################
+    # DataAPI subscription handling
+    ################################################################################
 
-        Args:
-            msg(dict): The message content.
-            meta(dict): The message metadata.
+    def _config_sources(self) -> list[tuple[str, str]] | None:
         """
-        self.sync_signal_update.emit()
-        self._scan_done = msg.get("done")
-        if self._scan_done:
-            # Final refreshes for late scan data; skipped if the widget is closed meanwhile.
-            self._call_later(100, self.update_sync_curves)
-            self._call_later(300, self.update_sync_curves)
-
-    def _fetch_scan_data_and_access(self) -> tuple[dict, str] | tuple[None, None]:
-        """
-        Decide whether the widget is in live or historical mode
-        and return the appropriate data dict and access key.
+        Return the deduplicated (device, entry) sources of all device curves,
+        including the device supplying the x axis (custom device mode, or the
+        device the auto mode resolves to).
 
         Returns:
-            data_dict (dict): The data structure for the current scan.
-            access_key (str): Either 'val' (live) or 'value' (history).
+            list[tuple[str, str]] | None: The source list, or None if no
+                device curve is configured.
         """
-        if self.scan_item is None:
-            # Optionally fetch the latest from history if nothing is set
-            self.update_with_scan_history(-1)
-            if self.scan_item is None:
-                logger.info("No scan executed so far; skipping device curves categorisation.")
-                return None, None
-
-        if hasattr(self.scan_item, "live_data"):
-            # Live scan
-            return self.scan_item.live_data, "val"
-        else:
-            # Historical
-            scan_devices = self.scan_item.devices
-            return (scan_devices, "value")
-
-    def update_sync_curves(self):
-        """
-        Update the sync curves with the latest data from the scan.
-        """
-        if self.scan_item is None:
-            logger.info("No scan executed so far; skipping device curves categorisation.")
-            return
-        data, access_key = self._fetch_scan_data_and_access()
-        timestamp_mode = self.x_mode == "timestamp"
-        had_timestamps = timestamp_mode and "timestamp" in self._curve_data_axes.values()
-        for curve in self._sync_curves:
-            device_name = curve.config.signal.device
-            device_entry = curve.config.signal.signal
-            if access_key == "val":
-                device_data = data.get(device_name, {}).get(device_entry, {}).get(access_key, None)
-            else:
-                entry_obj = data.get(device_name, {}).get(device_entry)
-                device_data = entry_obj.read()["value"] if entry_obj else None
-            x_data = self._get_x_data(device_name, device_entry)
-            if x_data is not None:
-                if np.isscalar(x_data):
-                    self.clear_data()
-                    return
-            if device_data is not None and x_data is not None:
-                curve.setData(x_data, device_data)
-                self._curve_data_axes[curve] = self._overlay_axis()
-            if device_data is not None and x_data is None:
-                curve.setData(device_data)
-                self._curve_data_axes[curve] = "index"
-        if timestamp_mode and had_timestamps != ("timestamp" in self._curve_data_axes.values()):
-            self._update_overlay_visibility()
-        self.request_dap_update.emit()
-
-    def update_async_curves(self):
-        """
-        Updates asynchronously displayed curves with the latest scan data.
-
-        Fetches the scan data and access key to update each curve in `_async_curves` with
-        new values. If the data is available for a specific curve, it sets the x and y
-        data for the curve. Emits a signal to request an update once all curves are updated.
-
-        Raises:
-            The raised errors are dependent on the internal methods such as
-            `_fetch_scan_data_and_access`, `_get_x_data`, or `setData` used in this
-            function.
-
-        """
-        data, access_key = self._fetch_scan_data_and_access()
-        if data is None:
-            return
-
-        for curve in self._async_curves:
-            device_name = curve.config.signal.device
-            device_entry = curve.config.signal.signal
-            if access_key == "val":  # live access
-                device_data = data.get(device_name, {}).get(device_entry, {}).get(access_key, None)
-            else:  # history access
-                dataset_obj = data.get(device_name, {})
-                if self._skip_large_dataset_check is False:
-                    if not self._check_dataset_size_and_confirm(dataset_obj, device_entry):
-                        continue  # user declined to load; skip this curve
-                entry_obj = dataset_obj.get(device_entry, None)
-                device_data = entry_obj.read()["value"] if entry_obj else None
-
-            # if shape is 2D cast it into 1D and take the last waveform
-            if len(np.shape(device_data)) > 1:
-                device_data = device_data[-1, :]
-
-            if device_data is None:
-                logger.warning(f"Async data for curve {curve.name()} is None.")
+        sources: list[tuple[str, str]] = []
+        for curve in self.curves:
+            if curve.config.source != "device" or curve.config.signal is None:
                 continue
+            sources.append((curve.config.signal.device, curve.config.signal.signal))
+        if not sources:
+            return None
+        x_key = self._x_source_key()
+        if x_key is not None:
+            sources.append(x_key)
+        return list(dict.fromkeys(sources))
 
-            # Async curves only support plotting vs index or other device
-            axis = "index" if self.x_mode == "auto" else self._overlay_axis(is_async=True)
-            if axis == "index":
-                device_data_x = np.linspace(0, len(device_data) - 1, len(device_data))
-            else:
-                # Fetch data from signal instead
-                device_data_x = self._get_x_data(device_name, device_entry)
-
-            # Fallback to 'index' in case data is not of equal length
-            if device_data_x is None or len(device_data_x) != len(device_data):
-                logger.warning(
-                    f"Async data for curve {curve.name()} and x_axis {device_entry} is not of equal length. Falling back to 'index' plotting."
-                )
-                device_data_x = np.linspace(0, len(device_data) - 1, len(device_data))
-                axis = "index"
-
-            self._auto_adjust_async_curve_settings(curve, len(device_data))
-            curve.setData(device_data_x, device_data)
-            self._curve_data_axes[curve] = axis
-
-        self.request_dap_update.emit()
-
-    def _check_async_signal_found(self, name: str, signal: str) -> tuple[bool, str]:
+    def _report_devices_no_file_io(self, scan_item) -> list[str]:
         """
-        Check if the async signal is found in the BEC device manager.
+        Resolve the scan report devices without touching the data file.
+
+        ``ScanDataContainer.metadata`` is lazy: reading it opens the HDF5 file
+        synchronously, which must not happen on the GUI thread (and would even
+        precede the large-dataset gate). Live scans carry the report devices on
+        their status message, finished scans carry the scan request in the
+        (Redis-backed) scan history message.
 
         Args:
-            name(str): The name of the async signal.
-            signal(str): The entry of the async signal.
+            scan_item: Live scan item or history data container.
 
         Returns:
-            tuple[bool, str]: A tuple where the first element is True if the async signal is found (False otherwise),
-                and the second element is the signal name (either the original signal or the storage_name for AsyncMultiSignal).
+            list[str]: Report device names, empty when only the file knows.
         """
-        bec_async_signals = self.client.device_manager.get_bec_signals(sorted(ASYNC_SIGNAL_CLASSES))
-        for signal_name, _, entry_data in bec_async_signals:
-            if signal_name == name and entry_data.get("obj_name") == signal:
-                return True, entry_data.get("storage_name")
-        return False, signal
-
-    def _setup_async_curve(self, curve: Curve):
-        """
-        Setup async curve.
-
-        Several curves can resolve to the same underlying async stream -- most
-        commonly the sub-signals of one ``AsyncMultiSignal``, which share a
-        ``storage_name`` and are published on a single endpoint. Such curves reuse one
-        subscription instead of subscribing to the same endpoint repeatedly;
-        ``on_async_readback`` then feeds every curve that maps to it.
-
-        Args:
-            curve(Curve): The curve to set up.
-        """
-        name = curve.config.signal.device
-        signal = curve.config.signal.signal
-        async_signal_found, stream = self._check_async_signal_found(name, signal)
-
-        self._curve_data_axes.pop(curve, None)
-        try:
-            curve.clear_data()
-        except KeyError:
-            logger.warning(f"Curve {name} not found in plot item.")
-
-        if async_signal_found:
-            stream_key = (name, stream)  # AsyncMultiSignal sub-signals share `stream`
-            new_endpoint = MessageEndpoints.device_async_signal(self.scan_id, name, stream)
-            old_endpoint = MessageEndpoints.device_async_signal(self.old_scan_id, name, stream)
-            legacy_endpoint = False
-        else:
-            # No BEC async signal (AsyncSignal/AsyncMultiSignal/DynamicSignal) was found
-            # for this curve, so it must be served by the deprecated per-device
-            # device_async_readback endpoint.
-            stream_key = (name, None)  # old endpoint is keyed by device only
-            new_endpoint = MessageEndpoints.device_async_readback(self.scan_id, name)
-            old_endpoint = MessageEndpoints.device_async_readback(self.old_scan_id, name)
-            legacy_endpoint = True
-
-        endpoint_str = getattr(new_endpoint, "endpoint", new_endpoint)
-
-        shared = self._async_streams_setup.get(stream_key)
-        if shared is not None:
-            # Another curve already subscribed to this exact stream this scan.
-            shared.append(signal)
-            logger.info(
-                f"Async signals {shared} share a single subscription on endpoint "
-                f"'{endpoint_str}'; reusing it instead of subscribing again."
+        status_message = getattr(scan_item, "status_message", None)
+        if status_message is not None:
+            raw = getattr(status_message, "scan_report_devices", None)
+            devices = (
+                self._ensure_str_list(raw) if isinstance(raw, (list, tuple, np.ndarray)) else []
             )
-            return
+            if devices:
+                return devices
+            info = getattr(status_message, "info", None)
+            raw = info.get("scan_report_devices") if isinstance(info, dict) else None
+            devices = (
+                self._ensure_str_list(raw) if isinstance(raw, (list, tuple, np.ndarray)) else []
+            )
+            if devices:
+                return devices
 
-        # TODO implement deprecation warning when simulations are migrated
-        # if legacy_endpoint:
-        #     logger.warning(
-        #         f"Deprecated async endpoint in use: device '{name}' provides async data via the "
-        #         f"legacy 'device_async_readback' endpoint ('{endpoint_str}'). Migrate the device "
-        #         "to an AsyncSignal/AsyncMultiSignal/DynamicSignal so it publishes on the "
-        #         "'device_async_signal' endpoint; support for 'device_async_readback' in the "
-        #         "waveform widget will be removed in a future release."
-        #     )
+        # History: the scan request of the scan history message names the
+        # scanned devices; its first entry is the first report device.
+        history_msg = getattr(scan_item, "_msg", None)
+        request_inputs = getattr(history_msg, "request_inputs", None)
+        arg_bundle = request_inputs.get("arg_bundle") if isinstance(request_inputs, dict) else None
+        if isinstance(arg_bundle, (list, tuple)):
+            devices = [item for item in arg_bundle if isinstance(item, str)]
+            if devices:
+                return devices[:1]
+        return []
 
-        self._async_streams_setup[stream_key] = [signal]
-        self.bec_dispatcher.disconnect_slot(self.on_async_readback, old_endpoint)
-        self.bec_dispatcher.connect_slot(
-            self.on_async_readback, new_endpoint, from_start=True, cb_info={"scan_id": self.scan_id}
-        )
-        logger.info(f"Setup async curve {name} (signal '{signal}', endpoint '{endpoint_str}')")
-
-    @SafeSlot(dict, dict)
-    def on_async_readback(self, msg, metadata):
+    def _x_source_key(self) -> tuple[str, str] | None:
         """
-        Get async data readback. This code needs to be fast, therefor we try
-        to reduce the number of copies in between cycles. Be careful when refactoring
-        this part as it will affect the performance of the async readback.
+        Resolve the (device, entry) supplying the x axis for the current
+        x-axis mode; None for index/timestamp or when auto resolves to index.
 
-        Async curves support plotting against 'index' or other 'device_signal'. No 'auto' or 'timestamp'.
-        The fallback mechanism for 'auto' and 'timestamp' is to use the 'index'.
+        Returns:
+            tuple[str, str] | None: The x source key, or None.
+        """
+        mode = self.x_axis_mode["name"] or "auto"
+        if mode in ("timestamp", "index"):
+            return None
+        if mode != "auto":  # custom device mode
+            entry = self.x_axis_mode.get("entry")
+            if entry is None:
+                try:
+                    entry = self.entry_validator.validate_signal(mode, None)
+                except Exception:
+                    return None
+            return (mode, entry)
+        return self._auto_x_source_key()
 
-        Note:
-            We create data_plot_x and data_plot_y and modify them within this function
-            to avoid creating new arrays. This is important for performance.
-            Support update instructions are 'add', 'add_slice', and 'replace'.
+    def _auto_x_source_key(self) -> tuple[str, str] | None:
+        """
+        The x source the auto mode resolves to for the current scan: None (index) when
+        async curves are present, otherwise the first device from the scan report.
+        """
+        if self._async_curves:
+            return None
+        if self.scan_item is None:
+            return None
+        report_devices = self._report_devices_no_file_io(self.scan_item)
+        if not report_devices:
+            # Last resort only: this opens the data file synchronously.
+            try:
+                report_devices = self._ensure_str_list(
+                    self.scan_item.metadata["bec"]["scan_report_devices"]
+                )
+            except Exception:
+                return None
+        if not report_devices:
+            return None
+        device_x = report_devices[0]
+        try:
+            signal_x = self.entry_validator.validate_signal(device_x, None)
+        except Exception:
+            return None
+        return (device_x, signal_x)
+
+    def _history_x_source_key(self, scan_item) -> tuple[str, str] | None:
+        """
+        Resolve the x source key for a pinned history scan.
+
+        Auto mode takes the history scan's own first report device, independent
+        of the live scan's x, so every history curve is drawn against the motor
+        of its own scan.
 
         Args:
-            msg(dict): Message with the async data.
-            metadata(dict): Message metadata, including the subscription's scan ID in ``cb_info``.
+            scan_item: The scan item of the pinned history scan.
+
+        Returns:
+            tuple[str, str] | None: The x source key, or None for index-like
+                modes.
         """
-        cb_info = metadata.get("cb_info")
-        if not isinstance(cb_info, dict):
-            logger.info("Async readback has no subscription context.")
-            return
-        scan_id = cb_info.get("scan_id")
-        if scan_id != self.scan_id:
-            logger.info("Scan ID mismatch, ignoring async readback.")
-            return
-
-        instruction = metadata.get("async_update", {}).get("type")
-        if instruction not in ["add", "add_slice", "replace"]:
-            logger.warning(f"Invalid async update instruction: {instruction}")
-            return
-        max_shape = metadata.get("async_update", {}).get("max_shape", [])
-        plot_mode = self.x_axis_mode["name"]
-        for curve in self._async_curves:
-            x_data = None  # Reset x_data
-            y_data = None  # Reset y_data
-            # Get the curve data
-            async_data = msg["signals"].get(curve.config.signal.signal, None)
-            if async_data is None:
-                continue
-            # y-data
-            data_plot_y = async_data["value"]
-            if data_plot_y is None:
-                logger.warning(f"Async data for curve {curve.name()} is None.")
-                continue
-            # Ensure we have numpy array for data_plot_y
-            data_plot_y = np.asarray(data_plot_y)
-            if data_plot_y.ndim == 0:
-                # Convert scalars/0d arrays to 1d so len() and stacking work
-                data_plot_y = data_plot_y.reshape(1)
-            # Add
-            if instruction == "add":
-                if len(max_shape) > 1:
-                    if len(data_plot_y.shape) > 1:
-                        data_plot_y = data_plot_y[-1, :]
-                else:
-                    x_data, y_data = curve.get_data()
-                    if y_data is not None:
-                        data_plot_y = np.hstack((y_data, data_plot_y))
-            # Add slice
-            if instruction == "add_slice":
-                current_slice_id = metadata.get("async_update", {}).get("index")
-                if current_slice_id != curve.slice_index:
-                    curve.slice_index = current_slice_id
-                else:
-                    x_data, y_data = curve.get_data()
-                    if y_data is not None:
-                        data_plot_y = np.hstack((y_data, data_plot_y))
-
-            # Replace is trivial, no need to modify data_plot_y
-
-            # Get x data for plotting
-            if plot_mode in ["index", "auto", "timestamp"]:
-                data_plot_x = np.linspace(0, len(data_plot_y) - 1, len(data_plot_y))
-                self._auto_adjust_async_curve_settings(curve, len(data_plot_y))
-                curve.setData(data_plot_x, data_plot_y)
-                self._curve_data_axes[curve] = "index"
-                # Move on in the loop
-                continue
-
-            # x_axis_mode is device signal
-            # Only consider device signals that are async for now, fallback is index
-            signal_x = self.x_axis_mode["entry"]
-            axis = (plot_mode, signal_x)
-            async_data = msg["signals"].get(signal_x, None)
-            # Make sure the signal exists, otherwise fall back to index
-            if async_data is None:
-                # Try to grab the data from device signals
-                data_plot_x = self._get_x_data(plot_mode, signal_x)
-            else:
-                data_plot_x = np.asarray(async_data["value"])
-            if x_data is not None and data_plot_x is not None:
-                data_plot_x = np.hstack((x_data, data_plot_x))
-            # Appended samples need the same X coordinates as the existing samples.
-            if (
-                data_plot_x is None
-                or len(data_plot_x) != len(data_plot_y)
-                or (x_data is not None and self._curve_data_axes.get(curve) != axis)
-            ):
-                logger.warning(
-                    f"Async data for curve {curve.name()} is incompatible with X signal "
-                    f"{signal_x}. Falling back to index plotting."
+        mode = self.x_axis_mode["name"] or "auto"
+        if mode in ("timestamp", "index"):
+            return None
+        if mode != "auto":  # custom device mode
+            entry = self.x_axis_mode.get("entry")
+            if entry is None:
+                try:
+                    entry = self.entry_validator.validate_signal(mode, None)
+                except Exception:
+                    return None
+            return (mode, entry)
+        if scan_item is None:
+            return None
+        report_devices = self._report_devices_no_file_io(scan_item)
+        if not report_devices:
+            # Last resort only: this opens the data file synchronously.
+            try:
+                report_devices = self._ensure_str_list(
+                    scan_item.metadata.get("bec", {}).get("scan_report_devices") or []
                 )
-                data_plot_x = np.linspace(0, len(data_plot_y) - 1, len(data_plot_y))
-                axis = "index"
+            except Exception:
+                return None
+        if not report_devices:
+            return None
+        device_x = report_devices[0]
+        try:
+            signal_x = self.entry_validator.validate_signal(device_x, None)
+        except Exception:
+            return None
+        return (device_x, signal_x)
 
-            # Plot the data
-            self._auto_adjust_async_curve_settings(curve, len(data_plot_y))
-            curve.setData(data_plot_x, data_plot_y)
+    def _setup_data_api_subscription(self, scan: str = ScanTarget.LIVE):
+        """
+        Point the DataAPI subscription at the configured device curves.
+
+        A subscription that already targets ``scan`` gets the new source set in place
+        (the backend opens the new binding before it releases the old one, so shared
+        feeds and what they delivered so far are kept). It is only closed and created
+        again when the target changes.
+
+        Args:
+            scan(str): "live" to follow the active scan, or a terminal scan id.
+        """
+        self._data_api_scan = scan
+        if self._shutting_down:
+            self._cleanup_data_api_subscription()
+            return
+        sources = self._config_sources()
+        if sources is None:
+            self._cleanup_data_api_subscription()
+            self.set_plot_warning(None)  # no device curve left to warn about
+            return
+        sources = self._filter_oversized_sources(sources, scan)
+        if not sources:
+            self._cleanup_data_api_subscription()
+            return
+        if self._data_bridge is not None and self._data_bridge_scan == scan:
+            try:
+                self._data_bridge.set_sources(sources)
+                self._forget_groups_without_sources()
+                self._check_x_alignment(sources, scan)
+                return
+            except Exception as exc:  # pylint: disable=broad-except
+                logger.debug(
+                    f"Replacing the waveform sources in place failed ({exc}); resubscribing."
+                )
+        self._cleanup_data_api_subscription()
+        try:
+            self._data_bridge = QtDataSubscription(
+                self.client,
+                sources=sources,
+                scan=scan,
+                parent=self,
+                min_emit_interval=self.update_interval_s,
+            )
+            self._data_bridge_scan = scan
+            self._data_bridge.updated.connect(self._on_data_update)
+            self._data_bridge.progress.connect(self._on_data_load_progress)
+        except Exception as exc:
+            logger.warning(f"Failed to configure waveform data subscription: {exc}")
+            self._cleanup_data_api_subscription()
+            return
+        self._check_x_alignment(sources, scan)
+
+    def _forget_groups_without_sources(self) -> None:
+        """After the sources changed in place: drop what belongs to groups that are gone."""
+        groups = self._data_bridge.groups if self._data_bridge is not None else {}
+        if not groups:
+            return  # not bound: nothing is known about the groups
+        self.clear_data_warnings(keep=groups)
+
+    def _check_x_alignment(self, sources: list[tuple[str, str]], scan: str) -> None:
+        """
+        Warn about device curves that cannot be aligned with the x-axis device.
+
+        Such curves share no ordinal with x (different correlation groups), so they
+        are plotted against their index instead of x.
+        """
+        x_key = self._x_source_key()
+        if x_key is None:
+            self.set_plot_warning(None)
+            return
+        labels = self._plotted_alignment_labels(sources, scan)
+        if labels is None:
+            return
+        if x_key not in labels:
+            # No data for x in the bound scan: there is nothing to align against.
+            self.set_plot_warning(None)
+            return
+        x_label = labels[x_key]
+        unaligned = [
+            f"{device}.{entry}"
+            for device, entry in sources
+            if (device, entry) != x_key
+            and (device, entry) in labels
+            and labels[(device, entry)] != x_label
+        ]
+        if unaligned:
+            text = (
+                f"x '{x_key[0]}.{x_key[1]}' cannot be aligned with {', '.join(unaligned)} "
+                "(not recorded together); plotted against the index"
+            )
+            logger.warning(text)
+            self.set_plot_warning(text)
+        else:
+            self.set_plot_warning(None)
+
+    def compatible_x_devices(self) -> list[str] | None:
+        """Devices that can serve as x for every device curve (None: no filter applies)."""
+        anchors = [
+            (curve.config.signal.device, curve.config.signal.signal)
+            for curve in self.curves
+            if curve.config.source == "device" and curve.config.signal is not None
+        ]
+        return self.compatible_devices(anchors, scan=self._data_api_scan)
+
+    ################################################################################
+    # Live curve legend
+    ################################################################################
+
+    def _is_live_curve(self, curve: Curve) -> bool:
+        """Device curves follow the live scan, and so do fits of them."""
+        if curve.config.source == "device":
+            return True
+        if curve.config.source == "dap" and curve.config.parent_label:
+            parent = self._find_curve_by_label(curve.config.parent_label)
+            return parent is not None and parent.config.source == "device"
+        return False
+
+    def _scan_number_and_state(self, scan_id: str | None) -> tuple[int | None, bool]:
+        """Scan number of ``scan_id`` and whether the scan still runs (no file I/O)."""
+        if not scan_id:
+            return None, False
+        item = self.client.queue.scan_storage.find_scan_by_ID(scan_id)
+        if item is not None:
+            number = item.scan_number
+            running = item.status == "open" and item.status_message is not None
+        else:
+            message = self.client.history.get_message(scan_id)
+            number, running = getattr(message, "scan_number", None), False
+        return (int(number) if isinstance(number, Integral) else None), running
+
+    def _refresh_live_legend(self, scan_id: str | None = None, running: bool | None = None):
+        """
+        Show ``LIVE <scan number>`` after the name of every live curve in the legend.
+
+        ``LIVE`` is green while the shown scan runs. Only the legend text changes: the
+        curve name (RPC access, object name) is the part before the first space.
+
+        Args:
+            scan_id(str | None): The scan the live curves now show (None: unchanged).
+            running(bool | None): Whether it runs (None: look it up in scan storage).
+        """
+        if scan_id is not None and scan_id != self._live_legend_scan_id:
+            self._live_legend_scan_id = scan_id
+            self._live_legend_running = None
+        if running is not None:
+            self._live_legend_running = running
+        legend = self.plot_item.legend
+        if legend is None:
+            return
+        number, scan_running = self._scan_number_and_state(self._live_legend_scan_id)
+        if self._live_legend_running is not None:
+            scan_running = self._live_legend_running
+        if scan_running:
+            live = f"<b><span style='color: {get_accent_colors().success.name()}'>LIVE</span></b>"
+        else:
+            live = "<b>LIVE</b>"
+        suffix = live if number is None else f"{live}&nbsp;{number}"
+        changed = False
+        for curve in self.curves:
+            label = legend.getLabel(curve)
+            if label is None:
+                continue
+            text = escape(curve.name()) + (f"&nbsp;{suffix}" if self._is_live_curve(curve) else "")
+            if label.text != text:
+                label.setText(text)
+                changed = True
+        if changed:
+            legend.updateSize()
+
+    def _adopt_live_scan(self, scan_id: str) -> None:
+        """Make the scan the live binding shows (the most recent one while idle) current."""
+        self.old_scan_id = self.scan_id
+        self.scan_id = scan_id
+        scan_item = self.client.queue.scan_storage.find_scan_by_ID(scan_id)
+        if scan_item is None:
+            scan_item = self.client.history.get_by_scan_id(scan_id)
+        if scan_item is None:
+            return
+        self.scan_item = scan_item
+        self.update_scan_info_from_source(scan_item)
+        self._mode = self._categorise_device_curves()
+        self.setup_dap_for_scan()
+
+    def _cleanup_data_api_subscription(self):
+        if self._data_bridge is None:
+            return
+        try:
+            self._data_bridge.close()
+        finally:
+            self._data_bridge = None
+            if not self._shutting_down:
+                self.clear_data_warnings()  # they were about this subscription
+
+    def _setup_history_curve_subscriptions(self):
+        """
+        (Re)create one DataAPI subscription per scan pinned by history curves.
+        """
+        self._cleanup_history_subscriptions()
+        if self._shutting_down:
+            return
+        sources_by_scan: dict[str, list[tuple[str, str]]] = {}
+        for curve in self._history_curves:
+            if curve in self._accumulated_curves:
+                continue  # scan overlays are seeded from the live curve and reloaded on their own
+            scan_id = curve.config.scan_id
+            signal = curve.config.signal
+            if not scan_id or signal is None:
+                continue
+            sources_by_scan.setdefault(scan_id, []).append((signal.device, signal.signal))
+        for scan_id, sources in sources_by_scan.items():
+            sources = self._filter_oversized_sources(sources, scan_id)
+            if not sources:
+                continue
+            scan_item = self.get_history_scan_item(scan_id=scan_id)
+            x_key = self._history_x_source_key(scan_item)
+            if x_key is not None:
+                sources.append(x_key)
+            self._history_x_keys[scan_id] = x_key
+            try:
+                bridge = QtDataSubscription(
+                    self.client,
+                    sources=list(dict.fromkeys(sources)),
+                    scan=scan_id,
+                    parent=self,
+                    min_emit_interval=self.update_interval_s,
+                )
+                bridge.updated.connect(self._on_history_data_update)
+                bridge.progress.connect(self._on_data_load_progress)
+                self._history_bridges[scan_id] = bridge
+            except Exception as exc:
+                logger.warning(
+                    f"Failed to configure history data subscription for scan {scan_id}: {exc}"
+                )
+
+    def _cleanup_history_subscriptions(self):
+        for bridge in self._history_bridges.values():
+            try:
+                bridge.close()
+            except Exception:  # pylint: disable=broad-except
+                pass
+        self._history_bridges = {}
+        self._history_x_keys = {}
+
+    def _estimate_source_bytes(self, scan: str, source: tuple[str, str]) -> int | None:
+        """
+        Estimated stored size of one source, from the scan-history metadata.
+
+        The estimate costs no file I/O — the decision to load is taken before
+        anything is read.
+
+        Args:
+            scan(str): The scan id the source belongs to.
+            source(tuple[str, str]): (device, entry).
+
+        Returns:
+            int | None: Size in bytes, or None when it cannot be estimated.
+        """
+        try:
+            estimate = self.client.data_api.estimate_bytes([source], scan)
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.warning(f"Could not estimate the size of {source[0]}-{source[1]}: {exc}")
+            return None
+        return estimate if isinstance(estimate, int) else None
+
+    def _stored_shape(self, scan: str, device: str, entry: str) -> tuple[int, ...] | None:
+        """Stored dataset shape of one source, for the confirmation dialog."""
+        scan_item = self.get_history_scan_item(scan_id=scan)
+        stored = getattr(getattr(scan_item, "_msg", None), "stored_data_info", None)
+        if not stored:
+            return None
+        device_info = stored.get(device) or {}
+        info = device_info.get(entry)
+        if info is None:
+            prefix = f"{device}_"
+            if entry.startswith(prefix):
+                # Async datasets are stored under the signal's storage name.
+                info = device_info.get(entry[len(prefix) :])
+        shape = getattr(info, "shape", None) if info is not None else None
+        return tuple(shape) if shape else None
+
+    def _filter_oversized_sources(self, sources: list, scan: str | None) -> list:
+        """
+        Drop sources the user does not want to load, asking per dataset.
+
+        Mirrors the pre-DataAPI guard: each oversized dataset is offered
+        individually, a declined dataset is simply not loaded (its curve stays
+        visible but empty), and a confirmed dataset is remembered for the rest
+        of the session so subscription rebuilds do not re-prompt.
+
+        Args:
+            sources(list): Candidate (device, entry) sources.
+            scan(str | None): The scan the subscription binds to.
+
+        Returns:
+            list: The sources that may be loaded.
+        """
+        if scan is None or scan == ScanTarget.LIVE or self._skip_large_dataset_check:
+            return list(sources)
+        limit_mb = self.config.max_dataset_size_mb
+        limit_bytes = int(limit_mb * 1024 * 1024)
+        kept = []
+        for source in sources:
+            if (scan, tuple(source)) in self._size_confirmed_sources:
+                kept.append(source)
+                continue
+            size = self._estimate_source_bytes(scan, tuple(source))
+            if size is None or size <= limit_bytes:
+                kept.append(source)
+                continue
+            size_mb = size / (1024 * 1024)
+            logger.warning(
+                f"Attempt to load large dataset {source[0]}-{source[1]}: {size_mb:.1f} MB "
+                f"(limit {limit_mb} MB)"
+            )
+            if self._skip_large_dataset_warning:
+                logger.info("Skipping large dataset warning dialog; dataset not loaded.")
+                continue
+            if not self._confirm_large_dataset(
+                size_mb, source=tuple(source), shape=self._stored_shape(scan, *source)
+            ):
+                continue
+            self._size_confirmed_sources.add((scan, tuple(source)))
+            kept.append(source)
+        return kept
+
+    def _refresh_data_subscriptions(self):
+        """Rebuild all DataAPI subscriptions after a source-set change."""
+        if self._shutting_down:
+            return
+        self._setup_data_api_subscription(scan=self._data_api_scan)
+        self._setup_history_curve_subscriptions()
+
+    def _resolve_x_axis(self) -> tuple[str, str] | None:
+        """
+        Resolve the device x source for the current x mode and sync the label
+        suffix, the current-x-device bookkeeping and the alignment state.
+
+        Returns:
+            tuple[str, str] | None: The x source key for device/auto modes,
+                None when the x axis is index- or timestamp-based.
+        """
+        mode = self.x_axis_mode["name"] or "auto"
+        previous_x_device = self._current_x_device
+        x_key = None if mode in ("timestamp", "index") else self._x_source_key()
+        self._current_x_device = x_key
+        self._update_x_label_suffix(self._x_mode_label_suffix(x_key))
+        if previous_x_device != self._current_x_device:
+            self._refresh_alignment_state(force_readback=True)
+        return x_key
+
+    def _x_mode_label_suffix(self, x_key: tuple[str, str] | None) -> str:
+        """The x-axis label suffix for the current mode and a resolved x source."""
+        mode = self.x_axis_mode["name"] or "auto"
+        if mode in ("timestamp", "index"):
+            return f" ({mode})"
+        if x_key is None:
+            return " (auto: index)" if mode == "auto" else " (index)"
+        return f" ({'auto' if mode == 'auto' else 'custom'}: {x_key[0]}-{x_key[1]})"
+
+    @SafeSlot(object)
+    def _on_data_update(self, update) -> None:
+        """
+        Render one update of the main binding (live, backfill or a pinned scan).
+
+        Monitored sources are drawn from the aligned columns; async sources
+        are reconstructed from their columnar fragments according to the
+        async update type. History curves have their own bridges and slot
+        (:meth:`_on_history_data_update`), so a history scan never redraws the
+        device curves.
+
+        Args:
+            update (SubscriptionUpdate): Full-state columnar snapshot.
+        """
+        if (
+            self._data_api_scan == ScanTarget.LIVE
+            and update.scan_id != self.scan_id
+            and not self._scan_number_and_state(update.scan_id)[1]
+        ):
+            # Idle: the live binding shows the most recent (finished) scan until the
+            # next one opens. A newly opened scan is taken over by on_scan_status.
+            self._adopt_live_scan(update.scan_id)
+        if update.scan_id == self.scan_id and update.scan_id != self._live_legend_scan_id:
+            self._refresh_live_legend(update.scan_id)
+        if self._alignment_binding_changed(update):
+            sources = self._config_sources()
+            if sources is not None:
+                self._check_x_alignment(sources, self._data_api_scan)
+        if self.scan_id is not None and update.scan_id != self.scan_id:
+            return
+        self.report_data_state(update, self._data_bridge)
+        x_key = self._resolve_x_axis()
+        aligned_columns = update.aligned()
+        had_timestamps = "timestamp" in self._curve_data_axes.values()
+        updated_any = False
+        for curve in self.curves:
+            if curve.config.source != "device":
+                continue
+            if self._render_curve_from_update(curve, update, aligned_columns, x_key):
+                updated_any = True
+        if had_timestamps != ("timestamp" in self._curve_data_axes.values()):
+            # Scan overlays on the index fallback are hidden while a curve shows timestamps.
+            self._update_overlay_visibility()
+        if updated_any:
+            self.request_dap_update.emit()
+
+    @SafeSlot(object)
+    def _on_history_data_update(self, update) -> None:
+        """
+        Render one update of a history bridge into the history curves of its scan.
+
+        Each history curve takes x from its own scan (``_history_x_keys``), so
+        scans of different lengths plot side by side.
+
+        Args:
+            update (SubscriptionUpdate): Full-state columnar snapshot of one pinned scan.
+        """
+        history_curves = [
+            c
+            for c in self._history_curves
+            if c.config.scan_id == update.scan_id and c not in self._accumulated_curves
+        ]
+        if not history_curves:
+            return
+        x_key = self._history_x_keys.get(update.scan_id)
+        self.report_data_state(
+            update, self._history_bridges.get(update.scan_id), scope=str(update.scan_id)
+        )
+        if not any(curve.config.source == "device" for curve in self.curves):
+            # No live binding labels the axis of a plot with history curves only.
+            self._update_x_label_suffix(self._x_mode_label_suffix(x_key))
+        aligned_columns = update.aligned()
+        updated_any = False
+        first_data = False
+        for curve in history_curves:
+            if self._render_curve_from_update(curve, update, aligned_columns, x_key):
+                updated_any = True
+                if curve.name() in self._history_curves_awaiting_data:
+                    self._history_curves_awaiting_data.discard(curve.name())
+                    first_data = True
+        if first_data:
+            # The history read finishes after the deferred autorange of plot() ran, and with
+            # clipToView the range would only see the points inside the old view.
+            for curve in history_curves:
+                curve.setClipToView(False)
+            self.auto_range()
+            for curve in history_curves:
+                curve.setClipToView(True)
+        if updated_any:
+            self.request_dap_update.emit()
+
+    def _render_curve_from_update(
+        self, curve: Curve, update, aligned_columns: dict, x_key: tuple[str, str] | None
+    ) -> bool:
+        """
+        Render one curve from a DataAPI update.
+
+        Args:
+            curve(Curve): The curve to render.
+            update(SubscriptionUpdate): The update snapshot.
+            aligned_columns(dict): Cached `update.aligned()` columns.
+            x_key(tuple[str, str] | None): The resolved x source key.
+
+        Returns:
+            bool: True if the curve data was set.
+        """
+        signal = curve.config.signal
+        if signal is None:
+            return False
+        key = (signal.device, signal.signal)
+        source = update.sources.get(key)
+        if source is None:
+            return False
+        if source.kind == SourceKind.MONITORED:
+            return self._render_monitored_curve(curve, update, key, aligned_columns, x_key)
+        return self._render_async_curve(curve, update, source, x_key)
+
+    def _render_monitored_curve(
+        self,
+        curve: Curve,
+        update,
+        key: tuple[str, str],
+        aligned_columns: dict,
+        x_key: tuple[str, str] | None,
+    ) -> bool:
+        """
+        Render a monitored (sync) curve from an update.
+
+        The curve is paired only with its own x source, never with the other curves
+        of the plot: a signal that lags or delivers nothing cannot shorten or blank
+        its neighbours. The x column follows the x-axis mode: the ordinals for index,
+        the source timestamps for timestamp mode, and the values of the x device for
+        device/auto modes with an index fallback when the x source is not part of
+        the update.
+        """
+        mode = self.x_axis_mode["name"] or "auto"
+        use_x = mode not in ("index", "timestamp") and x_key is not None and x_key in update.sources
+        keys = [key, x_key] if use_x else [key]
+        y_data = update.aligned(keys=keys).get(key)
+        if y_data is None or len(y_data) == 0:
+            return False
+        if mode == "timestamp":
+            x_data = update.axis(AxisMode.TIMESTAMP, key, keys=keys)
+            axis = "timestamp"
+        elif use_x:
+            x_data = update.axis(AxisMode.DEVICE, x_key, keys=keys)
+            axis = x_key
+        else:
+            x_data = update.ordinals(keys)
+            axis = "index"
+        curve.setData(_numeric_column(x_data), _numeric_column(y_data))
+        self._curve_data_axes[curve] = axis
+        return True
+
+    def _render_async_curve(
+        self, curve: Curve, update, source, x_key: tuple[str, str] | None
+    ) -> bool:
+        """
+        Render an async or unindexed curve from its columnar source.
+
+        The y data is reconstructed according to the async update type; x is
+        the sample index, the source timestamps (timestamp mode, matching
+        lengths only) or a same-length x device column, with an index
+        fallback on any length mismatch.
+        """
+        y_data = source.latest()
+        if y_data is None or len(y_data) == 0:
+            return False
+        mode = self.x_axis_mode["name"] or "auto"
+        x_data = None
+        axis = "index"  # what the curve ends up drawn against, for the scan overlays
+        if mode == "timestamp":
+            timestamps = source.timestamps
+            if timestamps is not None and len(timestamps) == len(y_data):
+                try:
+                    x_data = np.asarray(timestamps, dtype=float)
+                    axis = "timestamp"
+                except (TypeError, ValueError):
+                    x_data = None
+        elif mode not in ("index", "auto") and x_key is not None:
+            x_source = update.sources.get(x_key)
+            if x_source is not None and source.key in update.sources:
+                # Same correlation group: pair point by point through the aligned view.
+                columns = update.aligned(keys=[source.key, x_key])
+                y_aligned = _numeric_column(columns[source.key])
+                if y_aligned.ndim == 1 and y_aligned.dtype != object:
+                    y_data = y_aligned
+                    x_data = _numeric_column(columns[x_key])
+            if x_data is None and x_source is not None:
+                x_candidate = (
+                    _numeric_column(x_source.values)
+                    if x_source.kind == SourceKind.MONITORED
+                    else x_source.latest()
+                )
+                if x_candidate is not None and len(x_candidate) == len(y_data):
+                    x_data = x_candidate
+            if x_data is None:
+                logger.warning(
+                    f"Curve {curve.name()} cannot be aligned with x {x_key} (not recorded "
+                    "together or different lengths); plotting against the index."
+                )
+            else:
+                axis = x_key
+        n_points = len(y_data)
+        self._auto_adjust_async_curve_settings(curve, n_points)
+        y_arr = _numeric_column(y_data)
+        if n_points > DISPLAY_POINT_LIMIT and y_arr.dtype != object:
+            # min/max envelope: bounded render cost, extremes stay visible.
+            # The raw series is kept on the curve so zooming re-decimates the
+            # visible window at full fidelity (see _apply_lod_windows).
+            x_arr = None if x_data is None else np.asarray(x_data)
+            curve._lod_raw = (x_arr, y_arr)
+            curve._lod_window = None
+            self._ensure_lod_hooks()
+            x_dec, y_dec = _decimate_envelope(y_arr, x_arr)
+            curve.setData(x_dec, y_dec)
             self._curve_data_axes[curve] = axis
+            return True
+        curve._lod_raw = None
+        if x_data is None:
+            x_data = np.arange(n_points)
+        curve.setData(np.asarray(x_data), y_arr)
+        self._curve_data_axes[curve] = axis
+        return True
 
-        self.request_dap_update.emit()
+    def _ensure_lod_hooks(self):
+        """Re-decimate oversized curves for the visible window on zoom/pan."""
+        if self._lod_timer is not None:
+            return
+        self._lod_timer = QTimer(self)
+        self._lod_timer.setSingleShot(True)
+        self._lod_timer.setInterval(150)
+        self._lod_timer.timeout.connect(self._apply_lod_windows)
+        self._lod_applying = False
+        self.plot_item.vb.sigXRangeChanged.connect(self._schedule_lod)
+
+    @SafeSlot()
+    def _schedule_lod(self, *_args):
+        """Debounce zoom/pan events; sigXRangeChanged passes (viewbox, range)."""
+        if not self._lod_applying:
+            self._lod_timer.start()
+
+    @SafeSlot()
+    def _apply_lod_windows(self):
+        """Render the visible slice of every oversized curve.
+
+        Zoomed out, the min/max envelope of all data is shown; zooming in
+        narrows the window until the raw samples themselves are rendered —
+        no information is lost at any zoom level.
+        """
+        x_min, x_max = self.plot_item.vb.viewRange()[0]
+        self._lod_applying = True
+        try:
+            for curve in self.curves + self._history_curves:
+                raw = curve._lod_raw
+                if raw is None:
+                    continue
+                x_arr, y_arr = raw
+                n = len(y_arr)
+                if x_arr is None:
+                    i0 = max(0, int(np.floor(x_min)))
+                    i1 = min(n, int(np.ceil(x_max)) + 1)
+                else:
+                    i0, i1 = np.searchsorted(x_arr, [x_min, x_max])
+                    i0, i1 = max(0, i0 - 1), min(n, i1 + 1)
+                if i1 <= i0:
+                    continue
+                window = (i0, i1)
+                if curve._lod_window == window:
+                    continue
+                curve._lod_window = window
+                y_win = y_arr[i0:i1]
+                x_win = None if x_arr is None else x_arr[i0:i1]
+                if len(y_win) > DISPLAY_POINT_LIMIT:
+                    x_dec, y_dec = _decimate_envelope(y_win, x_win, offset=i0)
+                    curve.setData(x_dec, y_dec)
+                else:
+                    curve.setData(np.arange(i0, i1) if x_win is None else x_win, y_win)
+        finally:
+            self._lod_applying = False
+
+    def _ensure_load_progress_bar(self) -> QProgressBar:
+        """Create (once) a full-width progress row below the plot."""
+        if self._load_progress_row is None:
+            row = QWidget(self)
+            row_layout = QHBoxLayout(row)
+            row_layout.setContentsMargins(8, 2, 8, 2)
+            row_layout.setSpacing(8)
+            label = QLabel("Loading large dataset...", row)
+            bar = QProgressBar(row)
+            bar.setRange(0, 100)
+            bar.setTextVisible(True)
+            row_layout.addWidget(label)
+            row_layout.addWidget(bar, 1)
+            row.hide()
+            self.layout.addWidget(row)
+            self._load_progress_row = row
+            self._load_progress_bar = bar
+        return self._load_progress_bar
+
+    @SafeSlot(float)
+    def _on_data_load_progress(self, fraction: float):
+        """Show bulk-load progress so a long history read is visibly alive."""
+        bar = self._ensure_load_progress_bar()
+        if fraction >= 1.0:
+            self._load_progress_row.hide()
+            return
+        bar.setValue(int(fraction * 100))
+        self._load_progress_row.show()
 
     def _auto_adjust_async_curve_settings(
         self,
@@ -2577,85 +3130,6 @@ class Waveform(PlotBase):
             self.dap_params_update.emit(curve.dap_params, {"curve_id": curve.name()})
             self.dap_summary_update.emit(curve.dap_summary, {"curve_id": curve.name()})
 
-    def _get_x_data(self, device_name: str, device_entry: str) -> list | np.ndarray | None:
-        """
-        Get the x data for the curves with the decision logic based on the widget x mode configuration:
-            - If x is called 'timestamp', use the timestamp data from the scan item.
-            - If x is called 'index', use the rolling index.
-            - If x is a custom signal, use the data from the scan item.
-            - If x is not specified, use the first device from the scan report.
-
-        Additionally, checks and updates the x label suffix.
-
-        Args:
-            device_name(str): The name of the device.
-            device_entry(str): The entry of the device
-
-        Returns:
-            list|np.ndarray|None: X data for the curve.
-        """
-        x_data = None
-        new_suffix = None
-        previous_x_device = self._current_x_device
-        data, access_key = self._fetch_scan_data_and_access()
-
-        # 1 User wants custom signal
-        if self.x_axis_mode["name"] not in ["timestamp", "index", "auto"]:
-            device_x = self.x_axis_mode["name"]
-            signal_x = self.x_axis_mode.get("entry", None)
-            if signal_x is None:
-                signal_x = self.entry_validator.validate_signal(device_x, None)
-            # if the motor was not scanned, an empty list is returned and curves are not updated
-            if access_key == "val":  # live data
-                x_data = data.get(device_x, {}).get(signal_x, {}).get(access_key, [0])
-            else:  # history data
-                entry_obj = data.get(device_x, {}).get(signal_x)
-                x_data = entry_obj.read()["value"] if entry_obj else [0]
-            new_suffix = f" (custom: {device_x}-{signal_x})"
-            self._current_x_device = (device_x, signal_x)
-
-        # 2 User wants timestamp
-        if self.x_axis_mode["name"] == "timestamp":
-            if access_key == "val":  # live
-                x_data = data.get(device_name, {}).get(device_entry, None)
-                if x_data is None:
-                    return None
-                else:
-                    timestamps = x_data.timestamps
-            else:  # history data
-                entry_obj = data.get(device_name, {}).get(device_entry)
-                timestamps = entry_obj.read()["timestamp"] if entry_obj else [0]
-            x_data = timestamps
-            new_suffix = " (timestamp)"
-            self._current_x_device = None
-
-        # 3 User wants index
-        if self.x_axis_mode["name"] == "index":
-            x_data = None
-            new_suffix = " (index)"
-            self._current_x_device = None
-
-        # 4 Best effort automatic mode
-        if self.x_axis_mode["name"] is None or self.x_axis_mode["name"] == "auto":
-            auto_axis = self._scan_auto_axis()
-            if auto_axis == "index":
-                x_data = None
-                new_suffix = " (auto: index)"
-                self._current_x_device = None
-            else:
-                device_x, signal_x = auto_axis
-                if access_key == "val":
-                    x_data = data.get(device_x, {}).get(signal_x, {}).get(access_key, None)
-                else:
-                    entry_obj = data.get(device_x, {}).get(signal_x)
-                    x_data = entry_obj.read()["value"] if entry_obj else None
-                new_suffix = f" (auto: {device_x}-{signal_x})"
-                self._current_x_device = auto_axis
-        self._update_x_label_suffix(new_suffix)
-        if previous_x_device != self._current_x_device:
-            self._refresh_alignment_state(force_readback=True)
-        return x_data
-
     def _update_x_label_suffix(self, new_suffix: str):
         """
         Update x_label so it ends with `new_suffix`, removing any old suffix.
@@ -2720,7 +3194,6 @@ class Waveform(PlotBase):
         # Reset sync/async curve lists
         self._async_curves.clear()
         self._sync_curves.clear()
-        self._async_streams_setup = {}
         found_async = False
         found_sync = False
         mode = "sync"
@@ -2736,8 +3209,6 @@ class Waveform(PlotBase):
             category = classify_device_signal(self.dev.get(dev_name), entry)
             if category == SignalCategory.ASYNC or dev_name in readout_priority_async:
                 self._async_curves.append(curve)
-                if hasattr(self.scan_item, "live_data"):
-                    self._setup_async_curve(curve)
                 found_async = True
             elif category == SignalCategory.SYNC or dev_name in readout_priority_sync:
                 self._sync_curves.append(curve)
@@ -2841,14 +3312,14 @@ class Waveform(PlotBase):
                 self.scan_id = self.scan_item.scan_id
 
         self.update_scan_info_from_source(self.scan_item)
-        self._emit_signal_update()
-
-    def _emit_signal_update(self):
-        self._categorise_device_curves()
-
+        self._mode = self._categorise_device_curves()
         self.setup_dap_for_scan()
-        self.sync_signal_update.emit()
-        self.async_signal_update.emit()
+        # The data flows through the DataAPI: a still-running scan is followed
+        # live, a terminal scan is served by the history plugin.
+        if hasattr(self.scan_item, "live_data"):
+            self._setup_data_api_subscription(scan=ScanTarget.LIVE)
+        else:
+            self._setup_data_api_subscription(scan=self.scan_id)
 
     ################################################################################
     # Utility Methods
@@ -2864,37 +3335,35 @@ class Waveform(PlotBase):
             mem_bytes = info[first_key]["value"]["mem_size"]
         return mem_bytes / (1024 * 1024)
 
-    def _check_dataset_size_and_confirm(self, dataset_obj, device_entry: str) -> bool:
+    @staticmethod
+    def _describe_dataset(source: tuple[str, str] | None, shape: tuple[int, ...] | None) -> str:
         """
-        Check the size of the dataset and confirm with the user if it exceeds the limit.
+        Human-readable identity and extent of a dataset for the dialog.
 
         Args:
-            dataset_obj: The dataset object containing the information.
-            device_entry( str): The specific device entry to check.
+            source(tuple[str, str] | None): (device, entry) of the dataset.
+            shape(tuple[int, ...] | None): Stored dataset shape.
 
         Returns:
-            bool: True if the dataset is within the size limit or user confirmed to load it,
-                  False if the dataset exceeds the size limit and user declined to load it.
+            str: A sentence naming the dataset and its number of points.
         """
-        try:
-            size_mb = self._dataset_size_mb(dataset_obj, device_entry)
-            logger.info(f"Dataset size: {size_mb:.1f} MB")
-        except Exception as exc:  # noqa: BLE001
-            logger.error(f"Unable to evaluate dataset size: {exc}")
-            return True
-
-        if size_mb <= self.config.max_dataset_size_mb:
-            return True
-        logger.warning(
-            f"Attempt to load large dataset: {size_mb:.1f} MB "
-            f"(limit {self.config.max_dataset_size_mb} MB)"
+        name = f"'{source[0]}-{source[1]}'" if source else "The selected dataset"
+        if not shape:
+            return f"{name} (size unknown)"
+        if len(shape) == 1:
+            return f"{name} holds {shape[0]:,} points"
+        per_point = int(np.prod(shape[1:]))
+        return (
+            f"{name} holds {shape[0]:,} points x {per_point:,} samples "
+            f"({int(np.prod(shape)):,} values, shape {tuple(shape)})"
         )
-        if self._skip_large_dataset_warning:
-            logger.info("Skipping large dataset warning dialog.")
-            return False
-        return self._confirm_large_dataset(size_mb)
 
-    def _confirm_large_dataset(self, size_mb: float) -> bool:
+    def _confirm_large_dataset(
+        self,
+        size_mb: float,
+        source: tuple[str, str] | None = None,
+        shape: tuple[int, ...] | None = None,
+    ) -> bool:
         """
         Confirm with the user whether to load a large dataset with dialog popup.
         Also allows the user to adjust the maximum dataset size limit and if user
@@ -2902,6 +3371,9 @@ class Waveform(PlotBase):
 
         Args:
             size_mb(float): Size of the dataset in MB.
+            source(tuple[str, str] | None): (device, entry) of the dataset, shown
+                in the dialog so the user knows which curve is affected.
+            shape(tuple[int, ...] | None): Stored shape, shown as a point count.
 
         Returns:
             bool: True if the user confirmed to load the dataset, False otherwise.
@@ -2936,8 +3408,8 @@ class Waveform(PlotBase):
         # widget layout
         main_dialog_layout.addWidget(
             QLabel(
-                f"The selected dataset is {size_mb:.1f} MB which exceeds the "
-                f"current limit of {self.config.max_dataset_size_mb} MB.\n"
+                f"{self._describe_dataset(source, shape)} and is {size_mb:.1f} MB, "
+                f"which exceeds the current limit of {self.config.max_dataset_size_mb} MB.\n"
             )
         )
         main_dialog_layout.addLayout(limit_adjustment_layout)
@@ -3065,10 +3537,9 @@ class Waveform(PlotBase):
         """
         Cleanup the widget by disconnecting signals and closing dialogs.
         """
-        # Stop all update proxies first, so no queued update is delivered into the widget
-        # while (or after) it is torn down.
-        cleanup_signal_proxy(self.proxy_update_sync)
-        cleanup_signal_proxy(self.proxy_update_async)
+        self._shutting_down = True
+        self._cleanup_data_api_subscription()
+        self._cleanup_history_subscriptions()
         self.proxy_dap_request.cleanup()
         if self._alignment_controller is not None:
             self._alignment_controller.cleanup()

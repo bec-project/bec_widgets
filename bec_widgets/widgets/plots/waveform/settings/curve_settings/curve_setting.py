@@ -57,6 +57,10 @@ class CurveSetting(SettingWidget):
 
         self.device_x_label = QLabel("Device")
         self.device_x = DeviceComboBox(parent=self)
+        # Offer only devices that can be aligned with every device curve.
+        compatible = getattr(self.target_widget, "compatible_x_devices", lambda: None)()
+        if compatible is not None:
+            self.device_x.set_available_devices(compatible)
         self.device_x.insertItem(0, "")
         self.device_x.setEditable(True)
         self.device_x.setMinimumWidth(180)

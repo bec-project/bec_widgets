@@ -20,7 +20,6 @@ class AlignmentContext:
         positioner_name: Name of the resolved x-axis positioner, if available.
         precision: Decimal precision to use for readback and target labels.
         limits: Optional positioner limits for the draggable target line.
-        readback: Current cached positioner readback value.
         has_dap_curves: Whether the waveform currently contains any DAP curves.
         force_readback: Whether the embedded positioner should refresh its readback immediately.
     """
@@ -29,7 +28,6 @@ class AlignmentContext:
     positioner_name: str | None
     precision: int = 3
     limits: tuple[float, float] | None = None
-    readback: float | None = None
     has_dap_curves: bool = False
     force_readback: bool = False
 
@@ -80,7 +78,8 @@ class WaveformAlignmentController(QObject):
         self._positioner_name = context.positioner_name
         self._precision = context.precision
         self._limits = context.limits
-        self._readback = context.readback
+        if previous_name != context.positioner_name:
+            self._readback = None
 
         self._panel.set_positioner_device(context.positioner_name)
         self._panel.set_positioner_enabled(context.visible and context.positioner_name is not None)
@@ -97,8 +96,8 @@ class WaveformAlignmentController(QObject):
             if self._panel.target_active:
                 self._clear_target_line()
 
-        if context.readback is not None:
-            self.update_position(context.readback)
+        if self._readback is not None:
+            self.update_position(self._readback)
 
         if self._panel.target_active:
             if previous_name != context.positioner_name or self._target_line is None:
@@ -130,6 +129,9 @@ class WaveformAlignmentController(QObject):
         self._marker_line.label.setText(
             f"{self._positioner_name}: {self._readback:.{self._precision}f}"
         )
+        if self._panel.target_active and self._target_line is None:
+            self._show_target_line()
+            self._refresh_target_controls()
         self.autoscale_requested.emit()
 
     @SafeSlot(dict, dict)
@@ -231,7 +233,7 @@ class WaveformAlignmentController(QObject):
         self._marker_line = None
 
     def _show_target_line(self):
-        if not self._visible or self._positioner_name is None:
+        if not self._visible or self._positioner_name is None or self._readback is None:
             return
 
         if self._target_line is None:
@@ -250,7 +252,7 @@ class WaveformAlignmentController(QObject):
             self._plot_item.addItem(self._target_line)
         self._refresh_target_line_metadata()
 
-        value = 0.0 if self._readback is None else self._readback
+        value = self._readback
         if self._limits is not None:
             value = min(max(value, self._limits[0]), self._limits[1])
         self._target_line.setValue(value)

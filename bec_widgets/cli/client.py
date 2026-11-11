@@ -6160,8 +6160,6 @@ class ViewBase(RPCBase):
 
 
 class Waveform(RPCBase):
-    """Widget for plotting waveforms."""
-
     _IMPORT_MODULE = "bec_widgets.widgets.plots.waveform.waveform"
 
     @rpc_call
