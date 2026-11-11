@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import numpy as np
 import pyqtgraph as pg
 from bec_lib import bec_logger
+from bec_lib.data_api import CorrelationMode
 from bec_lib.endpoints import MessageEndpoints
 from pydantic import BaseModel, Field, field_validator
 from pydantic_core import PydanticCustomError
@@ -14,6 +16,7 @@ from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_signal_proxy import cleanup_signal_proxy
 from bec_widgets.utils.colors import Colors, apply_theme
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.qt_data_subscription import QtDataSubscription
 from bec_widgets.utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.toolbars.toolbar import MaterialIconAction
 from bec_widgets.widgets.plots.motor_map.settings.motor_map_settings import MotorMapSettings
@@ -147,12 +150,24 @@ class MotorMap(PlotBase):
         self.coord_label = None
         self.motor_map_settings = None
 
+        # Data delivery through the DataAPI device streams (readback), paired
+        # into (x, y) rows by the backend's continuous correlation.
+        self._data_bridge: QtDataSubscription | None = None
+        self._connected_limit_endpoints: list = []
+        # First row ordinal shown in the trail (advanced by reset_history)
+        # and the last one seen.
+        self._trail_start: int = 0
+        self._last_row: int | None = None
+        self._data_binding: tuple[str, int] | None = None
+
         # Connect slots
         self.proxy_update_plot = pg.SignalProxy(
             self.update_signal, rateLimit=25, slot=self._update_plot
         )
         self._init_motor_map_toolbar()
         self._add_motor_map_settings()
+        if self.device_x and self.device_y:
+            self.map(self.device_x, self.device_y, suppress_errors=True)
 
     ################################################################################
     # Widget Specific GUI interactions
@@ -517,7 +532,14 @@ class MotorMap(PlotBase):
     def reset_history(self):
         """
         Reset the history of the motor map.
+
+        Updates are full-state snapshots, so rows up to the last one seen are
+        hidden from now on instead of merely dropped from the buffer.
         """
+        if not self._buffer["x"] or not self._buffer["y"]:
+            return
+        if self._last_row is not None:
+            self._trail_start = self._last_row + 1
         self._buffer["x"] = [self._buffer["x"][-1]]
         self._buffer["y"] = [self._buffer["y"][-1]]
         self.update_signal.emit()
@@ -529,6 +551,9 @@ class MotorMap(PlotBase):
     def _update_plot(self, _=None):
         """Update the motor map plot."""
         if self._trace is None:
+            return
+        if not self._buffer["x"] or not self._buffer["y"]:
+            self._trace.setData(x=[], y=[], size=self.config.scatter_size)
             return
         # If the number of points exceeds max_points, delete the oldest points
         if len(self._buffer["x"]) > self.config.max_points:
@@ -567,62 +592,113 @@ class MotorMap(PlotBase):
         # Update the crosshair
         self._set_motor_indicator_position(current_x, current_y)
 
-    @SafeSlot(dict, dict)
-    def on_device_readback(self, msg: dict, metadata: dict) -> None:
+    @SafeSlot(object)
+    def _on_data_update(self, update) -> None:
         """
-        Update the motor map plot with the new motor position.
+        Update the motor map trail from one columnar DataAPI update.
+
+        The two readbacks form one continuous correlation group: the backend
+        holds each motor's latest position and appends a paired (x, y) row on
+        every new sample, so the update's aligned columns *are* the trail.
+        Rows before :meth:`reset_history` are skipped.
 
         Args:
-            msg(dict): Message from the device readback.
-            metadata(dict): Metadata of the message.
+            update (SubscriptionUpdate): Full-state snapshot of the paired
+                readback streams (``"continuous"`` group).
         """
         device_x = self.config.device_x.device
         device_y = self.config.device_y.device
-
         if device_x is None or device_y is None:
             return
-
-        if device_x in msg["signals"]:
-            x = msg["signals"][device_x]["value"]
-            self._buffer["x"].append(x)
-            self._buffer["y"].append(self._buffer["y"][-1])
-
-        elif device_y in msg["signals"]:
-            y = msg["signals"][device_y]["value"]
-            self._buffer["y"].append(y)
-            self._buffer["x"].append(self._buffer["x"][-1])
-
+        binding = (update.scan_id, update.generation)
+        if binding != self._data_binding:
+            self._data_binding = binding
+            self._trail_start = 0
+            self._last_row = None
+            self._buffer = {"x": [], "y": []}
+            for item in (self.v_line, self.h_line, self.coord_label):
+                if item is not None:
+                    item.hide()
+            self.update_signal.emit()
+        columns = update.aligned()
+        xs = columns.get((device_x, device_x))
+        ys = columns.get((device_y, device_y))
+        ordinals = update.aligned_ordinals
+        if xs is None or ys is None or not len(ordinals):
+            # Wait until the DataAPI has a reading from both motors.
+            return
+        start = 0
+        if self._trail_start:
+            start = int(np.searchsorted(np.asarray(ordinals), self._trail_start))
+        if start >= len(xs):
+            return
+        self._buffer["x"] = list(xs[start:])
+        self._buffer["y"] = list(ys[start:])
+        self._last_row = int(ordinals[-1])
+        if self.v_line is None:
+            self._add_coordinates_crosshair(self._buffer["x"][-1], self._buffer["y"][-1])
         self.update_signal.emit()
 
     def _connect_motor_to_slots(self):
-        """Connect motors to slots."""
+        """Connect the motors to the DataAPI stream and the limits dispatcher."""
         self._disconnect_current_motors()
 
-        endpoints_readback = [
-            MessageEndpoints.device_readback(self.config.device_x.device),
-            MessageEndpoints.device_readback(self.config.device_y.device),
-        ]
+        # device_limits is config metadata (not a data series) and stays on
+        # the dispatcher.
         endpoints_limits = [
             MessageEndpoints.device_limits(self.config.device_x.device),
             MessageEndpoints.device_limits(self.config.device_y.device),
         ]
-
-        self.bec_dispatcher.connect_slot(self.on_device_readback, endpoints_readback)
         self.bec_dispatcher.connect_slot(self.on_device_limits, endpoints_limits)
+        self._connected_limit_endpoints = endpoints_limits
+
+        self._setup_data_api_subscription()
 
     def _disconnect_current_motors(self):
-        """Disconnect the current motors from the slots."""
-        if self.config.device_x.device is not None and self.config.device_y.device is not None:
-            endpoints_readback = [
-                MessageEndpoints.device_readback(self.config.device_x.device),
-                MessageEndpoints.device_readback(self.config.device_y.device),
-            ]
-            endpoints_limits = [
-                MessageEndpoints.device_limits(self.config.device_x.device),
-                MessageEndpoints.device_limits(self.config.device_y.device),
-            ]
-            self.bec_dispatcher.disconnect_slot(self.on_device_readback, endpoints_readback)
-            self.bec_dispatcher.disconnect_slot(self.on_device_limits, endpoints_limits)
+        """Disconnect the current motors from the data stream and the limits slot.
+
+        Disconnects the endpoints that were actually connected: at this point
+        the config may already carry the new motor names.
+        """
+        self._cleanup_data_api_subscription()
+        if self._connected_limit_endpoints:
+            self.bec_dispatcher.disconnect_slot(
+                self.on_device_limits, self._connected_limit_endpoints
+            )
+            self._connected_limit_endpoints = []
+
+    def _setup_data_api_subscription(self):
+        """(Re)create the scan-less DataAPI subscription for the configured motors."""
+        self._cleanup_data_api_subscription()
+        device_x = self.config.device_x.device
+        device_y = self.config.device_y.device
+        if not device_x or not device_y:
+            return
+        try:
+            self._data_bridge = QtDataSubscription(
+                self.client,
+                devices=[device_x, device_y],
+                scan=None,
+                parent=self,
+                min_emit_interval=self.update_interval_s,
+                max_points=self.config.max_points,
+                correlation=CorrelationMode.CONTINUOUS,
+            )
+            self._data_bridge.updated.connect(self._on_data_update)
+        except Exception as exc:
+            logger.warning(f"Failed to configure motor map data subscription: {exc}")
+            self._cleanup_data_api_subscription()
+
+    def _cleanup_data_api_subscription(self):
+        self._trail_start = 0
+        self._last_row = None
+        self._data_binding = None
+        if self._data_bridge is None:
+            return
+        try:
+            self._data_bridge.close()
+        finally:
+            self._data_bridge = None
 
     ################################################################################
     # Utility Methods
@@ -678,21 +754,11 @@ class MotorMap(PlotBase):
         self.plot_item.addItem(self._trace)
         self._trace.setZValue(0)
 
-        # Add the crosshair for initial motor coordinates
-        initial_position_x = self._get_motor_init_position(
-            self.config.device_x.device, self.config.precision
-        )
-        initial_position_y = self._get_motor_init_position(
-            self.config.device_y.device, self.config.precision
-        )
-
-        self._buffer["x"] = [initial_position_x]
-        self._buffer["y"] = [initial_position_y]
-
-        self._trace.setData([initial_position_x], [initial_position_y])
-
-        # Add initial crosshair
-        self._add_coordinates_crosshair(initial_position_x, initial_position_y)
+        # The DataAPI backfill supplies the initial coordinates. Until then,
+        # show no position rather than inventing an initial motor reading.
+        self.v_line = None
+        self.h_line = None
+        self.coord_label = None
 
         # Set default labels for the plot
         self.set_x_label_suffix(f"[{self.config.device_x.device}-{self.config.device_x.device}]")
@@ -746,6 +812,9 @@ class MotorMap(PlotBase):
         self.h_line.setPos(y)
         self.coord_label.setText(text)
         self.coord_label.setPos(x, y)
+        self.v_line.show()
+        self.h_line.show()
+        self.coord_label.show()
 
     def _make_limit_map(self, limits_x: list | None, limits_y: list | None) -> FilledRectItem:
         """
@@ -803,21 +872,6 @@ class MotorMap(PlotBase):
             self._limit_map.setZValue(-1)
             self.plot_item.addItem(self._limit_map)
 
-    def _get_motor_init_position(self, name: str, precision: int) -> float:
-        """
-        Get the motor initial position from the config.
-
-        Args:
-            name(str): Motor name.
-            precision(int): Decimal precision of the motor position.
-
-        Returns:
-            float: Motor initial position.
-        """
-        entry = self.entry_validator.validate_signal(name, None)
-        init_position = round(float(self.dev[name].read(cached=True)[entry]["value"]), precision)
-        return init_position
-
     def _sync_motor_map_selection_toolbar(self):
         """
         Sync the motor map selection toolbar with the current motor map.
@@ -858,10 +912,14 @@ class MotorMap(PlotBase):
     ################################################################################
     # Cleanup
     ################################################################################
+
     def cleanup(self):
         """
-        Cleanup the widget by detaching the plot update proxy and closing the settings popup.
+        Cleanup the widget: close the DataAPI bridge, stop the plot update proxy and
+        close the settings popup. The limits dispatcher slot is released by
+        BECWidget.cleanup via disconnect_owner.
         """
+        self._cleanup_data_api_subscription()
         # Stop the update proxy first, so no queued update reaches the closed plot.
         cleanup_signal_proxy(self.proxy_update_plot)
         if self.motor_map_settings is not None:
