@@ -7,6 +7,7 @@ from qtpy.QtWidgets import QFrame, QScrollArea, QVBoxLayout
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.settings_dialog import SettingWidget
 from bec_widgets.utils.ui_loader import UILoader
+from bec_widgets.widgets.plots.plot_base import connect_alignment_filter
 
 
 class HeatmapSettings(SettingWidget):
@@ -49,6 +50,13 @@ class HeatmapSettings(SettingWidget):
             self.ui.button_apply.clicked.connect(self.accept_changes)
 
         self.ui.device_x.setFocus()
+        # y and z offer only devices that can be aligned with the chosen x.
+        connect_alignment_filter(
+            self.target_widget,
+            self.ui.device_x,
+            [self.ui.device_y, self.ui.device_z],
+            anchor_signal_combo=self.ui.signal_x,
+        )
 
     @SafeSlot()
     def fetch_all_properties(self):
