@@ -831,3 +831,14 @@ def test_update_rate_propagates_to_bridges(qtbot, mocked_client):
         pb.update_rate = 5
     assert signal.args == ["update_rate", 5.0]
     bridge._subscription.set_min_emit_interval.assert_called_once_with(0.2)
+
+
+def test_update_rate_widget_defaults():
+    """Per-widget defaults preserve the benchmarked rates."""
+    from bec_widgets.widgets.plots.heatmap.heatmap import Heatmap
+    from bec_widgets.widgets.plots.image.image import Image
+    from bec_widgets.widgets.plots.waveform.waveform import Waveform
+
+    assert Waveform.DEFAULT_UPDATE_RATE == 15.0
+    assert Heatmap.DEFAULT_UPDATE_RATE == 5.0
+    assert Image.DEFAULT_UPDATE_RATE == 25.0
