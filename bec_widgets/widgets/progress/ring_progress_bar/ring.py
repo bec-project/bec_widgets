@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable, Literal
 
+from bec_lib.data_api import SubscriptionUpdate
 from bec_lib.endpoints import EndpointInfo, MessageEndpoints
 from bec_lib.logger import bec_logger
 from pydantic import Field
@@ -13,6 +14,7 @@ from bec_widgets import BECWidget
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.colors import Colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.qt_data_subscription import QtDataSubscription
 from bec_widgets.widgets.progress.progress_backend import BECProgressTracker, ProgressSnapshot
 
 logger = bec_logger.logger
@@ -82,6 +84,8 @@ class Ring(BECWidget, QWidget):
         self._color: QColor = self.convert_color(self.config.color)
         self._background_color: QColor = self.convert_color(self.config.background_color)
         self.registered_slot: tuple[Callable, str | EndpointInfo] | None = None
+        self._data_subscription: QtDataSubscription | None = None
+        self._source_key: tuple[str, str] | None = None
         self.progress_tracker = BECProgressTracker(self.bec_dispatcher, parent=self)
         self.progress_tracker.progress_updated.connect(self._on_progress_snapshot)
         self.RID = None
@@ -243,6 +247,11 @@ class Ring(BECWidget, QWidget):
                 raise ValueError(f"Unsupported mode: {mode}")
 
     def _disconnect_registered_update(self):
+        if self._data_subscription is not None:
+            self._data_subscription.close()
+            self._data_subscription.deleteLater()
+            self._data_subscription = None
+        self._source_key = None
         if self.registered_slot is not None:
             self.bec_dispatcher.disconnect_slot(*self.registered_slot)
             self.registered_slot = None
@@ -317,7 +326,7 @@ class Ring(BECWidget, QWidget):
         When no signal is provided, the ring selects the first available progress
         signal, then the first hinted readback signal, then the first normal
         readback signal. Progress signals use the device_progress endpoint;
-        readback signals use the device_readback endpoint.
+        readback signals are delivered through DataAPI.
 
         Returns:
             The selected signal name, or an empty string if the device is not known.
@@ -362,9 +371,16 @@ class Ring(BECWidget, QWidget):
             return signal
 
         if signal in hinted_signals or signal in normal_signals:
-            endpoint = MessageEndpoints.device_readback(device)
-            self.bec_dispatcher.connect_slot(self.on_device_readback, endpoint)
-            self.registered_slot = (self.on_device_readback, endpoint)
+            entry = signal
+            for component, info in dev_obj._info.get("signals", {}).items():
+                if signal in {component, info.get("component_name"), info.get("obj_name")}:
+                    entry = info.get("obj_name", signal)
+                    break
+            self._source_key = (device, entry)
+            self._data_subscription = QtDataSubscription(
+                self.client, sources=[self._source_key], scan=None, parent=self, max_points=1
+            )
+            self._data_subscription.updated.connect(self._on_data_update)
             return signal
 
         raise ValueError(
@@ -373,24 +389,15 @@ class Ring(BECWidget, QWidget):
             f"available readback signals: {hinted_signals + normal_signals}."
         )
 
-    @SafeSlot(dict, dict)
-    def on_device_readback(self, msg, meta):
-        """
-        Update the ring widget with the device readback.
-
-        Args:
-            msg(dict): Message with the device readback
-            meta(dict): Metadata for the message
-        """
-        device = self.config.device
-        if device is None:
+    @SafeSlot(object)
+    def _on_data_update(self, update: SubscriptionUpdate):
+        """Display the latest measured value from the DataAPI snapshot."""
+        source = update.sources.get(self._source_key)
+        if source is None or not len(source.values):
             return
-        signal = self.config.signal or device
-        value = msg.get("signals", {}).get(signal, {}).get("value", None)
-        if value is None:
-            return
-        self.set_value(value)
-        self.update()
+        value = source.values[-1]
+        if value is not None:
+            self.set_value(value)
 
     @SafeSlot(dict, dict)
     def on_device_progress(self, msg, meta):
@@ -640,10 +647,7 @@ class Ring(BECWidget, QWidget):
         """
         Cleanup the ring widget.
         """
-        # Dispatcher slots are released by BECWidget.cleanup via disconnect_owner;
-        # no per-widget disconnect is needed at teardown.
-        self.registered_slot = None
-        self.progress_tracker.cleanup()
+        self._disconnect_registered_update()
         self._hover_animation.stop()
         super().cleanup()
 
