@@ -13,7 +13,7 @@ dependencies = [
   "PySide6==6.11.1",
   "PySide6-QtAds==5.0.0",
   "bec_ipython_client>=4.5",       # needed for jupyter console
-  "bec_lib>=4.5",
+  "bec_lib>=4.9",                  # the first release with bec_lib.data_api
   "bec_qthemes~=1.0, >=1.3.7",
   "black>=26,<27",                 # needed for bw-generate-cli
   "copier~=9.7",
