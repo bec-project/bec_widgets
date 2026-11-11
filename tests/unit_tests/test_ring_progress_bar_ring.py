@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, call
 
 import pytest
 from bec_lib.endpoints import MessageEndpoints
+from bec_lib.messages import DeviceMessage
 from qtpy.QtGui import QColor
 
 from bec_widgets.tests.client_mocks import mocked_client
@@ -122,7 +123,8 @@ def test_set_update_to_device(ring_widget_with_device):
     assert ring_widget.config.mode == "device"
     assert ring_widget.config.device == test_device
     assert ring_widget.config.signal == "samx"
-    ring_widget.bec_dispatcher.connect_slot.assert_called_once()
+    assert ring_widget._data_subscription.sources == [("samx", "samx")]
+    ring_widget.bec_dispatcher.connect_slot.assert_not_called()
 
 
 def test_set_update_from_device_to_manual(ring_widget_with_device):
@@ -189,12 +191,13 @@ def test_set_update_same_device_resubscribes(ring_widget_with_device):
     ring_widget.bec_dispatcher.connect_slot.reset_mock()
     ring_widget.bec_dispatcher.disconnect_slot.reset_mock()
 
+    previous_subscription = ring_widget._data_subscription
     # Set to same device mode again (should resubscribe)
     ring_widget.set_update("device", device=test_device)
 
-    # Should disconnect and reconnect
-    ring_widget.bec_dispatcher.disconnect_slot.assert_called_once()
-    ring_widget.bec_dispatcher.connect_slot.assert_called_once()
+    assert previous_subscription._closed
+    assert ring_widget._data_subscription is not previous_subscription
+    ring_widget.bec_dispatcher.connect_slot.assert_not_called()
 
 
 def test_set_update_invalid_mode(ring_widget):
@@ -490,10 +493,8 @@ def test_update_device_connection_resolves_component_name_to_readback_signal(
     signal = ring_widget._update_device_connection("samx", "setpoint")
 
     assert signal == "setpoint"
-    ring_widget.bec_dispatcher.connect_slot.assert_called_once()
-    call_args = ring_widget.bec_dispatcher.connect_slot.call_args
-    assert call_args[0][0] == ring_widget.on_device_readback
-    assert call_args[0][1] == MessageEndpoints.device_readback("samx")
+    ring_widget.bec_dispatcher.connect_slot.assert_not_called()
+    assert ring_widget._data_subscription.sources == [("samx", "samx_setpoint")]
 
 
 def test_update_device_connection_falls_back_to_hinted_signal(ring_widget_with_device):
@@ -503,10 +504,8 @@ def test_update_device_connection_falls_back_to_hinted_signal(ring_widget_with_d
     signal = ring_widget._update_device_connection("samx", "")
 
     assert signal == "samx"
-    ring_widget.bec_dispatcher.connect_slot.assert_called_once()
-    call_args = ring_widget.bec_dispatcher.connect_slot.call_args
-    assert call_args[0][0] == ring_widget.on_device_readback
-    assert call_args[0][1] == MessageEndpoints.device_readback("samx")
+    ring_widget.bec_dispatcher.connect_slot.assert_not_called()
+    assert ring_widget._data_subscription.sources == [("samx", "samx")]
 
 
 def test_update_device_connection_falls_back_to_normal_signal(ring_widget_with_device):
@@ -526,10 +525,8 @@ def test_update_device_connection_falls_back_to_normal_signal(ring_widget_with_d
     signal = ring_widget._update_device_connection("samx", "")
 
     assert signal == "setpoint"
-    ring_widget.bec_dispatcher.connect_slot.assert_called_once()
-    call_args = ring_widget.bec_dispatcher.connect_slot.call_args
-    assert call_args[0][0] == ring_widget.on_device_readback
-    assert call_args[0][1] == MessageEndpoints.device_readback("samx")
+    ring_widget.bec_dispatcher.connect_slot.assert_not_called()
+    assert ring_widget._data_subscription.sources == [("samx", "samx_setpoint")]
 
 
 def test_update_device_connection_rejects_unusable_signal(ring_widget_with_device):
@@ -565,10 +562,8 @@ def test_update_device_connection_accepts_explicit_hinted_signal(ring_widget):
     signal = ring_widget._update_device_connection("samx", "samx")
 
     assert signal == "samx"
-    ring_widget.bec_dispatcher.connect_slot.assert_called_once()
-    call_args = ring_widget.bec_dispatcher.connect_slot.call_args
-    assert call_args[0][0] == ring_widget.on_device_readback
-    assert call_args[0][1] == MessageEndpoints.device_readback("samx")
+    ring_widget.bec_dispatcher.connect_slot.assert_not_called()
+    assert ring_widget._data_subscription.sources == [("samx", "samx")]
 
 
 def test_update_device_connection_no_device_manager(ring_widget):
@@ -635,60 +630,39 @@ def test_scan_progress_same_rid_no_min_max_update(ring_widget):
     assert ring_widget.config.value == 75
 
 
-###################################
-# on_device_readback tests
-###################################
+def test_ring_receives_cached_and_live_data_api_values(qtbot, ring_widget_with_device):
+    ring = ring_widget_with_device
+    ring.client.connector.set_and_publish(
+        MessageEndpoints.device_readback("samx"), DeviceMessage(signals={"samx": {"value": 12.34}})
+    )
+    ring.set_update("device", device="samx")
+    qtbot.waitUntil(lambda: ring.config.value == 12.34)
+    ring.client.connector.set_and_publish(
+        MessageEndpoints.device_readback("samx"), DeviceMessage(signals={"samx": {"value": 56.78}})
+    )
+    qtbot.waitUntil(lambda: ring.config.value == 56.78)
+    subscription = ring._data_subscription
+    ring.set_update("manual")
+    assert subscription._closed
+    assert ring._data_subscription is None
 
 
-def test_on_device_readback_updates_value(ring_widget):
-    ring_widget.config.device = "samx"
-    ring_widget.config.signal = "readback"
-
-    msg = {"signals": {"readback": {"value": 12.34}}}
-    meta = {}
-
-    ring_widget.on_device_readback(msg, meta)
-
-    assert ring_widget.config.value == 12.34
-
-
-def test_on_device_readback_uses_device_name_when_no_signal(ring_widget):
-    ring_widget.config.device = "samy"
-    ring_widget.config.signal = None
-
-    msg = {"signals": {"samy": {"value": 56.78}}}
-    meta = {}
-
-    ring_widget.on_device_readback(msg, meta)
-
-    assert ring_widget.config.value == 56.78
-
-
-def test_on_device_readback_no_device_returns_early(ring_widget):
-    ring_widget.config.device = None
-
-    msg = {"signals": {"samx": {"value": 99.99}}}
-    meta = {}
-
-    initial_value = ring_widget.config.value
-    ring_widget.on_device_readback(msg, meta)
-
-    # Value should not change
-    assert ring_widget.config.value == initial_value
-
-
-def test_on_device_readback_missing_signal_data(ring_widget):
-    ring_widget.config.device = "samx"
-    ring_widget.config.signal = "missing_signal"
-
-    msg = {"signals": {"other_signal": {"value": 11.11}}}
-    meta = {}
-
-    initial_value = ring_widget.config.value
-    ring_widget.on_device_readback(msg, meta)
-
-    # Value should not change when signal is missing
-    assert ring_widget.config.value == initial_value
+def test_ring_component_name_resolves_data_api_value(qtbot, ring_widget_with_device):
+    ring = ring_widget_with_device
+    ring.client.device_manager.devices["samx"]._info["signals"]["setpoint"] = {
+        "obj_name": "samx_setpoint",
+        "component_name": "setpoint",
+        "kind_str": "normal",
+    }
+    ring.client.connector.set_and_publish(
+        MessageEndpoints.device_readback("samx"),
+        DeviceMessage(signals={"samx_setpoint": {"value": 42.0}}),
+    )
+    ring.set_update("device", device="samx", signal="setpoint")
+    qtbot.waitUntil(lambda: ring.config.value == 42.0)
+    subscription = ring._data_subscription
+    ring.close()
+    assert subscription._closed
 
 
 ###################################
