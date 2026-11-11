@@ -950,6 +950,7 @@ class Curve(RPCBase):
             - symbol: str
             - symbol_color: str
             - symbol_size: int
+            - symbol_point_limit: int | None
             - pen_width: int
             - pen_style: Literal["solid", "dash", "dot", "dashdot"]
         """
@@ -990,6 +991,9 @@ class Curve(RPCBase):
     def set_symbol(self, symbol: "str"):
         """
         Change the symbol of the curve.
+
+        Above ``symbol_point_limit`` points the symbol stays hidden until the data
+        shrinks or the limit is raised with ``set(symbol_point_limit=...)``.
 
         Args:
             symbol(str): Symbol of the curve.
