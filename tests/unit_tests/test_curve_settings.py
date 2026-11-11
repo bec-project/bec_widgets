@@ -477,6 +477,30 @@ def test_export_data_history_curve(curve_tree_fixture, scan_history_factory):
     assert exported["label"] == "bpm4i-bpm4i-scan-2"
 
 
+def test_export_data_validates_a_typed_signal(curve_tree_fixture):
+    """
+    A signal typed into the row that the device does not have is reported as such.
+    """
+    curve_tree, _ = curve_tree_fixture
+    device_row = curve_tree.add_new_curve(device="bpm4i", signal="bpm4i")
+    device_row.entry_edit.setEditText("not_a_signal")
+
+    with pytest.raises(ValueError, match="'not_a_signal' not found in device 'bpm4i'"):
+        device_row.export_data()
+
+
+def test_entry_validator_takes_device_and_signal_keywords(curve_tree_fixture):
+    """
+    The validator names its parameters like its callers do: device and signal.
+    """
+    curve_tree, _ = curve_tree_fixture
+    validator = curve_tree.add_new_curve(device="bpm4i", signal="bpm4i").entry_validator
+
+    assert validator.validate_signal(device="bpm4i", signal="bpm4i") == "bpm4i"
+    assert validator.validate_signal(device="bpm4i") == "bpm4i"
+    assert validator.validate_signal("bpm4i", "bpm4i") == "bpm4i"
+
+
 ##################################################
 # Staging of edits (issue #1314)
 ##################################################
