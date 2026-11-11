@@ -4139,6 +4139,9 @@ class MotorMap(RPCBase):
     def reset_history(self):
         """
         Reset the history of the motor map.
+
+        Updates are full-state snapshots, so rows up to the last one seen are
+        hidden from now on instead of merely dropped from the buffer.
         """
 
     @rpc_call
