@@ -65,6 +65,7 @@ else:
 
 
 _OverlayAxis = Literal["index", "timestamp"] | tuple[str, str]
+_MAX_ACCUMULATED_CURVES = 50
 
 
 @dataclass
@@ -295,6 +296,11 @@ class Waveform(PlotBase):
             is_async = live in self._async_curves
             axis = auto_axis if self.x_mode == "auto" else self._overlay_axis(is_async)
             snapshot_axis = self._curve_data_axes.get(live)
+            oldest = (
+                next(iter(self._accumulated_curves))
+                if len(self._accumulated_curves) >= _MAX_ACCUMULATED_CURVES
+                else None
+            )
             config = CurveConfig(
                 label=label,
                 widget_class="Curve",
@@ -304,7 +310,11 @@ class Waveform(PlotBase):
                 scan_id=self.scan_id,
                 scan_number=scan_number,
                 current_x_mode=self.x_mode,
-                color=self._generate_color_from_palette(),
+                color=(
+                    oldest.config.color
+                    if oldest is not None
+                    else self._generate_color_from_palette()
+                ),
                 symbol=live.config.symbol,
                 symbol_size=live.config.symbol_size,
                 pen_width=live.config.pen_width,
@@ -315,6 +325,9 @@ class Waveform(PlotBase):
             curve = self._add_curve_object(name=label, config=config)
             if has_data:
                 curve.setData(x.copy(), y.copy())
+            if oldest is not None:
+                self.plot_item.removeItem(oldest)
+                self._curve_clean_up(oldest)
             self._history_curves.append(curve)
             self._accumulated_curves[curve] = _ScanOverlay(
                 auto_axis, snapshot_axis if has_data else None, axis, is_async

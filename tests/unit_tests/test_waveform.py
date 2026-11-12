@@ -655,6 +655,48 @@ def test_accumulate_scans_overlays_previous_device_data(
     assert wf.get_curve(saved.name()) is not None
 
 
+def test_accumulate_scans_evicts_oldest_overlays(
+    qtbot, mocked_client, monkeypatch, scan_history_factory
+):
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    inject_scan_history(wf, scan_history_factory, ("saved", 100))
+    wf.x_mode = "index"
+    saved = wf.plot("bpm4i", scan_id="saved")
+    live = wf.plot("bpm4i")
+    monkeypatch.setattr(wf, "_load_overlay", mock.Mock())
+    monkeypatch.setattr(
+        wf.queue.scan_storage,
+        "find_scan_by_ID",
+        lambda scan_id: create_dummy_scan_item(scan_id=scan_id, scan_number=int(scan_id)),
+    )
+    wf.toolbar.components.get_action("accumulate_scans").action.trigger()
+    wf.on_scan_status({"scan_id": "1"}, {})
+
+    def start_scan(number):
+        live.setData([0, 1], [number - 1, number])
+        wf.on_scan_status({"scan_id": str(number)}, {})
+
+    def overlay_ids():
+        return [
+            curve.config.scan_id
+            for curve in wf.curves
+            if curve.config.source == "history" and curve is not saved
+        ]
+
+    for number in range(2, 52):
+        start_scan(number)
+    assert overlay_ids() == [str(number) for number in range(1, 51)]
+    oldest = wf.get_curve("bpm4i-bpm4i-scan-1")
+
+    start_scan(52)
+    assert overlay_ids() == [str(number) for number in range(2, 52)]
+    assert wf.get_curve("bpm4i-bpm4i-scan-51").config.color == oldest.config.color
+    start_scan(53)
+    assert overlay_ids() == [str(number) for number in range(3, 53)]
+    assert wf.get_curve(saved.name()) is saved
+    assert wf.get_curve(live.name()) is live
+
+
 def test_accumulated_scan_uses_saved_points_and_hides_on_incompatible_auto_axis(
     qtbot, mocked_client, monkeypatch, scan_history_factory
 ):
