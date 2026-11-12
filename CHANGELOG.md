@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v3.44.0 (2026-11-12)
+
+### Bug Fixes
+
+- **waveform**: Cap accumulated scan overlays at 50
+  ([`a3f5a15`](https://github.com/bec-project/bec_widgets/commit/a3f5a15b7a5c484dc44f4e68e3ea44d9c008516e))
+
+### Features
+
+- **waveform**: Overlay successive scans
+  ([`956c8ff`](https://github.com/bec-project/bec_widgets/commit/956c8ff043f04c2e15d8465062907de344572ca0))
+
+
 ## v3.43.0 (2026-11-09)
 
 ### Bug Fixes
