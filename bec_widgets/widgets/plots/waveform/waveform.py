@@ -98,6 +98,16 @@ class WaveformConfig(ConnectionConfig):
 #: rendering: pyqtgraph's per-paint work is O(points) with a large constant,
 #: and a pixel column can only ever show a vertical range.
 DISPLAY_POINT_LIMIT = 1_000_000
+#: A stored column that would take more memory than this (MB, samples plus 8 bytes of row
+#: number per row) is not loaded whole by a history curve: the curve shows an overview and
+#: asks for the rows in view. The value was chosen empirically: below it a column loads
+#: whole within a fraction of a second. 0 switches view-driven loading off.
+VIEW_LIMIT_MB = 100.0
+#: Points asked for per pixel of the plot's width (two per bin: its smallest and largest sample).
+VIEW_POINTS_PER_PIXEL = 4
+#: Rows asked for on each side of the visible range, as a fraction of it, so that a pan or
+#: a small zoom-out needs no new read.
+VIEW_MARGIN = 1.0
 #: Envelope bins of a decimated display (output length = 2 * bins).
 DISPLAY_ENVELOPE_BINS = 250_000
 
@@ -287,6 +297,7 @@ class Waveform(PlotBase):
     _lod_timer: QTimer | None = None
     _lod_applying = False
     _load_progress_row: QWidget | None = None
+    _view_timer: QTimer | None = None
     """
     Widget for plotting waveforms.
     """
@@ -367,6 +378,10 @@ class Waveform(PlotBase):
         self._history_x_keys: dict[str, tuple[str, str] | None] = {}
         # History curves whose data has not arrived yet; the view ranges to it once.
         self._history_curves_awaiting_data: set[str] = set()
+        # History curves whose stored data is still arriving block by block, and the view
+        # range the plot was given for them (to tell whether the user changed it since).
+        self._history_curves_loading: set[str] = set()
+        self._history_view_range: list | None = None
         self._shutting_down = False
 
         # Scan data
@@ -2012,6 +2027,7 @@ class Waveform(PlotBase):
         if curve in self._history_curves:
             self._history_curves.remove(curve)
         self._history_curves_awaiting_data.discard(curve.name())
+        self._history_curves_loading.discard(curve.name())
         if curve in self._dap_curves:
             self._dap_curves.remove(curve)
 
@@ -2514,6 +2530,7 @@ class Waveform(PlotBase):
                     scan=scan_id,
                     parent=self,
                     min_emit_interval=self.update_interval_s,
+                    view_limit_bytes=self._view_limit_bytes(scan_id, sources),
                 )
                 bridge.updated.connect(self._on_history_data_update)
                 bridge.progress.connect(self._on_data_load_progress)
@@ -2592,6 +2609,10 @@ class Waveform(PlotBase):
         kept = []
         for source in sources:
             if (scan, tuple(source)) in self._size_confirmed_sources:
+                kept.append(source)
+                continue
+            if self._loads_as_view(scan, tuple(source), sources):
+                # Not loaded whole: nothing to ask, the curve says what it shows.
                 kept.append(source)
                 continue
             size = self._estimate_source_bytes(scan, tuple(source))
@@ -2779,15 +2800,30 @@ class Waveform(PlotBase):
         aligned_columns = update.aligned()
         updated_any = False
         first_data = False
+        grew = False
         for curve in history_curves:
             if self._render_curve_from_update(curve, update, aligned_columns, x_key):
                 updated_any = True
-                if curve.name() in self._history_curves_awaiting_data:
-                    self._history_curves_awaiting_data.discard(curve.name())
+                name = curve.name()
+                if name in self._history_curves_awaiting_data:
+                    self._history_curves_awaiting_data.discard(name)
                     first_data = True
-        if first_data:
+                if self._history_curve_is_loading(curve, update):
+                    self._history_curves_loading.add(name)
+                    grew = True
+                elif name in self._history_curves_loading:
+                    self._history_curves_loading.discard(name)
+                    grew = True
+        if self._view_box_follows() and all(c._full_bounds is not None for c in history_curves):
+            # The view box sets the range itself at the next paint, from the bounds of the
+            # whole series. A second range from here would use another padding and move
+            # the view twice per update.
+            pass
+        elif first_data or (grew and self._history_view_untouched()):
             # The history read finishes after the deferred autorange of plot() ran, and with
-            # clipToView the range would only see the points inside the old view.
+            # clipToView the range would only see the points inside the old view. A large
+            # scan arrives in blocks: the range follows it until it is complete, unless the
+            # user zoomed or panned in the meantime.
             for curve in history_curves:
                 curve.setClipToView(False)
             self.auto_range()
@@ -2795,6 +2831,46 @@ class Waveform(PlotBase):
                 curve.setClipToView(True)
         if updated_any:
             self.request_dap_update.emit()
+
+    @staticmethod
+    def _history_curve_is_loading(curve: Curve, update) -> bool:
+        """Whether more stored rows of the curve's source are still to come."""
+        signal = curve.config.signal
+        source = update.sources.get((signal.device, signal.signal)) if signal else None
+        if source is None or source.metadata.get("error"):
+            return False
+        view = source.metadata.get("view")
+        if view is not None:
+            return view["loaded_rows"] < view["total_rows"]
+        return not source.complete
+
+    def _view_box_follows(self) -> bool:
+        """Whether the view box autoranges both axes by itself."""
+        return self.auto_range_x and self.auto_range_y
+
+    def _history_view_untouched(self) -> bool:
+        """
+        Whether the plot still follows the loading curves: the view box ranges by itself,
+        or the plot shows the range the last autorange of the waveform gave it. A zoom or
+        pan, by mouse or by code, ends both.
+        """
+        if self._view_box_follows():
+            return True
+        if self._history_view_range is None:
+            return False
+        return bool(np.allclose(self.plot_item.vb.viewRange(), self._history_view_range))
+
+    def auto_range(self, value: bool = True):
+        """
+        On demand apply autorange to the plot item based on the visible curves.
+
+        Args:
+            value(bool): If True, apply autorange to the visible curves.
+        """
+        super().auto_range(value)
+        # The range is remembered: a history curve that still loads keeps the plot on its
+        # data for as long as the view is the one set here.
+        self._history_view_range = self.plot_item.vb.viewRange() if value else None
 
     def _render_curve_from_update(
         self, curve: Curve, update, aligned_columns: dict, x_key: tuple[str, str] | None
@@ -2818,6 +2894,10 @@ class Waveform(PlotBase):
         source = update.sources.get(key)
         if source is None:
             return False
+        if source.metadata.get("view") is not None:
+            # Held as an overview plus the rows in view, whatever its kind: drawn against
+            # its rows and registered for the rows the user looks at.
+            return self._render_view_curve(curve, update, source)
         if source.kind == SourceKind.MONITORED:
             return self._render_monitored_curve(curve, update, key, aligned_columns, x_key)
         return self._render_async_curve(curve, update, source, x_key)
@@ -2905,14 +2985,22 @@ class Waveform(PlotBase):
             # The raw series is kept on the curve so zooming re-decimates the
             # visible window at full fidelity (see _apply_lod_windows).
             x_arr = None if x_data is None else np.asarray(x_data)
-            curve._lod_raw = (x_arr, y_arr)
-            curve._lod_window = None
-            self._ensure_lod_hooks()
             x_dec, y_dec = _decimate_envelope(y_arr, x_arr)
+            x_ends = (0, n_points - 1) if x_arr is None else (x_arr[0], x_arr[-1])
+            curve._lod_raw = (x_arr, y_arr)
+            # The envelope holds the true extremes: the bounds of the whole series, whatever
+            # part of it the curve draws later.
+            curve._full_bounds = (
+                (float(min(*x_ends, np.nanmin(x_dec))), float(max(*x_ends, np.nanmax(x_dec)))),
+                (float(np.nanmin(y_dec)), float(np.nanmax(y_dec))),
+            )
+            curve._lod_window = (0, n_points)  # the envelope of everything is what it shows
+            self._ensure_lod_hooks()
             curve.setData(x_dec, y_dec)
             self._curve_data_axes[curve] = axis
             return True
         curve._lod_raw = None
+        curve._full_bounds = None
         if x_data is None:
             x_data = np.arange(n_points)
         curve.setData(np.asarray(x_data), y_arr)
@@ -2968,6 +3056,164 @@ class Waveform(PlotBase):
                     curve.setData(np.arange(i0, i1) if x_win is None else x_win, y_win)
         finally:
             self._lod_applying = False
+
+    # --- view-driven loading of large history curves ---------------------------------------
+
+    def _view_limit_bytes(self, scan: str, sources: list[tuple[str, str]]) -> int | None:
+        """
+        Size above which a stored column is shown through a view instead of loaded whole.
+
+        Only while the curves are drawn against the row index: the visible x range then is
+        a range of rows. What counts is the x the mode resolves to for this scan. A source
+        that is paired with that x row by row (in auto mode: a monitored signal and the
+        scan motor) is held whole, because x and y reduced each on its own would no longer
+        pair. A source that cannot be paired with it is drawn against the index anyway.
+
+        Args:
+            scan(str): The history scan.
+            sources(list[tuple[str, str]]): The curve sources read from that scan.
+
+        Returns:
+            int | None: The limit in bytes, or None to hold every column whole.
+        """
+        mode = self.x_axis_mode["name"] or "auto"
+        if mode == "timestamp" or VIEW_LIMIT_MB <= 0:
+            return None
+        if mode != "index":
+            try:
+                x_key = self._history_x_source_key(self.get_history_scan_item(scan_id=scan))
+            except Exception:  # pylint: disable=broad-except
+                return None
+            if x_key is not None:
+                labels = self._alignment_labels([*sources, x_key], scan) or {}
+                x_group = labels.get(tuple(x_key))
+                if x_group is not None and any(
+                    labels.get(tuple(source)) == x_group
+                    for source in sources
+                    if tuple(source) != tuple(x_key)
+                ):
+                    return None
+        return int(VIEW_LIMIT_MB * 1024 * 1024)
+
+    def _loads_as_view(
+        self, scan: str, source: tuple[str, str], sources: list[tuple[str, str]] | None = None
+    ) -> bool:
+        """
+        Whether the stored column of ``source`` is above the view limit (one value per row).
+
+        ``sources`` are all curve sources read from the scan in one subscription: the view
+        limit is decided for them together.
+        """
+        limit = self._view_limit_bytes(scan, list(sources or [source]))
+        if limit is None:
+            return False
+        shape = self._stored_shape(scan, *source)
+        size = self._estimate_source_bytes(scan, source)
+        if shape is None or len(shape) != 1 or size is None:
+            return False
+        return size + 8 * shape[0] > limit  # samples plus row numbers, as the DataAPI counts
+
+    def _render_view_curve(self, curve: Curve, update, source) -> bool:
+        """
+        Render a history curve whose column the DataAPI holds as an overview plus a window.
+
+        The points carry their row numbers, so they are drawn against them: coarse where
+        only the overview is held, at the requested resolution inside the window.
+        """
+        view = dict(source.metadata["view"])
+        view["key"] = source.key
+        view["scan_id"] = update.scan_id
+        curve._view = view
+        curve._lod_raw = None
+        window = view["window"]
+        pending = curve._view_pending
+        if pending is not None and window is not None:
+            if (window["start"], window["stop"]) == pending:
+                curve._view_pending = None
+        if len(source.values) == 0:
+            return False
+        self._auto_adjust_async_curve_settings(curve, len(source.values))
+        rows = np.asarray(source.ordinals, dtype=float)
+        values = _numeric_column(source.values)
+        if values.dtype != object:
+            # The overview keeps the smallest and largest sample of every bin, so its
+            # extremes are those of the rows read so far.
+            last_row = max(float(rows[-1]), float(view["loaded_rows"] - 1))
+            curve._full_bounds = (
+                (float(rows[0]), last_row),
+                (float(np.nanmin(values)), float(np.nanmax(values))),
+            )
+        else:
+            curve._full_bounds = None
+        curve.setData(rows, values)
+        self._ensure_view_hooks()
+        # The first points may arrive before the view settled: ask once for what is visible.
+        self._view_timer.start()
+        return True
+
+    def _ensure_view_hooks(self) -> None:
+        """Follow the visible x range of the plot (debounced) to ask for the rows in view."""
+        if self._view_timer is not None:
+            return
+        self._view_timer = QTimer(self)
+        self._view_timer.setSingleShot(True)
+        self._view_timer.setInterval(120)
+        self._view_timer.timeout.connect(self._request_views)
+        self.plot_item.vb.sigXRangeChanged.connect(self._schedule_view_request)
+
+    @SafeSlot()
+    def _schedule_view_request(self, *_args):
+        """Debounce zoom/pan events; sigXRangeChanged passes (viewbox, range)."""
+        self._view_timer.start()
+
+    @SafeSlot()
+    def _request_views(self):
+        """
+        Ask the DataAPI for the visible rows of every curve that is shown through a view.
+
+        Nothing is asked while what is held is fine enough for the plot's width: the
+        overview when zoomed out, or a window that covers the visible rows at a resolution
+        within a factor of two of the one wanted. Otherwise the visible rows plus a margin
+        on each side are requested, reduced to a few points per pixel.
+        """
+        x_min, x_max = self.plot_item.vb.viewRange()[0]
+        width = max(200, int(self.plot_item.vb.width()))
+        for curve in self._history_curves:
+            view = curve._view
+            if not view:
+                continue
+            total = view["total_rows"]
+            if view["loaded_rows"] < total and self._history_view_untouched():
+                # The overview is still streaming and the plot follows it: nothing to
+                # refine. Once the user zooms or pans, the rows in view are read at once,
+                # next to the stream.
+                continue
+            start = max(0, int(np.floor(x_min)))
+            stop = min(total, int(np.ceil(x_max)) + 1)
+            if stop <= start:
+                continue
+            visible = stop - start
+            wanted_bin = max(1, 2 * visible // (width * VIEW_POINTS_PER_PIXEL))
+            if wanted_bin >= view["overview_bin"]:
+                continue  # the overview is as fine as the plot can show
+            window = view["window"]
+            if (
+                window is not None
+                and window["start"] <= start
+                and window["stop"] >= stop
+                and window["bin"] <= 2 * wanted_bin
+            ):
+                continue  # the held window covers the view at a fitting resolution
+            margin = int(VIEW_MARGIN * visible)
+            first, last = max(0, start - margin), min(total, stop + margin)
+            if curve._view_pending == (first, last):
+                continue
+            bridge = self._history_bridges.get(view["scan_id"])
+            if bridge is None:
+                continue
+            max_points = int(width * VIEW_POINTS_PER_PIXEL * (1 + 2 * VIEW_MARGIN))
+            if bridge.request_view(view["key"], first, last, max_points):
+                curve._view_pending = (first, last)
 
     def _ensure_load_progress_bar(self) -> QProgressBar:
         """Create (once) a full-width progress row below the plot."""
