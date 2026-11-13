@@ -79,6 +79,14 @@ class Curve(BECConnector, pg.PlotDataItem):
     #: (see Waveform._apply_lod_windows).
     _lod_raw: tuple | None = None
     _lod_window: tuple[int, int] | None = None
+    #: ((x_min, x_max), (y_min, y_max)) of the whole series, for a curve that draws a
+    #: reduced or windowed copy of it; None for a curve that draws its data as it is.
+    _full_bounds: tuple[tuple[float, float], tuple[float, float]] | None = None
+    #: For a history curve whose column is not held whole: what the DataAPI holds of it
+    #: (``metadata["view"]`` of its source, see Waveform._render_view_curve).
+    _view: dict | None = None
+    #: The rows asked for and not delivered yet.
+    _view_pending: tuple[int, int] | None = None
     USER_ACCESS = [
         "remove",
         "_rpc_id",
@@ -165,6 +173,20 @@ class Curve(BECConnector, pg.PlotDataItem):
             self.setSymbolSize(self.config.symbol_size)
             # updateItems() keeps it hidden while the curve is above the symbol limit.
             self.setSymbol(self.config.symbol)
+
+    def dataBounds(self, ax, frac=1.0, orthoRange=None):
+        """
+        Range of the data along one axis, as the view box asks for it to autorange.
+
+        pyqtgraph answers from what is drawn, which with clipToView and downsampling
+        depends on the view: a new range changes the answer, and the view moves again.
+        A curve that knows the bounds of its whole series (``_full_bounds``) answers with
+        those instead.
+        """
+        bounds = self._full_bounds
+        if bounds is None or frac < 1.0 or orthoRange is not None:
+            return super().dataBounds(ax, frac, orthoRange)
+        return bounds[ax]
 
     def setData(self, *args, **kwargs):
         """
@@ -459,11 +481,15 @@ class Curve(BECConnector, pg.PlotDataItem):
 
     def clear_data(self):
         """
-        Clear the data of the curve, including the samples it kept for redrawing: a zoom
-        or pan must not bring back what was cleared.
+        Clear the data of the curve, including what it kept for redrawing: the samples of
+        a decimated curve, the bounds of its series and the view of a stored column. A zoom,
+        a pan or an autorange must not bring back what was cleared.
         """
         self._lod_raw = None
         self._lod_window = None
+        self._full_bounds = None
+        self._view = None
+        self._view_pending = None
         self.setData([], [])
 
     def remove(self):
