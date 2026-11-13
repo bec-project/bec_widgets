@@ -40,6 +40,13 @@ class CurveConfig(ConnectionConfig):
         None, description="The color of the symbol of the curve."
     )
     symbol_size: int | None = Field(7, description="The size of the symbol of the curve.")
+    symbol_point_limit: int | None = Field(
+        1000,
+        description=(
+            "Hide the symbol once the curve holds more than this many points. "
+            "None keeps the symbol at every data size."
+        ),
+    )
     pen_width: int | None = Field(4, description="The width of the pen of the curve.")
     pen_style: Literal["solid", "dash", "dot", "dashdot"] | None = Field(
         "solid", description="The style of the pen of the curve."
@@ -93,6 +100,8 @@ class Curve(BECConnector, pg.PlotDataItem):
         parent_item: Waveform | None = None,
         **kwargs,
     ):
+        # Set before PlotDataItem.__init__, whose first setData already runs updateItems().
+        self._symbols_suppressed = False
         if config is None:
             config = CurveConfig(label=name, widget_class=self.__class__.__name__)
             self.config = config
@@ -146,7 +155,64 @@ class Curve(BECConnector, pg.PlotDataItem):
 
             self.setSymbolBrush(brush)
             self.setSymbolSize(self.config.symbol_size)
+            # updateItems() keeps it hidden while the curve is above the symbol limit.
             self.setSymbol(self.config.symbol)
+
+    def setData(self, *args, **kwargs):
+        """Wrap ``PlotDataItem.setData`` to track how often the data changes."""
+        # getattr guards against setData being reached before __init__ sets the field.
+        self._data_version = getattr(self, "_data_version", 0) + 1
+        super().setData(*args, **kwargs)
+
+    def updateItems(self, styleUpdate: bool = True):
+        """
+        Redraw the curve and its symbols, hiding the symbol above the symbol limit.
+
+        pyqtgraph draws symbols through ``ScatterPlotItem``, which builds a style
+        tuple per point in Python (``SymbolAtlas._keys``). That is linear in the
+        number of points and dominates everything else: at 50k points a ``setData``
+        costs ~90 ms with a symbol and ~0.5 ms without. Scans routinely exceed the
+        limit, so the symbol is dropped there and restored when the data shrinks.
+
+        pyqtgraph calls this after every data or style change, once the new dataset
+        is in place, so the decision counts the points of the stored dataset, whatever
+        form ``setData`` received them in. It also overrides the default ``"o"`` that
+        pyqtgraph adds for ``symbolSize``/``symbolPen``/``symbolBrush`` without a symbol.
+
+        Args:
+            styleUpdate(bool): Passed on to ``PlotDataItem.updateItems``.
+        """
+        if getattr(self, "config", None) is not None:
+            suppressed = self._exceeds_symbol_limit(self._point_count())
+            if suppressed:
+                self.opts["symbol"] = None
+            elif getattr(self, "_symbols_suppressed", False):
+                self.opts["symbol"] = self.config.symbol
+            self._symbols_suppressed = suppressed
+        super().updateItems(styleUpdate=styleUpdate)
+
+    def _exceeds_symbol_limit(self, data_length: int) -> bool:
+        """
+        Whether a dataset of this length is above the configured symbol limit.
+
+        Args:
+            data_length(int): Number of points.
+
+        Returns:
+            bool: True if the symbol should be hidden; a limit of None never hides it.
+        """
+        limit = self.config.symbol_point_limit
+        return limit is not None and data_length > limit
+
+    def _point_count(self) -> int:
+        """
+        Number of points in the curve's current dataset.
+
+        Returns:
+            int: The number of points, 0 for an empty curve.
+        """
+        dataset = getattr(self, "_dataset", None)
+        return 0 if dataset is None else len(dataset.y)
 
     @property
     def dap_params(self):
@@ -202,12 +268,6 @@ class Curve(BECConnector, pg.PlotDataItem):
         """Monotonic counter bumped on every ``setData`` call."""
         return self._data_version
 
-    def setData(self, *args, **kwargs):
-        """Wrap ``PlotDataItem.setData`` to track how often the data changes."""
-        # getattr guards against setData being reached before __init__ sets the field.
-        self._data_version = getattr(self, "_data_version", 0) + 1
-        super().setData(*args, **kwargs)
-
     def set_data(self, x: list | np.ndarray, y: list | np.ndarray):
         """
         Set the data of the curve.
@@ -237,6 +297,7 @@ class Curve(BECConnector, pg.PlotDataItem):
             - symbol: str
             - symbol_color: str
             - symbol_size: int
+            - symbol_point_limit: int | None
             - pen_width: int
             - pen_style: Literal["solid", "dash", "dot", "dashdot"]
         """
@@ -248,6 +309,7 @@ class Curve(BECConnector, pg.PlotDataItem):
             "symbol": self.set_symbol,
             "symbol_color": self.set_symbol_color,
             "symbol_size": self.set_symbol_size,
+            "symbol_point_limit": self._set_symbol_point_limit,
             "pen_width": self.set_pen_width,
             "pen_style": self.set_pen_style,
         }
@@ -273,10 +335,15 @@ class Curve(BECConnector, pg.PlotDataItem):
         """
         Change the symbol of the curve.
 
+        Above ``symbol_point_limit`` points the symbol stays hidden until the data
+        shrinks or the limit is raised with ``set(symbol_point_limit=...)``.
+
         Args:
             symbol(str): Symbol of the curve.
         """
         self.config.symbol = symbol
+        # While the curve is above the symbol limit, updateItems() keeps the symbol
+        # hidden; the config keeps the request for when the data drops below it.
         self.setSymbol(symbol)
         self.updateItems()
 
@@ -299,6 +366,16 @@ class Curve(BECConnector, pg.PlotDataItem):
         """
         self.config.symbol_size = symbol_size
         self.apply_config()
+
+    def _set_symbol_point_limit(self, limit: int | None):
+        """
+        Change the number of points above which the symbol of the curve is hidden.
+
+        Args:
+            limit(int | None): Number of points; None keeps the symbol at every data size.
+        """
+        self.config.symbol_point_limit = limit
+        self.updateItems()
 
     def set_pen_width(self, pen_width: int):
         """

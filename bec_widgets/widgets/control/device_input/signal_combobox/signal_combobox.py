@@ -505,12 +505,18 @@ class SignalComboBox(BECWidget, QComboBox):
         """Return the selected signal config if item-data storage is enabled.
 
         Returns:
-            Selected signal configuration dictionary, or None when item-data storage is disabled
-            or the current item has no configuration.
+            Selected signal configuration dictionary, or None when item-data storage is disabled,
+            the displayed text matches no signal, or its item has no configuration.
         """
         if not self._store_signal_config:
             return None
-        signal_info = self.itemData(self.currentIndex())
+        # Resolve by the displayed text: on editable comboboxes the current index
+        # does not follow programmatic or typed text changes, so it may belong to
+        # another signal. A text that matches no item has no config.
+        index = self._find_signal_index(self.currentText())
+        if index < 0:
+            return None
+        signal_info = self.itemData(index)
         return signal_info if isinstance(signal_info, dict) else None
 
     def update_signals_from_signal_classes(self, ndim_filter: int | list[int] | None = None):

@@ -163,6 +163,101 @@ def test_full_colorbar_uses_bec_histogram_lut_item(qtbot, mocked_client):
     assert color_bar.vb.getMenu(None) is color_bar._bec_menu
 
 
+def test_full_colorbar_frames_do_not_disable_autorange(qtbot, mocked_client):
+    """Rendering frames must not count as a user level change: pyqtgraph's
+    HistogramLUTItem snaps its region to the image levels on every setImage,
+    which used to fire the drag-disable hook on each update."""
+    view = create_widget(qtbot, Image, client=mocked_client)
+    view.enable_full_colorbar = True
+    view.autorange = True
+    rng = np.random.default_rng(7)
+    with mock.patch.object(view, "_set_autorange", wraps=view._set_autorange) as spy:
+        for frame in range(3):
+            view.main_image.set_data(rng.random((20, 20)) * (frame + 1))
+    disable_calls = [call for call in spy.call_args_list if call.args and call.args[0] is False]
+    assert not disable_calls
+    assert view.autorange is True
+
+
+def test_full_colorbar_region_drag_disables_autorange(qtbot, mocked_client):
+    """An actual mouse drag of the histogram region must still switch
+    autorange off."""
+    view = create_widget(qtbot, Image, client=mocked_client)
+    view.enable_full_colorbar = True
+    view.autorange = True
+    view.main_image.set_data(np.ones((20, 20)))
+    region = view._color_bar.region
+    with mock.patch.object(view, "_set_autorange", wraps=view._set_autorange) as spy:
+        region.moving = True  # simulate an active mouse drag
+        for step in range(5):
+            region.setRegion((0.1, 0.7 + 0.01 * step))
+        region.moving = False
+    assert view.autorange is False
+    # every mouse move emits, but autorange is switched off only once per drag
+    assert spy.call_count == 1
+
+
+class _FakeDragEvent:
+    """Left-button drag event with the interface pyqtgraph's mouseDragEvent reads."""
+
+    def __init__(self, pos: QPointF, down_pos: QPointF, start: bool, finish: bool):
+        self._pos, self._down_pos, self._start, self._finish = pos, down_pos, start, finish
+
+    def button(self):
+        return Qt.MouseButton.LeftButton
+
+    def accept(self):
+        pass
+
+    def isStart(self):
+        return self._start
+
+    def isFinish(self):
+        return self._finish
+
+    def pos(self):
+        return self._pos
+
+    def buttonDownPos(self):
+        return self._down_pos
+
+
+def test_full_colorbar_edge_line_drag_disables_autorange(qtbot, mocked_client):
+    """Dragging only one edge of the histogram region is a user level change too."""
+    view = create_widget(qtbot, Image, client=mocked_client)
+    view.enable_full_colorbar = True
+    view.autorange = True
+    view.main_image.set_data(np.random.default_rng(1).random((20, 20)))
+    line = view._color_bar.region.lines[1]
+    down = line.mapFromParent(line.pos())
+    steps = [(True, False), (False, False), (False, True)]
+    with mock.patch.object(view, "_set_autorange", wraps=view._set_autorange) as spy:
+        for step, (start, finish) in enumerate(steps):
+            line.mouseDragEvent(
+                _FakeDragEvent(down + QPointF(0.0, -0.05 * step), down, start, finish)
+            )
+    assert not line.moving
+    assert view.autorange is False
+    assert spy.call_count == 1
+
+
+@pytest.mark.parametrize("style", ["full", "simple", None])
+def test_manual_levels_switch_the_autorange_button_off(qtbot, mocked_client, style):
+    """Explicit levels turn autorange off, and the toolbar has to show it."""
+    view = create_widget(qtbot, Image, client=mocked_client)
+    if style:
+        view.enable_colorbar(True, style=style)
+    view.autorange = True
+    view.main_image.set_data(np.random.default_rng(3).random((20, 20)))
+    action = view.toolbar.components.get_action("image_autorange")
+    assert all(a.action.isChecked() for a in action.actions.values())
+
+    view._set_vrange_from_menu((0.1, 0.5))
+
+    assert view.autorange is False
+    assert not any(a.action.isChecked() for a in action.actions.values())
+
+
 def test_colorbar_menu_set_levels_updates_vrange(qtbot, mocked_client):
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
     bec_image_view.enable_full_colorbar = True
