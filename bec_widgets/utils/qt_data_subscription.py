@@ -190,6 +190,25 @@ class QtDataSubscription(QObject):
         """Declared sources that are not delivering."""
         return self._subscription.unbound_sources
 
+    def request_view(
+        self, source: SourceKey, start: int, stop: int, max_points: int = 4000
+    ) -> bool:
+        """
+        Ask for the rows ``start:stop`` of a source that is held as an overview.
+
+        Args:
+            source (SourceKey): The (device, entry) source.
+            start (int): First row wanted.
+            stop (int): One past the last row wanted.
+            max_points (int): Upper bound of the points for these rows.
+
+        Returns:
+            bool: Whether the request was taken; the rows arrive in a later update.
+        """
+        if self._closed:
+            return False
+        return self._subscription.request_view(source, start, stop, max_points)
+
     def set_min_emit_interval(self, seconds: float) -> None:
         """
         Change the backend coalescing interval of the live subscription.

@@ -12,6 +12,7 @@ import pyqtgraph as pg
 import pytest
 from bec_lib import messages
 from bec_lib.data_api import SCAN_GROUP, CorrelationGroup
+from bec_lib.data_api.models import SourceData
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.scan_items import ScanItem
 from pyqtgraph.graphicsItems.DateAxisItem import DateAxisItem
@@ -86,8 +87,11 @@ def _fake_bridge_factory(monkeypatch, gated_bytes: int | None = None):
             parent=None,
             min_emit_interval=0.1,
             size_limit_bytes=None,
+            view_limit_bytes=None,
         ):
             self.client = client
+            self.view_limit_bytes = view_limit_bytes
+            self.view_requests = []
             self.sources = list(sources)
             self.scan = scan
             self.scan_id = None if scan == "live" else scan
@@ -113,18 +117,24 @@ def _fake_bridge_factory(monkeypatch, gated_bytes: int | None = None):
             self.confirmed = True
             self.size_gated = False
 
+        def request_view(self, source, start, stop, max_points=4000):
+            self.view_requests.append((tuple(source), start, stop, max_points))
+            return True
+
         def close(self):
             self.closed = True
 
     def factory(
-        client, sources, scan="live", parent=None, min_emit_interval=0.1, size_limit_bytes=None
+        client,
+        sources,
+        scan="live",
+        parent=None,
+        min_emit_interval=0.1,
+        size_limit_bytes=None,
+        view_limit_bytes=None,
     ):
         bridge = _FakeBridge(
-            client,
-            sources,
-            scan=scan,
-            min_emit_interval=min_emit_interval,
-            size_limit_bytes=size_limit_bytes,
+            client, sources, scan, parent, min_emit_interval, size_limit_bytes, view_limit_bytes
         )
         created.append(bridge)
         return bridge
@@ -134,8 +144,6 @@ def _fake_bridge_factory(monkeypatch, gated_bytes: int | None = None):
 
 
 def _monitored_source(device, values, entry=None, timestamps=None, ordinals=None, as_numpy=False):
-    from bec_lib.data_api.models import SourceData
-
     entry = entry or device
     ordinals = tuple(range(len(values))) if ordinals is None else tuple(ordinals)
     if timestamps is None:
@@ -163,8 +171,6 @@ def _async_source(
     ordinals=None,
     as_numpy=False,
 ):
-    from bec_lib.data_api.models import SourceData
-
     entry = entry or device
     ordinals = tuple(range(len(values))) if ordinals is None else tuple(ordinals)
     if timestamps is None:
@@ -2465,6 +2471,230 @@ def test_history_curve_grows_while_the_stored_scan_is_loading(
         x_data, y_data = c.get_data()
         np.testing.assert_array_equal(x_data, (10, 20, 30, 40, 50)[:rows])
         np.testing.assert_array_equal(y_data, (5, 6, 7, 8, 9)[:rows])
+
+
+def test_plot_range_follows_a_history_curve_that_loads_in_blocks(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    """
+    The range is set with the first block; it has to follow the later blocks, or the plot
+    ends up showing only the start of the scan. A user who zoomed meanwhile keeps the zoom.
+    """
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    inject_scan_history(wf, scan_history_factory, ("hist1", 1))
+    wf.x_mode = "index"
+    wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist1")
+
+    def deliver(rows, complete):
+        source = replace(_monitored_source("bpm4i", values=tuple(range(rows))), complete=complete)
+        wf._on_history_data_update(
+            replace(_make_update([source], scan_id="hist1", reason="history"), complete=complete)
+        )
+        return wf.plot_item.vb.viewRange()[0]
+
+    assert deliver(100, complete=False)[1] < 150
+    assert 400 < deliver(500, complete=False)[1] < 600
+    x_range = deliver(1000, complete=True)
+    assert x_range[0] <= 0 and 999 <= x_range[1] < 1200
+
+    # the same again, but the user zooms in after the first block
+    wf2 = create_widget(qtbot, Waveform, client=mocked_client)
+    inject_scan_history(wf2, scan_history_factory, ("hist1", 1))
+    wf2.x_mode = "index"
+    wf2.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist1")
+    source = replace(_monitored_source("bpm4i", values=tuple(range(100))), complete=False)
+    wf2._on_history_data_update(
+        replace(_make_update([source], scan_id="hist1", reason="history"), complete=False)
+    )
+    wf2.plot_item.vb.setXRange(10, 20, padding=0)
+    source = replace(_monitored_source("bpm4i", values=tuple(range(1000))), complete=True)
+    wf2._on_history_data_update(_make_update([source], scan_id="hist1", reason="history"))
+    assert wf2.plot_item.vb.viewRange()[0] == [10, 20]
+
+
+def _view_source(rows, total, window=None, loaded=None, overview_bin=1000):
+    """A source the DataAPI holds as an overview plus a window: points at their row numbers."""
+    rows = np.asarray(rows, dtype=np.int64)
+    return SourceData(
+        device="bpm4i",
+        entry="bpm4i",
+        kind="async",
+        ordinals=rows,
+        values=(rows % 97).astype(np.uint16),
+        timestamps=np.full(len(rows), None, dtype=object),
+        complete=False,
+        metadata={
+            "view": {
+                "total_rows": total,
+                "loaded_rows": total if loaded is None else loaded,
+                "overview_bin": overview_bin,
+                "window": window,
+                "points": len(rows),
+            }
+        },
+    )
+
+
+def _view_waveform(qtbot, mocked_client, scan_history_factory, monkeypatch):
+    bridges = _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.resize(1000, 600)
+    inject_scan_history(wf, scan_history_factory, ("hist1", 1))
+    monkeypatch.setattr(wf, "_loads_as_view", lambda scan, source: True)
+    curve = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist1")
+    return wf, curve, wf._history_bridges["hist1"], bridges
+
+
+def test_view_curve_is_drawn_against_its_rows(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    """
+    A column the DataAPI holds as an overview is not loaded whole: no size question, and
+    the points are drawn at their row numbers.
+    """
+    wf, curve, bridge, _ = _view_waveform(qtbot, mocked_client, scan_history_factory, monkeypatch)
+    assert bridge.view_limit_bytes == 100 * 1024 * 1024
+
+    overview = np.arange(0, 2_000_000, 500)
+    wf._on_history_data_update(
+        _make_update(
+            [_view_source(overview, 2_000_000, loaded=1_000_000)], scan_id="hist1", reason="history"
+        )
+    )
+    x_data, y_data = curve.get_data()
+    np.testing.assert_array_equal(x_data, overview)
+    np.testing.assert_array_equal(y_data, overview % 97)
+    assert curve._view["points"] == 4000 and curve._view["total_rows"] == 2_000_000
+    assert curve._view["loaded_rows"] == 1_000_000 and curve._view_pending is None
+    # while the overview streams and the plot follows it, nothing is asked for
+    wf._request_views()
+    assert bridge.view_requests == []
+    # the user zooms in during the load: the rows in view are asked for at once
+    wf.plot_item.vb.setXRange(1000, 5000, padding=0)
+    wf._request_views()
+    assert [request[:3] for request in bridge.view_requests] == [(("bpm4i", "bpm4i"), 0, 9002)]
+    assert curve._view_pending == (0, 9002)
+
+
+def test_view_curve_reports_the_bounds_of_all_rows_read(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    """
+    Autorange asks the curve for its bounds. With clipToView and downsampling pyqtgraph
+    answers from what is drawn, which changes with the view and moves the view again. A
+    view curve answers with the rows read so far and their extremes, whatever is drawn.
+    """
+    wf, curve, _, _ = _view_waveform(qtbot, mocked_client, scan_history_factory, monkeypatch)
+    overview = np.arange(0, 1_000_000, 500)
+    wf._on_history_data_update(
+        _make_update(
+            [_view_source(overview, 2_000_000, loaded=1_000_000)], scan_id="hist1", reason="history"
+        )
+    )
+    assert curve.dataBounds(0) == (0.0, 999_999.0)
+    assert curve.dataBounds(1) == (0.0, 96.0)
+    # zoomed in, the curve draws a few points only; the bounds stay those of the series
+    wf.plot_item.vb.setXRange(1000, 2000, padding=0)
+    QApplication.processEvents()
+    assert curve.dataBounds(0) == (0.0, 999_999.0) and curve.dataBounds(1) == (0.0, 96.0)
+    # a curve without such bounds answers as pyqtgraph does
+    curve._full_bounds = None
+    assert curve.dataBounds(0) != (0.0, 999_999.0)
+
+
+def test_view_box_that_ranges_by_itself_is_left_alone_while_a_history_curve_loads(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    """
+    With autorange on, the view box follows the data at the next paint. The waveform must
+    not set a range of its own on top: two ranges per update with different padding make
+    the plot jitter while a large scan loads.
+    """
+    wf, curve, bridge, _ = _view_waveform(qtbot, mocked_client, scan_history_factory, monkeypatch)
+    wf.show()
+    qtbot.waitExposed(wf)
+    wf.auto_range_x = True
+    wf.auto_range_y = True
+    calls = []
+    monkeypatch.setattr(wf, "auto_range", lambda *args, **kwargs: calls.append(args))
+
+    for loaded in (500_000, 1_000_000, 2_000_000):
+        overview = np.arange(0, loaded, 500)
+        wf._on_history_data_update(
+            _make_update(
+                [_view_source(overview, 2_000_000, loaded=loaded)],
+                scan_id="hist1",
+                reason="history",
+            )
+        )
+        assert wf._history_view_untouched()
+        qtbot.wait(50)  # a paint: the view box ranges by itself
+    assert calls == []
+    # still following: nothing is asked for while the overview streams
+    assert bridge.view_requests == []
+    x_range = wf.plot_item.vb.viewRange()[0]
+    assert x_range[0] <= 0 and 1_999_999 <= x_range[1] < 2_200_000
+
+    # a zoom ends the following
+    wf.plot_item.vb.setXRange(1000, 5000, padding=0)
+    assert not wf._history_view_untouched()
+
+
+def test_view_curve_asks_for_the_visible_rows_with_a_margin(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    wf, curve, bridge, _ = _view_waveform(qtbot, mocked_client, scan_history_factory, monkeypatch)
+    total = 2_000_000
+    overview = np.arange(0, total, 500)
+    wf._on_history_data_update(
+        _make_update([_view_source(overview, total)], scan_id="hist1", reason="history")
+    )
+
+    # the whole column in view: the overview is as fine as the plot can show
+    wf.plot_item.vb.setXRange(0, total, padding=0)
+    wf._request_views()
+    assert bridge.view_requests == []
+
+    # zoomed in to 10,000 rows: they are asked for with one view width on each side
+    wf.plot_item.vb.setXRange(500_000, 510_000, padding=0)
+    wf._request_views()
+    ((key, first, last, max_points),) = bridge.view_requests
+    assert key == ("bpm4i", "bpm4i")
+    assert (first, last) == (500_000 - 10_001, 510_001 + 10_001)
+    assert max_points == max(200, int(wf.plot_item.vb.width())) * 4 * 3
+    assert curve._view_pending == (489_999, 520_002)
+    # the same view again does not ask twice
+    wf._request_views()
+    assert len(bridge.view_requests) == 1
+
+    # the rows arrive: nothing is pending any more, the curve knows its window
+    window = {"start": first, "stop": last, "bin": 4}
+    rows = np.unique(np.concatenate([overview, np.arange(first, last, 2)]))
+    wf._on_history_data_update(
+        _make_update([_view_source(rows, total, window=window)], scan_id="hist1", reason="history")
+    )
+    assert curve._view_pending is None
+    assert curve._view["window"] == {"start": 489_999, "stop": 520_002, "bin": 4}
+
+    # a pan inside the window needs nothing, a pan out of it asks again
+    wf.plot_item.vb.setXRange(495_000, 505_000, padding=0)
+    wf._request_views()
+    assert len(bridge.view_requests) == 1
+    wf.plot_item.vb.setXRange(515_000, 525_000, padding=0)
+    wf._request_views()
+    assert len(bridge.view_requests) == 2
+    # zooming in far enough asks for a finer window, then every row
+    wf._on_history_data_update(
+        _make_update(
+            [_view_source(rows, total, window={"start": 504_999, "stop": 535_002, "bin": 64})],
+            scan_id="hist1",
+            reason="history",
+        )
+    )
+    wf.plot_item.vb.setXRange(519_000, 520_000, padding=0)
+    wf._request_views()
+    assert len(bridge.view_requests) == 3 and bridge.view_requests[-1][1:3] == (517_999, 521_002)
 
 
 @pytest.mark.parametrize("mode", ["auto", "timestamp", "index", "samx"])
