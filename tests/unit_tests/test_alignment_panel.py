@@ -38,3 +38,14 @@ def test_alignment_panel_emits_only_center_fit_actions(qtbot, mocked_client):
 
     panel.fit_dialog.move_action.emit(("center", 2.5))
     fit_center_callback.assert_called_once_with(2.5)
+
+
+def test_alignment_panel_clear_closes_positioner_subscription(qtbot, mocked_client):
+    panel = create_widget(qtbot, WaveformAlignmentPanel, client=mocked_client)
+    panel.set_positioner_device("samx")
+    subscription = next(iter(panel.positioner._readback_subscriptions.values()))
+    panel.set_positioner_device(None)
+    assert panel.positioner.device == ""
+    assert subscription._closed
+    assert not panel.positioner._readback_subscriptions
+    assert panel.positioner.ui.readback.text() == "__"

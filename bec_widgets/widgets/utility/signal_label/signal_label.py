@@ -5,8 +5,8 @@ import traceback
 from typing import TYPE_CHECKING, Any, Sequence
 
 import numpy as np
+from bec_lib.data_api import SubscriptionUpdate
 from bec_lib.device import Device, Signal
-from bec_lib.endpoints import MessageEndpoints
 from bec_qthemes import material_icon
 from qtpy.QtCore import Signal as QSignal
 from qtpy.QtWidgets import (
@@ -24,7 +24,7 @@ from qtpy.QtWidgets import (
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
-from bec_widgets.utils.ophyd_kind_util import Kind
+from bec_widgets.utils.qt_data_subscription import QtDataSubscription
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import SignalComboBox
 
@@ -187,6 +187,7 @@ class SignalLabel(BECWidget, QWidget):
         self._show_default_units: bool = show_default_units
         self._decimal_places = 3
         self._dtype = None
+        self._units = ""
         self._max_list_display_len = 5
 
         self._show_hinted_signals: bool = True
@@ -222,6 +223,7 @@ class SignalLabel(BECWidget, QWidget):
         self._signal_key, self._signal_info = "", {}
 
         self._connected: bool = False
+        self._data_subscription: QtDataSubscription | None = None
         self.connect_device()
 
     def _create_dialog(self):
@@ -235,12 +237,12 @@ class SignalLabel(BECWidget, QWidget):
             show_hinted=self.show_hinted_signals,
         )
 
-    @SafeSlot()
+    @SafeSlot(str, str)
     def _process_dialog(self, device: str, signal: str):
-        signal = signal or device
         self.disconnect_device()
-        self.device = device
-        self.signal = signal
+        self._device = device
+        self._device_obj = self.dev.get(device)
+        self._signal = signal or device
         self._update_label()
         self.connect_device()
 
@@ -251,53 +253,57 @@ class SignalLabel(BECWidget, QWidget):
         return dialog
 
     def connect_device(self):
-        """Subscribe to the Redis topic for the device to display"""
-        if not self._connected and self._device and self._device in self.dev:
-            self._signal_key, self._signal_info = self._signal_key_and_info()
-            self._manual_read()
-            self._read_endpoint = MessageEndpoints.device_readback(self._device)
-            self._read_config_endpoint = MessageEndpoints.device_read_configuration(self._device)
-            self.bec_dispatcher.connect_slot(self.on_device_readback, self._read_endpoint)
-            self.bec_dispatcher.connect_slot(self.on_device_readback, self._read_config_endpoint)
-            self._connected = True
-            self.set_display_value(self._value)
-
-    def disconnect_device(self):
-        """Unsubscribe from the Redis topic for the device to display"""
+        """Display the selected signal through a scan-less DataAPI subscription."""
         if self._connected:
-            self.bec_dispatcher.disconnect_slot(self.on_device_readback, self._read_endpoint)
-            self.bec_dispatcher.disconnect_slot(self.on_device_readback, self._read_config_endpoint)
-            self._connected = False
-
-    def _manual_read(self):
-        if not isinstance(self._device_obj, Device | Signal):
-            self._value, self._units = "__", ""
             return
-        reading = (self._device_obj.read(cached=True) or {}) | (
-            self._device_obj.read_configuration(cached=True) or {}
-        )
-        value = reading.get(self._signal_key, {}).get("value")
-        if value is None:
-            self._value, self._units = "__", ""
-            return
-        self._value = value
+        self._value, self._units, self._dtype = "__", "", None
+        self._signal_key, self._signal_info = self._signal_key_and_info()
         self._units = self._signal_info.get("egu", "")
         self._dtype = self._signal_info.get("dtype")
+        self.set_display_value(self._value)
+        if not self._device or self._device not in self.dev or not self._signal_key:
+            return
+        self._data_subscription = QtDataSubscription(
+            self.client,
+            sources=[(self._device, self._signal_key)],
+            scan=None,
+            max_points=1,
+            parent=self,
+        )
+        self._data_subscription.updated.connect(self._on_data_update)
+        self._connected = True
 
-    @SafeSlot(dict, dict)
-    def on_device_readback(self, msg: dict, metadata: dict) -> None:
-        """
-        Update the display with the new value.
-        """
+    def disconnect_device(self):
+        """Close the selected signal's DataAPI subscription."""
+        if self._data_subscription is not None:
+            self._data_subscription.close()
+            self._data_subscription.deleteLater()
+            self._data_subscription = None
+        self._connected = False
+
+    @SafeSlot()
+    def refresh(self):
+        """Resubscribe to receive the latest available DataAPI snapshot."""
+        self.disconnect_device()
+        self.connect_device()
+
+    @SafeSlot(object)
+    def _on_data_update(self, update: SubscriptionUpdate) -> None:
+        """Display the latest acquisition without interpreting transport messages."""
         try:
-            _value = msg["signals"].get(self._signal_key, {}).get("value")
-            if _value is not None:
-                self._value = _value
-                self.set_display_value(self._value)
+            source = update.get(self._device, self._signal_key)
+            if source is None:
+                return
+            if error := source.metadata.get("error"):
+                raise ValueError(error)
+            if len(source.values) == 0:
+                return
+            self._value = source.values[-1]
+            self.set_display_value(self._value)
         except Exception as e:
             self._display.setText("ERROR!")
             self._display.setToolTip(
-                f"Error processing incoming reading: {msg}, handled with exception: {''.join(traceback.format_exception(e))}"
+                f"Error processing DataAPI reading: {''.join(traceback.format_exception(e))}"
             )
 
     def _signal_key_and_info(self) -> tuple[str, dict]:
@@ -306,14 +312,10 @@ class SignalLabel(BECWidget, QWidget):
                 signal_info = self._device_obj._info["signals"][self._signal]
             except KeyError:
                 return "", {}
-            if signal_info["kind_str"] == Kind.hinted.name:
-                return signal_info["obj_name"], signal_info.get("describe", {})
-            else:
-                return f"{self._device}_{self._signal}", signal_info.get("describe", {})
+            return signal_info["obj_name"], signal_info.get("describe", {})
         elif isinstance(self._device_obj, Signal):
-            info = self._device_obj._info["describe_configuration"][self._device]
-            info["egu"] = self._device_obj._info["describe_configuration"].get("egu")
-            return (self._device, info)
+            info = self._device_obj._info.get("describe_configuration", {})
+            return self._device, info.get(self._device, {})
         return "", {}
 
     @SafeProperty(str)

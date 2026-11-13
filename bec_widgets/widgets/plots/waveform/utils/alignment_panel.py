@@ -167,6 +167,7 @@ class WaveformAlignmentPanel(QWidget):
             device: Name of the positioner device to display, or `None` to clear it.
         """
         if device is None:
+            self.positioner.set_positioner("")
             self.positioner.ui.device_box.setTitle("No positioner selected")
             return
         if self.positioner.device != device:

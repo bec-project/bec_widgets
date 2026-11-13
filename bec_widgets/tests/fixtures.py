@@ -39,6 +39,7 @@ from unittest import mock
 
 import numpy as np
 import pytest
+from bec_lib import messages
 from bec_lib.messages import _StoredDataInfo
 from bec_qthemes import apply_theme
 from bec_qthemes._theme import Theme
@@ -47,7 +48,12 @@ from pytestqt.exceptions import TimeoutError as QtBotTimeoutError
 from qtpy.QtWidgets import QApplication, QMessageBox
 
 from bec_widgets.tests.client_mocks import dap_plugin_message, mocked_client, mocked_client_with_dap
-from bec_widgets.tests.utils import create_history_file, mock_client, process_all_deferred_deletes
+from bec_widgets.tests.utils import (
+    create_history_file,
+    mock_client,
+    process_all_deferred_deletes,
+    reset_mock_qt_redis_connector,
+)
 from bec_widgets.utils import bec_dispatcher as bec_dispatcher_module
 from bec_widgets.utils import error_popups
 from bec_widgets.utils.rpc_register import RPCRegister
@@ -71,6 +77,8 @@ __all__ = [
     "dap_plugin_message",
     "grid_scan_history_msg",
     "scan_history_factory",
+    "_isolate_data_api_instances",
+    "_isolate_device_signal_info",
 ]
 
 
@@ -153,6 +161,7 @@ def bec_dispatcher(threads_check):
     bec_dispatcher.stop_cli_server()
     # reinitialize singleton for next test
     bec_dispatcher_module.BECDispatcher.reset_singleton()
+    reset_mock_qt_redis_connector()
 
 
 @pytest.fixture(autouse=True)
@@ -230,7 +239,18 @@ def grid_scan_history_msg(tmpdir):
     }
 
     file_path = str(tmpdir.join("scan_1.h5"))
-    return create_history_file(file_path, data, metadata)
+    message = create_history_file(file_path, data, metadata)
+    # The file writer lists the stored datasets in the history message.
+    stored = {
+        device: {
+            entry: {"shape": np.shape(columns["value"]), "dtype": "float64"}
+            for entry, columns in signals.items()
+        }
+        for device, signals in data["monitored"].items()
+    }
+    return messages.ScanHistoryMessage.model_validate(
+        message.model_dump() | {"stored_data_info": stored}
+    )
 
 
 @pytest.fixture
@@ -360,3 +380,46 @@ def _register_worker_thread_dummies():
         barrier.wait()
     except threading.BrokenBarrierError:
         pass
+
+
+@pytest.fixture(autouse=True)
+def _isolate_data_api_instances():
+    """
+    Drop DataAPI per-client instances between tests.
+
+    The registry is keyed by id(client); mock clients die between tests and
+    CPython reuses addresses, so a GC-lagged instance from a previous test can
+    answer for a fresh mock (order-dependent discovery failures).
+    """
+    from bec_lib.data_api import DataAPI
+
+    DataAPI.clear_instance()
+    yield
+    DataAPI.clear_instance()
+
+
+@pytest.fixture(autouse=True)
+def _isolate_device_signal_info(bec_dispatcher):
+    """
+    Restore the mock devices' ``_info["signals"]`` after each test.
+
+    The dispatcher's fake devices are shared; tests that inject signal
+    configs (image, multi-waveform, device-input suites) would otherwise
+    leak them into later tests, making signal discovery order-dependent.
+    """
+    import copy
+
+    devices = getattr(getattr(bec_dispatcher.client, "device_manager", None), "devices", None)
+    snapshots = {}
+    if devices is not None:
+        for name in list(getattr(devices, "keys", dict)() or []):
+            device = devices[name]
+            info = getattr(device, "_info", None)
+            if isinstance(info, dict) and isinstance(info.get("signals"), dict):
+                snapshots[name] = copy.deepcopy(info["signals"])
+    yield
+    for name, signals in snapshots.items():
+        try:
+            devices[name]._info["signals"] = signals
+        except (KeyError, TypeError, AttributeError):
+            continue

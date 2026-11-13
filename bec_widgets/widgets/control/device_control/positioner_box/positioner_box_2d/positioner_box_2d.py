@@ -194,16 +194,15 @@ class PositionerBox2D(PositionerBoxBase):
     @device_hor.setter
     def device_hor(self, value: str):
         """Setter, checks if device is a string"""
-        if not value or not isinstance(value, str):
+        if not isinstance(value, str):
             return
-        if not self._check_device_is_valid(value):
+        if value and not self._check_device_is_valid(value):
             return
-        if value == self.device_ver:
+        if value and value == self.device_ver:
             return
         old_device = self._device_hor
         self._device_hor = value
         self.device_changed_hor.emit(old_device, value)
-        self._init_device(self.device_hor, self.position_update_hor.emit, self.update_limits_hor)
 
     @SafeProperty(str)
     def device_ver(self):
@@ -213,16 +212,15 @@ class PositionerBox2D(PositionerBoxBase):
     @device_ver.setter
     def device_ver(self, value: str):
         """Setter, checks if device is a string"""
-        if not value or not isinstance(value, str):
+        if not isinstance(value, str):
             return
-        if not self._check_device_is_valid(value):
+        if value and not self._check_device_is_valid(value):
             return
-        if value == self.device_hor:
+        if value and value == self.device_hor:
             return
         old_device = self._device_ver
         self._device_ver = value
         self.device_changed_ver.emit(old_device, value)
-        self._init_device(self.device_ver, self.position_update_ver.emit, self.update_limits_ver)
 
     @SafeProperty(bool)
     def hide_device_selection(self):
@@ -287,14 +285,13 @@ class PositionerBox2D(PositionerBoxBase):
             old_device (str): The old device name.
             new_device (str): The new device name.
         """
-        if not self._check_device_is_valid(new_device):
+        if new_device and not self._check_device_is_valid(new_device):
             return
         self._on_device_change(
             old_device,
             new_device,
             self.position_update_hor.emit,
             self.update_limits_hor,
-            self.on_device_readback_hor,
             self._device_ui_components_hv("horizontal"),
         )
         self._apply_controls_enabled("horizontal")
@@ -307,14 +304,13 @@ class PositionerBox2D(PositionerBoxBase):
             old_device (str): The old device name.
             new_device (str): The new device name.
         """
-        if not self._check_device_is_valid(new_device):
+        if new_device and not self._check_device_is_valid(new_device):
             return
         self._on_device_change(
             old_device,
             new_device,
             self.position_update_ver.emit,
             self.update_limits_ver,
-            self.on_device_readback_ver,
             self._device_ui_components_hv("vertical"),
         )
         self._apply_controls_enabled("vertical")
@@ -355,7 +351,11 @@ class PositionerBox2D(PositionerBoxBase):
             return self._device_ui_components_hv("vertical")
 
     def _apply_controls_enabled(self, axis: DeviceId):
-        state = self._enable_controls_hor if axis == "horizontal" else self._enable_controls_ver
+        state = (
+            self._enable_controls_hor and bool(self.device_hor)
+            if axis == "horizontal"
+            else self._enable_controls_ver and bool(self.device_ver)
+        )
         if axis == "horizontal":
             widgets = [
                 self.ui.tweak_increase_hor,
@@ -372,40 +372,7 @@ class PositionerBox2D(PositionerBoxBase):
             ]
         for w in widgets:
             w.setEnabled(state)
-
-    @SafeSlot(dict, dict)
-    def on_device_readback_hor(self, msg_content: dict, metadata: dict):
-        """Callback for device readback.
-
-        Args:
-            msg_content (dict): The message content.
-            metadata (dict): The message metadata.
-        """
-        self._on_device_readback(
-            self.device_hor,
-            self._device_ui_components_hv("horizontal"),
-            msg_content,
-            metadata,
-            self.position_update_hor.emit,
-            self.update_limits_hor,
-        )
-
-    @SafeSlot(dict, dict)
-    def on_device_readback_ver(self, msg_content: dict, metadata: dict):
-        """Callback for device readback.
-
-        Args:
-            msg_content (dict): The message content.
-            metadata (dict): The message metadata.
-        """
-        self._on_device_readback(
-            self.device_ver,
-            self._device_ui_components_hv("vertical"),
-            msg_content,
-            metadata,
-            self.position_update_ver.emit,
-            self.update_limits_ver,
-        )
+        self.ui.stop_button.setEnabled(bool(self.device_hor or self.device_ver))
 
     def update_limits_hor(self, limits: tuple):
         """Update limits

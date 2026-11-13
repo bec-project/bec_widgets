@@ -7,6 +7,7 @@ from typing import Literal, TypeAlias
 import numpy as np
 import pyqtgraph as pg
 from bec_lib import bec_logger
+from bec_lib.data_api import CorrelationGroup, ScanTarget, SubscriptionUpdate
 from bec_lib.scan_data_container import ScanDataContainer
 from bec_lib.scan_items import ScanItem
 from qtpy.QtCore import QPoint, QPointF, Qt, Signal
@@ -19,7 +20,9 @@ from bec_widgets.utils.entry_validator import EntryValidator
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.fps_counter import FPSCounter
 from bec_widgets.utils.plot_indicator_items import BECArrowItem, BECTickItem
+from bec_widgets.utils.qt_data_subscription import QtDataSubscription
 from bec_widgets.utils.side_panel import SidePanel
+from bec_widgets.utils.signal_classification import SignalCategory, classify_signal_info
 from bec_widgets.utils.toolbars.actions import MaterialIconAction
 from bec_widgets.utils.toolbars.performance import PerformanceConnection, performance_bundle
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
@@ -73,6 +76,13 @@ class UIMode(Enum):
 class PlotBase(BECWidget, QWidget):
     PLUGIN = False
     RPC = False
+    #: Default data-update rate in Hz; widgets override it to match their
+    #: render cost (see the ``update_rate`` property).
+    DEFAULT_UPDATE_RATE: float = 25.0
+    #: The DataAPI subscription of the widget; the subclasses that plot through one set it.
+    _data_bridge: QtDataSubscription | None = None
+    #: The (bridge, scan, binding revision) the alignment of the sources was last checked for.
+    _alignment_binding: tuple | None = None
     BASE_USER_ACCESS = [
         "enable_toolbar",
         "enable_toolbar.setter",
@@ -116,6 +126,8 @@ class PlotBase(BECWidget, QWidget):
         "legend_label_size.setter",
         "minimal_crosshair_precision",
         "minimal_crosshair_precision.setter",
+        "update_rate",
+        "update_rate.setter",
         "screenshot",
     ]
     USER_ACCESS = [*BECWidget.USER_ACCESS, *BASE_USER_ACCESS]
@@ -176,6 +188,9 @@ class PlotBase(BECWidget, QWidget):
         self.info_label.setParentItem(self.plot_item.vb)
         self._scan_info_rows: list[tuple[str, object | None]] = []
         self._custom_info_rows: list[tuple[str, object | None]] = []
+        self._warning_rows: list[tuple[str, object | None]] = []
+        self._data_rows: list[tuple[str, object | None]] = []
+        self._data_warnings: dict[str, str] = {}
         self.crosshair = None
         # Holds a pin that outlived its crosshair (e.g. crosshair toggled off) so it
         # can be re-adopted when the crosshair is hooked again.
@@ -189,6 +204,7 @@ class PlotBase(BECWidget, QWidget):
         self._y_label_suffix = ""
         self._y_axis_units = ""
         self._minimal_crosshair_precision = 3
+        self._update_rate = min(100.0, max(1.0, float(self.DEFAULT_UPDATE_RATE)))
 
         # Plot Indicator Items
         self.tick_item = BECTickItem(parent=self, plot_item=self.plot_item)
@@ -334,8 +350,199 @@ class PlotBase(BECWidget, QWidget):
         self._custom_info_rows = []
         self._render_info_label()
 
+    def set_plot_warning(self, text: str | None) -> None:
+        """Show (or clear, with None) a warning row in the info label, even if it is hidden."""
+        self._warning_rows = [("Warning", text)] if text else []
+        self._render_info_label()
+
+    def set_data_warning(self, text: str | None, group: str = "") -> None:
+        """
+        Show (or clear, with None) what the DataAPI reports about the plotted data.
+
+        Args:
+            text(str | None): The warning, or None to clear it.
+            group(str): Whose warning it is (a correlation group or a scan); the row
+                shows the warnings of all groups.
+        """
+        if text:
+            self._data_warnings[group] = text
+        else:
+            self._data_warnings.pop(group, None)
+        self._render_data_warnings()
+
+    def clear_data_warnings(
+        self, scope: str = "", keep: Iterable[CorrelationGroup] | None = None
+    ) -> None:
+        """
+        Drop what one DataAPI subscription reported (see :meth:`report_data_state`).
+
+        Args:
+            scope(str): The scope its warnings were reported under.
+            keep(Iterable[CorrelationGroup] | None): Correlation groups whose warnings stay, for a
+                subscription that lives on with other sources; None drops all of them.
+        """
+        prefix = f"{scope}/"
+        kept = {f"{prefix}{group}" for group in keep or ()}
+        for key in [k for k in self._data_warnings if k.startswith(prefix) and k not in kept]:
+            del self._data_warnings[key]
+        self._render_data_warnings()
+
+    def _render_data_warnings(self) -> None:
+        joined = "; ".join(dict.fromkeys(self._data_warnings.values()))
+        rows = [("Data", joined)] if joined else []
+        if rows != self._data_rows:
+            self._data_rows = rows
+            self._render_info_label()
+
+    def report_data_state(
+        self, update: SubscriptionUpdate, bridge: QtDataSubscription | None = None, scope: str = ""
+    ) -> None:
+        """Show the warnings of one DataAPI update (see :meth:`data_warning_of`)."""
+        group = update.metadata.get("group", "")
+        self.set_data_warning(self.data_warning_of(update, bridge), f"{scope}/{group}")
+
+    @staticmethod
+    def data_warning_of(
+        update: SubscriptionUpdate, bridge: QtDataSubscription | None = None
+    ) -> str | None:
+        """
+        Put what a DataAPI update says about its sources into one line for the user.
+
+        Covers a failed source (``error``), a live stream whose beginning was already gone
+        (``stream_trimmed``), sources that trail the others and sources no data path serves.
+        Without any of these the result is None.
+
+        Args:
+            update (SubscriptionUpdate): The update.
+            bridge (QtDataSubscription | None): The subscription it came from, for the
+                unserved sources.
+
+        Returns:
+            str | None: The warning text, or None.
+        """
+
+        def name(key) -> str:
+            return f"{key[0]}.{key[1]}"
+
+        parts = []
+        for key, source in update.sources.items():
+            metadata = source.metadata
+            if metadata.get("error"):
+                parts.append(f"{name(key)}: {metadata['error']}")
+            if metadata.get("stream_trimmed"):
+                parts.append(f"{name(key)}: the start of the live stream is no longer available")
+        lagging = update.metadata.get("lagging_sources") or []
+        if lagging:
+            parts.append(f"{', '.join(name(key) for key in lagging)}: behind the other signals")
+        unbound = bridge.unbound_sources if bridge is not None else []
+        if unbound:
+            reason = (
+                "not available in this scan" if update.has_scan else "has no live value to follow"
+            )
+            parts.append(f"{', '.join(name(key) for key in unbound)}: {reason}")
+        return "; ".join(dict.fromkeys(parts)) or None
+
+    def _alignment_labels(
+        self, sources: list[tuple[str, str]], scan: str | None
+    ) -> dict[tuple[str, str], CorrelationGroup] | None:
+        """Correlation group per source from the DataAPI, or None if unavailable."""
+        try:
+            groups = self.client.data_api.correlation_groups(list(sources), scan=scan)
+        except (ValueError, RuntimeError) as exc:  # an unknown scan, or the DataAPI is closed
+            logger.debug(f"Correlation groups unavailable: {exc}")
+            return None
+        return {tuple(key): label for label, keys in groups.items() for key in keys}
+
+    def _plotted_alignment_labels(
+        self, sources: list[tuple[str, str]], scan: str | None
+    ) -> dict[tuple[str, str], CorrelationGroup] | None:
+        """
+        Correlation group per plotted source.
+
+        Once the data subscription is bound, its groups decide (the scan's own readout
+        priorities); sources without data in the bound scan are left out. Before that,
+        the DataAPI classifies ``scan`` (for an idle ``"live"``: a guess from the
+        device configuration).
+        """
+        bridge = self._data_bridge
+        groups = bridge.groups if bridge is not None else {}
+        if not groups:
+            return self._alignment_labels(sources, scan)
+        unbound = set(bridge.unbound_sources)
+        return {
+            tuple(key): label
+            for label, keys in groups.items()
+            for key in keys
+            if tuple(key) not in unbound
+        }
+
+    def _alignment_binding_changed(self, update: SubscriptionUpdate) -> bool:
+        """Whether ``update`` comes from a binding the alignment was not checked against."""
+        binding = (id(self._data_bridge), update.scan_id, update.generation)
+        if binding == self._alignment_binding:
+            return False
+        self._alignment_binding = binding
+        return True
+
+    def _warn_if_unaligned(self, sources: list[tuple[str, str]], scan: str | None) -> None:
+        """Warn when sources that are plotted against each other cannot be aligned."""
+        labels = self._plotted_alignment_labels(sources, scan)
+        if labels is None:
+            return
+        if len({labels[key] for key in map(tuple, sources) if key in labels}) > 1:
+            names = ", ".join(f"{device}.{entry}" for device, entry in sources)
+            text = f"{names} cannot be aligned point by point (not recorded together)"
+            logger.warning(text)
+            self.set_plot_warning(text)
+        else:
+            self.set_plot_warning(None)
+
+    def _alignment_candidates(self, name: str) -> list[tuple[str, str]]:
+        """Sources of one device a picker can offer: its main signal and its async signals."""
+        candidates = [(name, name)]
+        device_info = self.dev[name]._info or {}  # pylint: disable=protected-access
+        signals = device_info.get("signals", {})
+        for info in signals.values() if isinstance(signals, dict) else ():
+            obj_name = info.get("obj_name") if isinstance(info, dict) else None
+            if obj_name and classify_signal_info(info) is SignalCategory.ASYNC:
+                candidates.append((name, obj_name))
+        return list(dict.fromkeys(candidates))
+
+    def compatible_devices(
+        self, anchors: list[tuple[str, str]], scan: str | None = ScanTarget.LIVE
+    ) -> list[str] | None:
+        """
+        Devices with a signal that can be aligned with all ``anchors`` (to filter pickers).
+
+        A device qualifies through its main signal or any of its async signals, so the
+        sub-signals of one AsyncMultiSignal make their device compatible with each other.
+
+        Args:
+            anchors (list[tuple[str, str]]): Sources already chosen.
+            scan (str | None): Scan to classify for (``"live"``: the running or next scan).
+
+        Returns:
+            list[str] | None: Compatible device names, or None when no filter applies.
+        """
+        anchors = [tuple(anchor) for anchor in anchors if anchor and anchor[0]]
+        names = list(self.dev.keys())
+        if not anchors or not names:
+            return None
+        candidates = {name: self._alignment_candidates(name) for name in names}
+        sources = anchors + [key for keys in candidates.values() for key in keys]
+        labels = self._alignment_labels(list(dict.fromkeys(sources)), scan)
+        if labels is None:
+            return None
+        anchor_labels = {labels.get(anchor) for anchor in anchors}
+        if len(anchor_labels) != 1:
+            return None  # the anchors themselves cannot be aligned: do not filter
+        label = anchor_labels.pop()
+        return [name for name in names if any(labels.get(key) == label for key in candidates[name])]
+
     def _render_info_label(self) -> None:
-        self.info_label.set_rows([*self._scan_info_rows, *self._custom_info_rows])
+        self.info_label.set_rows(
+            [*self._scan_info_rows, *self._custom_info_rows, *self._warning_rows, *self._data_rows]
+        )
         self._sync_info_label_visibility()
         self._sync_info_label_action()
 
@@ -390,7 +597,11 @@ class PlotBase(BECWidget, QWidget):
         component.action.deleteLater()
 
     def _sync_info_label_visibility(self) -> None:
-        self.info_label.setVisible(self._show_info_label and bool(self.info_label.rows))
+        self.info_label.setVisible(
+            (self._show_info_label and bool(self.info_label.rows))
+            or bool(self._warning_rows)
+            or bool(self._data_rows)
+        )
 
     def _sync_info_label_action(self) -> None:
         if not self.toolbar.components.exists("plot_info_label"):
@@ -1173,6 +1384,45 @@ class PlotBase(BECWidget, QWidget):
         )  # 9 is the default font size of the legend, so we always scale it against 9
         self.plot_item.legend.setScale(scale)
 
+    @SafeProperty(float, doc="Data update rate in Hz (clamped to 1-100).")
+    def update_rate(self) -> float:
+        """
+        Rate at which data subscriptions deliver updates to the widget, in Hz.
+
+        Clamped to 1-100 Hz. Each widget class defines its own default via
+        ``DEFAULT_UPDATE_RATE`` (25 Hz unless overridden).
+        """
+        return self._update_rate
+
+    @update_rate.setter
+    def update_rate(self, value: float):
+        """
+        Set the data update rate and apply it to all active subscriptions.
+
+        Args:
+            value(float): Update rate in Hz; clamped to 1-100.
+        """
+        try:
+            rate = float(value)
+        except (TypeError, ValueError):
+            logger.warning(f"Invalid update_rate {value!r}; keeping {self._update_rate} Hz.")
+            return
+        rate = min(100.0, max(1.0, rate))
+        self._update_rate = rate
+        self._apply_update_rate()
+        self.property_changed.emit("update_rate", rate)
+
+    @property
+    def update_interval_s(self) -> float:
+        """The subscription coalescing interval in seconds for :attr:`update_rate`."""
+        return 1.0 / self._update_rate
+
+    def _apply_update_rate(self):
+        """Propagate the current update rate to every active data bridge."""
+        interval = self.update_interval_s
+        for bridge in self.findChildren(QtDataSubscription):
+            bridge.set_min_emit_interval(interval)
+
     ################################################################################
     # FPS Counter
     ################################################################################
@@ -1437,3 +1687,69 @@ if __name__ == "__main__":  # pragma: no cover:
     launch_window.show()
 
     sys.exit(app.exec_())
+
+
+def expand_sample_columns(*columns) -> tuple[list, ...] | None:
+    """
+    Expand aligned columns whose rows hold several samples into one sample per row.
+
+    An async ``add`` message may carry a chunk of samples, so each aligned row of such a
+    source is an array. Plots pairing x/y(/z) point by point need scalars; the rows are
+    flattened in lockstep, which pairs samples correctly when every source carries
+    equally many samples per row (the sub-signals of one AsyncMultiSignal always do).
+
+    Args:
+        *columns: Aligned columns of equal length (``update.aligned()`` values).
+
+    Returns:
+        tuple[list, ...] | None: One flat list per column, or None when a row's sources
+            carry different numbers of samples (their samples cannot be paired).
+    """
+    arrays = [np.asarray(column) for column in columns]
+    if all(array.ndim == 1 and array.dtype != object for array in arrays):
+        return tuple(array.tolist() for array in arrays)
+    flat: list[list] = [[] for _ in arrays]
+    for row in zip(*arrays):
+        sizes = {np.size(value) for value in row}
+        if len(sizes) != 1:
+            return None
+        for out, value in zip(flat, row):
+            out.extend(np.ravel(value).tolist())
+    return tuple(flat)
+
+
+def connect_alignment_filter(
+    target_widget, anchor_combo, partner_combos, anchor_signal_combo=None
+) -> None:
+    """
+    Keep partner device pickers to devices that can be aligned with the anchor.
+
+    Used by the scatter and heatmap settings: once x is chosen, y and z offer only
+    devices in x's correlation group (their current choice stays selectable).
+
+    Args:
+        target_widget: The plot widget providing ``compatible_devices``.
+        anchor_combo: The x device combobox.
+        partner_combos: The y/z device comboboxes to filter.
+        anchor_signal_combo: The x signal combobox; when it names a signal, that
+            signal is the anchor instead of the device's main signal.
+    """
+
+    def apply(*_) -> None:
+        device = anchor_combo.currentText()
+        entry = anchor_signal_combo.get_signal_name() if anchor_signal_combo is not None else ""
+        anchor = (device, entry or device)
+        compatible = target_widget.compatible_devices([anchor]) if device else None
+        if compatible is None:
+            return
+        for combo in partner_combos:
+            current = combo.currentText()
+            names = compatible + ([current] if current and current not in compatible else [])
+            combo.set_available_devices(names)
+            if current:
+                combo.setCurrentText(current)
+
+    anchor_combo.currentTextChanged.connect(apply)
+    if anchor_signal_combo is not None:
+        anchor_signal_combo.currentTextChanged.connect(apply)
+    apply()

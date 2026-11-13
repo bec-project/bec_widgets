@@ -3,6 +3,9 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
+from bec_lib.data_api import SourceData, SubscriptionUpdate
+from bec_lib.endpoints import MessageEndpoints
+from bec_lib.messages import DeviceMessage
 from qtpy import QtCore
 from qtpy.QtWidgets import QDialogButtonBox, QLabel
 
@@ -78,8 +81,7 @@ def test_initialization(signal_label: SignalLabel):
     assert signal_label.show_select_button is True
     assert signal_label.show_default_units is False
     assert signal_label.decimal_places == 3
-    signal_label.set_display_value()
-    assert signal_label._display.text() == ""
+    assert signal_label._display.text() == "__ m/s"
 
 
 def test_initialization_with_device(qtbot, mocked_client: MagicMock):
@@ -225,35 +227,103 @@ def test_set_nonexisting_device_and_signal(signal_label: SignalLabel, qtbot):
     signal_label.device = "samq"
     signal_label.signal = "readfront"
     assert signal_label._device == "samq"
-    signal_label._manual_read()
-    signal_label.set_display_value(signal_label._value)
     assert signal_label._display.text() == "__"
     assert signal_label._signal == "readfront"
-    signal_label._manual_read()
-    signal_label.set_display_value(signal_label._value)
-    assert signal_label._display.text() == "__"
+    assert signal_label._data_subscription is None
 
 
-def test_handle_readback(signal_label: SignalLabel, qtbot):
+def test_handle_data_api_error(signal_label: SignalLabel):
     signal_label.device = "samx"
     signal_label.signal = "readback"
     signal_label.custom_units = "μm"
     signal_label._dtype = "float"
-    signal_label.on_device_readback({"random": {"stuff": "in", "corrupted": "reading"}}, {})
-    assert signal_label._display.text() == "ERROR!"
-    assert "Error processing incoming reading" in signal_label._display.toolTip()
-    signal_label.on_device_readback(
-        {
-            "signals": {
-                "samx": {"value": 0.9927490347496489, "timestamp": 1747662246.3741279},
-                "samx_setpoint": {"value": 1.0, "timestamp": 1747662246.368704},
-                "samx_motor_is_moving": {"value": 0, "timestamp": 1747662246.373092},
-            }
-        },
-        {},
+    source = SourceData(
+        device="samx",
+        entry="samx",
+        kind="unindexed",
+        ordinals=(),
+        values=(),
+        timestamps=(),
+        complete=False,
+        metadata={"error": "Reading unavailable"},
     )
-    assert signal_label._display.text() == "0.993 μm"
+    signal_label._on_data_update(
+        SubscriptionUpdate(
+            scan_id=None,
+            reason="live",
+            sources={source.key: source},
+            aligned_ordinals=(),
+            complete=False,
+        )
+    )
+    assert signal_label._display.text() == "ERROR!"
+    assert "Reading unavailable" in signal_label._display.toolTip()
+
+
+def test_data_api_seeds_readback_and_delivers_live_values(signal_label, qtbot, mocked_client):
+    endpoint = MessageEndpoints.device_readback("samx")
+    mocked_client.connector.set_and_publish(
+        endpoint, DeviceMessage(signals={"samx": {"value": 0.5, "timestamp": 1.0}})
+    )
+    with (
+        patch.object(signal_label.dev.samx, "read") as read,
+        patch.object(signal_label.dev.samx, "read_configuration") as read_configuration,
+    ):
+        signal_label.device = "samx"
+        signal_label.signal = "readback"
+        signal_label.custom_units = "μm"
+        qtbot.waitUntil(lambda: signal_label._display.text() == "0.500 μm")
+        mocked_client.connector.set_and_publish(
+            endpoint, DeviceMessage(signals={"samx": {"value": 0.992749, "timestamp": 2.0}})
+        )
+        qtbot.waitUntil(lambda: signal_label._display.text() == "0.993 μm")
+        read.assert_not_called()
+        read_configuration.assert_not_called()
     assert signal_label._display.toolTip() == ""
+
+
+def test_data_api_delivers_configuration_signals(qtbot, mocked_client):
+    endpoint = MessageEndpoints.device_read_configuration("samx")
+    mocked_client.connector.set_and_publish(
+        endpoint, DeviceMessage(signals={"samx_velocity": {"value": 2.5, "timestamp": 1.0}})
+    )
+    widget = SignalLabel(device="samx", signal="velocity", client=mocked_client)
+    qtbot.addWidget(widget)
+    qtbot.waitUntil(lambda: widget._display.text() == "2.5")
+    mocked_client.connector.set_and_publish(
+        endpoint, DeviceMessage(signals={"samx_velocity": {"value": 3.5, "timestamp": 2.0}})
+    )
+    qtbot.waitUntil(lambda: widget._display.text() == "3.5")
+
+
+def test_signal_rebind_discards_queued_values_and_closes_subscription(
+    signal_label, qtbot, mocked_client
+):
+    for device, value in [("samx", 1.5), ("samy", 2.5)]:
+        mocked_client.connector.set_and_publish(
+            MessageEndpoints.device_readback(device),
+            DeviceMessage(signals={device: {"value": value, "timestamp": 1.0}}),
+        )
+    signal_label.device = "samx"
+    signal_label.signal = "readback"
+    previous = signal_label._data_subscription
+    signal_label.device = "samy"
+    assert previous._closed
+    qtbot.waitUntil(lambda: signal_label._value == 2.5)
+    assert signal_label._data_subscription.sources == [("samy", "samy")]
+    current = signal_label._data_subscription
+    signal_label.close()
+    assert current._closed
+
+
+def test_data_api_preserves_array_signal_values(signal_label, qtbot, mocked_client):
+    mocked_client.connector.set_and_publish(
+        MessageEndpoints.device_readback("samx"),
+        DeviceMessage(signals={"samx": {"value": [1.0, 2.0], "timestamp": 1.0}}),
+    )
+    signal_label.device = "samx"
+    signal_label.signal = "readback"
+    qtbot.waitUntil(lambda: signal_label._display.text() == "[1.0, 2.0] m/s")
 
 
 def test_handle_lists(signal_label: SignalLabel, qtbot):
