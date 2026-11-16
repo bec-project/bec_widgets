@@ -669,7 +669,9 @@ class HDF5Viewer(BECWidget, QWidget):
         self.status_icon.setPixmap(material_icon("verified_user", size=(16, 16)))
         remute(self)
         self.scan_list.view.viewport().update()
-        self._refresh_plot()
+        # The Waveform recolours its curves when it follows the theme itself; give the curves
+        # the colours of the scan list and the signal chips again once it has done so.
+        QTimer.singleShot(0, self._refresh_plot)
 
     def cleanup(self):
         """Stop the reads, release the history and scan status subscriptions."""

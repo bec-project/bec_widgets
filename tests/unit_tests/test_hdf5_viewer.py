@@ -35,6 +35,7 @@ from bec_widgets.widgets.services.hdf5_viewer.scan_list import (
     fit_parts,
     format_duration,
     format_when,
+    series_color,
 )
 from bec_widgets.widgets.services.hdf5_viewer.signal_list import SignalList, classify
 
@@ -920,3 +921,17 @@ def test_scan_status_words_and_tones_are_the_ones_of_the_scan_queue():
         _icon, tone, word = HISTORY_STATUS[status]
         assert STATUS_LABELS[status] == word
         assert STATUS_TONES[status] == tone
+
+
+def test_curves_keep_the_colours_of_the_scan_list_after_a_theme_change(qtbot, viewer):
+    # pylint: disable=import-outside-toplevel
+    from bec_widgets.utils.colors import apply_theme
+
+    qtbot.waitUntil(lambda: len(viewer._curves) == 1)
+    curve = next(iter(viewer._curves.values()))[0]
+    try:
+        apply_theme("dark")
+        qtbot.waitUntil(lambda: curve.config.color == series_color(0))
+        assert viewer.signal_list.signal_color(("bpm3a", "bpm3a")) == series_color(0)
+    finally:
+        apply_theme("light")
