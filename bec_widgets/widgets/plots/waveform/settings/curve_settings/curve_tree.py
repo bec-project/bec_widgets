@@ -237,16 +237,22 @@ class CurveRow(QTreeWidgetItem):
             self.device_edit.currentTextChanged.connect(self.entry_edit.set_device)
             self.device_edit.device_reset.connect(self.entry_edit.reset_selection)
             if self.config.signal:
+                kept = False
                 device_index = self.device_edit.findText(self.config.signal.device or "")
                 if device_index >= 0:
                     self.device_edit.setCurrentIndex(device_index)
                     # Force the entry_edit to update based on the device name
                     self.device_edit.currentTextChanged.emit(self.device_edit.currentText())
+                elif self.source == "history" and self.config.signal.device:
+                    # A device that has left the session: its scan still holds it, so keep it.
+                    self.device_edit.setEditText(self.config.signal.device)
+                    self.entry_edit.setEditText(self.config.signal.signal or "")
+                    kept = True
                 else:
                     # If the device name is not found, set the first enabled item
                     self.device_edit.setCurrentIndex(0)
 
-                if not self.entry_edit.set_to_obj_name(self.config.signal.signal):
+                if not kept and not self.entry_edit.set_to_obj_name(self.config.signal.signal):
                     # If the entry is not found, try to set it to the first enabled item
                     if not self.entry_edit.set_to_first_enabled():
                         # If no enabled item is found, set to the first item
@@ -447,10 +453,15 @@ class CurveRow(QTreeWidgetItem):
                     device_entry_info = self.entry_edit.itemData(index)
                     if device_entry_info:
                         device_entry = device_entry_info.get("obj_name", device_entry)
-                else:
+                elif (
+                    device_name in self.entry_validator.devices
+                    or self.scan_index_combo.scan_number is None
+                ):
                     device_entry = self.entry_validator.validate_signal(
                         device=device_name, signal=device_entry
                     )
+                # Otherwise a history curve of a device that has left the session: the
+                # Waveform checks it against what its scan stored when it is added.
 
             self.config.signal = DeviceSignal(device=device_name, signal=device_entry)
             scan_number = self.scan_index_combo.scan_number

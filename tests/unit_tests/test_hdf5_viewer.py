@@ -711,19 +711,35 @@ def test_viewer_keeps_the_waveform_names_of_history_curves(qtbot, viewer):
     }
 
 
-def test_viewer_explains_a_signal_the_session_cannot_plot(qtbot, viewer):
+def test_viewer_plots_a_signal_of_a_device_that_left_the_session(qtbot, viewer):
     qtbot.waitUntil(lambda: len(viewer._curves) == 1)
 
     with mock.patch.object(ErrorPopupUtility(), "custom_exception_hook") as popup:
         viewer.signal_list.toggle_y(("old_diode", "old_diode"))
 
+    popup.assert_not_called()
+    assert set(viewer._curves) == {
+        ("scan-2", "bpm3a", "bpm3a"),
+        ("scan-2", "old_diode", "old_diode"),
+    }
+    assert (
+        legend_texts(viewer)[("scan-2", "old_diode", "old_diode")] == "old_diode-old_diode-scan-12"
+    )
+
+
+def test_viewer_explains_a_signal_it_cannot_plot_in_place(qtbot, viewer):
+    qtbot.waitUntil(lambda: len(viewer._curves) == 1)
+
+    with (
+        mock.patch.object(ErrorPopupUtility(), "custom_exception_hook") as popup,
+        mock.patch.object(viewer.waveform, "plot", side_effect=ValueError("no data")),
+    ):
+        viewer.signal_list.toggle_y(("bpm4i", "bpm4i"))
+
     # No popup and no broken entry: the reason stands under the title of the plot.
     popup.assert_not_called()
     assert set(viewer._curves) == {("scan-2", "bpm3a", "bpm3a")}
-    assert (
-        "old_diode is not a device of the current BEC session" in viewer.plot_subtitle.full_text()
-    )
-    assert legend_texts(viewer) == {("scan-2", "bpm3a", "bpm3a"): "bpm3a-bpm3a-scan-12"}
+    assert "bpm4i could not be plotted: no data" in viewer.plot_subtitle.full_text()
 
 
 def test_tabs_open_a_page_and_say_so(qtbot):
