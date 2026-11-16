@@ -19,7 +19,13 @@ from bec_widgets.widgets.services.hdf5_viewer import h5_reader
 from bec_widgets.widgets.services.hdf5_viewer.h5_preview import H5Preview, views_for
 from bec_widgets.widgets.services.hdf5_viewer.h5_reader import H5Node, H5ReadError
 from bec_widgets.widgets.services.hdf5_viewer.h5_service import H5Service
-from bec_widgets.widgets.services.hdf5_viewer.h5_tree import NODE_ROLE, PLACEHOLDER_ROLE, H5Tree
+from bec_widgets.widgets.services.hdf5_viewer.h5_tree import (
+    CONTEXT_ROLE,
+    MATCH_ROLE,
+    NODE_ROLE,
+    PLACEHOLDER_ROLE,
+    H5Tree,
+)
 from bec_widgets.widgets.services.hdf5_viewer.hdf5_viewer import HDF5Viewer
 from bec_widgets.widgets.services.hdf5_viewer.pane_tabs import PaneTabs
 from bec_widgets.widgets.services.hdf5_viewer.scan_list import (
@@ -273,17 +279,32 @@ def test_tree_follows_a_link_into_another_file_when_it_is_selected(qtbot, servic
     tree.cleanup()
 
 
-def test_tree_finds_entries_by_name(qtbot, service, data_file):
+def found_root(tree):
+    return tree.found_model.item(0)
+
+
+def test_tree_finds_entries_by_name_and_shows_names_in_their_branch(qtbot, service, data_file):
     tree = H5Tree(service)
     qtbot.addWidget(tree)
     tree.set_file(str(data_file), select_path="/entry")
     qtbot.waitUntil(lambda: tree.model.item(0).rowCount() == 1)
 
-    tree.find_edit.setText("ener")
+    tree.find_edit.setText("ENER")
     qtbot.waitUntil(lambda: tree.view.model() is tree.found_model)
-    assert tree.found_model.rowCount() == 1
-    assert tree.found_model.item(0).data(NODE_ROLE).path == "/entry/plot/energy"
-    assert "1 match" in tree.note.text()
+    # The way to the match is a branch of the tree, opened, with names instead of paths.
+    root = found_root(tree)
+    assert child_names(root) == ["entry"]
+    entry = root.child(0)
+    assert entry.data(CONTEXT_ROLE) and child_names(entry) == ["plot"]
+    plot = entry.child(0)
+    assert child_names(plot) == ["energy"]
+    energy = plot.child(0)
+    assert energy.data(NODE_ROLE).path == "/entry/plot/energy"
+    assert energy.data(MATCH_ROLE) == (0, 4)
+    assert tree.view.isExpanded(plot.index())
+    assert tree.note.text() == "1 match"
+    # Nothing is read only because something was typed.
+    assert not tree.view.currentIndex().isValid()
 
     tree.find_edit.setText("zzz")
     qtbot.waitUntil(lambda: "No name" in tree.note.text())
@@ -292,9 +313,84 @@ def test_tree_finds_entries_by_name(qtbot, service, data_file):
     tree.cleanup()
 
 
-################################################################################
-# Preview
-################################################################################
+def test_tree_search_matches_names_not_paths(qtbot, service, data_file):
+    tree = H5Tree(service)
+    qtbot.addWidget(tree)
+    tree.set_file(str(data_file), select_path="/entry")
+    qtbot.waitUntil(lambda: tree.model.item(0).rowCount() == 1)
+
+    tree.find_edit.setText("plot")
+    qtbot.waitUntil(lambda: tree.view.model() is tree.found_model)
+    plot = found_root(tree).child(0).child(0)
+    assert plot.data(MATCH_ROLE) == (0, 4)
+    # Its children do not match because of their parent; they are listed when it is opened.
+    assert plot.child(0).data(PLACEHOLDER_ROLE)
+    assert tree.note.text() == "1 match"
+    tree.cleanup()
+
+
+def test_tree_search_result_is_selected_and_its_group_lists_children(qtbot, service, data_file):
+    tree = H5Tree(service)
+    qtbot.addWidget(tree)
+    selected = []
+    tree.node_selected.connect(selected.append)
+    tree.set_file(str(data_file), select_path="/entry")
+    qtbot.waitUntil(lambda: tree.model.item(0).rowCount() == 1)
+
+    tree.find_edit.setText("plot")
+    qtbot.waitUntil(lambda: tree.view.model() is tree.found_model)
+    plot = found_root(tree).child(0).child(0)
+    tree.view.setCurrentIndex(plot.index())
+    qtbot.waitUntil(lambda: selected[-1] is not None and selected[-1].path == "/entry/plot")
+
+    tree.view.expand(plot.index())
+    qtbot.waitUntil(lambda: child_names(plot) == ["counts", "energy"])
+    tree.view.setCurrentIndex(plot.child(0).index())
+    qtbot.waitUntil(lambda: selected[-1] is not None and selected[-1].path == "/entry/plot/counts")
+    tree.cleanup()
+
+
+def test_tree_enter_in_the_search_selects_the_first_match(qtbot, service, data_file):
+    tree = H5Tree(service)
+    qtbot.addWidget(tree)
+    selected = []
+    tree.node_selected.connect(selected.append)
+    tree.set_file(str(data_file), select_path="/entry")
+    qtbot.waitUntil(lambda: tree.model.item(0).rowCount() == 1)
+
+    tree.find_edit.setText("ener")
+    qtbot.waitUntil(lambda: tree.view.model() is tree.found_model)
+    qtbot.keyClick(tree.find_edit, Qt.Key.Key_Return)
+    qtbot.waitUntil(lambda: selected[-1] is not None and selected[-1].path == "/entry/plot/energy")
+
+    qtbot.keyClick(tree.find_edit, Qt.Key.Key_Escape)
+    assert tree.find_edit.text() == ""
+    tree.cleanup()
+
+
+def test_clearing_the_search_reveals_the_selected_match_in_the_tree(qtbot, service, data_file):
+    tree = H5Tree(service)
+    qtbot.addWidget(tree)
+    tree.set_file(str(data_file), select_path="/entry")
+    qtbot.waitUntil(lambda: tree.model.item(0).rowCount() == 1)
+
+    tree.find_edit.setText("ener")
+    qtbot.waitUntil(lambda: tree.view.model() is tree.found_model)
+    assert tree.enter_results()
+    tree.find_edit.clear()
+
+    assert tree.view.model() is tree.model
+    qtbot.waitUntil(lambda: tree.current_node() is not None)
+    assert tree.current_node().path == "/entry/plot/energy"
+    assert tree.view.isExpanded(tree.view.currentIndex().parent())
+    tree.cleanup()
+
+
+def test_find_branches_lists_the_groups_on_the_way(data_file):
+    result = h5_reader.find_branches(str(data_file), "ener")
+    assert [node.path for node in result.matches] == ["/entry/plot/energy"]
+    assert sorted(node.path for node in result.ancestors) == ["/entry", "/entry/plot"]
+    assert not result.truncated
 
 
 def dataset(file_path, path, shape, dtype_kind="f"):

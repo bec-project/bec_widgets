@@ -628,6 +628,54 @@ def find_nodes(
     return matches
 
 
+@dataclass(frozen=True)
+class FoundBranches:
+    """The entries whose name matches a search, and the groups that lead to them."""
+
+    matches: tuple[H5Node, ...]
+    #: The groups on the way to a match that do not match themselves, in no particular order.
+    ancestors: tuple[H5Node, ...]
+    #: Whether the search stopped at its limit, so that more matches may exist.
+    truncated: bool
+
+
+def find_branches(
+    file_path: str, text: str, limit: int = 200, cancel: CancelCheck | None = None
+) -> FoundBranches:
+    """
+    Find the entries whose own name contains ``text``, with the groups that lead to them.
+
+    Only the last part of a path is compared, so the children of a matching group are not
+    matches because of their parent. Links into other files are not followed.
+
+    Args:
+        file_path (str): Path of the file.
+        text (str): Text to look for, case-insensitive.
+        limit (int): Largest number of matches returned.
+        cancel (CancelCheck | None): Returns True when the search is no longer wanted.
+
+    Returns:
+        FoundBranches: The matches in the order of the file and the groups above them.
+    """
+    matches = find_nodes(file_path, text, limit=limit, cancel=cancel)
+    matched = {node.path for node in matches}
+    wanted: list[str] = []
+    for node in matches:
+        parts = [part for part in node.path.split("/") if part][:-1]
+        for depth in range(1, len(parts) + 1):
+            path = "/" + "/".join(parts[:depth])
+            if path not in matched and path not in wanted:
+                wanted.append(path)
+    ancestors: list[H5Node] = []
+    if wanted:
+        with open_readonly(file_path) as handle, _guarded(file_path, "Searching"):
+            for path in wanted:
+                if cancel is not None and cancel():
+                    break
+                ancestors.append(_node_of(handle[path], path.rsplit("/", 1)[-1], path, file_path))
+    return FoundBranches(tuple(matches), tuple(ancestors), len(matches) >= limit)
+
+
 ################################################################################
 # Reading values
 ################################################################################

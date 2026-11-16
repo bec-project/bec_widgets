@@ -11,14 +11,23 @@ from functools import partial
 from pathlib import Path
 
 from bec_qthemes import material_icon
-from qtpy.QtCore import QModelIndex, QPoint, Qt, QTimer, Signal
-from qtpy.QtGui import QGuiApplication, QPalette, QStandardItem, QStandardItemModel
+from qtpy.QtCore import QEvent, QModelIndex, QObject, QPoint, Qt, QTimer, Signal
+from qtpy.QtGui import (
+    QFont,
+    QFontMetrics,
+    QGuiApplication,
+    QPalette,
+    QStandardItem,
+    QStandardItemModel,
+)
 from qtpy.QtWidgets import (
     QAbstractItemView,
+    QApplication,
     QHeaderView,
     QLabel,
     QLineEdit,
     QMenu,
+    QStyle,
     QStyledItemDelegate,
     QStyleOptionViewItem,
     QTreeView,
@@ -27,12 +36,16 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets.widgets.services.hdf5_viewer import h5_reader
-from bec_widgets.widgets.services.hdf5_viewer.h5_reader import H5Node, H5ReadError
+from bec_widgets.widgets.services.hdf5_viewer.h5_reader import FoundBranches, H5Node, H5ReadError
 from bec_widgets.widgets.services.hdf5_viewer.h5_service import H5Service
 
 NODE_ROLE = Qt.ItemDataRole.UserRole + 1
 STATE_ROLE = Qt.ItemDataRole.UserRole + 2
 PLACEHOLDER_ROLE = Qt.ItemDataRole.UserRole + 3
+#: In the search results: ``(start, length)`` of the part of the name that matches.
+MATCH_ROLE = Qt.ItemDataRole.UserRole + 4
+#: In the search results: a group that only leads to a match.
+CONTEXT_ROLE = Qt.ItemDataRole.UserRole + 5
 
 #: Pause after the last change of the selection before a preview is asked for.
 SELECT_DELAY_MS = 150
@@ -93,13 +106,79 @@ def node_type_text(node: H5Node) -> str:
 
 
 class _MutedColumnDelegate(QStyledItemDelegate):
-    """Draws the shape and type columns in the muted text colour of the theme."""
+    """
+    Draws the shape and type columns, placeholders and the groups that only lead to a search
+    match in the muted text colour of the theme, and the matching part of a name in bold.
+    """
 
     def initStyleOption(self, option: QStyleOptionViewItem, index: QModelIndex):
         super().initStyleOption(option, index)
-        if index.column() > 0 or index.data(PLACEHOLDER_ROLE):
+        if index.column() > 0 or index.data(PLACEHOLDER_ROLE) or index.data(CONTEXT_ROLE):
             muted = option.palette.color(QPalette.ColorRole.PlaceholderText)
             option.palette.setColor(QPalette.ColorRole.Text, muted)
+
+    def paint(self, painter, option: QStyleOptionViewItem, index: QModelIndex):
+        span = index.data(MATCH_ROLE) if index.column() == 0 else None
+        if not span:
+            super().paint(painter, option, index)
+            return
+        opt = QStyleOptionViewItem(option)
+        self.initStyleOption(opt, index)
+        widget = opt.widget
+        style = widget.style() if widget is not None else QApplication.style()
+        rect = style.subElementRect(QStyle.SubElement.SE_ItemViewItemText, opt, widget)
+        text = opt.text
+        opt.text = ""
+        style.drawControl(QStyle.ControlElement.CE_ItemViewItem, opt, painter, widget)
+        margin = style.pixelMetric(QStyle.PixelMetric.PM_FocusFrameHMargin, None, widget) + 1
+        rect = rect.adjusted(margin, 0, -margin, 0)
+        selected = bool(opt.state & QStyle.StateFlag.State_Selected)
+        role = QPalette.ColorRole.HighlightedText if selected else QPalette.ColorRole.Text
+        start, length = span
+        strong = QFont(opt.font)
+        strong.setWeight(QFont.Weight.Bold)
+        painter.save()
+        painter.setPen(opt.palette.color(role))
+        x = rect.left()
+        for part, font in (
+            (text[:start], opt.font),
+            (text[start : start + length], strong),
+            (text[start + length :], opt.font),
+        ):
+            if not part:
+                continue
+            metrics = QFontMetrics(font)
+            room = rect.right() - x
+            if room <= 0:
+                break
+            shown = metrics.elidedText(part, Qt.TextElideMode.ElideRight, room)
+            painter.setFont(font)
+            painter.drawText(
+                x, rect.top(), room, rect.height(), Qt.AlignmentFlag.AlignVCenter, shown
+            )
+            x += metrics.horizontalAdvance(shown)
+            if shown != part:
+                break
+        painter.restore()
+
+
+class _FindKeys(QObject):
+    """Down and Enter in the search field move into the results, Esc clears the search."""
+
+    def __init__(self, tree: H5Tree):
+        super().__init__(tree)
+        self._tree = tree
+
+    def eventFilter(self, watched, event) -> bool:  # pylint: disable=invalid-name
+        if event.type() != QEvent.Type.KeyPress:
+            return False
+        key = event.key()
+        if key == Qt.Key.Key_Escape and self._tree.find_edit.text():
+            self._tree.find_edit.clear()
+            return True
+        if key in (Qt.Key.Key_Down, Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            return self._tree.enter_results()
+        return False
 
 
 class H5Tree(QWidget):
@@ -116,6 +195,13 @@ class H5Tree(QWidget):
         super().__init__(parent)
         self._service = service
         self._generation = 0
+        #: Bumped whenever the search results are rebuilt or left, so late reads into the old
+        #: result rows are dropped.
+        self._found_generation = 0
+        #: The node announced last, so that finding it again in the tree does not read it again.
+        self._shown_node: H5Node | None = None
+        #: Rows of the tree that were open when the search results took the view.
+        self._expanded: list[QStandardItem] = []
         self._file_path = ""
         self._pending_path: list[str] = []
         self._follow_default = False
@@ -173,6 +259,7 @@ class H5Tree(QWidget):
         self.view.collapsed.connect(self._on_collapsed)
         self.view.customContextMenuRequested.connect(self._show_menu)
         self.find_edit.textChanged.connect(self._on_find_text)
+        self.find_edit.installEventFilter(_FindKeys(self))
         self._connect_selection()
 
     ################################################################################
@@ -205,7 +292,9 @@ class H5Tree(QWidget):
         self.find_edit.blockSignals(True)
         self.find_edit.clear()
         self.find_edit.blockSignals(False)
-        self._show_tree()
+        self._show_tree(reveal=False)
+        self._expanded = []
+        self._shown_node = None
         self.model.removeRows(0, self.model.rowCount())
         self.find_edit.setEnabled(bool(file_path))
         if not file_path:
@@ -227,7 +316,11 @@ class H5Tree(QWidget):
         """
         if not self._file_path or self.model.rowCount() == 0:
             return
-        self.find_edit.clear()
+        if self.find_edit.text():
+            self.find_edit.blockSignals(True)
+            self.find_edit.clear()
+            self.find_edit.blockSignals(False)
+            self._show_tree(reveal=False)
         self._pending_path = [part for part in path.split("/") if part]
         self._follow_default = False
         self._continue_path(self.model.item(0))
@@ -249,6 +342,7 @@ class H5Tree(QWidget):
         self._generation += 1
         self._select_timer.stop()
         self._find_timer.stop()
+        self._found_generation += 1
         self._service.cancel_all(self._channel)
 
     ################################################################################
@@ -277,16 +371,46 @@ class H5Tree(QWidget):
         self.view.selectionModel().currentChanged.connect(self._on_current_changed)
 
     def _use_model(self, model: QStandardItemModel) -> None:
-        """Show the tree or the list of matches in the view."""
+        """Show the tree or the search results in the view, keeping what is open in the tree."""
         if self.view.model() is model:
             return
+        if self.view.model() is self.model:
+            self._expanded = self._expanded_items(self.model.invisibleRootItem())
         previous = self.view.selectionModel()
+        if previous is not None:
+            previous.currentChanged.disconnect(self._on_current_changed)
         self.view.setModel(model)
         if previous is not None:
             previous.deleteLater()
-        self.view.setRootIsDecorated(model is self.model)
         self._size_header()
         self._connect_selection()
+        if model is self.model:
+            self.view.blockSignals(True)
+            for item in self._expanded:
+                self.view.expand(item.index())
+            self.view.blockSignals(False)
+            self._expanded = []
+
+    def _expanded_items(self, parent: QStandardItem) -> list[QStandardItem]:
+        """The loaded rows below ``parent`` that are open in the view, parents first."""
+        items = []
+        for row in range(parent.rowCount()):
+            child = parent.child(row)
+            if child.data(STATE_ROLE) == "loaded" and self.view.isExpanded(child.index()):
+                items.append(child)
+                items.extend(self._expanded_items(child))
+        return items
+
+    def _token(self, item: QStandardItem) -> tuple[int, int | None]:
+        """What must still hold when a read for ``item`` comes back."""
+        found = self._found_generation if item.model() is self.found_model else None
+        return (self._generation, found)
+
+    def _current(self, token: tuple[int, int | None]) -> bool:
+        generation, found = token
+        if generation != self._generation:
+            return False
+        return found is None or found == self._found_generation
 
     def _row_for(self, node: H5Node, name: str | None = None) -> list[QStandardItem]:
         name_item = QStandardItem(name or node.name)
@@ -326,7 +450,7 @@ class H5Tree(QWidget):
 
     def _set_node(self, item: QStandardItem, node: H5Node) -> None:
         """Replace the node of a row, after its link was followed."""
-        parent = item.parent() or self.model.invisibleRootItem()
+        parent = item.parent() or item.model().invisibleRootItem()
         item.setData(node, NODE_ROLE)
         shape = h5_reader.format_shape(node.shape) if node.kind == "dataset" else ""
         parent.child(item.row(), 1).setText(shape)
@@ -336,16 +460,16 @@ class H5Tree(QWidget):
     ################################################################################
 
     def _on_expanded(self, index: QModelIndex) -> None:
-        if self.view.model() is not self.model:
+        item = self.view.model().itemFromIndex(index)
+        if item is None:
             return
-        item = self.model.itemFromIndex(index)
-        if item is not None and item.data(STATE_ROLE) == "unloaded":
+        if item.data(STATE_ROLE) == "unloaded":
             self._load(item)
+        elif item.data(STATE_ROLE) == "loaded" and item.model() is self.model:
+            self._continue_path(item)
 
     def _on_collapsed(self, index: QModelIndex) -> None:
-        if self.view.model() is not self.model:
-            return
-        item = self.model.itemFromIndex(index)
+        item = self.view.model().itemFromIndex(index)
         if item is not None and item.data(STATE_ROLE) == "failed":
             # Opening it again tries again.
             item.removeRows(0, item.rowCount())
@@ -355,8 +479,9 @@ class H5Tree(QWidget):
     def _load(self, item: QStandardItem) -> None:
         node: H5Node = item.data(NODE_ROLE)
         item.setData("loading", STATE_ROLE)
-        generation = self._generation
-        channel = f"{self._channel}-list-{node.file_path}-{node.path}"
+        generation = self._token(item)
+        found = "-found" if item.model() is self.found_model else ""
+        channel = f"{self._channel}-list{found}-{node.file_path}-{node.path}"
         if node.kind == "link":
             self._service.request(
                 channel,
@@ -374,8 +499,8 @@ class H5Tree(QWidget):
             partial(self._on_load_failed, generation, item),
         )
 
-    def _on_link_resolved(self, generation: int, item: QStandardItem, target: H5Node) -> None:
-        if generation != self._generation:
+    def _on_link_resolved(self, generation, item: QStandardItem, target: H5Node) -> None:
+        if not self._current(generation):
             return
         self._set_node(item, target)
         if target.kind == "group":
@@ -386,28 +511,34 @@ class H5Tree(QWidget):
         if self.view.currentIndex() == item.index():
             self._select_timer.start()
 
-    def _on_children(self, generation: int, item: QStandardItem, nodes: list[H5Node]) -> None:
-        if generation != self._generation:
+    def _on_children(self, generation, item: QStandardItem, nodes: list[H5Node]) -> None:
+        if not self._current(generation):
             return
         item.removeRows(0, item.rowCount())
-        self.view.setFirstColumnSpanned(0, item.index(), False)
+        if self.view.model() is item.model():
+            self.view.setFirstColumnSpanned(0, item.index(), False)
         for node in nodes:
             item.appendRow(self._row_for(node))
         if not nodes:
             item.appendRow(self._placeholder("Empty"))
         item.setData("loaded", STATE_ROLE)
+        if item.model() is not self.model:
+            return
         node: H5Node = item.data(NODE_ROLE)
         if node.kind == "file" and node.file_path == self._file_path:
             self.file_listed.emit(self._file_path)
         self._continue_path(item)
 
-    def _on_load_failed(self, generation: int, item: QStandardItem, error: H5ReadError) -> None:
-        if generation != self._generation:
+    def _on_load_failed(self, generation, item: QStandardItem, error: H5ReadError) -> None:
+        if not self._current(generation):
             return
         item.removeRows(0, item.rowCount())
         item.appendRow(self._placeholder(error.message, "error"))
-        self.view.setFirstColumnSpanned(0, item.index(), True)
+        if self.view.model() is item.model():
+            self.view.setFirstColumnSpanned(0, item.index(), True)
         item.setData("failed", STATE_ROLE)
+        if item.model() is not self.model:
+            return
         node: H5Node = item.data(NODE_ROLE)
         if node.kind == "file" and node.file_path == self._file_path:
             self.file_failed.emit(error)
@@ -474,14 +605,15 @@ class H5Tree(QWidget):
     def _emit_selection(self) -> None:
         index = self.view.currentIndex()
         if not index.isValid():
-            self.node_selected.emit(None)
+            if not self._pending_path:
+                self._emit_node(None)
             return
         index = index.sibling(index.row(), 0)
         node: H5Node | None = index.data(NODE_ROLE)
         if node is None:
             return
         if node.kind != "link":
-            self.node_selected.emit(node)
+            self._emit_node(node)
             return
         generation = self._generation
         model = index.model()
@@ -495,7 +627,7 @@ class H5Tree(QWidget):
             else:
                 item.setData(target, NODE_ROLE)
             if self.view.currentIndex().sibling(self.view.currentIndex().row(), 0) == index:
-                self.node_selected.emit(target)
+                self._emit_node(target)
 
         def _failed(error: H5ReadError):
             if generation != self._generation:
@@ -508,7 +640,7 @@ class H5Tree(QWidget):
                 link_file=node.link_file,
                 link_path=error.message,
             )
-            self.node_selected.emit(broken)
+            self._emit_node(broken)
 
         self._service.request(
             f"{self._channel}-select",
@@ -517,6 +649,13 @@ class H5Tree(QWidget):
             _resolved,
             _failed,
         )
+
+    def _emit_node(self, node: H5Node | None) -> None:
+        """Announce the selected node, unless it is the one already shown."""
+        if node is not None and node == self._shown_node:
+            return
+        self._shown_node = node
+        self.node_selected.emit(node)
 
     def _show_menu(self, position: QPoint) -> None:
         index = self.view.indexAt(position)
@@ -536,46 +675,79 @@ class H5Tree(QWidget):
     # Find by name
     ################################################################################
 
-    def _show_tree(self) -> None:
+    def enter_results(self) -> bool:
+        """
+        Move from the search field into the results and select the first match.
+
+        Returns:
+            bool: Whether there were results to move into.
+        """
+        if self.view.model() is not self.found_model:
+            return False
+        first = self._first_match(self.found_model.invisibleRootItem())
+        if first is None:
+            return False
+        self.view.setFocus(Qt.FocusReason.OtherFocusReason)
+        self.view.setCurrentIndex(first.index())
+        self.view.scrollTo(first.index())
+        return True
+
+    def _first_match(self, parent: QStandardItem) -> QStandardItem | None:
+        for row in range(parent.rowCount()):
+            child = parent.child(row)
+            if child.data(MATCH_ROLE):
+                return child
+            found = self._first_match(child)
+            if found is not None:
+                return found
+        return None
+
+    def _show_tree(self, reveal: bool = True) -> None:
+        """
+        Leave the search and show the whole file again.
+
+        Args:
+            reveal (bool): Open the tree along the entry selected in the results.
+        """
         self._find_timer.stop()
         self._service.cancel(f"{self._channel}-find")
+        self._service.cancel_all(f"{self._channel}-list-found")
         self.note.hide()
+        selected = self.current_node() if self.view.model() is self.found_model else None
+        self._found_generation += 1
         self._use_model(self.model)
+        self.found_model.removeRows(0, self.found_model.rowCount())
+        if reveal and selected is not None and selected.file_path == self._file_path:
+            self._pending_path = [part for part in selected.path.split("/") if part]
+            self._follow_default = False
+            if self.model.rowCount():
+                self._continue_path(self.model.item(0))
 
     def _on_find_text(self, text: str) -> None:
-        if len(text.strip()) < 2:
+        if not text.strip():
             self._show_tree()
-            if text.strip():
-                self.note.setText("Type at least two letters.")
-                self.note.show()
             return
         self._find_timer.start()
 
     def _find(self) -> None:
         text = self.find_edit.text().strip()
-        if len(text) < 2 or not self._file_path:
+        if not self._file_path:
+            return
+        if len(text) < 2:
+            if self.view.model() is self.found_model:
+                self._show_tree(reveal=False)
+            self.note.setText("Type at least two letters.")
+            self.note.show()
             return
         generation = self._generation
         file_path = self._file_path
         self.note.setText("Searching…")
         self.note.show()
 
-        def _found(nodes: list[H5Node]):
+        def _found(result: FoundBranches):
             if generation != self._generation or self.find_edit.text().strip() != text:
                 return
-            self.found_model.removeRows(0, self.found_model.rowCount())
-            for node in nodes:
-                row = self._row_for(node, name=node.path)
-                row[0].removeRows(0, row[0].rowCount())
-                self.found_model.appendRow(row)
-            self._use_model(self.found_model)
-            if not nodes:
-                self.note.setText(f"No name in this file contains “{text}”.")
-            elif len(nodes) >= 200:
-                self.note.setText("Showing the first 200 matches. Type more to narrow it down.")
-            else:
-                count = "1 match" if len(nodes) == 1 else f"{len(nodes)} matches"
-                self.note.setText(f"{count}. Clear the search to see the tree again.")
+            self._show_results(file_path, text, result)
 
         def _failed(error: H5ReadError):
             if generation == self._generation:
@@ -584,7 +756,65 @@ class H5Tree(QWidget):
         self._service.request(
             f"{self._channel}-find",
             file_path,
-            lambda ctx: h5_reader.find_nodes(file_path, text, cancel=ctx.cancelled),
+            lambda ctx: h5_reader.find_branches(file_path, text, cancel=ctx.cancelled),
             _found,
             _failed,
         )
+
+    def _show_results(self, file_path: str, text: str, result: FoundBranches) -> None:
+        """Fill the results with the branches that lead to a match, opened, and show them."""
+        self._found_generation += 1
+        self._service.cancel_all(f"{self._channel}-list-found")
+        self.found_model.removeRows(0, self.found_model.rowCount())
+        needle = text.lower()
+        root = H5Node(name=Path(file_path).name, path="/", file_path=file_path, kind="file")
+        root_row = self._row_for(root)
+        root_row[0].removeRows(0, root_row[0].rowCount())
+        root_row[0].setData("filtered", STATE_ROLE)
+        root_row[0].setToolTip(file_path)
+        self.found_model.appendRow(root_row)
+        items: dict[str, QStandardItem] = {"/": root_row[0]}
+        nodes = {node.path: node for node in (*result.ancestors, *result.matches)}
+        matched = {node.path for node in result.matches}
+        branches = set()
+        for path in matched:
+            parts = [part for part in path.split("/") if part]
+            branches.update("/" + "/".join(parts[:depth]) for depth in range(1, len(parts)))
+
+        def _item(path: str) -> QStandardItem | None:
+            if path in items:
+                return items[path]
+            node = nodes.get(path)
+            parent = _item(path.rsplit("/", 1)[0] or "/")
+            if node is None or parent is None:
+                return None
+            row = self._row_for(node)
+            row[0].setToolTip(path)
+            if path in matched:
+                start = node.name.lower().find(needle)
+                row[0].setData((start, len(needle)) if start >= 0 else None, MATCH_ROLE)
+            else:
+                row[0].setData(True, CONTEXT_ROLE)
+            if path in branches:
+                # Lists the way to the matches below it, not all of its children.
+                row[0].removeRows(0, row[0].rowCount())
+                row[0].setData("filtered", STATE_ROLE)
+            parent.appendRow(row)
+            items[path] = row[0]
+            return row[0]
+
+        for node in result.matches:
+            _item(node.path)
+        self._use_model(self.found_model)
+        for path in ("/", *sorted(branches, key=lambda p: p.count("/"))):
+            item = items.get(path)
+            if item is not None:
+                self.view.expand(item.index())
+        count = len(result.matches)
+        if count == 0:
+            self.note.setText(f"No name in this file contains “{text}”.")
+        elif result.truncated:
+            self.note.setText("Showing the first 200 matches. Type more to narrow it down.")
+        else:
+            self.note.setText("1 match" if count == 1 else f"{count} matches")
+        self.note.show()
