@@ -16,11 +16,13 @@ from qtpy.QtCore import (
     QAbstractListModel,
     QEvent,
     QModelIndex,
+    QPoint,
     QRect,
     QRectF,
     QSize,
     QSortFilterProxyModel,
     Qt,
+    QTimer,
     Signal,
 )
 from qtpy.QtGui import QColor, QFont, QFontMetrics, QPainter, QPalette, QPen
@@ -77,6 +79,8 @@ STATUS_LABELS = {
     "halted": "Halted",
     "user_completed": "Finished early",
 }
+#: How long a message stays in the note under the list.
+NOTE_FLASH_MS = 3000
 STATUS_TONES = {
     "open": Tone.RUN,
     "paused": Tone.WARN,
@@ -647,6 +651,8 @@ class ScanList(QWidget):
     scan_selected = Signal(object)
     #: The set of pinned scans changed.
     pins_changed = Signal()
+    #: A context menu was asked for on a scan: the :class:`ScanEntry` and the global position.
+    context_menu_requested = Signal(object, QPoint)
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -706,6 +712,8 @@ class ScanList(QWidget):
         self.view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.view.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         self.view.setAccessibleName("Scans")
+        self.view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.view.customContextMenuRequested.connect(self._on_context_menu)
 
         self.note = QLabel(self)
         self.note.setWordWrap(True)
@@ -727,7 +735,33 @@ class ScanList(QWidget):
         self.model.rowsInserted.connect(self._update_note)
         self.model.rowsRemoved.connect(self._update_note)
         self._pins_seen = self.model.pins()
+        # A message in the note, e.g. the result of an action, stays this long.
+        self._note_timer = QTimer(self)
+        self._note_timer.setSingleShot(True)
+        self._note_timer.setInterval(NOTE_FLASH_MS)
+        self._note_timer.timeout.connect(self._update_note)
         self._update_note()
+
+    def cleanup(self) -> None:
+        """Stop the timer of the note."""
+        self._note_timer.stop()
+
+    def flash_note(self, text: str) -> None:
+        """
+        Say something in the note under the list for a few seconds, then go back to the count.
+
+        Args:
+            text (str): What to say.
+        """
+        self.note.setText(text)
+        self._note_timer.start()
+
+    def _on_context_menu(self, position: QPoint) -> None:
+        index = self.view.indexAt(position)
+        if index.isValid():
+            self.context_menu_requested.emit(
+                index.data(ENTRY_ROLE), self.view.viewport().mapToGlobal(position)
+            )
 
     ################################################################################
     # Public interface
@@ -866,6 +900,8 @@ class ScanList(QWidget):
             self.pins_changed.emit()
 
     def _update_note(self, *_args) -> None:
+        if self._note_timer.isActive():
+            return
         total = self.model.rowCount()
         shown = self.filter_model.rowCount()
         if total == 0:

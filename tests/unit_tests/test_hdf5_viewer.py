@@ -986,3 +986,69 @@ def test_tree_leaves_out_the_type_while_a_name_in_view_would_be_cut(qtbot, servi
     tree.resize(900, 400)
     qtbot.waitUntil(lambda: not tree.view.isColumnHidden(2))
     tree.cleanup()
+
+
+def menu_texts(menu):
+    return [action.text() for action in menu.actions() if not action.isSeparator()]
+
+
+def test_add_to_plot_adds_the_viewer_curves_to_another_plot_as_history_curves(
+    qtbot, viewer, mocked_client
+):
+    # pylint: disable=import-outside-toplevel
+    from bec_widgets.widgets.plots.waveform.waveform import Waveform
+    from bec_widgets.widgets.services.hdf5_viewer.plot_targets import other_plots
+
+    qtbot.waitUntil(lambda: len(viewer._curves) == 1)
+    target = create_widget(qtbot, Waveform, client=mocked_client)
+    target.setObjectName("TargetPlot")
+
+    plots = other_plots(viewer)
+    # The plots of the viewer itself are not offered.
+    assert [plot for _name, plot in plots] == [target]
+    viewer._fill_add_menu()
+    assert menu_texts(viewer.add_menu) == ["TargetPlot"]
+
+    result = viewer.add_to_plot(target, "TargetPlot")
+
+    assert result.added == 1
+    [curve] = target.curves
+    assert curve.config.source == "history" and curve.config.scan_id == "scan-2"
+    assert curve.name() == "bpm3a-bpm3a-scan-12"
+    assert viewer.add_button.text() == "Added 1 curve to TargetPlot"
+
+    again = viewer.add_to_plot(target, "TargetPlot")
+    assert again.added == 0 and len(target.curves) == 1
+    assert viewer.add_button.text() == "Already on TargetPlot"
+    qtbot.waitUntil(lambda: viewer.add_button.text() == "Add to plot", timeout=5000)
+
+
+def test_add_to_plot_says_when_there_is_nowhere_to_add(qtbot, viewer):
+    qtbot.waitUntil(lambda: len(viewer._curves) == 1)
+    viewer._fill_add_menu()
+    [line] = viewer.add_menu.actions()
+    assert not line.isEnabled() and "No other plot" in line.text()
+
+
+def test_overlay_adds_a_scan_with_the_signals_the_other_plot_shows(qtbot, viewer, mocked_client):
+    # pylint: disable=import-outside-toplevel
+    from bec_widgets.widgets.plots.waveform.waveform import Waveform
+    from bec_widgets.widgets.services.hdf5_viewer.plot_targets import held_history_curves
+
+    qtbot.waitUntil(lambda: len(viewer._curves) == 1)
+    target = create_widget(qtbot, Waveform, client=mocked_client)
+    target.setObjectName("TargetPlot")
+    target.plot(device_y="bpm4i", signal_y="bpm4i")
+    oldest = viewer.scan_list.model.entry("scan-0")
+
+    menu = viewer.scan_menu(oldest)
+    assert [action.text() for action in menu.actions()] == ["Overlay on"]
+    assert menu_texts(menu.overlay_menu) == ["TargetPlot"]
+    menu.deleteLater()
+
+    text = viewer.overlay_scan(oldest, target, "TargetPlot")
+
+    assert ("scan-0", "bpm4i", "bpm4i") in held_history_curves(target)
+    assert text == "Added 1 curve to TargetPlot"
+    assert viewer.scan_list.note.text() == text
+    qtbot.waitUntil(lambda: viewer.scan_list.note.text() == "3 scans", timeout=5000)

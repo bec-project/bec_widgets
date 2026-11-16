@@ -21,6 +21,7 @@ from qtpy.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
+    QMenu,
     QSplitter,
     QStackedWidget,
     QToolButton,
@@ -38,6 +39,15 @@ from bec_widgets.widgets.services.hdf5_viewer.h5_reader import FileSummary, H5Re
 from bec_widgets.widgets.services.hdf5_viewer.h5_service import H5Service
 from bec_widgets.widgets.services.hdf5_viewer.h5_tree import H5Tree
 from bec_widgets.widgets.services.hdf5_viewer.pane_tabs import PaneTabs
+from bec_widgets.widgets.services.hdf5_viewer.plot_targets import (
+    AddResult,
+    CurveSource,
+    add_history_curves,
+    dock_area_for,
+    other_plots,
+    plot_name,
+    shown_signals,
+)
 from bec_widgets.widgets.services.hdf5_viewer.scan_list import ScanEntry, ScanList, series_color
 from bec_widgets.widgets.services.hdf5_viewer.signal_list import SignalInfo, SignalList, SourceKey
 from bec_widgets.widgets.services.hdf5_viewer.style import mute, remute
@@ -51,6 +61,10 @@ logger = bec_logger.logger
 PEN_STYLES = ("solid", "dash", "dot", "dashdot")
 #: Pause between two looks at a file that is still being written.
 BUSY_RETRY_MS = 2000
+#: Text of the button that adds the curves to another plot.
+ADD_BUTTON_TEXT = "Add to plot"
+#: How long the result of adding curves stays on that button.
+ADD_FEEDBACK_MS = 3000
 #: Time a scan that ended stays listed as running while its history entry is awaited.
 LIVE_LINGER_MS = 20000
 
@@ -129,6 +143,21 @@ class HDF5Viewer(BECWidget, QWidget):
         title_row.setSpacing(8)
         title_row.addWidget(self.plot_title)
         title_row.addWidget(self.plot_subtitle, 1)
+        self.add_button = QToolButton(self)
+        self.add_button.setText(ADD_BUTTON_TEXT)
+        self.add_button.setIcon(material_icon("add_chart", convert_to_pixmap=False))
+        self.add_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.add_button.setAutoRaise(True)
+        self.add_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.add_button.setToolTip("Add the curves of this plot to another plot as history curves")
+        self.add_menu = QMenu(self.add_button)
+        self.add_menu.aboutToShow.connect(self._fill_add_menu)
+        self.add_button.setMenu(self.add_menu)
+        title_row.addWidget(self.add_button)
+        self._add_reset_timer = QTimer(self)
+        self._add_reset_timer.setSingleShot(True)
+        self._add_reset_timer.setInterval(ADD_FEEDBACK_MS)
+        self._add_reset_timer.timeout.connect(lambda: self.add_button.setText(ADD_BUTTON_TEXT))
         self.waveform = Waveform(parent=self, client=self.client)
         self.plot_state = StatePage(self)
         self.plot_stack = QStackedWidget(self)
@@ -180,6 +209,7 @@ class HDF5Viewer(BECWidget, QWidget):
 
         self.scan_list.scan_selected.connect(self._on_scan_selected)
         self.scan_list.pins_changed.connect(self._refresh_plot)
+        self.scan_list.context_menu_requested.connect(self._show_scan_menu)
         self.signal_list.selection_changed.connect(self._refresh_plot)
         self.signal_list.open_requested.connect(self._open_signal_in_file)
         self.tabs.current_changed.connect(self._on_tab_changed)
@@ -649,6 +679,141 @@ class HDF5Viewer(BECWidget, QWidget):
         self.status_label.setText("  ·  ".join(parts))
 
     ################################################################################
+    # Other plots
+    ################################################################################
+
+    def curve_sources(self) -> list[CurveSource]:
+        """
+        The curves on the plot that can go to another plot: those of finished scans.
+
+        Returns:
+            list[CurveSource]: (scan id, device, signal) of each.
+        """
+        return [key for key, (_curve, live) in self._curves.items() if not live]
+
+    def _fill_add_menu(self) -> None:
+        self.add_menu.clear()
+        plots = other_plots(self)
+        area = dock_area_for(self)
+        if not self.curve_sources():
+            note = self.add_menu.addAction(
+                "Nothing to add: the plot is empty or shows a running scan"
+            )
+            note.setEnabled(False)
+            return
+        for name, plot in plots:
+            action = self.add_menu.addAction(name)
+            action.triggered.connect(lambda _=False, p=plot, n=name: self.add_to_plot(p, n))
+        if area is not None:
+            if plots:
+                self.add_menu.addSeparator()
+            action = self.add_menu.addAction("New plot in workspace")
+            action.triggered.connect(lambda _=False, a=area: self.add_to_new_plot(a))
+        if not plots and area is None:
+            note = self.add_menu.addAction("No other plot is open and there is no workspace")
+            note.setEnabled(False)
+
+    def add_to_plot(self, plot: Waveform, name: str | None = None) -> AddResult:
+        """
+        Add what is on the plot of the viewer to another plot as history curves.
+
+        Args:
+            plot (Waveform): The other plot.
+            name (str | None): Its name, as shown on the button afterwards.
+
+        Returns:
+            AddResult: What happened.
+        """
+        result = add_history_curves(plot, self.curve_sources())
+        self._say_on_add_button(result.message(name or plot_name(plot)))
+        return result
+
+    def add_to_new_plot(self, dock_area) -> AddResult | None:
+        """
+        Open a new plot in a dock area and add what is on the plot of the viewer to it.
+
+        Args:
+            dock_area (BECDockArea): The dock area.
+
+        Returns:
+            AddResult | None: What happened, or None when no plot could be opened.
+        """
+        try:
+            plot = dock_area.new("Waveform")
+        except Exception as exc:  # pylint: disable=broad-except
+            self._say_on_add_button(f"Could not open a new plot: {exc}")
+            return None
+        return self.add_to_plot(plot)
+
+    def _say_on_add_button(self, text: str) -> None:
+        self.add_button.setText(text)
+        self._add_reset_timer.start()
+
+    def _show_scan_menu(self, entry: ScanEntry, position) -> None:
+        self.scan_menu(entry).popup(position)
+
+    def scan_menu(self, entry: ScanEntry) -> QMenu:
+        """
+        The context menu of a scan: overlay it on another plot.
+
+        Args:
+            entry (ScanEntry): The scan.
+
+        Returns:
+            QMenu: The menu, not shown yet.
+        """
+        menu = QMenu(self)
+        menu.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        overlay = QMenu("Overlay on", menu)
+        menu.addMenu(overlay)
+        menu.overlay_menu = overlay
+        plots = other_plots(self)
+        if entry.live:
+            overlay.setEnabled(False)
+            overlay.setToolTip("A running scan can be overlaid once it is done")
+        for name, plot in plots:
+            action = overlay.addAction(name)
+            action.triggered.connect(
+                lambda _=False, e=entry, p=plot, n=name: self.overlay_scan(e, p, n)
+            )
+        if not plots:
+            note = overlay.addAction("No other plot is open")
+            note.setEnabled(False)
+        return menu
+
+    def overlay_scan(self, entry: ScanEntry, plot: Waveform, name: str | None = None) -> str:
+        """
+        Add a scan to another plot with the signals that plot shows, as history curves.
+
+        Args:
+            entry (ScanEntry): The scan.
+            plot (Waveform): The other plot.
+            name (str | None): Its name.
+
+        Returns:
+            str: What happened, as said in the note under the scan list.
+        """
+        name = name or plot_name(plot)
+        signals = shown_signals(plot)
+        stored = entry.stored_data_info or {}
+        sources = [
+            (entry.scan_id, device, signal)
+            for device, signal in signals
+            if signal in stored.get(device, {})
+        ]
+        if not signals:
+            text = f"{name} shows no signal to overlay"
+        elif not sources:
+            text = f"Scan {entry.scan_number} did not store what {name} shows"
+        else:
+            text = add_history_curves(plot, sources).message(name)
+            missing = len(signals) - len(sources)
+            if missing:
+                text += f" ({missing} not stored in scan {entry.scan_number})"
+        self.scan_list.flash_note(text)
+        return text
+
+    ################################################################################
     # Housekeeping
     ################################################################################
 
@@ -672,6 +837,8 @@ class HDF5Viewer(BECWidget, QWidget):
     def cleanup(self):
         """Stop the reads, release the history and scan status subscriptions."""
         self._busy_timer.stop()
+        self._add_reset_timer.stop()
+        self.scan_list.cleanup()
         self.tree.cleanup()
         self.preview.cleanup()
         self.service.cleanup()
