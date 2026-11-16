@@ -389,11 +389,6 @@ class HDF5Viewer(BECWidget, QWidget):
     @staticmethod
     def _plot_problem(device: str, error: Exception) -> str:
         """Say in plain words why a signal is not on the plot."""
-        if "not found in current BEC session" in str(error):
-            return (
-                f"{device} is not a device of the current BEC session, so it cannot be "
-                "plotted here. Its values are in the File tab."
-            )
         return f"{device} could not be plotted: {error}"
 
     @SafeSlot()
