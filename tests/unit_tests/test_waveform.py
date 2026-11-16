@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import threading
 from dataclasses import replace
+from datetime import datetime
 from types import SimpleNamespace
 from unittest import mock
 from unittest.mock import MagicMock
@@ -572,17 +573,17 @@ def test_curve_json_rejects_label_of_kept_custom_curve(qtbot, mocked_client):
 
 
 @pytest.mark.parametrize("label", ["history_alias", None], ids=["aliased", "omitted"])
-def test_curve_json_rejects_generated_history_label_of_kept_custom_curve(
+def test_curve_json_history_curve_steps_around_the_name_of_a_kept_custom_curve(
     qtbot, mocked_client, scan_history_factory, label
 ):
     """
-    History curves are relabelled '<device>-<signal>-scan-<N>' when they are added, so the
-    clash check must use that label, not the one in the JSON, and still fail before any curve
-    is removed.
+    History curves are relabelled '<device>-<signal>-scan-<N>' when they are added. When a
+    kept custom curve already has that name, the history curve gets the start time of its scan
+    added instead of clashing with it, whatever label the JSON carried.
     """
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     inject_scan_history(wf, scan_history_factory, ("hist1", 1))
-    device_curve = wf.plot(arg1="bpm3a")
+    wf.plot(arg1="bpm3a")
     custom = wf.plot(x=[1, 2, 3], y=[4, 5, 6], label="bpm4i-bpm4i-scan-1")
     history = {
         "widget_class": "Curve",
@@ -592,9 +593,12 @@ def test_curve_json_rejects_generated_history_label_of_kept_custom_curve(
         "signal": {"device": "bpm4i", "signal": "bpm4i"},
     }
 
-    wf.curve_json = json.dumps([history])  # SafeProperty logs the error
+    wf.curve_json = json.dumps([history])
 
-    assert wf.curves == [device_curve, custom]
+    assert wf.curves[0] is custom
+    [restored] = wf.curves[1:]
+    assert restored.config.scan_id == "hist1"
+    assert restored.name().startswith("bpm4i-bpm4i-scan-1-")
 
 
 def test_curve_json_rejects_payload_before_removing_curves(
@@ -3083,6 +3087,92 @@ def test_curve_tree_keeps_a_history_curve_of_a_device_that_left_the_session(
     # Applying the dialog keeps the curve.
     tree.send_curve_json()
     assert [curve.name() for curve in wf.curves] == ["old_diode-old_diode-scan-1"]
+
+
+def _two_scans_numbered_11(wf, scan_history_factory):
+    """Two scans that share the number 11 (e.g. after a counter reset), the older first."""
+    older, newer = inject_scan_history(
+        wf, scan_history_factory, ("first-11", 11), ("second-11", 11)
+    )
+    older.start_time = datetime(2026, 11, 14, 9, 12, 30).timestamp()
+    newer.start_time = datetime(2026, 11, 16, 15, 40, 5).timestamp()
+    return older, newer
+
+
+def test_history_curves_of_two_scans_that_share_a_number_both_plot(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_mode = "index"
+    older, newer = _two_scans_numbered_11(wf, scan_history_factory)
+
+    first = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id=older.scan_id)
+    second = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id=newer.scan_id)
+
+    # The usual name while it is free; the start time tells the second one apart.
+    assert first.name() == "bpm4i-bpm4i-scan-11"
+    assert second.name() == "bpm4i-bpm4i-scan-11-20261116-1540"
+    assert {c.config.scan_id for c in wf.curves} == {"first-11", "second-11"}
+    # The same signal of the same scan is still refused.
+    with pytest.raises(ValueError, match="already exists"):
+        wf.plot(
+            device_y="bpm4i",
+            signal_y="bpm4i",
+            scan_id=older.scan_id,
+            _override_slot_params={"raise_error": True},
+        )
+
+    # Saved and restored, both come back under the same names.
+    saved = wf.curve_json
+    wf.clear_all()
+    wf.curve_json = saved
+    assert sorted(c.name() for c in wf.curves) == [
+        "bpm4i-bpm4i-scan-11",
+        "bpm4i-bpm4i-scan-11-20261116-1540",
+    ]
+    wf.remove_curve("bpm4i-bpm4i-scan-11-20261116-1540")
+    assert [c.config.scan_id for c in wf.curves] == ["first-11"]
+
+
+def test_curve_tree_keeps_two_history_curves_that_share_a_scan_number(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    # pylint: disable=import-outside-toplevel,protected-access
+    from bec_widgets.widgets.plots.waveform.settings.curve_settings.curve_tree import CurveTree
+
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_mode = "index"
+    older, newer = _two_scans_numbered_11(wf, scan_history_factory)
+    wf.client.history._scan_numbers.extend([11, 11])
+    wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id=older.scan_id)
+    wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id=newer.scan_id)
+
+    tree = create_widget(qtbot, CurveTree, waveform=wf)
+    combos = {row.config.scan_id: row.scan_index_combo for row in tree.all_items}
+    # The scan selector tells the two scans 11 apart by their start time.
+    assert combos["first-11"].currentText() == "11 (14 Nov 09:12:30)"
+    assert combos["second-11"].currentText() == "11 (16 Nov 15:40:05)"
+
+    tree.send_curve_json()
+    assert sorted((c.name(), c.config.scan_id) for c in wf.curves) == [
+        ("bpm4i-bpm4i-scan-11", "first-11"),
+        ("bpm4i-bpm4i-scan-11-20261116-1540", "second-11"),
+    ]
+
+
+def test_history_curve_by_a_repeated_scan_number_takes_the_newest_scan(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_mode = "index"
+    _older, newer = _two_scans_numbered_11(wf, scan_history_factory)
+
+    curve = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_number=11)
+
+    assert curve.config.scan_id == newer.scan_id
 
 
 def test_live_curve_of_a_device_that_is_not_in_the_session_is_refused(qtbot, mocked_client):

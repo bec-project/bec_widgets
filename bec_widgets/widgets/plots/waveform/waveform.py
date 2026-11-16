@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import datetime
 from html import escape
 from numbers import Integral
 from typing import TYPE_CHECKING, Literal
@@ -1276,6 +1277,8 @@ class Waveform(PlotBase):
             # Build and check every serialized curve before anything is removed, so a curve
             # that cannot be added does not leave the plot half-loaded
             configs = []
+            # Names the restored curves will hold, with the scan each belongs to.
+            names: dict[str, str | None] = {label: None for label in kept_labels}
             for cfg_dict in curve_configs:
                 if cfg_dict.get("source") == "custom":
                     if cfg_dict.get("label") not in kept_labels:
@@ -1283,7 +1286,8 @@ class Waveform(PlotBase):
                     continue
                 config = CurveConfig(**cfg_dict)
                 if config.source == "history":
-                    self._resolve_history_config(config)
+                    self._resolve_history_config(config, names=names)
+                names[config.label] = config.scan_id
                 configs.append(config)
             labels = [config.label for config in configs if config.label]
             taken = kept_labels & set(labels)
@@ -1425,6 +1429,9 @@ class Waveform(PlotBase):
                 the y‑data (and optional x‑data) are fetched from that historical scan. Such curves are
                 never cleared by live‑scan resets.
             scan_number(int): Optional scan index. When provided, the curve is treated as a **history** curve and
+                the data come from the scan with that number. Scan numbers can repeat (e.g. after
+                a counter reset); the newest scan with the number is taken then. Give scan_id to
+                pick one of them.
 
         Returns:
             Curve: The curve object.
@@ -1687,14 +1694,20 @@ class Waveform(PlotBase):
 
         return curve
 
-    def _resolve_history_config(self, config: CurveConfig) -> ScanDataContainer:
+    def _resolve_history_config(
+        self, config: CurveConfig, names: dict[str, str | None] | None = None
+    ) -> ScanDataContainer:
         """
         Resolve the scan of a history curve config and set its scan_id, scan_number and label.
 
-        History curves are always labelled '<device>-<signal>-scan-<scan_number>'.
+        History curves are labelled '<device>-<signal>-scan-<scan_number>'. Scan numbers can
+        repeat (e.g. after a counter reset), so when a curve of another scan already has that
+        name, the start time of the scan is added: '<device>-<signal>-scan-<number>-<YYYYMMDD-HHMM>'.
 
         Args:
             config (CurveConfig): Config of a history curve; updated in place.
+            names (dict[str, str | None] | None): Curve names in use with the scan id of each,
+                instead of the curves on the plot (used while a set of curves is restored).
 
         Returns:
             ScanDataContainer: The scan item the curve reads its data from.
@@ -1711,8 +1724,46 @@ class Waveform(PlotBase):
             )
         config.scan_id = scan_item.metadata["bec"]["scan_id"]
         config.scan_number = scan_item.metadata["bec"]["scan_number"]
-        config.label = f"{config.signal.device}-{config.signal.signal}-scan-{config.scan_number}"
+        config.label = self._history_label(config, scan_item, names)
         return scan_item
+
+    def _history_label(
+        self, config: CurveConfig, scan_item, names: dict[str, str | None] | None = None
+    ) -> str:
+        """
+        Name of a history curve that no curve of another scan has: the usual name while it is
+        free, else with the start time of the scan added (with seconds, then the scan id, while
+        that still collides).
+
+        Args:
+            config (CurveConfig): Config of the curve, with its scan id and number resolved.
+            scan_item: The scan of the curve.
+            names (dict[str, str | None] | None): Names in use and the scan id of each; the
+                curves on the plot when not given.
+
+        Returns:
+            str: The name.
+        """
+        if names is None:
+            names = {curve.name(): curve.config.scan_id for curve in self.curves}
+        base = f"{config.signal.device}-{config.signal.signal}-scan-{config.scan_number}"
+
+        def free(label: str) -> bool:
+            # A curve of the same scan with the same name is a duplicate, refused later.
+            return label not in names or names[label] == config.scan_id
+
+        if free(base):
+            return base
+        candidates = []
+        start = getattr(getattr(scan_item, "_msg", None), "start_time", None)
+        if start:
+            moment = datetime.fromtimestamp(float(start))
+            candidates += [
+                f"{base}-{moment.strftime('%Y%m%d-%H%M')}",
+                f"{base}-{moment.strftime('%Y%m%d-%H%M%S')}",
+            ]
+        candidates += [f"{base}-{str(config.scan_id)[:8]}", f"{base}-{config.scan_id}"]
+        return next((label for label in candidates if free(label)), candidates[-1])
 
     def _add_curve_object(self, name: str, config: CurveConfig) -> Curve:
         """
@@ -3741,7 +3792,8 @@ class Waveform(PlotBase):
         """
         Get scan item from history based on scan_id or scan_index.
         If both are provided, scan_id takes precedence and the resolved scan_number
-        will be read from the fetched item.
+        will be read from the fetched item. Scan numbers can repeat; for a number shared by
+        several scans the newest of them is returned.
 
         Args:
             scan_id (str, optional): ScanID of the scan to fetch. Defaults to None.

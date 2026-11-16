@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from qtpy.QtCore import Slot
 from qtpy.QtWidgets import QComboBox
 
@@ -62,13 +64,28 @@ class ScanIndexComboBox(BECWidget, QComboBox):
         # Add items: show scan numbers, store scan IDs as item data,
         # ordered live -> latest scan -> oldest scan
         pairs = sorted(zip(scan_number_list, scan_id_list), key=lambda pair: pair[0], reverse=True)
+        repeated = {num for num in scan_number_list if scan_number_list.count(num) > 1}
         for num, sid in pairs:
-            self.addItem(str(num), sid)
+            self.addItem(self._item_text(history, num, sid, num in repeated), sid)
 
         self.set_scan_id(current_scan_id)
         # The current text may be unchanged while the item list changed, so no
         # currentTextChanged signal is emitted; re-check validity explicitly.
         self.check_validity(self.currentText())
+
+    @staticmethod
+    def _item_text(history, num: int, scan_id: str, repeated: bool) -> str:
+        """
+        Text of a scan: its number, and its start time when several scans share the number
+        (scan numbers can repeat, e.g. after a counter reset), so that each text is unique.
+        """
+        if not repeated:
+            return str(num)
+        msg = getattr(history, "_scan_data", {}).get(scan_id)
+        start = getattr(msg, "start_time", None)
+        if start:
+            return f"{num} ({datetime.fromtimestamp(float(start)).strftime('%d %b %H:%M:%S')})"
+        return f"{num} ({str(scan_id)[:8]})"
 
     @property
     def is_valid_input(self) -> bool:
@@ -102,7 +119,8 @@ class ScanIndexComboBox(BECWidget, QComboBox):
         """
         if self.scan_id is None:
             return None
-        return int(self.currentText())
+        # A repeated number carries the start time of its scan after it.
+        return int(self.currentText().split()[0])
 
     @SafeSlot(str)
     @SafeSlot()
