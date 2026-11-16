@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 from bec_lib import messages
 from bec_lib.scan_history import ScanHistory
-from qtpy.QtCore import Qt
+from qtpy.QtCore import QPoint, Qt
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.tests.utils import create_history_file, create_widget
@@ -608,6 +608,48 @@ def test_viewer_lists_the_history_and_plots_the_newest_scan(qtbot, viewer):
     assert viewer.plot_title.text() == "Scan 12  line_scan"
     # The curve gets its data through the Data API.
     qtbot.waitUntil(lambda: curve.xData is not None and len(curve.xData) == 20, timeout=10000)
+
+
+def click_scan_row(qtbot, viewer, row, modifier=Qt.KeyboardModifier.NoModifier):
+    view = viewer.scan_list.view
+    rect = view.visualRect(view.model().index(row, 0))
+    # Left of the pin, so that the click lands on the row itself.
+    point = rect.topLeft() + QPoint(40, rect.height() // 2)
+    qtbot.mouseClick(view.viewport(), Qt.MouseButton.LeftButton, modifier, point)
+
+
+def test_ctrl_click_adds_a_scan_to_the_comparison_and_takes_it_off(qtbot, viewer):
+    qtbot.waitUntil(lambda: len(viewer._curves) == 1)
+    assert "to compare" in viewer.plot_subtitle.text()
+    selected = viewer.scan_list.current_entry().scan_id
+
+    click_scan_row(qtbot, viewer, 2, Qt.KeyboardModifier.ControlModifier)
+
+    # The selection stays; the clicked scan joins the plot.
+    assert viewer.scan_list.current_entry().scan_id == selected
+    assert set(viewer.scan_list.model.pins()) == {"scan-0"}
+    assert ("scan-0", "bpm3a", "bpm3a") in viewer._curves
+    assert "compared with 10" in viewer.plot_subtitle.text()
+
+    click_scan_row(qtbot, viewer, 2, Qt.KeyboardModifier.ControlModifier)
+    assert viewer.scan_list.model.pins() == {}
+    assert "to compare" in viewer.plot_subtitle.text()
+
+
+def test_shift_click_adds_every_scan_up_to_the_clicked_one(qtbot, viewer):
+    qtbot.waitUntil(lambda: len(viewer._curves) == 1)
+    selected = viewer.scan_list.current_entry().scan_id
+
+    click_scan_row(qtbot, viewer, 2, Qt.KeyboardModifier.ShiftModifier)
+
+    assert viewer.scan_list.current_entry().scan_id == selected
+    assert set(viewer.scan_list.model.pins()) == {"scan-1", "scan-0"}
+    assert {key[0] for key in viewer._curves} == {"scan-2", "scan-1", "scan-0"}
+
+    # A plain click only selects; the pins stay.
+    click_scan_row(qtbot, viewer, 1)
+    assert viewer.scan_list.current_entry().scan_id == "scan-1"
+    assert set(viewer.scan_list.model.pins()) == {"scan-1", "scan-0"}
 
 
 def test_viewer_compares_pinned_scans_in_one_colour_each(qtbot, viewer):

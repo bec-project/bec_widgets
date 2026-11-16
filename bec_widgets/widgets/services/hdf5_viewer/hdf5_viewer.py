@@ -9,6 +9,7 @@ never takes a file lock and never reads more than is shown.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 from bec_lib.endpoints import MessageEndpoints
@@ -517,7 +518,10 @@ class HDF5Viewer(BECWidget, QWidget):
         elif self._entry.live:
             self.plot_subtitle.setText("running  ·  drawn live, its file is not opened")
         else:
-            self.plot_subtitle.setText(self._entry.summary())
+            key = "⌘" if sys.platform == "darwin" else "Ctrl"
+            self.plot_subtitle.setText(
+                f"{self._entry.summary()}  ·  pin another scan or {key}-click it to compare"
+            )
 
     ################################################################################
     # File view
@@ -676,7 +680,6 @@ class HDF5Viewer(BECWidget, QWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    import sys
 
     from qtpy.QtWidgets import QApplication
 

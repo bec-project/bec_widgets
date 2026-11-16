@@ -343,6 +343,23 @@ class ScanListModel(QAbstractListModel):
                 index = self.index(row)
                 self.dataChanged.emit(index, index)
 
+    def pin_scans(self, scan_ids: list[str]) -> None:
+        """
+        Pin several scans for comparison at once. Scans that are pinned already stay pinned.
+
+        Args:
+            scan_ids (list[str]): Ids of the scans.
+        """
+        added = False
+        for scan_id in scan_ids:
+            if scan_id in self._pins:
+                continue
+            used = set(self._pins.values())
+            self._pins[scan_id] = next(slot for slot in range(1, 64) if slot not in used)
+            added = True
+        if added and self._entries:
+            self.dataChanged.emit(self.index(0), self.index(len(self._entries) - 1))
+
     def clear_pins(self) -> None:
         """Let all pinned scans go."""
         self._pins.clear()
@@ -531,7 +548,11 @@ class ScanDelegate(QStyledItemDelegate):
 
             QToolTip.showText(
                 event.globalPos(),
-                "Unpin this scan (P)" if pinned else "Pin this scan to compare it (P)",
+                (
+                    "Take this scan off the plot (P)"
+                    if pinned
+                    else "Keep this scan on the plot to compare (P)"
+                ),
                 view,
             )
             return True
@@ -539,7 +560,33 @@ class ScanDelegate(QStyledItemDelegate):
 
 
 class _ScanListView(QListView):
-    """List view that pins the current scan with the P key."""
+    """
+    List view that adds scans to the comparison: the P key pins the current scan, a click with
+    Ctrl (Cmd on macOS) pins or unpins the clicked one, a click with Shift pins every scan
+    between the current one and the clicked one. A plain click selects.
+    """
+
+    def mousePressEvent(self, event):  # pylint: disable=invalid-name
+        modifiers = event.modifiers()
+        index = self.indexAt(event.position().toPoint())
+        wanted = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
+        current = self.currentIndex()
+        if (
+            event.button() != Qt.MouseButton.LeftButton
+            or not modifiers & wanted
+            or not index.isValid()
+            or not current.isValid()
+        ):
+            super().mousePressEvent(event)
+            return
+        source: ScanListModel = self.model().sourceModel()
+        if modifiers & Qt.KeyboardModifier.ShiftModifier:
+            low, high = sorted((current.row(), index.row()))
+            rows = [row for row in range(low, high + 1) if row != current.row()]
+            source.pin_scans([self.model().index(row, 0).data(ENTRY_ROLE).scan_id for row in rows])
+        elif index != current:
+            source.toggle_pin(index.data(ENTRY_ROLE).scan_id)
+        event.accept()
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_P and self.currentIndex().isValid():
