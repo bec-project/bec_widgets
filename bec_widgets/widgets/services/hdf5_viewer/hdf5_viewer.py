@@ -29,6 +29,7 @@ from qtpy.QtWidgets import (
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.widgets.plots.waveform.waveform import Waveform
 from bec_widgets.widgets.services.hdf5_viewer import h5_reader
 from bec_widgets.widgets.services.hdf5_viewer.h5_preview import H5DetailsPanel, H5Preview, StatePage
 from bec_widgets.widgets.services.hdf5_viewer.h5_reader import FileSummary, H5ReadError
@@ -36,7 +37,6 @@ from bec_widgets.widgets.services.hdf5_viewer.h5_service import H5Service
 from bec_widgets.widgets.services.hdf5_viewer.h5_tree import H5Tree
 from bec_widgets.widgets.services.hdf5_viewer.pane_tabs import PaneTabs
 from bec_widgets.widgets.services.hdf5_viewer.scan_list import ScanEntry, ScanList, series_color
-from bec_widgets.widgets.services.hdf5_viewer.scan_plot import ScanWaveform
 from bec_widgets.widgets.services.hdf5_viewer.signal_list import SignalInfo, SignalList, SourceKey
 from bec_widgets.widgets.services.scan_history_browser.components.scan_history_view import (
     BECHistoryManager,
@@ -126,7 +126,7 @@ class HDF5Viewer(BECWidget, QWidget):
         title_row.setSpacing(8)
         title_row.addWidget(self.plot_title)
         title_row.addWidget(self.plot_subtitle, 1)
-        self.waveform = ScanWaveform(parent=self, client=self.client)
+        self.waveform = Waveform(parent=self, client=self.client)
         self.plot_state = StatePage(self)
         self.plot_stack = QStackedWidget(self)
         self.plot_stack.addWidget(self.plot_state)
@@ -393,14 +393,6 @@ class HDF5Viewer(BECWidget, QWidget):
             )
         return f"{device} could not be plotted: {error}"
 
-    @staticmethod
-    def _legend_text(entry: ScanEntry, device: str, signal: str, one_scan: bool) -> str:
-        """Name of a curve in the legend: the signal, and the scan when several are compared."""
-        name = SignalInfo(device, signal, (), "", "point").label
-        if one_scan:
-            return name
-        return f"{entry.scan_number} · {name}" if entry.scan_number is not None else name
-
     @SafeSlot()
     def _refresh_plot(self) -> None:
         """Bring the curves of the plot in line with the chosen scans and signals."""
@@ -460,12 +452,6 @@ class HDF5Viewer(BECWidget, QWidget):
                 self._plot_note = f"{key[1]} could not be plotted."
                 continue
             self._curves[key] = (curve, entry.live)
-        self.waveform.set_legend_names(
-            {
-                curve.name(): self._legend_text(wanted[key][0], key[1], key[2], one_scan)
-                for key, (curve, _live) in self._curves.items()
-            }
-        )
 
         if self._curves:
             self.plot_stack.setCurrentWidget(self.waveform)

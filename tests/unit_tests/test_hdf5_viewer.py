@@ -647,19 +647,21 @@ def legend_texts(viewer):
     return {key: legend.getLabel(curve).text for key, (curve, _live) in viewer._curves.items()}
 
 
-def test_viewer_names_the_curves_in_the_legend_by_signal_and_scan(qtbot, viewer):
+def test_viewer_keeps_the_waveform_names_of_history_curves(qtbot, viewer):
     qtbot.waitUntil(lambda: len(viewer._curves) == 1)
     key = ("scan-2", "bpm3a", "bpm3a")
-    # The curve keeps the name BEC gives it; the legend shows the signal alone.
-    assert viewer._curves[key][0].name() == "bpm3a-bpm3a-scan-12"
-    assert legend_texts(viewer) == {key: "bpm3a"}
+    # The curves are history curves of their scans and are named as the Waveform names them.
+    curve = viewer._curves[key][0]
+    assert curve.name() == "bpm3a-bpm3a-scan-12"
+    assert curve.config.source == "history" and curve.config.scan_number == 12
+    assert legend_texts(viewer) == {key: "bpm3a-bpm3a-scan-12"}
 
     viewer.scan_list.model.toggle_pin("scan-0")
 
-    assert legend_texts(viewer) == {key: "12 · bpm3a", ("scan-0", "bpm3a", "bpm3a"): "10 · bpm3a"}
-    # A refresh of the legend by the plot itself keeps the short names.
-    viewer.waveform._refresh_live_legend()
-    assert legend_texts(viewer)[key] == "12 · bpm3a"
+    assert legend_texts(viewer) == {
+        key: "bpm3a-bpm3a-scan-12",
+        ("scan-0", "bpm3a", "bpm3a"): "bpm3a-bpm3a-scan-10",
+    }
 
 
 def test_viewer_explains_a_signal_the_session_cannot_plot(qtbot, viewer):
@@ -672,7 +674,7 @@ def test_viewer_explains_a_signal_the_session_cannot_plot(qtbot, viewer):
     popup.assert_not_called()
     assert set(viewer._curves) == {("scan-2", "bpm3a", "bpm3a")}
     assert "old_diode is not a device of the current BEC session" in viewer.plot_subtitle.text()
-    assert legend_texts(viewer) == {("scan-2", "bpm3a", "bpm3a"): "bpm3a"}
+    assert legend_texts(viewer) == {("scan-2", "bpm3a", "bpm3a"): "bpm3a-bpm3a-scan-12"}
 
 
 def test_tabs_open_a_page_and_say_so(qtbot):
