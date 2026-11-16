@@ -22,7 +22,6 @@ from qtpy.QtWidgets import (
     QLabel,
     QSplitter,
     QStackedWidget,
-    QTabWidget,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -36,6 +35,7 @@ from bec_widgets.widgets.services.hdf5_viewer.h5_preview import H5DetailsPanel, 
 from bec_widgets.widgets.services.hdf5_viewer.h5_reader import FileSummary, H5ReadError
 from bec_widgets.widgets.services.hdf5_viewer.h5_service import H5Service
 from bec_widgets.widgets.services.hdf5_viewer.h5_tree import H5Tree
+from bec_widgets.widgets.services.hdf5_viewer.pane_tabs import PaneTabs
 from bec_widgets.widgets.services.hdf5_viewer.scan_list import ScanEntry, ScanList, series_color
 from bec_widgets.widgets.services.hdf5_viewer.signal_list import SignalInfo, SignalList, SourceKey
 from bec_widgets.widgets.services.scan_history_browser.components.scan_history_view import (
@@ -98,21 +98,21 @@ class HDF5Viewer(BECWidget, QWidget):
         self.file_splitter.setStretchFactor(0, 3)
         self.file_splitter.setStretchFactor(1, 2)
         self.file_splitter.setChildrenCollapsible(False)
-        self.tabs = QTabWidget(self)
-        self.tabs.setDocumentMode(True)
-        self.tabs.tabBar().setExpanding(False)
+        self.tabs = PaneTabs(self)
         self.tabs.setMinimumWidth(300)
-        self.tabs.addTab(self._padded(self.signal_list), "Signals")
-        self.tabs.addTab(self._padded(self.file_splitter), "File")
-        self.tabs.setTabToolTip(0, "The signals BEC stored for the scan")
-        self.tabs.setTabToolTip(1, "Everything that is in the scan's file")
+        self.tabs.add_tab(
+            self._padded(self.signal_list), "Signals", "The signals BEC stored for the scan"
+        )
+        self.tabs.add_tab(
+            self._padded(self.file_splitter), "File", "Everything that is in the scan's file"
+        )
         self.open_button = QToolButton(self)
         self.open_button.setText("Open file…")
         self.open_button.setIcon(material_icon("folder_open", convert_to_pixmap=False))
         self.open_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.open_button.setAutoRaise(True)
         self.open_button.setToolTip("Look into any HDF5 file")
-        self.tabs.setCornerWidget(self.open_button, Qt.Corner.TopRightCorner)
+        self.tabs.set_corner_widget(self.open_button)
 
         # Right: the plot of the signals, or the preview of a dataset
         self.plot_title = QLabel(self)
@@ -179,7 +179,7 @@ class HDF5Viewer(BECWidget, QWidget):
         self.scan_list.pins_changed.connect(self._refresh_plot)
         self.signal_list.selection_changed.connect(self._refresh_plot)
         self.signal_list.open_requested.connect(self._open_signal_in_file)
-        self.tabs.currentChanged.connect(self._on_tab_changed)
+        self.tabs.current_changed.connect(self._on_tab_changed)
         self.open_button.clicked.connect(self._choose_file)
         self.tree.node_selected.connect(self.preview.show_node)
         self.tree.file_failed.connect(self._on_file_failed)
@@ -216,7 +216,7 @@ class HDF5Viewer(BECWidget, QWidget):
             None,
         )
         if listed is not None and self.scan_list.select(listed.scan_id):
-            self.tabs.setCurrentIndex(1)
+            self.tabs.set_current_index(1)
             self._show_file(dataset)
             return
         self._keep_file = True
@@ -226,7 +226,7 @@ class HDF5Viewer(BECWidget, QWidget):
             self._keep_file = False
         self._file_path = file_path
         self._file_shown = ""
-        self.tabs.setCurrentIndex(1)
+        self.tabs.set_current_index(1)
         self._show_file(dataset)
 
     @SafeSlot()
@@ -365,7 +365,7 @@ class HDF5Viewer(BECWidget, QWidget):
         elif not self._keep_file:
             self._file_path = ""
         self.signal_list.set_scan(entry, self._signal_kinds(entry) if entry is not None else None)
-        if self.tabs.currentIndex() == 1 and not self._keep_file:
+        if self.tabs.current_index() == 1 and not self._keep_file:
             self._show_file()
         self._update_status()
 
@@ -440,7 +440,6 @@ class HDF5Viewer(BECWidget, QWidget):
                 self._plot_note = f"{key[1]} could not be plotted: {exc}"
                 continue
             self._curves[key] = (curve, entry.live)
-
         if self._curves:
             self.plot_stack.setCurrentWidget(self.waveform)
         elif self._entry is None:
@@ -454,7 +453,7 @@ class HDF5Viewer(BECWidget, QWidget):
                 "No signals listed for this scan",
                 "Its history entry does not say what was stored. "
                 "The File tab shows everything that is in its file.",
-                (("Go to the File tab", lambda: self.tabs.setCurrentIndex(1)),),
+                (("Go to the File tab", lambda: self.tabs.set_current_index(1)),),
             )
             self.plot_stack.setCurrentWidget(self.plot_state)
         else:
@@ -527,7 +526,7 @@ class HDF5Viewer(BECWidget, QWidget):
             self.open_file(file_path)
 
     def _open_signal_in_file(self, signal: SignalInfo) -> None:
-        self.tabs.setCurrentIndex(1)
+        self.tabs.set_current_index(1)
         self._show_file(signal.dataset_path)
 
     def _show_file(self, select_path: str = "") -> None:
@@ -542,7 +541,7 @@ class HDF5Viewer(BECWidget, QWidget):
                 f"Scan {entry.scan_number} is still running",
                 "Its file is being written and is not opened. The Signals tab shows the scan "
                 "while it runs, and the file opens here as soon as the scan is done.",
-                (("Go to the Signals tab", lambda: self.tabs.setCurrentIndex(0)),),
+                (("Go to the Signals tab", lambda: self.tabs.set_current_index(0)),),
             )
             return
         file_path = self._file_path
@@ -592,7 +591,7 @@ class HDF5Viewer(BECWidget, QWidget):
 
     def _reopen_file(self) -> None:
         self._file_shown = ""
-        if self.tabs.currentIndex() == 1:
+        if self.tabs.current_index() == 1:
             self._show_file()
 
     def _on_file_failed(self, error: H5ReadError) -> None:
@@ -610,7 +609,7 @@ class HDF5Viewer(BECWidget, QWidget):
     def _update_status(self) -> None:
         file_path = self._file_path
         node = self.preview.node
-        if self.tabs.currentIndex() == 1 and node is not None and node.file_path:
+        if self.tabs.current_index() == 1 and node is not None and node.file_path:
             # A link may have led into another file: tell about the file that is read.
             file_path = node.file_path
         if self._entry is not None and self._entry.live:
@@ -623,7 +622,7 @@ class HDF5Viewer(BECWidget, QWidget):
             return
         parts = [Path(file_path).name]
         size = self._file_sizes.get(file_path)
-        if self.tabs.currentIndex() == 1:
+        if self.tabs.current_index() == 1:
             read = h5_reader.format_bytes(self.service.bytes_read(file_path))
             if size:
                 parts.append(f"{read} of {h5_reader.format_bytes(size)} read")

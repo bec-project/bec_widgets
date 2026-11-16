@@ -10,6 +10,7 @@ import pytest
 from bec_lib import messages
 from bec_lib.scan_history import ScanHistory
 from qtpy.QtCore import Qt
+from qtpy.QtWidgets import QWidget
 
 from bec_widgets.tests.utils import create_history_file, create_widget
 from bec_widgets.widgets.services.hdf5_viewer import h5_reader
@@ -18,6 +19,7 @@ from bec_widgets.widgets.services.hdf5_viewer.h5_reader import H5Node, H5ReadErr
 from bec_widgets.widgets.services.hdf5_viewer.h5_service import H5Service
 from bec_widgets.widgets.services.hdf5_viewer.h5_tree import NODE_ROLE, PLACEHOLDER_ROLE, H5Tree
 from bec_widgets.widgets.services.hdf5_viewer.hdf5_viewer import HDF5Viewer
+from bec_widgets.widgets.services.hdf5_viewer.pane_tabs import PaneTabs
 from bec_widgets.widgets.services.hdf5_viewer.scan_list import (
     ScanEntry,
     ScanList,
@@ -539,6 +541,27 @@ def test_viewer_compares_pinned_scans_in_one_colour_each(qtbot, viewer):
     assert viewer.plot_state.title.text() == "Nothing on the plot"
 
 
+def test_tabs_open_a_page_and_say_so(qtbot):
+    tabs = PaneTabs()
+    qtbot.addWidget(tabs)
+    first, second = QWidget(), QWidget()
+    opened = []
+    tabs.current_changed.connect(opened.append)
+    assert tabs.add_tab(first, "Signals") == 0
+    assert tabs.add_tab(second, "File", "Everything in the file") == 1
+    assert tabs.current_index() == 0
+
+    tabs._buttons[1].click()
+    assert tabs.current_index() == 1
+    assert tabs._stack.currentWidget() is second
+    tabs.set_current_index(1)
+    tabs.set_current_index(5)
+    assert opened == [1]
+    tabs.set_current_index(0)
+    assert tabs._buttons[0].isChecked() and not tabs._buttons[1].isChecked()
+    assert opened == [1, 0]
+
+
 def test_viewer_sets_the_x_axis_from_the_signal_list(qtbot, viewer):
     qtbot.waitUntil(lambda: len(viewer._curves) == 1)
     viewer.signal_list.toggle_x(("samx", "samx"))
@@ -548,7 +571,7 @@ def test_viewer_sets_the_x_axis_from_the_signal_list(qtbot, viewer):
 
 
 def test_viewer_shows_the_file_of_the_scan_in_the_file_tab(qtbot, viewer, history):
-    viewer.tabs.setCurrentIndex(1)
+    viewer.tabs.set_current_index(1)
     assert viewer.right_stack.currentWidget() is viewer.preview
     qtbot.waitUntil(lambda: viewer.tree.model.rowCount() == 1)
     assert viewer.tree.file_path == history[2].file_path
@@ -556,10 +579,10 @@ def test_viewer_shows_the_file_of_the_scan_in_the_file_tab(qtbot, viewer, histor
     assert "never locked" in viewer.status_label.text()
 
     # An image of the scan opens in the file view at the place BEC stored it.
-    viewer.tabs.setCurrentIndex(0)
+    viewer.tabs.set_current_index(0)
     camera = next(s for s in viewer.signal_list.signals() if s.device == "camera")
     viewer.signal_list.open_requested.emit(camera)
-    assert viewer.tabs.currentIndex() == 1
+    assert viewer.tabs.current_index() == 1
     qtbot.waitUntil(
         lambda: viewer.preview.node is not None
         and viewer.preview.node.path == "/entry/collection/devices/camera/camera/value"
@@ -569,7 +592,7 @@ def test_viewer_shows_the_file_of_the_scan_in_the_file_tab(qtbot, viewer, histor
 
 def test_viewer_waits_for_a_file_that_is_still_being_written(qtbot, viewer, history):
     os.utime(history[2].file_path, None)  # the writer just touched it
-    viewer.tabs.setCurrentIndex(1)
+    viewer.tabs.set_current_index(1)
 
     qtbot.waitUntil(lambda: viewer.preview.state_page.title.text() == "Still being written")
     assert viewer._busy_timer.isActive()
@@ -590,7 +613,7 @@ def test_viewer_waits_for_a_file_that_is_still_being_written(qtbot, viewer, hist
 def test_viewer_opens_any_file_and_selects_a_dataset(qtbot, viewer, data_file):
     viewer.open_file(str(data_file), "/entry/name")
 
-    assert viewer.tabs.currentIndex() == 1
+    assert viewer.tabs.current_index() == 1
     assert viewer.scan_list.current_entry() is None
     qtbot.waitUntil(
         lambda: viewer.preview.node is not None and viewer.preview.node.path == "/entry/name"
@@ -624,7 +647,7 @@ def test_viewer_lists_a_running_scan_and_keeps_its_file_closed(qtbot, viewer):
     viewer.scan_list.select("live-1")
     assert [signal.group for signal in viewer.signal_list.signals()] == ["point", "point"]
 
-    viewer.tabs.setCurrentIndex(1)
+    viewer.tabs.set_current_index(1)
     assert viewer.preview.state_page.title.text() == "Scan 13 is still running"
     assert viewer.tree.model.rowCount() == 0
     assert "not opened" in viewer.status_label.text()
