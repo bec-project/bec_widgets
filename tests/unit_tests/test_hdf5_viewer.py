@@ -3,6 +3,7 @@
 import os
 import threading
 import time
+from unittest import mock
 
 import h5py
 import numpy as np
@@ -13,6 +14,7 @@ from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.tests.utils import create_history_file, create_widget
+from bec_widgets.utils.error_popups import ErrorPopupUtility
 from bec_widgets.widgets.services.hdf5_viewer import h5_reader
 from bec_widgets.widgets.services.hdf5_viewer.h5_preview import H5Preview, views_for
 from bec_widgets.widgets.services.hdf5_viewer.h5_reader import H5Node, H5ReadError
@@ -81,6 +83,8 @@ def history(tmp_path):
                 "samx": {"samx": {"value": x, "timestamp": np.arange(points)}},
                 "bpm4i": {"bpm4i": {"value": x**2 + index, "timestamp": np.arange(points)}},
                 "bpm3a": {"bpm3a": {"value": x + index, "timestamp": np.arange(points)}},
+                # A device of the time of the scan that the session of today does not have.
+                "old_diode": {"old_diode": {"value": x * 2, "timestamp": np.arange(points)}},
             },
             "async": {
                 "camera": {
@@ -93,6 +97,7 @@ def history(tmp_path):
             "samx": {"samx": info(shape=(points,), dtype="float64")},
             "bpm4i": {"bpm4i": info(shape=(points,), dtype="float64")},
             "bpm3a": {"bpm3a": info(shape=(points,), dtype="float64")},
+            "old_diode": {"old_diode": info(shape=(points,), dtype="float64")},
             "camera": {"camera": info(shape=(points, 8, 8), dtype="float64")},
             "mono": {"mono": info(shape=(1,), dtype="float64")},
         }
@@ -559,6 +564,19 @@ def test_viewer_names_the_curves_in_the_legend_by_signal_and_scan(qtbot, viewer)
     # A refresh of the legend by the plot itself keeps the short names.
     viewer.waveform._refresh_live_legend()
     assert legend_texts(viewer)[key] == "12 · bpm3a"
+
+
+def test_viewer_explains_a_signal_the_session_cannot_plot(qtbot, viewer):
+    qtbot.waitUntil(lambda: len(viewer._curves) == 1)
+
+    with mock.patch.object(ErrorPopupUtility(), "custom_exception_hook") as popup:
+        viewer.signal_list.toggle_y(("old_diode", "old_diode"))
+
+    # No popup and no broken entry: the reason stands under the title of the plot.
+    popup.assert_not_called()
+    assert set(viewer._curves) == {("scan-2", "bpm3a", "bpm3a")}
+    assert "old_diode is not a device of the current BEC session" in viewer.plot_subtitle.text()
+    assert legend_texts(viewer) == {("scan-2", "bpm3a", "bpm3a"): "bpm3a"}
 
 
 def test_tabs_open_a_page_and_say_so(qtbot):

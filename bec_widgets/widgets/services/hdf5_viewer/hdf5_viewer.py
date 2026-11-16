@@ -384,6 +384,16 @@ class HDF5Viewer(BECWidget, QWidget):
         return scans
 
     @staticmethod
+    def _plot_problem(device: str, error: Exception) -> str:
+        """Say in plain words why a signal is not on the plot."""
+        if "not found in current BEC session" in str(error):
+            return (
+                f"{device} is not a device of the current BEC session, so it cannot be "
+                "plotted here. Its values are in the File tab."
+            )
+        return f"{device} could not be plotted: {error}"
+
+    @staticmethod
     def _legend_text(entry: ScanEntry, device: str, signal: str, one_scan: bool) -> str:
         """Name of a curve in the legend: the signal, and the scan when several are compared."""
         name = SignalInfo(device, signal, (), "", "point").label
@@ -429,23 +439,25 @@ class HDF5Viewer(BECWidget, QWidget):
                 curve.set_color(color)
                 curve.set_pen_style(style)
                 continue
+            # Errors come back here instead of as a popup: they are explained under the title.
+            options = {
+                "device_y": key[1],
+                "signal_y": key[2],
+                "color": color,
+                "pen_style": style,
+                "pen_width": 2,
+                "_override_slot_params": {"popup_error": False, "raise_error": True},
+            }
+            if not entry.live:
+                options["scan_id"] = entry.scan_id
             try:
-                if entry.live:
-                    curve = self.waveform.plot(
-                        device_y=key[1], signal_y=key[2], color=color, pen_style=style, pen_width=2
-                    )
-                else:
-                    curve = self.waveform.plot(
-                        device_y=key[1],
-                        signal_y=key[2],
-                        scan_id=entry.scan_id,
-                        color=color,
-                        pen_style=style,
-                        pen_width=2,
-                    )
+                curve = self.waveform.plot(**options)
             except Exception as exc:  # pylint: disable=broad-except
                 logger.warning(f"HDF5 viewer: {key[1]}/{key[2]} could not be plotted: {exc}")
-                self._plot_note = f"{key[1]} could not be plotted: {exc}"
+                self._plot_note = self._plot_problem(key[1], exc)
+                continue
+            if curve is None:
+                self._plot_note = f"{key[1]} could not be plotted."
                 continue
             self._curves[key] = (curve, entry.live)
         self.waveform.set_legend_names(
