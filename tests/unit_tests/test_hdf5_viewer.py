@@ -562,6 +562,17 @@ def test_tabs_open_a_page_and_say_so(qtbot):
     assert opened == [1, 0]
 
 
+def test_tree_leaves_the_type_column_out_while_it_is_narrow(qtbot, service):
+    tree = H5Tree(service)
+    qtbot.addWidget(tree)
+    tree.resize(500, 400)
+    tree.show()
+    qtbot.waitUntil(lambda: not tree.view.isColumnHidden(2))
+    tree.resize(320, 400)
+    qtbot.waitUntil(lambda: tree.view.isColumnHidden(2))
+    tree.cleanup()
+
+
 def test_viewer_sets_the_x_axis_from_the_signal_list(qtbot, viewer):
     qtbot.waitUntil(lambda: len(viewer._curves) == 1)
     viewer.signal_list.toggle_x(("samx", "samx"))

@@ -150,7 +150,7 @@ class HDF5Viewer(BECWidget, QWidget):
         self.splitter.setStretchFactor(0, 0)
         self.splitter.setStretchFactor(1, 0)
         self.splitter.setStretchFactor(2, 1)
-        self.splitter.setSizes([270, 330, 800])
+        self.splitter.setSizes([270, 400, 730])
 
         # Bottom: what is being read, and that nothing is locked
         self.status_icon = QLabel(self)

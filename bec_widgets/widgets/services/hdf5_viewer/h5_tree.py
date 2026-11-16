@@ -40,6 +40,8 @@ SELECT_DELAY_MS = 150
 FIND_DELAY_MS = 300
 #: Deepest level the tree opens by itself when a file is shown.
 AUTO_EXPAND_DEPTH = 6
+#: Below this width the tree shows names and shapes only; the type is in the details.
+NARROW_TREE_WIDTH = 380
 
 
 def node_icon_name(node: H5Node) -> str:
@@ -260,6 +262,16 @@ class H5Tree(QWidget):
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         header.setMinimumSectionSize(48)
+        self._fit_columns()
+
+    def _fit_columns(self) -> None:
+        """Leave the type column out while the tree is narrow, so that names stay readable."""
+        self.view.setColumnHidden(2, self.width() < NARROW_TREE_WIDTH)
+
+    def resizeEvent(self, event) -> None:  # pylint: disable=invalid-name
+        """Fit the columns to the new width."""
+        super().resizeEvent(event)
+        self._fit_columns()
 
     def _connect_selection(self) -> None:
         self.view.selectionModel().currentChanged.connect(self._on_current_changed)
