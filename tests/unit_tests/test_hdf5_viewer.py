@@ -625,7 +625,7 @@ def click_scan_row(qtbot, viewer, row, modifier=Qt.KeyboardModifier.NoModifier):
 
 def test_ctrl_click_adds_a_scan_to_the_comparison_and_takes_it_off(qtbot, viewer):
     qtbot.waitUntil(lambda: len(viewer._curves) == 1)
-    assert "to compare" in viewer.plot_subtitle.text()
+    assert "to compare" in viewer.plot_subtitle.full_text()
     selected = viewer.scan_list.current_entry().scan_id
 
     click_scan_row(qtbot, viewer, 2, Qt.KeyboardModifier.ControlModifier)
@@ -634,11 +634,11 @@ def test_ctrl_click_adds_a_scan_to_the_comparison_and_takes_it_off(qtbot, viewer
     assert viewer.scan_list.current_entry().scan_id == selected
     assert set(viewer.scan_list.model.pins()) == {"scan-0"}
     assert ("scan-0", "bpm3a", "bpm3a") in viewer._curves
-    assert "compared with 10" in viewer.plot_subtitle.text()
+    assert "compared with 10" in viewer.plot_subtitle.full_text()
 
     click_scan_row(qtbot, viewer, 2, Qt.KeyboardModifier.ControlModifier)
     assert viewer.scan_list.model.pins() == {}
-    assert "to compare" in viewer.plot_subtitle.text()
+    assert "to compare" in viewer.plot_subtitle.full_text()
 
 
 def test_shift_click_adds_every_scan_up_to_the_clicked_one(qtbot, viewer):
@@ -677,7 +677,7 @@ def test_viewer_compares_pinned_scans_in_one_colour_each(qtbot, viewer):
     assert config[("scan-0", "bpm3a", "bpm3a")].color != config[("scan-2", "bpm3a", "bpm3a")].color
     assert config[("scan-2", "bpm3a", "bpm3a")].pen_style == "solid"
     assert config[("scan-2", "bpm4i", "bpm4i")].pen_style == "dash"
-    assert "compared with 10" in viewer.plot_subtitle.text()
+    assert "compared with 10" in viewer.plot_subtitle.full_text()
 
     viewer.scan_list.model.toggle_pin("scan-0")
     assert len(viewer._curves) == 2
@@ -720,7 +720,7 @@ def test_viewer_explains_a_signal_the_session_cannot_plot(qtbot, viewer):
     # No popup and no broken entry: the reason stands under the title of the plot.
     popup.assert_not_called()
     assert set(viewer._curves) == {("scan-2", "bpm3a", "bpm3a")}
-    assert "old_diode is not a device of the current BEC session" in viewer.plot_subtitle.text()
+    assert "old_diode is not a device of the current BEC session" in viewer.plot_subtitle.full_text()
     assert legend_texts(viewer) == {("scan-2", "bpm3a", "bpm3a"): "bpm3a-bpm3a-scan-12"}
 
 
@@ -770,7 +770,7 @@ def test_viewer_shows_the_file_of_the_scan_in_the_file_tab(qtbot, viewer, histor
     qtbot.waitUntil(lambda: viewer.tree.model.rowCount() == 1)
     assert viewer.tree.file_path == history[2].file_path
     qtbot.waitUntil(lambda: viewer.tree.model.item(0).rowCount() == 1)
-    assert "never locked" in viewer.status_label.text()
+    assert "never locked" in viewer.status_label.full_text()
 
     # An image of the scan opens in the file view at the place BEC stored it.
     viewer.tabs.set_current_index(0)
@@ -844,7 +844,7 @@ def test_viewer_lists_a_running_scan_and_keeps_its_file_closed(qtbot, viewer):
     viewer.tabs.set_current_index(1)
     assert viewer.preview.state_page.title.text() == "Scan 13 is still running"
     assert viewer.tree.model.rowCount() == 0
-    assert "not opened" in viewer.status_label.text()
+    assert "not opened" in viewer.status_label.full_text()
 
     # A scan that ended is replaced by its history entry, never listed twice.
     viewer.on_scan_status(status | {"status": "closed"}, {})
@@ -935,3 +935,14 @@ def test_curves_keep_the_colours_of_the_scan_list_after_a_theme_change(qtbot, vi
         assert viewer.signal_list.signal_color(("bpm3a", "bpm3a")) == series_color(0)
     finally:
         apply_theme("light")
+
+
+def test_viewer_does_not_grow_wider_because_of_long_lines(qtbot, viewer):
+    qtbot.waitUntil(lambda: len(viewer._curves) == 1)
+    viewer.plot_subtitle.setText("a very long line about the scan " * 10)
+    viewer.status_label.setText("a very long status line " * 10)
+    # The lines are cut to the room they get and say the rest in their tooltip.
+    assert viewer.right_stack.parentWidget().minimumSizeHint().width() < 400
+    assert viewer.minimumSizeHint().width() < 1000
+    viewer.resize(900, 600)
+    qtbot.waitUntil(lambda: viewer.plot_subtitle.toolTip() != "")

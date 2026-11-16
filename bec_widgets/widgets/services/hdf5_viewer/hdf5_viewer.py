@@ -31,6 +31,7 @@ from qtpy.QtWidgets import (
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
+from bec_widgets.widgets.progress.scan_progressbar.scan_ui import ElidedLabel
 from bec_widgets.widgets.services.hdf5_viewer import h5_reader
 from bec_widgets.widgets.services.hdf5_viewer.h5_preview import H5DetailsPanel, H5Preview, StatePage
 from bec_widgets.widgets.services.hdf5_viewer.h5_reader import FileSummary, H5ReadError
@@ -121,7 +122,7 @@ class HDF5Viewer(BECWidget, QWidget):
         font = self.plot_title.font()
         font.setWeight(QFont.Weight.DemiBold)
         self.plot_title.setFont(font)
-        self.plot_subtitle = QLabel(self)
+        self.plot_subtitle = ElidedLabel(parent=self)
         mute(self.plot_subtitle)
         title_row = QHBoxLayout()
         title_row.setContentsMargins(0, 0, 0, 0)
@@ -157,7 +158,7 @@ class HDF5Viewer(BECWidget, QWidget):
         # Bottom: what is being read, and that nothing is locked
         self.status_icon = QLabel(self)
         self.status_icon.setPixmap(material_icon("verified_user", size=(16, 16)))
-        self.status_label = QLabel(self)
+        self.status_label = ElidedLabel(parent=self)
         mute(self.status_label)
         self.status_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         status_row = QHBoxLayout()
@@ -630,6 +631,7 @@ class HDF5Viewer(BECWidget, QWidget):
         if self.tabs.current_index() == 1 and node is not None and node.file_path:
             # A link may have led into another file: tell about the file that is read.
             file_path = node.file_path
+        self.status_icon.setToolTip(file_path or "")
         if self._entry is not None and self._entry.live:
             self.status_label.setText(
                 "The running scan is drawn live from BEC. Its file is not opened."
@@ -650,7 +652,6 @@ class HDF5Viewer(BECWidget, QWidget):
                 parts.append(h5_reader.format_bytes(size))
             parts.append("read-only, plotted through BEC's Data API")
         self.status_label.setText("  ·  ".join(parts))
-        self.status_label.setToolTip(file_path)
 
     ################################################################################
     # Housekeeping
