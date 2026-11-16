@@ -422,3 +422,30 @@ def test_status_pill_opens_its_widget_in_the_dock_area_view(
     assert switched == ["dock_area"]
     qtbot.mouseDClick(item.pill, Qt.MouseButton.LeftButton)
     assert [w for w in dock_area.widget_list() if isinstance(w, ScanProgressBar)] == after
+
+
+def test_data_view_builds_the_hdf5_viewer_on_first_enter_only(app_with_spies, qtbot, monkeypatch):
+    # pylint: disable=import-outside-toplevel
+    from bec_widgets.widgets.services.hdf5_viewer.hdf5_viewer import HDF5Viewer
+
+    app, _, _, _ = app_with_spies
+    view = app.data_view
+    assert app._view_index["data"] >= 0
+    # Starting the application does not build the viewer.
+    assert view.viewer is None
+
+    app.set_current("data")
+    qtbot.waitUntil(lambda: view.viewer is not None)
+    viewer = view.viewer
+    assert isinstance(viewer, HDF5Viewer)
+    assert view.content is viewer
+
+    paused, resumed = [], []
+    monkeypatch.setattr(viewer, "pause", lambda: paused.append(True))
+    monkeypatch.setattr(viewer, "resume", lambda: resumed.append(True))
+    app.set_current("Docks")
+    qtbot.waitUntil(lambda: paused == [True])
+    app.set_current("data")
+    qtbot.waitUntil(lambda: resumed == [True])
+    # Entering again reuses the viewer.
+    assert view.viewer is viewer

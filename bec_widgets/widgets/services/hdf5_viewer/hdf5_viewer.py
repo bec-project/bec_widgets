@@ -817,6 +817,28 @@ class HDF5Viewer(BECWidget, QWidget):
     # Housekeeping
     ################################################################################
 
+    def pause(self) -> None:
+        """
+        Stop reading files while the viewer is not shown, e.g. while another view of the main
+        application is open. :meth:`resume` picks up what was cut off.
+        """
+        self._paused_busy = self._busy_timer.isActive()
+        self._busy_timer.stop()
+        self.tree.pause()
+        channel = self.preview._channel  # pylint: disable=protected-access
+        self._paused_preview = self.service.has_pending(channel)
+        self.service.cancel_all(channel)
+
+    def resume(self) -> None:
+        """Read again what :meth:`pause` cut off."""
+        self.tree.resume()
+        if getattr(self, "_paused_busy", False):
+            self._paused_busy = False
+            self._busy_timer.start()
+        if getattr(self, "_paused_preview", False):
+            self._paused_preview = False
+            self.preview.reload()
+
     @SafeSlot(str)
     def apply_theme(self, theme: str):
         """

@@ -163,6 +163,18 @@ class H5Service(QObject):
         if not self._requests:
             self.busy_changed.emit(False)
 
+    def has_pending(self, prefix: str = "") -> bool:
+        """
+        Whether a channel whose name starts with ``prefix`` waits for a read.
+
+        Args:
+            prefix (str): Start of the channel names. Empty for all channels.
+
+        Returns:
+            bool: True while such a read is pending.
+        """
+        return any(name.startswith(prefix) for name in self._latest)
+
     def cancel_all(self, prefix: str = "") -> None:
         """
         Drop the pending requests of every channel whose name starts with ``prefix``.

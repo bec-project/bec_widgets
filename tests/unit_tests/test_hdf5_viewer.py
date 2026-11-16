@@ -25,6 +25,7 @@ from bec_widgets.widgets.services.hdf5_viewer.h5_tree import (
     MATCH_ROLE,
     NODE_ROLE,
     PLACEHOLDER_ROLE,
+    STATE_ROLE,
     H5Tree,
 )
 from bec_widgets.widgets.services.hdf5_viewer.hdf5_viewer import HDF5Viewer
@@ -1052,3 +1053,24 @@ def test_overlay_adds_a_scan_with_the_signals_the_other_plot_shows(qtbot, viewer
     assert text == "Added 1 curve to TargetPlot"
     assert viewer.scan_list.note.text() == text
     qtbot.waitUntil(lambda: viewer.scan_list.note.text() == "3 scans", timeout=5000)
+
+
+def test_tree_pause_cuts_off_a_listing_and_resume_reads_it_again(qtbot, service, data_file):
+    tree = H5Tree(service)
+    qtbot.addWidget(tree)
+    tree.set_file(str(data_file), select_path="/entry")
+    root = tree.model.item(0)
+    qtbot.waitUntil(lambda: child_names(root) == ["entry"])
+    entry = root.child(0)
+    qtbot.waitUntil(lambda: "plot" in child_names(entry))
+    plot = entry.child(child_names(entry).index("plot"))
+
+    with qtbot.waitSignal(service.busy_changed, timeout=1000, raising=False):
+        tree.view.expand(plot.index())
+        tree.pause()
+    assert not service.has_pending()
+    assert plot.data(STATE_ROLE) == "unloaded"
+
+    tree.resume()
+    qtbot.waitUntil(lambda: child_names(plot) == ["counts", "energy"])
+    tree.cleanup()

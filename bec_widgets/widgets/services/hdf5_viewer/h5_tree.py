@@ -198,6 +198,9 @@ class H5Tree(QWidget):
         #: Bumped whenever the search results are rebuilt or left, so late reads into the old
         #: result rows are dropped.
         self._found_generation = 0
+        #: Rows whose listing :meth:`pause` cut off, read again by :meth:`resume`.
+        self._paused_loads: list[QStandardItem] = []
+        self._find_interrupted = False
         #: The node announced last, so that finding it again in the tree does not read it again.
         self._shown_node: H5Node | None = None
         #: Rows of the tree that were open when the search results took the view.
@@ -347,6 +350,43 @@ class H5Tree(QWidget):
         if not index.isValid():
             return None
         return index.sibling(index.row(), 0).data(NODE_ROLE)
+
+    def pause(self) -> None:
+        """Stop reading while the tree is not shown; :meth:`resume` reads again what was cut off."""
+        self._select_timer.stop()
+        self._fit_timer.stop()
+        self._find_interrupted = self._find_timer.isActive() or self._service.has_pending(
+            f"{self._channel}-find"
+        )
+        self._find_timer.stop()
+        self._service.cancel_all(self._channel)
+        self._paused_loads = []
+        for model in (self.model, self.found_model):
+            self._collect_loading(model.invisibleRootItem(), self._paused_loads)
+        for item in self._paused_loads:
+            item.setData("unloaded", STATE_ROLE)
+
+    def resume(self) -> None:
+        """Read again what :meth:`pause` cut off."""
+        loads, self._paused_loads = self._paused_loads, []
+        for item in loads:
+            try:
+                if item.model() is not None and item.data(STATE_ROLE) == "unloaded":
+                    self._load(item)
+            except RuntimeError:  # the row went away meanwhile
+                continue
+        if self._find_interrupted:
+            self._find_interrupted = False
+            self._find_timer.start()
+
+    def _collect_loading(self, parent: QStandardItem, found: list[QStandardItem]) -> None:
+        for row in range(parent.rowCount()):
+            child = parent.child(row)
+            if child is None:
+                continue
+            if child.data(STATE_ROLE) == "loading":
+                found.append(child)
+            self._collect_loading(child, found)
 
     def cleanup(self) -> None:
         """Stop the timers and drop the pending reads."""
