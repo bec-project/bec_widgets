@@ -192,6 +192,15 @@ class ScanEntry:
         Returns:
             str: For example ``"samx  ·  200 points  ·  1 min 12 s"``.
         """
+        return "  ·  ".join(self.summary_parts())
+
+    def summary_parts(self) -> list[str]:
+        """
+        The parts of :meth:`summary`, the most important first.
+
+        Returns:
+            list[str]: For example ``["samx", "200 points", "1 min 12 s"]``.
+        """
         parts = []
         if self.motors:
             parts.append(", ".join(self.motors[:3]) + ("…" if len(self.motors) > 3 else ""))
@@ -199,7 +208,7 @@ class ScanEntry:
             parts.append("1 point" if self.num_points == 1 else f"{self.num_points} points")
         if self.end_time and self.start_time and not self.live:
             parts.append(format_duration(self.end_time - self.start_time))
-        return "  ·  ".join(parts)
+        return parts
 
     def matches(self, text: str) -> bool:
         """
@@ -406,6 +415,27 @@ class ScanFilterModel(QSortFilterProxyModel):
         return not self._text or entry.matches(self._text)
 
 
+def fit_parts(parts: list[str], metrics: QFontMetrics, width: int) -> str:
+    """
+    Join as many of ``parts`` as fit into ``width``, leaving out the last ones first.
+
+    A part is never cut in the middle, except the first one when even it does not fit.
+
+    Args:
+        parts (list[str]): The parts, the most important first.
+        metrics (QFontMetrics): Metrics of the font the text is drawn in.
+        width (int): Room in pixels.
+
+    Returns:
+        str: The text to draw.
+    """
+    for count in range(len(parts), 0, -1):
+        text = "  ·  ".join(parts[:count])
+        if metrics.horizontalAdvance(text) <= width:
+            return text
+    return metrics.elidedText(parts[0], Qt.TextElideMode.ElideRight, width) if parts else ""
+
+
 class ScanDelegate(QStyledItemDelegate):
     """Draws a scan in two lines, with how it ended and a pin."""
 
@@ -523,10 +553,11 @@ class ScanDelegate(QStyledItemDelegate):
             painter.setFont(option.font)
         painter.setPen(muted)
         summary_rect = bottom.adjusted(0, 0, -(status_width + 6), 0)
-        summary = metrics.elidedText(
-            entry.summary(), Qt.TextElideMode.ElideRight, summary_rect.width()
+        painter.drawText(
+            summary_rect,
+            align_left,
+            fit_parts(entry.summary_parts(), metrics, summary_rect.width()),
         )
-        painter.drawText(summary_rect, align_left, summary)
         painter.restore()
 
     def editorEvent(self, event, model, option, index) -> bool:

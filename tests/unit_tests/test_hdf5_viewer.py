@@ -11,7 +11,8 @@ import pytest
 from bec_lib import messages
 from bec_lib.scan_history import ScanHistory
 from qtpy.QtCore import QPoint, Qt
-from qtpy.QtWidgets import QWidget
+from qtpy.QtGui import QFontMetrics
+from qtpy.QtWidgets import QApplication, QWidget
 
 from bec_widgets.tests.utils import create_history_file, create_widget
 from bec_widgets.utils.error_popups import ErrorPopupUtility
@@ -31,6 +32,7 @@ from bec_widgets.widgets.services.hdf5_viewer.pane_tabs import PaneTabs
 from bec_widgets.widgets.services.hdf5_viewer.scan_list import (
     ScanEntry,
     ScanList,
+    fit_parts,
     format_duration,
     format_when,
 )
@@ -858,3 +860,15 @@ def test_viewer_lists_a_running_scan_and_keeps_its_file_closed(qtbot, viewer):
     )
     listed = [entry for entry in viewer.scan_list.model.entries() if entry.scan_id == "live-1"]
     assert len(listed) == 1 and not listed[0].live
+
+
+def test_scan_row_leaves_out_the_last_parts_instead_of_cutting_them(qtbot):
+    metrics = QFontMetrics(QApplication.font())
+    parts = ["samx", "100 points", "3 s"]
+    full = "  ·  ".join(parts)
+    assert fit_parts(parts, metrics, metrics.horizontalAdvance(full)) == full
+    two = "  ·  ".join(parts[:2])
+    assert fit_parts(parts, metrics, metrics.horizontalAdvance(two) + 2) == two
+    # Only the first part is ever cut, and only when nothing else fits.
+    assert fit_parts(parts, metrics, metrics.horizontalAdvance("sa")).endswith("…")
+    assert fit_parts([], metrics, 100) == ""
