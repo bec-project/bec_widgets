@@ -874,3 +874,38 @@ def test_scan_row_leaves_out_the_last_parts_instead_of_cutting_them(qtbot):
     # Only the first part is ever cut, and only when nothing else fits.
     assert fit_parts(parts, metrics, metrics.horizontalAdvance("sa")).endswith("…")
     assert fit_parts([], metrics, 100) == ""
+
+
+def contrast(a, b):
+    def lum(c):
+        def ch(v):
+            v /= 255
+            return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+
+        return 0.2126 * ch(c.red()) + 0.7152 * ch(c.green()) + 0.0722 * ch(c.blue())
+
+    high, low = sorted((lum(a), lum(b)), reverse=True)
+    return (high + 0.05) / (low + 0.05)
+
+
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_muted_text_is_the_queue_colour_and_stays_readable(qtbot, theme):
+    # pylint: disable=import-outside-toplevel
+    from qtpy.QtGui import QPalette
+    from qtpy.QtWidgets import QLabel
+
+    from bec_widgets.utils.colors import apply_theme
+    from bec_widgets.utils.theme_utils import theme_colors
+    from bec_widgets.widgets.services.hdf5_viewer.style import mute, muted_color, remute
+
+    holder = QWidget()
+    qtbot.addWidget(holder)
+    label = QLabel("note", holder)
+    mute(label)
+    apply_theme(theme)
+    remute(holder)
+
+    color = label.palette().color(QPalette.ColorRole.WindowText)
+    assert color == muted_color()
+    assert contrast(color, theme_colors()["bg"]) >= 4.5
+    apply_theme("light")

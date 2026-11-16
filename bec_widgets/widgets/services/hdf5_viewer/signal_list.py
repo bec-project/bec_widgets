@@ -30,6 +30,7 @@ from qtpy.QtWidgets import (
 
 from bec_widgets.widgets.services.hdf5_viewer.h5_reader import format_shape
 from bec_widgets.widgets.services.hdf5_viewer.scan_list import ScanEntry
+from bec_widgets.widgets.services.hdf5_viewer.style import mute, muted_color
 
 SIGNAL_ROLE = Qt.ItemDataRole.UserRole + 1
 
@@ -332,7 +333,7 @@ class SignalList(QWidget):
 
         self.note = QLabel(self)
         self.note.setWordWrap(True)
-        self.note.setForegroundRole(QPalette.ColorRole.PlaceholderText)
+        mute(self.note)
         self.note.setContentsMargins(6, 2, 6, 2)
 
         layout = QVBoxLayout(self)
@@ -502,7 +503,7 @@ class SignalList(QWidget):
                 item.setTextAlignment(
                     1, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
                 )
-                item.setForeground(1, self.palette().brush(QPalette.ColorRole.PlaceholderText))
+                item.setForeground(1, muted_color())
             # The long lists of single values start closed.
             head.setExpanded(group != "single" or len(members) <= 12)
         self._apply_filter(self.filter_edit.text())

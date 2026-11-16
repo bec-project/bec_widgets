@@ -16,7 +16,7 @@ from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from qtpy.QtCore import Qt, QTimer
-from qtpy.QtGui import QFont, QPalette
+from qtpy.QtGui import QFont
 from qtpy.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -39,6 +39,7 @@ from bec_widgets.widgets.services.hdf5_viewer.h5_tree import H5Tree
 from bec_widgets.widgets.services.hdf5_viewer.pane_tabs import PaneTabs
 from bec_widgets.widgets.services.hdf5_viewer.scan_list import ScanEntry, ScanList, series_color
 from bec_widgets.widgets.services.hdf5_viewer.signal_list import SignalInfo, SignalList, SourceKey
+from bec_widgets.widgets.services.hdf5_viewer.style import mute, remute
 from bec_widgets.widgets.services.scan_history_browser.components.scan_history_view import (
     BECHistoryManager,
 )
@@ -121,7 +122,7 @@ class HDF5Viewer(BECWidget, QWidget):
         font.setWeight(QFont.Weight.DemiBold)
         self.plot_title.setFont(font)
         self.plot_subtitle = QLabel(self)
-        self.plot_subtitle.setForegroundRole(QPalette.ColorRole.PlaceholderText)
+        mute(self.plot_subtitle)
         title_row = QHBoxLayout()
         title_row.setContentsMargins(0, 0, 0, 0)
         title_row.setSpacing(8)
@@ -157,7 +158,7 @@ class HDF5Viewer(BECWidget, QWidget):
         self.status_icon = QLabel(self)
         self.status_icon.setPixmap(material_icon("verified_user", size=(16, 16)))
         self.status_label = QLabel(self)
-        self.status_label.setForegroundRole(QPalette.ColorRole.PlaceholderText)
+        mute(self.status_label)
         self.status_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         status_row = QHBoxLayout()
         status_row.setContentsMargins(8, 2, 8, 4)
@@ -666,6 +667,7 @@ class HDF5Viewer(BECWidget, QWidget):
         if not hasattr(self, "scan_list"):
             return
         self.status_icon.setPixmap(material_icon("verified_user", size=(16, 16)))
+        remute(self)
         self.scan_list.view.viewport().update()
         self._refresh_plot()
 

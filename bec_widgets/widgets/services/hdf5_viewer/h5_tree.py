@@ -38,6 +38,7 @@ from qtpy.QtWidgets import (
 from bec_widgets.widgets.services.hdf5_viewer import h5_reader
 from bec_widgets.widgets.services.hdf5_viewer.h5_reader import FoundBranches, H5Node, H5ReadError
 from bec_widgets.widgets.services.hdf5_viewer.h5_service import H5Service
+from bec_widgets.widgets.services.hdf5_viewer.style import mute, muted_color
 
 NODE_ROLE = Qt.ItemDataRole.UserRole + 1
 STATE_ROLE = Qt.ItemDataRole.UserRole + 2
@@ -114,8 +115,7 @@ class _MutedColumnDelegate(QStyledItemDelegate):
     def initStyleOption(self, option: QStyleOptionViewItem, index: QModelIndex):
         super().initStyleOption(option, index)
         if index.column() > 0 or index.data(PLACEHOLDER_ROLE) or index.data(CONTEXT_ROLE):
-            muted = option.palette.color(QPalette.ColorRole.PlaceholderText)
-            option.palette.setColor(QPalette.ColorRole.Text, muted)
+            option.palette.setColor(QPalette.ColorRole.Text, muted_color())
 
     def paint(self, painter, option: QStyleOptionViewItem, index: QModelIndex):
         span = index.data(MATCH_ROLE) if index.column() == 0 else None
@@ -235,7 +235,7 @@ class H5Tree(QWidget):
 
         self.note = QLabel(self)
         self.note.setWordWrap(True)
-        self.note.setEnabled(False)
+        mute(self.note)
         self.note.setContentsMargins(6, 2, 6, 2)
         self.note.hide()
 

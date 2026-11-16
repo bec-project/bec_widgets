@@ -39,6 +39,7 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets.utils.colors import get_accent_colors, get_theme_name
+from bec_widgets.widgets.services.hdf5_viewer.style import mute, muted_color
 
 ENTRY_ROLE = Qt.ItemDataRole.UserRole + 1
 
@@ -477,8 +478,9 @@ class ScanDelegate(QStyledItemDelegate):
             tint.setAlpha(52 if selected else 22)
             painter.fillRect(option.rect, tint)
         text_color = palette.color(QPalette.ColorRole.Text)
-        muted = QColor(text_color)
-        muted.setAlphaF(0.66)
+        muted = muted_color() if not selected else QColor(text_color)
+        if selected:
+            muted.setAlphaF(0.66)
 
         rect = option.rect.adjusted(self.MARGIN + 6, 5, -self.MARGIN, -5)
         # A bar in the colour the scan has in the plot.
@@ -696,7 +698,7 @@ class ScanList(QWidget):
 
         self.note = QLabel(self)
         self.note.setWordWrap(True)
-        self.note.setForegroundRole(QPalette.ColorRole.PlaceholderText)
+        mute(self.note)
         self.note.setContentsMargins(6, 2, 6, 2)
 
         layout = QVBoxLayout(self)

@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np
 from bec_qthemes import material_icon
 from qtpy.QtCore import QAbstractTableModel, QModelIndex, Qt, QTimer, Signal
-from qtpy.QtGui import QFont, QGuiApplication, QPalette
+from qtpy.QtGui import QFont, QGuiApplication
 from qtpy.QtWidgets import (
     QAbstractItemView,
     QButtonGroup,
@@ -49,6 +49,7 @@ from bec_widgets.widgets.services.hdf5_viewer.h5_reader import (
     TableData,
 )
 from bec_widgets.widgets.services.hdf5_viewer.h5_service import H5Service, ReadContext
+from bec_widgets.widgets.services.hdf5_viewer.style import mute
 
 #: Rows and columns of the table that are read in one piece.
 TABLE_BLOCK_ROWS = 200
@@ -64,16 +65,6 @@ PROGRESS_DELAY_MS = 200
 
 VIEW_LABELS = {"line": "Line", "image": "Image", "table": "Table", "value": "Value"}
 VIEW_ICONS = {"line": "show_chart", "image": "image", "table": "table_rows", "value": "tag"}
-
-
-def mute(label: QWidget) -> None:
-    """
-    Draw a widget's text in the muted text colour of the theme.
-
-    Args:
-        label (QWidget): The widget, usually a label.
-    """
-    label.setForegroundRole(QPalette.ColorRole.PlaceholderText)
 
 
 def views_for(node: H5Node) -> list[str]:

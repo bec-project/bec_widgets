@@ -19,6 +19,8 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from bec_widgets.widgets.services.hdf5_viewer.style import muted_color
+
 
 class _TabButton(QAbstractButton):
     """One tab: its name, with a line under it while it is the open one."""
@@ -51,9 +53,8 @@ class _TabButton(QAbstractButton):
         palette = self.palette()
         strong = self.isChecked()
         lively = strong or self.underMouse() or self.hasFocus()
-        role = QPalette.ColorRole.WindowText if lively else QPalette.ColorRole.PlaceholderText
         painter.setFont(self._font(strong))
-        painter.setPen(palette.color(role))
+        painter.setPen(palette.color(QPalette.ColorRole.WindowText) if lively else muted_color())
         painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, self.text())
         if strong:
             line = QRect(6, self.height() - 2, self.width() - 12, 2)
