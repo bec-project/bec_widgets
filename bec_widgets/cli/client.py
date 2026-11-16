@@ -35,6 +35,7 @@ _Widgets = {
     "BeamlineStateManager": "BeamlineStateManager",
     "BecConsole": "BecConsole",
     "DapComboBox": "DapComboBox",
+    "HDF5Viewer": "HDF5Viewer",
     "Heatmap": "Heatmap",
     "Image": "Image",
     "LogPanel": "LogPanel",
@@ -1727,6 +1728,55 @@ class EllipticalROI(RPCBase):
         Args:
             x (float): The x-coordinate of the new position.
             y (float): The y-coordinate of the new position.
+        """
+
+
+class HDF5Viewer(RPCBase):
+    """Viewer for the scans BEC has written and for HDF5 files in general."""
+
+    _IMPORT_MODULE = "bec_widgets.widgets.services.hdf5_viewer.hdf5_viewer"
+
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
+    @rpc_call
+    def open_file(self, file_path: "str", dataset: "str" = "") -> "None":
+        """
+        Show an HDF5 file in the file view.
+
+        The file is opened for each read and closed again, without a file lock. A file that
+        is still being written is not read until its writer is done.
+
+        Args:
+            file_path (str): Path of the file.
+            dataset (str): Path of a dataset or group inside the file to select.
+        """
+
+    @rpc_call
+    def show_scan(self, scan: "int | str") -> "None":
+        """
+        Select a scan of the scan history.
+
+        Args:
+            scan (int | str): Scan number or scan id.
+
+        Raises:
+            ValueError: If the scan is not in the scan history.
         """
 
 
