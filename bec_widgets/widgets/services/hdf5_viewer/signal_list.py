@@ -200,13 +200,20 @@ class _ChipDelegate(QStyledItemDelegate):
         font.setPointSizeF(option.font.pointSizeF() * 0.9)
         painter.setFont(font)
         x_rect, y_rect = self.chip_rects(option.rect)
+        owner = self._owner
         if not signal.plottable:
-            open_rect = x_rect.united(y_rect)
-            self._draw_chip(painter, open_rect, "Open", None, ink)
+            if not owner.picker:
+                open_rect = x_rect.united(y_rect)
+                self._draw_chip(painter, open_rect, "Open", None, ink)
             painter.restore()
             return
-        owner = self._owner
         on = QColor("#ffffff")
+        if owner.picker:
+            y_on = signal.key in owner.y_signals()
+            y_fill = QColor(owner.signal_color(signal.key)) if y_on else None
+            self._draw_chip(painter, y_rect, "Y", y_fill, on if y_on else ink)
+            painter.restore()
+            return
         x_on = owner.x_signal() == signal.key
         x_fill = QColor(ink) if x_on else None
         x_ink = QColor("#000000" if ink.lightness() > 128 else "#ffffff") if x_on else ink
@@ -225,6 +232,11 @@ class _ChipDelegate(QStyledItemDelegate):
             return False
         x_rect, y_rect = self.chip_rects(option.rect)
         position = event.position().toPoint()
+        if self._owner.picker:
+            if signal.plottable and y_rect.contains(position):
+                self._owner.toggle_y(signal.key)
+                return True
+            return False
         if not signal.plottable:
             if x_rect.united(y_rect).contains(position):
                 self._owner.open_requested.emit(signal)
@@ -243,7 +255,11 @@ class _ChipDelegate(QStyledItemDelegate):
         if signal is None:
             return super().helpEvent(event, view, option, index)
         x_rect, y_rect = self.chip_rects(option.rect)
-        if not signal.plottable:
+        if self._owner.picker:
+            if not (signal.plottable and y_rect.contains(event.pos())):
+                return super().helpEvent(event, view, option, index)
+            text = "Add to the plot, or take it off (Y)"
+        elif not signal.plottable:
             text = "Open in the file view (Enter)"
         elif x_rect.contains(event.pos()):
             text = (
@@ -273,13 +289,13 @@ class _SignalTree(QTreeWidget):
             if event.key() == Qt.Key.Key_Y and signal.plottable:
                 self._owner.toggle_y(signal.key)
                 return
-            if event.key() == Qt.Key.Key_X and signal.plottable:
+            if event.key() == Qt.Key.Key_X and signal.plottable and not self._owner.picker:
                 self._owner.toggle_x(signal.key)
                 return
             if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space):
                 if signal.plottable:
                     self._owner.toggle_y(signal.key)
-                else:
+                elif not self._owner.picker:
                     self._owner.open_requested.emit(signal)
                 return
         super().keyPressEvent(event)
@@ -292,9 +308,19 @@ class SignalList(QWidget):
     selection_changed = Signal()
     #: A signal that cannot be plotted should be opened in the file view.
     open_requested = Signal(object)
+    #: Y was pressed on a signal: (device, entry) and whether it is on now.
+    y_toggled = Signal(object, bool)
 
-    def __init__(self, parent: QWidget | None = None):
+    def __init__(self, parent: QWidget | None = None, picker: bool = False):
+        """
+        Args:
+            parent (QWidget | None): Parent widget.
+            picker (bool): Only Y buttons, for picking curves of another plot: no x axis, no
+                Open button, no signal chosen by itself, and signals of different groups can
+                be on together.
+        """
         super().__init__(parent)
+        self.picker = picker
         self._signals: dict[SourceKey, SignalInfo] = {}
         self._y: list[SourceKey] = []
         self._x: SourceKey | None = None
@@ -328,7 +354,7 @@ class SignalList(QWidget):
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
-        header.resizeSection(2, 66)
+        header.resizeSection(2, 38 if picker else 66)
         header.setMinimumSectionSize(40)
 
         self.note = QLabel(self)
@@ -368,7 +394,9 @@ class SignalList(QWidget):
             self._x in self._signals and self._signals[self._x].group == "point"
         ):
             self._x = None
-        if not self._y:
+        if self.picker:
+            self._y = []
+        elif not self._y:
             # Nothing of the last plot exists in this scan: start with its first detector.
             default = self._default_y(entry, signals)
             if default is not None:
@@ -418,6 +446,8 @@ class SignalList(QWidget):
             return
         if key in self._y:
             self._y.remove(key)
+        elif self.picker:
+            self._y.append(key)
         else:
             group = self._signals[key].group
             self._y = [other for other in self._y if self._signals[other].group == group]
@@ -425,6 +455,18 @@ class SignalList(QWidget):
             if group != "point":
                 self._x = None
         self._changed()
+        self.y_toggled.emit(key, key in self._y)
+
+    def set_y_signals(self, keys: list[SourceKey]) -> None:
+        """
+        Show which signals are on, without announcing it, e.g. to follow another plot.
+
+        Args:
+            keys (list[SourceKey]): (device, entry) of the signals that are on.
+        """
+        self._y = [key for key in keys if key in self._signals]
+        self.tree.viewport().update()
+        self._update_note()
 
     def toggle_x(self, key: SourceKey) -> None:
         """
@@ -551,6 +593,14 @@ class SignalList(QWidget):
         )
         if hidden:
             self.note.setText("No signal fits the filter.")
+            return
+        if self.picker:
+            count = len(self._y)
+            self.note.setText(
+                "Press Y on a signal to add it to the plot."
+                if not count
+                else f"{'1 signal' if count == 1 else f'{count} signals'} of this scan on the plot"
+            )
             return
         if not self._y:
             self.note.setText("Press Y on a signal to plot it.")

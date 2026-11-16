@@ -506,7 +506,8 @@ class ScanDelegate(QStyledItemDelegate):
             painter.drawRoundedRect(bar, 2, 2)
 
         pin_rect = self.pin_rect(option.rect)
-        if slot is not None or hovered or selected:
+        pinnable = getattr(option.widget, "pinnable", True)
+        if pinnable and (slot is not None or hovered or selected):
             icon_color = text_color if slot is not None else muted
             pixmap = material_icon(
                 "keep",
@@ -578,6 +579,8 @@ class ScanDelegate(QStyledItemDelegate):
         painter.restore()
 
     def editorEvent(self, event, model, option, index) -> bool:
+        if not getattr(self.parent(), "pinnable", True):
+            return super().editorEvent(event, model, option, index)
         if event.type() == QEvent.Type.MouseButtonRelease and self.pin_rect(option.rect).contains(
             event.position().toPoint()
         ):
@@ -587,7 +590,8 @@ class ScanDelegate(QStyledItemDelegate):
         return super().editorEvent(event, model, option, index)
 
     def helpEvent(self, event, view, option, index) -> bool:
-        if index.isValid() and self.pin_rect(option.rect).contains(event.pos()):
+        pinnable = getattr(view, "pinnable", True)
+        if pinnable and index.isValid() and self.pin_rect(option.rect).contains(event.pos()):
             entry: ScanEntry = index.data(ENTRY_ROLE)
             pinned = entry.scan_id in index.model().sourceModel().pins()
             view.setToolTip("")
@@ -614,7 +618,13 @@ class _ScanListView(QListView):
     between the current one and the clicked one. A plain click selects.
     """
 
+    #: Whether scans can be pinned for comparison in this list.
+    pinnable = True
+
     def mousePressEvent(self, event):  # pylint: disable=invalid-name
+        if not self.pinnable:
+            super().mousePressEvent(event)
+            return
         modifiers = event.modifiers()
         index = self.indexAt(event.position().toPoint())
         wanted = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
@@ -637,7 +647,7 @@ class _ScanListView(QListView):
         event.accept()
 
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key.Key_P and self.currentIndex().isValid():
+        if event.key() == Qt.Key.Key_P and self.pinnable and self.currentIndex().isValid():
             entry: ScanEntry = self.currentIndex().data(ENTRY_ROLE)
             self.model().sourceModel().toggle_pin(entry.scan_id)
             return
@@ -654,7 +664,12 @@ class ScanList(QWidget):
     #: A context menu was asked for on a scan: the :class:`ScanEntry` and the global position.
     context_menu_requested = Signal(object, QPoint)
 
-    def __init__(self, parent: QWidget | None = None):
+    def __init__(self, parent: QWidget | None = None, pinnable: bool = True):
+        """
+        Args:
+            parent (QWidget | None): Parent widget.
+            pinnable (bool): Whether scans can be pinned for comparison.
+        """
         super().__init__(parent)
         self._current_id: str | None = None
         self._quiet = False
@@ -703,6 +718,7 @@ class ScanList(QWidget):
         chips.addWidget(self.unpin_button)
 
         self.view = _ScanListView(self)
+        self.view.pinnable = pinnable
         self.view.setModel(self.filter_model)
         self.delegate = ScanDelegate(self.view)
         self.view.setItemDelegate(self.delegate)
