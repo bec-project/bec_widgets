@@ -254,6 +254,17 @@ class H5Tree(QWidget):
         self._find_timer.setSingleShot(True)
         self._find_timer.setInterval(FIND_DELAY_MS)
         self._find_timer.timeout.connect(self._find)
+        # Rows come and go in bursts; look at the columns once things settle.
+        self._fit_timer = QTimer(self)
+        self._fit_timer.setSingleShot(True)
+        self._fit_timer.setInterval(0)
+        self._fit_timer.timeout.connect(self._fit_columns)
+        self.view.expanded.connect(self._schedule_fit)
+        self.view.collapsed.connect(self._schedule_fit)
+        self.view.verticalScrollBar().valueChanged.connect(self._schedule_fit)
+        for model in (self.model, self.found_model):
+            model.rowsInserted.connect(self._schedule_fit)
+            model.rowsRemoved.connect(self._schedule_fit)
 
         self.view.expanded.connect(self._on_expanded)
         self.view.collapsed.connect(self._on_collapsed)
@@ -342,6 +353,7 @@ class H5Tree(QWidget):
         self._generation += 1
         self._select_timer.stop()
         self._find_timer.stop()
+        self._fit_timer.stop()
         self._found_generation += 1
         self._service.cancel_all(self._channel)
 
@@ -359,8 +371,45 @@ class H5Tree(QWidget):
         self._fit_columns()
 
     def _fit_columns(self) -> None:
-        """Leave the type column out while the tree is narrow, so that names stay readable."""
-        self.view.setColumnHidden(2, self.width() < NARROW_TREE_WIDTH)
+        """
+        Leave the type column out while the tree is narrow or while a name in view would be
+        cut with it, so that names stay readable. The type is also in the details.
+        """
+        hide = self.width() < NARROW_TREE_WIDTH or self._names_need_room()
+        if hide != self.view.isColumnHidden(2):
+            self.view.setColumnHidden(2, hide)
+
+    def _names_need_room(self) -> bool:
+        """Whether a name in view would be cut while the type column is shown."""
+        view = self.view
+        model = view.model()
+        if model is None:
+            return False
+        room = (
+            view.viewport().width()
+            - view.header().sectionSize(1)
+            - max(view.sizeHintForColumn(2), view.header().sectionSizeHint(2))
+        )
+        icon = view.iconSize().width() if view.iconSize().isValid() else 16
+        index = view.indexAt(view.viewport().rect().topLeft())
+        bottom = view.viewport().height()
+        while index.isValid():
+            rect = view.visualRect(index)
+            if rect.top() > bottom:
+                break
+            font = index.data(Qt.ItemDataRole.FontRole) or view.font()
+            if index.data(MATCH_ROLE):
+                font = QFont(font)
+                font.setWeight(QFont.Weight.Bold)
+            text = str(index.data() or "")
+            need = rect.left() + icon + 12 + QFontMetrics(font).horizontalAdvance(text)
+            if need > room:
+                return True
+            index = view.indexBelow(index)
+        return False
+
+    def _schedule_fit(self, *_args) -> None:
+        self._fit_timer.start()
 
     def resizeEvent(self, event) -> None:  # pylint: disable=invalid-name
         """Fit the columns to the new width."""

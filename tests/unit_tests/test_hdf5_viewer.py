@@ -720,7 +720,9 @@ def test_viewer_explains_a_signal_the_session_cannot_plot(qtbot, viewer):
     # No popup and no broken entry: the reason stands under the title of the plot.
     popup.assert_not_called()
     assert set(viewer._curves) == {("scan-2", "bpm3a", "bpm3a")}
-    assert "old_diode is not a device of the current BEC session" in viewer.plot_subtitle.full_text()
+    assert (
+        "old_diode is not a device of the current BEC session" in viewer.plot_subtitle.full_text()
+    )
     assert legend_texts(viewer) == {("scan-2", "bpm3a", "bpm3a"): "bpm3a-bpm3a-scan-12"}
 
 
@@ -946,3 +948,25 @@ def test_viewer_does_not_grow_wider_because_of_long_lines(qtbot, viewer):
     assert viewer.minimumSizeHint().width() < 1000
     viewer.resize(900, 600)
     qtbot.waitUntil(lambda: viewer.plot_subtitle.toolTip() != "")
+
+
+def test_tree_leaves_out_the_type_while_a_name_in_view_would_be_cut(qtbot, service, tmp_path):
+    path = tmp_path / "deep.h5"
+    with h5py.File(path, "w") as handle:
+        handle[
+            "entry/collection/configuration/samx/samx_acceleration_of_the_motor_in_the_optics_hutch"
+        ] = [1.0]
+    settle(path)
+    tree = H5Tree(service)
+    qtbot.addWidget(tree)
+    tree.resize(900, 400)
+    tree.show()
+    tree.set_file(str(path), select_path="/entry/collection/configuration/samx")
+    qtbot.waitUntil(lambda: tree.current_node() is not None)
+    qtbot.waitUntil(lambda: not tree.view.isColumnHidden(2))
+
+    tree.resize(420, 400)
+    qtbot.waitUntil(lambda: tree.view.isColumnHidden(2))
+    tree.resize(900, 400)
+    qtbot.waitUntil(lambda: not tree.view.isColumnHidden(2))
+    tree.cleanup()
