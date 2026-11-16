@@ -909,3 +909,14 @@ def test_muted_text_is_the_queue_colour_and_stays_readable(qtbot, theme):
     assert color == muted_color()
     assert contrast(color, theme_colors()["bg"]) >= 4.5
     apply_theme("light")
+
+
+def test_scan_status_words_and_tones_are_the_ones_of_the_scan_queue():
+    # pylint: disable=import-outside-toplevel
+    from bec_widgets.widgets.services.bec_queue.queue_model import HISTORY_STATUS
+    from bec_widgets.widgets.services.hdf5_viewer.scan_list import STATUS_LABELS, STATUS_TONES
+
+    for status in ("aborted", "halted", "user_completed"):
+        _icon, tone, word = HISTORY_STATUS[status]
+        assert STATUS_LABELS[status] == word
+        assert STATUS_TONES[status] == tone

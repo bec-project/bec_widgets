@@ -17,12 +17,13 @@ from qtpy.QtCore import (
     QEvent,
     QModelIndex,
     QRect,
+    QRectF,
     QSize,
     QSortFilterProxyModel,
     Qt,
     Signal,
 )
-from qtpy.QtGui import QColor, QFont, QFontMetrics, QPainter, QPalette
+from qtpy.QtGui import QColor, QFont, QFontMetrics, QPainter, QPalette, QPen
 from qtpy.QtWidgets import (
     QAbstractItemView,
     QButtonGroup,
@@ -38,8 +39,9 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets.utils.colors import get_accent_colors, get_theme_name
-from bec_widgets.widgets.services.hdf5_viewer.style import mute, muted_color
+from bec_widgets.utils.colors import get_theme_name
+from bec_widgets.widgets.progress.stage_bar import Tone
+from bec_widgets.widgets.services.hdf5_viewer.style import mute, muted_color, tone_color
 
 ENTRY_ROLE = Qt.ItemDataRole.UserRole + 1
 
@@ -67,12 +69,20 @@ SERIES_COLORS = {
     ],
 }
 #: How a scan ended, in words. A scan that ran to its end carries no label.
+#: The words and tones of the scan queue for how a scan ended or what it is doing.
 STATUS_LABELS = {
     "open": "Running",
     "paused": "Paused",
-    "aborted": "Stopped",
+    "aborted": "Aborted",
     "halted": "Halted",
-    "user_completed": "Ended early",
+    "user_completed": "Finished early",
+}
+STATUS_TONES = {
+    "open": Tone.RUN,
+    "paused": Tone.WARN,
+    "aborted": Tone.BAD,
+    "halted": Tone.BAD,
+    "user_completed": Tone.ACCENT,
 }
 
 
@@ -537,22 +547,23 @@ class ScanDelegate(QStyledItemDelegate):
         status = STATUS_LABELS.get(entry.status, "")
         status_width = 0
         if status:
-            accents = get_accent_colors()
-            tone = QColor(accents.default if entry.live else accents.warning)
-            small = QFont(option.font)
-            small.setPointSizeF(option.font.pointSizeF() * 0.88)
-            small_metrics = QFontMetrics(small)
-            status_width = small_metrics.horizontalAdvance(status) + 14
-            pill = QRect(bottom.right() - status_width + 1, bottom.top(), status_width, line_height)
-            fill = QColor(tone)
-            fill.setAlpha(60)
-            painter.setPen(Qt.PenStyle.NoPen)
+            # Drawn like the Chip of the scan queue: tone text on a tint of it, with a rim.
+            tone = tone_color(STATUS_TONES.get(entry.status, Tone.NEUTRAL))
+            status_width = metrics.horizontalAdvance(status) + 16
+            pill = QRectF(
+                bottom.right() - status_width + 1.5,
+                bottom.top() + 0.5,
+                status_width - 1,
+                line_height,
+            )
+            fill, rim = QColor(tone), QColor(tone)
+            fill.setAlphaF(0.16)
+            rim.setAlphaF(0.45)
+            painter.setPen(QPen(rim, 1))
             painter.setBrush(fill)
-            painter.drawRoundedRect(pill, line_height / 2, line_height / 2)
-            painter.setPen(text_color)
-            painter.setFont(small)
+            painter.drawRoundedRect(pill, 9, 9)
+            painter.setPen(tone)
             painter.drawText(pill, Qt.AlignmentFlag.AlignCenter, status)
-            painter.setFont(option.font)
         painter.setPen(muted)
         summary_rect = bottom.adjusted(0, 0, -(status_width + 6), 0)
         painter.drawText(

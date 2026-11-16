@@ -6,6 +6,7 @@ from qtpy.QtGui import QColor, QPalette
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.theme_utils import theme_colors
+from bec_widgets.widgets.progress.stage_bar import Tone
 
 #: Widgets drawn in the muted colour carry this property, so a theme change can find them.
 MUTED_PROPERTY = "hdf5_viewer_muted"
@@ -58,3 +59,25 @@ def _apply(widget: QWidget) -> None:
     for role in (QPalette.ColorRole.WindowText, QPalette.ColorRole.Text):
         palette.setColor(role, color)
     widget.setPalette(palette)
+
+
+def tone_color(tone: Tone) -> QColor:
+    """
+    The colour of a tone, as the chips of the scan queue and the status box use it.
+
+    Args:
+        tone (Tone): The tone.
+
+    Returns:
+        QColor: The colour.
+    """
+    colors = theme_colors()
+    return QColor(
+        {
+            Tone.RUN: colors["run"],
+            Tone.OK: colors["ok"],
+            Tone.WARN: colors["warn"],
+            Tone.BAD: colors["bad"],
+            Tone.ACCENT: colors["primary"],
+        }.get(tone, colors["muted"])
+    )
