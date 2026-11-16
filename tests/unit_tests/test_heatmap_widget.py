@@ -248,7 +248,7 @@ def test_heatmap_get_image_data_grid_scan(heatmap_widget):
 
 def test_heatmap_get_image_data_step_scan(heatmap_widget):
     """
-    If the step scan has too few points, it should return None.
+    A step scan with at least four points that span an area is interpolated.
     """
     scan_msg = messages.ScanStatusMessage(
         scan_id="123",
@@ -260,7 +260,7 @@ def test_heatmap_get_image_data_step_scan(heatmap_widget):
     )
     with mock.patch.object(heatmap_widget, "get_step_scan_image") as mock_get_step_scan_image:
         heatmap_widget.status_message = scan_msg
-        heatmap_widget.get_image_data(x_data=[1, 2, 3, 4], y_data=[1, 2, 3, 4], z_data=[1, 2, 5, 6])
+        heatmap_widget.get_image_data(x_data=[1, 2, 3, 4], y_data=[1, 2, 1, 2], z_data=[1, 2, 5, 6])
         mock_get_step_scan_image.assert_called_once()
 
 
@@ -281,6 +281,55 @@ def test_heatmap_get_image_data_step_scan_too_few_points(heatmap_widget):
     assert out == (None, None)
 
 
+@pytest.mark.parametrize(
+    "x_data, y_data",
+    [
+        ([1, 2, 3, 4], [1, 2, 3, 4]),  # on a diagonal
+        (np.linspace(-5, 5, 50), np.full(50, -5.0)),  # the first row of a raster
+        (np.full(6, 2.0), np.arange(6.0)),  # one column
+        ([3.0] * 5, [3.0] * 5),  # one spot
+    ],
+)
+def test_heatmap_get_image_data_step_scan_points_on_one_line(heatmap_widget, x_data, y_data):
+    """
+    Points on one line span no area: there is no image yet, and the triangulation of the
+    interpolation must not be asked to fail on them.
+    """
+    heatmap_widget.status_message = messages.ScanStatusMessage(
+        scan_id="123", status="open", scan_name="step_scan", scan_type="step", metadata={}, info={}
+    )
+    z_data = np.arange(len(x_data), dtype=float)
+    assert heatmap_widget.get_image_data(x_data=x_data, y_data=y_data, z_data=z_data) == (
+        None,
+        None,
+    )
+
+
+def test_heatmap_nearest_needs_no_triangulation(heatmap_widget):
+    """
+    Points on a diagonal cannot be triangulated, but ``nearest`` does not triangulate: it
+    gives an image for them, as it did before. Points on one row give no image with any
+    method.
+    """
+    heatmap_widget.status_message = messages.ScanStatusMessage(
+        scan_id="123", status="open", scan_name="step_scan", scan_type="step", metadata={}, info={}
+    )
+    diagonal = [1, 2, 3, 4]
+    heatmap_widget._image_config.interpolation = "nearest"
+    image, transform = heatmap_widget.get_image_data(
+        x_data=diagonal, y_data=diagonal, z_data=[1.0, 2.0, 3.0, 4.0]
+    )
+    assert image is not None and image.ndim == 2 and min(image.shape) > 1
+    assert np.isfinite(image).all() and transform is not None
+    assert heatmap_widget.get_image_data(
+        x_data=diagonal, y_data=[2, 2, 2, 2], z_data=[1.0, 2.0, 3.0, 4.0]
+    ) == (None, None)
+    heatmap_widget._image_config.interpolation = "linear"
+    assert heatmap_widget.get_image_data(
+        x_data=diagonal, y_data=diagonal, z_data=[1.0, 2.0, 3.0, 4.0]
+    ) == (None, None)
+
+
 def test_heatmap_forgets_its_columns_when_the_subscription_is_set_up_again(
     heatmap_widget, fake_bridges
 ):
@@ -294,6 +343,24 @@ def test_heatmap_forgets_its_columns_when_the_subscription_is_set_up_again(
     with mock.patch.object(heatmap_widget, "_render_columns") as render:
         heatmap_widget.update_plot()
         render.assert_not_called()
+
+
+def test_heatmap_waits_for_a_second_row_before_it_interpolates(heatmap_widget):
+    """
+    A raster arrives row by row. While all points lie on the first row no interpolation
+    is requested; with the first point of the second row it is.
+    """
+    scan_msg = messages.ScanStatusMessage(
+        scan_id="123", status="open", scan_name="step_scan", scan_type="step", metadata={}, info={}
+    )
+    heatmap_widget.scan_item = mock.MagicMock(status_message=scan_msg)
+    x_row = np.linspace(-5, 5, 50)
+    with mock.patch.object(heatmap_widget, "_request_step_scan_interpolation") as request:
+        heatmap_widget._render_columns(x_row, np.full(50, -5.0), np.arange(50.0))
+        request.assert_not_called()
+        x_data, y_data = np.append(x_row, -5.0), np.append(np.full(50, -5.0), -4.8)
+        heatmap_widget._render_columns(x_data, y_data, np.arange(51.0))
+        request.assert_called_once()
 
 
 def test_heatmap_get_image_data_unsupported_scan(heatmap_widget):

@@ -844,6 +844,10 @@ class Heatmap(ImageBase):
             # LinearNDInterpolator requires at least 4 points to interpolate
             logger.warning("Not enough data points to interpolate; skipping update.")
             return
+        if not self._can_interpolate(x_data, y_data, self._image_config.interpolation):
+            # E.g. the first row of a raster: the next rows give the image its extent.
+            logger.info("The data points do not span an image yet; skipping update.")
+            return
 
         self._request_step_scan_interpolation(x_data, y_data, z_data, scan_msg)
 
@@ -1043,10 +1047,41 @@ class Heatmap(ImageBase):
 
         if self._is_grid_scan_supported(msg):
             return self.get_grid_scan_image(z_data, msg)
-        if len(z_data) < 4:
-            # LinearNDInterpolator requires at least 4 points to interpolate
+        if len(z_data) < 4 or not self._can_interpolate(
+            x_data, y_data, self._image_config.interpolation
+        ):
+            # LinearNDInterpolator requires at least 4 points that do not lie on one line
             return None, None
         return self.get_step_scan_image(x_data, y_data, z_data)
+
+    @staticmethod
+    def _can_interpolate(x_data, y_data, interpolation_method: str) -> bool:
+        """
+        Whether the points can be turned into an image with the given method.
+
+        ``linear`` and ``clough`` triangulate the points, which needs points that span an
+        area: on one line there is nothing to triangulate. ``nearest`` needs no
+        triangulation, only an image with an extent in x and in y, so points on a
+        diagonal are fine for it and points on one row or column are not.
+
+        Args:
+            x_data: X coordinates of the data points.
+            y_data: Y coordinates of the data points.
+            interpolation_method (str): One of 'linear', 'nearest', or 'clough'.
+
+        Returns:
+            bool: False while the points give no image.
+        """
+        points = np.column_stack((x_data, y_data)).astype(float)
+        spread = np.ptp(points, axis=0)
+        if not np.all(spread > 0):
+            return False
+        if interpolation_method == "nearest":
+            return True
+        # Rank 2 relative to the extent of the points; far above the round-off of real
+        # positions.
+        centered = (points - points.mean(axis=0)) / spread.max()
+        return int(np.linalg.matrix_rank(centered, tol=1e-9)) == 2
 
     def _is_grid_scan_supported(self, msg: messages.ScanStatusMessage) -> bool:
         """Check if the scan can use optimized grid_scan rendering.
