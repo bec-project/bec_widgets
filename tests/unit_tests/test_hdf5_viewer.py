@@ -541,6 +541,26 @@ def test_viewer_compares_pinned_scans_in_one_colour_each(qtbot, viewer):
     assert viewer.plot_state.title.text() == "Nothing on the plot"
 
 
+def legend_texts(viewer):
+    legend = viewer.waveform.plot_item.legend
+    return {key: legend.getLabel(curve).text for key, (curve, _live) in viewer._curves.items()}
+
+
+def test_viewer_names_the_curves_in_the_legend_by_signal_and_scan(qtbot, viewer):
+    qtbot.waitUntil(lambda: len(viewer._curves) == 1)
+    key = ("scan-2", "bpm3a", "bpm3a")
+    # The curve keeps the name BEC gives it; the legend shows the signal alone.
+    assert viewer._curves[key][0].name() == "bpm3a-bpm3a-scan-12"
+    assert legend_texts(viewer) == {key: "bpm3a"}
+
+    viewer.scan_list.model.toggle_pin("scan-0")
+
+    assert legend_texts(viewer) == {key: "12 · bpm3a", ("scan-0", "bpm3a", "bpm3a"): "10 · bpm3a"}
+    # A refresh of the legend by the plot itself keeps the short names.
+    viewer.waveform._refresh_live_legend()
+    assert legend_texts(viewer)[key] == "12 · bpm3a"
+
+
 def test_tabs_open_a_page_and_say_so(qtbot):
     tabs = PaneTabs()
     qtbot.addWidget(tabs)
