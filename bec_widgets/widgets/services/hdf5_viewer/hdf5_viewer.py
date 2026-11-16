@@ -267,12 +267,16 @@ class HDF5Viewer(BECWidget, QWidget):
         """
         Select a scan of the scan history.
 
+        Scan numbers can repeat (e.g. after a counter reset): for a number shared by several
+        scans the newest of them is selected. A scan id always names one scan.
+
         Args:
             scan (int | str): Scan number or scan id.
 
         Raises:
             ValueError: If the scan is not in the scan history.
         """
+        # The scans are listed newest first, so the first match of a number is its newest scan.
         for entry in self.scan_list.model.entries():
             if scan in (entry.scan_id, entry.scan_number):
                 self.scan_list.search_edit.clear()
@@ -535,8 +539,11 @@ class HDF5Viewer(BECWidget, QWidget):
             self.plot_title.setText("")
             self.plot_subtitle.setText("")
             return
-        self.plot_title.setText(f"Scan {self._entry.title}")
-        others = [str(entry.scan_number) for entry, _slot in scans[1:]]
+        self.plot_title.setText(
+            f"Scan {self.scan_list.model.scan_label(self._entry)}  {self._entry.scan_name}".rstrip()
+        )
+        label = self.scan_list.model.scan_label
+        others = [label(entry) for entry, _slot in scans[1:]]
         if others:
             self.plot_subtitle.setText(
                 f"compared with {', '.join(others)}"
@@ -582,7 +589,7 @@ class HDF5Viewer(BECWidget, QWidget):
             self.tree.set_file(None)
             self.preview.show_message(
                 "hourglass_top",
-                f"Scan {entry.scan_number} is still running",
+                f"Scan {self.scan_list.model.scan_label(entry)} is still running",
                 "Its file is being written and is not opened. The Signals tab shows the scan "
                 "while it runs, and the file opens here as soon as the scan is done.",
                 (("Go to the Signals tab", lambda: self.tabs.set_current_index(0)),),
@@ -804,12 +811,12 @@ class HDF5Viewer(BECWidget, QWidget):
         if not signals:
             text = f"{name} shows no signal to overlay"
         elif not sources:
-            text = f"Scan {entry.scan_number} did not store what {name} shows"
+            text = f"Scan {self.scan_list.model.scan_label(entry)} did not store what {name} shows"
         else:
             text = add_history_curves(plot, sources).message(name)
             missing = len(signals) - len(sources)
             if missing:
-                text += f" ({missing} not stored in scan {entry.scan_number})"
+                text += f" ({missing} not stored in scan {self.scan_list.model.scan_label(entry)})"
         self.scan_list.flash_note(text)
         return text
 

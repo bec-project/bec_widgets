@@ -82,6 +82,11 @@ def service(qtbot):
 @pytest.fixture
 def history(tmp_path):
     """Three finished scans with files, the newest last."""
+    return make_history(tmp_path, (10, 11, 12))
+
+
+def make_history(tmp_path, numbers):
+    """Three finished scans with files and the given scan numbers, the newest last."""
     out = []
     start = time.time() - 7200
     for index, exit_status in enumerate(["closed", "aborted", "closed"]):
@@ -116,7 +121,7 @@ def history(tmp_path):
             "scan_name": "line_scan",
             "scan_type": "step",
             "status": "closed",
-            "scan_number": 10 + index,
+            "scan_number": numbers[index],
             "dataset_number": 1,
             "request_inputs": {"arg_bundle": ["samx", -1, 1], "kwargs": {"steps": points}},
             "num_points": points,
@@ -1074,3 +1079,89 @@ def test_tree_pause_cuts_off_a_listing_and_resume_reads_it_again(qtbot, service,
     tree.resume()
     qtbot.waitUntil(lambda: child_names(plot) == ["counts", "energy"])
     tree.cleanup()
+
+
+@pytest.fixture
+def twin_viewer(qtbot, mocked_client, tmp_path):
+    """The viewer on a history in which the oldest and the newest scan are both numbered 12."""
+    history = make_history(tmp_path, (12, 11, 12))
+    mocked_client.history = ScanHistory(mocked_client, False)
+    for msg in history:
+        # pylint: disable=protected-access
+        mocked_client.history._scan_data[msg.scan_id] = msg
+        mocked_client.history._scan_ids.append(msg.scan_id)
+    mocked_client.queue.scan_storage.current_scan = None
+    widget = create_widget(qtbot, HDF5Viewer, client=mocked_client)
+    widget.resize(1200, 700)
+    qtbot.waitUntil(lambda: widget.scan_list.model.rowCount() == 3)
+    return widget
+
+
+def test_scans_that_share_a_number_are_listed_and_told_apart(qtbot, twin_viewer):
+    model = twin_viewer.scan_list.model
+    old, middle, new = (model.entry(f"scan-{index}") for index in range(3))
+    assert model.is_repeated(old) and model.is_repeated(new) and not model.is_repeated(middle)
+    assert model.scan_label(middle) == "11"
+    assert model.scan_label(old).startswith("12 (") and model.scan_label(new).startswith("12 (")
+    assert model.scan_label(old) != model.scan_label(new)
+    row = next(r for r in range(model.rowCount()) if model.entries()[r].scan_id == "scan-0")
+    assert "Scan id scan-0" in model.data(model.index(row), Qt.ItemDataRole.ToolTipRole)
+
+    # A number picks its newest scan; a scan id picks exactly that one.
+    twin_viewer.show_scan(12)
+    assert twin_viewer.scan_list.current_entry().scan_id == "scan-2"
+    twin_viewer.show_scan("scan-0")
+    assert twin_viewer.scan_list.current_entry().scan_id == "scan-0"
+
+
+def test_scans_that_share_a_number_are_compared_on_one_plot(qtbot, twin_viewer):
+    qtbot.waitUntil(lambda: len(twin_viewer._curves) == 1)
+    twin_viewer.scan_list.model.toggle_pin("scan-0")
+
+    assert set(twin_viewer._curves) == {("scan-2", "bpm3a", "bpm3a"), ("scan-0", "bpm3a", "bpm3a")}
+    names = {key[0]: curve.name() for key, (curve, _live) in twin_viewer._curves.items()}
+    assert names["scan-2"] == "bpm3a-bpm3a-scan-12"
+    assert names["scan-0"].startswith("bpm3a-bpm3a-scan-12-")
+    label = twin_viewer.scan_list.model.scan_label(twin_viewer.scan_list.model.entry("scan-0"))
+    assert f"compared with {label}" in twin_viewer.plot_subtitle.full_text()
+    assert twin_viewer.plot_title.text().startswith("Scan 12 (")
+
+
+def test_add_to_plot_tells_scans_that_share_a_number_apart(qtbot, twin_viewer, mocked_client):
+    # pylint: disable=import-outside-toplevel
+    from bec_widgets.widgets.plots.waveform.waveform import Waveform
+    from bec_widgets.widgets.services.hdf5_viewer.plot_targets import held_history_curves
+
+    qtbot.waitUntil(lambda: len(twin_viewer._curves) == 1)
+    target = create_widget(qtbot, Waveform, client=mocked_client)
+    target.setObjectName("TargetPlot")
+    first = twin_viewer.add_to_plot(target, "TargetPlot")
+    assert first.added == 1
+
+    # The other scan 12 is not "already there" just because its number is.
+    twin_viewer.scan_list.model.toggle_pin("scan-0")
+    second = twin_viewer.add_to_plot(target, "TargetPlot")
+    assert (second.added, second.already) == (1, 1)
+    assert held_history_curves(target) == {
+        ("scan-2", "bpm3a", "bpm3a"),
+        ("scan-0", "bpm3a", "bpm3a"),
+    }
+    assert twin_viewer.add_to_plot(target, "TargetPlot").already == 2
+
+
+def test_history_picker_follows_the_scan_id_not_the_number(qtbot, twin_viewer, mocked_client):
+    # pylint: disable=import-outside-toplevel
+    from bec_widgets.widgets.plots.waveform.waveform import Waveform
+    from bec_widgets.widgets.services.hdf5_viewer.history_picker import HistoryPicker
+
+    target = create_widget(qtbot, Waveform, client=mocked_client)
+    target.plot(device_y="bpm3a", signal_y="bpm3a", scan_id="scan-2")
+    picker = HistoryPicker(target)
+    qtbot.addWidget(picker)
+    qtbot.waitUntil(lambda: picker.scan_list.model.rowCount() == 3)
+
+    assert picker.scan_list.select("scan-0")
+    assert picker.signal_list.y_signals() == []
+    assert picker.scan_list.select("scan-2")
+    assert picker.signal_list.y_signals() == [("bpm3a", "bpm3a")]
+    picker.cleanup()

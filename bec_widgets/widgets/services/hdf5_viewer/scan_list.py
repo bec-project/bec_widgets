@@ -122,13 +122,15 @@ def format_duration(seconds: float) -> str:
     return f"{seconds // 3600} h {seconds % 3600 // 60:02d} min"
 
 
-def format_when(timestamp: float, now: float | None = None) -> str:
+def format_when(timestamp: float, now: float | None = None, full: bool = False) -> str:
     """
     Readable point in time: the clock time for today, the date with it otherwise.
 
     Args:
         timestamp (float): Seconds since the epoch.
         now (float | None): Current time, for tests.
+        full (bool): Always give the date and the time, e.g. to tell apart scans that share
+            a number.
 
     Returns:
         str: For example ``"14:32"`` or ``"12 Nov 14:32"``.
@@ -137,6 +139,9 @@ def format_when(timestamp: float, now: float | None = None) -> str:
         return ""
     when = datetime.fromtimestamp(timestamp)
     today = datetime.fromtimestamp(time.time() if now is None else now)
+    if full:
+        fmt = "%d %b %H:%M" if when.year == today.year else "%d %b %Y %H:%M"
+        return when.strftime(fmt).lstrip("0")
     if when.date() == today.date():
         return when.strftime("%H:%M")
     if when.year == today.year:
@@ -246,6 +251,8 @@ class ScanListModel(QAbstractListModel):
         super().__init__(parent)
         self._entries: list[ScanEntry] = []
         self._pins: dict[str, int] = {}
+        #: Scan numbers listed more than once, worked out when first needed.
+        self._repeated: set | None = None
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return 0 if parent.isValid() else len(self._entries)
@@ -263,8 +270,48 @@ class ScanListModel(QAbstractListModel):
                 part for part in (f"Scan {entry.title}", entry.summary(), status, pinned) if part
             )
         if role == Qt.ItemDataRole.ToolTipRole:
+            if self.is_repeated(entry):
+                started = format_when(entry.start_time, full=True)
+                lines = [f"Scan {entry.scan_number}, started {started}", f"Scan id {entry.scan_id}"]
+                return "\n".join([*lines, entry.file_path] if entry.file_path else lines)
             return entry.file_path or None
         return None
+
+    def is_repeated(self, entry: ScanEntry) -> bool:
+        """
+        Whether another listed scan has the same number. Scan numbers can repeat, e.g. after a
+        counter reset; the scan id is what tells scans apart.
+
+        Args:
+            entry (ScanEntry): The scan.
+
+        Returns:
+            bool: True when its number is listed more than once.
+        """
+        if self._repeated is None:
+            seen: set = set()
+            self._repeated = set()
+            for other in self._entries:
+                if other.scan_number in seen:
+                    self._repeated.add(other.scan_number)
+                seen.add(other.scan_number)
+        return entry.scan_number is not None and entry.scan_number in self._repeated
+
+    def scan_label(self, entry: ScanEntry) -> str:
+        """
+        How a scan is named in texts: its number, with its start time when the number is listed
+        more than once.
+
+        Args:
+            entry (ScanEntry): The scan.
+
+        Returns:
+            str: For example ``"11"`` or ``"11 (14 Nov 09:12)"``.
+        """
+        number = f"{entry.scan_number}" if entry.scan_number is not None else "?"
+        if self.is_repeated(entry):
+            return f"{number} ({format_when(entry.start_time, full=True)})"
+        return number
 
     def set_entries(self, entries: list[ScanEntry]) -> None:
         """
@@ -275,6 +322,7 @@ class ScanListModel(QAbstractListModel):
         """
         self.beginResetModel()
         self._entries = sorted(entries, key=self._sort_key, reverse=True)
+        self._repeated = None
         known = {entry.scan_id for entry in self._entries}
         self._pins = {scan_id: slot for scan_id, slot in self._pins.items() if scan_id in known}
         self.endResetModel()
@@ -293,6 +341,7 @@ class ScanListModel(QAbstractListModel):
         for row, existing in enumerate(self._entries):
             if existing.scan_id == entry.scan_id:
                 self._entries[row] = entry
+                self._repeated = None
                 index = self.index(row)
                 self.dataChanged.emit(index, index)
                 return
@@ -301,8 +350,12 @@ class ScanListModel(QAbstractListModel):
         while row < len(self._entries) and self._sort_key(self._entries[row]) > key:
             row += 1
         self.beginInsertRows(QModelIndex(), row, row)
+        self._repeated = None
         self._entries.insert(row, entry)
         self.endInsertRows()
+        if self.is_repeated(entry):
+            # The other scans with this number now show their date too.
+            self.dataChanged.emit(self.index(0), self.index(len(self._entries) - 1))
 
     def remove(self, scan_id: str) -> None:
         """
@@ -315,6 +368,7 @@ class ScanListModel(QAbstractListModel):
             if existing.scan_id == scan_id:
                 self.beginRemoveRows(QModelIndex(), row, row)
                 del self._entries[row]
+                self._repeated = None
                 self.endRemoveRows()
                 self._pins.pop(scan_id, None)
                 return
@@ -531,7 +585,11 @@ class ScanDelegate(QStyledItemDelegate):
         top = QRect(rect.left(), rect.top(), rect.width(), line_height)
         bottom = QRect(rect.left(), rect.bottom() - line_height + 1, rect.width(), line_height)
 
-        when = format_when(entry.end_time or entry.start_time)
+        # A number listed more than once is told apart by the date and time of each scan.
+        repeated = model.is_repeated(entry)
+        when = format_when(
+            entry.start_time if repeated else (entry.end_time or entry.start_time), full=repeated
+        )
         when_width = metrics.horizontalAdvance(when) + 6
         painter.setPen(muted)
         painter.setFont(option.font)

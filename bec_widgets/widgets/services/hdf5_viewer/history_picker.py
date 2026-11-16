@@ -129,10 +129,12 @@ class HistoryPicker(QWidget):
                     scan_id=entry.scan_id,
                     _override_slot_params={"popup_error": False, "raise_error": True},
                 )
-                self.note.setText(f"Added {device} of scan {entry.scan_number} to the plot.")
+                label = self.scan_list.model.scan_label(entry)
+                self.note.setText(f"Added {device} of scan {label} to the plot.")
             elif not on and key in held:
                 self._plot.remove_curve(held[key].name())
-                self.note.setText(f"Took {device} of scan {entry.scan_number} off the plot.")
+                label = self.scan_list.model.scan_label(entry)
+                self.note.setText(f"Took {device} of scan {label} off the plot.")
         except Exception as exc:  # pylint: disable=broad-except
             self.note.setText(f"{device} could not be added: {exc}")
         self.sync()
