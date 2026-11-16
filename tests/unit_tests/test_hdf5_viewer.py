@@ -347,6 +347,8 @@ def test_tree_search_result_is_selected_and_its_group_lists_children(qtbot, serv
 
     tree.view.expand(plot.index())
     qtbot.waitUntil(lambda: child_names(plot) == ["counts", "energy"])
+    # Bold marks the matches here, so the default signal of the plot is not bold.
+    assert not plot.child(0).font().bold()
     tree.view.setCurrentIndex(plot.child(0).index())
     qtbot.waitUntil(lambda: selected[-1] is not None and selected[-1].path == "/entry/plot/counts")
     tree.cleanup()

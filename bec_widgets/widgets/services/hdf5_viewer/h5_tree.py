@@ -412,7 +412,9 @@ class H5Tree(QWidget):
             return False
         return found is None or found == self._found_generation
 
-    def _row_for(self, node: H5Node, name: str | None = None) -> list[QStandardItem]:
+    def _row_for(
+        self, node: H5Node, name: str | None = None, mark_default: bool = True
+    ) -> list[QStandardItem]:
         name_item = QStandardItem(name or node.name)
         name_item.setToolTip(name or node.name)
         name_item.setIcon(material_icon(node_icon_name(node), convert_to_pixmap=False))
@@ -427,7 +429,7 @@ class H5Tree(QWidget):
         if node.kind == "link":
             name_item.setToolTip(f"Link to {node.link_path} in {Path(node.link_file).name}")
             type_item.setToolTip(name_item.toolTip())
-        if node.is_default:
+        if node.is_default and mark_default:
             font = name_item.font()
             font.setBold(True)
             name_item.setFont(font)
@@ -517,8 +519,10 @@ class H5Tree(QWidget):
         item.removeRows(0, item.rowCount())
         if self.view.model() is item.model():
             self.view.setFirstColumnSpanned(0, item.index(), False)
+        # In the search results bold marks the matches, not the default plot.
+        mark_default = item.model() is self.model
         for node in nodes:
-            item.appendRow(self._row_for(node))
+            item.appendRow(self._row_for(node, mark_default=mark_default))
         if not nodes:
             item.appendRow(self._placeholder("Empty"))
         item.setData("loaded", STATE_ROLE)
@@ -768,7 +772,7 @@ class H5Tree(QWidget):
         self.found_model.removeRows(0, self.found_model.rowCount())
         needle = text.lower()
         root = H5Node(name=Path(file_path).name, path="/", file_path=file_path, kind="file")
-        root_row = self._row_for(root)
+        root_row = self._row_for(root, mark_default=False)
         root_row[0].removeRows(0, root_row[0].rowCount())
         root_row[0].setData("filtered", STATE_ROLE)
         root_row[0].setToolTip(file_path)
@@ -788,7 +792,7 @@ class H5Tree(QWidget):
             parent = _item(path.rsplit("/", 1)[0] or "/")
             if node is None or parent is None:
                 return None
-            row = self._row_for(node)
+            row = self._row_for(node, mark_default=False)
             row[0].setToolTip(path)
             if path in matched:
                 start = node.name.lower().find(needle)
