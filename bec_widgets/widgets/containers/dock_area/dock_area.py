@@ -392,6 +392,7 @@ class BECDockArea(DockAreaWidget):
             "bec_shell": (widget_icons["BECShell"], "BEC Shell", "BECShell"),
             "sbb_monitor": (widget_icons["SBBMonitor"], "SBB Monitor", "SBBMonitor"),
             "log_panel": (widget_icons["LogPanel"], "LogPanel", "LogPanel"),
+            "hdf5_viewer": (widget_icons["HDF5Viewer"], "HDF5 Viewer", "HDF5Viewer"),
             "beamline_state_manager": (
                 widget_icons["BeamlineStateManager"],
                 "Beamline State Manager",

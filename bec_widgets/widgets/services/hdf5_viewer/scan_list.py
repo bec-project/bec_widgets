@@ -1,0 +1,787 @@
+"""
+The list of scans of the HDF5 viewer.
+
+The list is filled from the scan history that BEC keeps in memory; no file is opened to
+show it. Scans can be searched, filtered by how they ended and pinned for comparison.
+"""
+
+from __future__ import annotations
+
+import time
+from dataclasses import dataclass, field
+from datetime import datetime
+
+from bec_qthemes import material_icon
+from qtpy.QtCore import (
+    QAbstractListModel,
+    QEvent,
+    QModelIndex,
+    QRect,
+    QSize,
+    QSortFilterProxyModel,
+    Qt,
+    Signal,
+)
+from qtpy.QtGui import QColor, QFont, QFontMetrics, QPainter, QPalette
+from qtpy.QtWidgets import (
+    QAbstractItemView,
+    QButtonGroup,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListView,
+    QStyle,
+    QStyledItemDelegate,
+    QStyleOptionViewItem,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
+)
+
+from bec_widgets.utils.colors import get_accent_colors, get_theme_name
+
+ENTRY_ROLE = Qt.ItemDataRole.UserRole + 1
+
+#: Colours of the scans in a comparison, for the light and the dark theme.
+SERIES_COLORS = {
+    "light": [
+        "#2a78d6",
+        "#eb6834",
+        "#1baf7a",
+        "#eda100",
+        "#e87ba4",
+        "#008300",
+        "#6250d6",
+        "#e34948",
+    ],
+    "dark": [
+        "#3987e5",
+        "#d95926",
+        "#199e70",
+        "#c98500",
+        "#d55181",
+        "#0ca30c",
+        "#9085e9",
+        "#e66767",
+    ],
+}
+#: How a scan ended, in words. A scan that ran to its end carries no label.
+STATUS_LABELS = {
+    "open": "Running",
+    "paused": "Paused",
+    "aborted": "Stopped",
+    "halted": "Halted",
+    "user_completed": "Ended early",
+}
+
+
+def series_color(slot: int) -> str:
+    """
+    Colour of the n-th scan or signal of a plot in the current theme.
+
+    Args:
+        slot (int): Position in the palette; it repeats after eight.
+
+    Returns:
+        str: Colour as ``#rrggbb``.
+    """
+    palette = SERIES_COLORS["dark" if get_theme_name() == "dark" else "light"]
+    return palette[slot % len(palette)]
+
+
+def format_duration(seconds: float) -> str:
+    """
+    Readable length of time.
+
+    Args:
+        seconds (float): Number of seconds.
+
+    Returns:
+        str: For example ``"48 s"``, ``"3 min 12 s"`` or ``"2 h 05 min"``.
+    """
+    seconds = max(0, int(round(seconds)))
+    if seconds < 60:
+        return f"{seconds} s"
+    if seconds < 3600:
+        return f"{seconds // 60} min {seconds % 60:02d} s"
+    return f"{seconds // 3600} h {seconds % 3600 // 60:02d} min"
+
+
+def format_when(timestamp: float, now: float | None = None) -> str:
+    """
+    Readable point in time: the clock time for today, the date with it otherwise.
+
+    Args:
+        timestamp (float): Seconds since the epoch.
+        now (float | None): Current time, for tests.
+
+    Returns:
+        str: For example ``"14:32"`` or ``"12 Nov 14:32"``.
+    """
+    if not timestamp:
+        return ""
+    when = datetime.fromtimestamp(timestamp)
+    today = datetime.fromtimestamp(time.time() if now is None else now)
+    if when.date() == today.date():
+        return when.strftime("%H:%M")
+    if when.year == today.year:
+        return when.strftime("%d %b %H:%M").lstrip("0")
+    return when.strftime("%d %b %Y").lstrip("0")
+
+
+@dataclass
+class ScanEntry:
+    """What the viewer knows about one scan, taken from its history or status message."""
+
+    scan_id: str
+    scan_number: int | None = None
+    scan_name: str = ""
+    status: str = "closed"
+    start_time: float = 0.0
+    end_time: float = 0.0
+    num_points: int | None = None
+    file_path: str = ""
+    motors: tuple[str, ...] = ()
+    stored_data_info: dict = field(default_factory=dict)
+    #: How each signal is keyed, where the status message of a running scan tells.
+    signal_kinds: dict = field(default_factory=dict)
+    live: bool = False
+
+    @classmethod
+    def from_history(cls, msg: dict) -> ScanEntry:
+        """
+        Build an entry from a dumped ``ScanHistoryMessage``.
+
+        Args:
+            msg (dict): The message content.
+
+        Returns:
+            ScanEntry: The entry.
+        """
+        inputs = msg.get("request_inputs") or {}
+        bundle = inputs.get("arg_bundle") or []
+        motors = tuple(dict.fromkeys(arg for arg in bundle if isinstance(arg, str)))
+        return cls(
+            scan_id=msg["scan_id"],
+            scan_number=msg.get("scan_number"),
+            scan_name=msg.get("scan_name") or "",
+            status=msg.get("exit_status") or "closed",
+            start_time=float(msg.get("start_time") or 0.0),
+            end_time=float(msg.get("end_time") or 0.0),
+            num_points=msg.get("num_points"),
+            file_path=msg.get("file_path") or "",
+            motors=motors,
+            stored_data_info=msg.get("stored_data_info") or {},
+        )
+
+    @property
+    def title(self) -> str:
+        """Scan number and name, as shown in the list and above the plot."""
+        number = f"{self.scan_number}" if self.scan_number is not None else "?"
+        return f"{number}  {self.scan_name}".rstrip()
+
+    @property
+    def ended_early(self) -> bool:
+        """Whether the scan was stopped, halted or ended by the user before its end."""
+        return self.status in ("aborted", "halted", "user_completed")
+
+    def summary(self) -> str:
+        """
+        One line about the scan: what moved, how many points, how long.
+
+        Returns:
+            str: For example ``"samx  ·  200 points  ·  1 min 12 s"``.
+        """
+        parts = []
+        if self.motors:
+            parts.append(", ".join(self.motors[:3]) + ("…" if len(self.motors) > 3 else ""))
+        if self.num_points:
+            parts.append("1 point" if self.num_points == 1 else f"{self.num_points} points")
+        if self.end_time and self.start_time and not self.live:
+            parts.append(format_duration(self.end_time - self.start_time))
+        return "  ·  ".join(parts)
+
+    def matches(self, text: str) -> bool:
+        """
+        Whether the scan fits a search text.
+
+        Args:
+            text (str): Words to look for in the number, the name and the motors.
+
+        Returns:
+            bool: True when every word is found.
+        """
+        haystack = " ".join([str(self.scan_number), self.scan_name, *self.motors]).lower()
+        return all(word in haystack for word in text.lower().split())
+
+
+class ScanListModel(QAbstractListModel):
+    """Scans, the newest first, with the colour of the pinned ones."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._entries: list[ScanEntry] = []
+        self._pins: dict[str, int] = {}
+
+    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
+        return 0 if parent.isValid() else len(self._entries)
+
+    def data(self, index: QModelIndex, role=Qt.ItemDataRole.DisplayRole):
+        if not index.isValid():
+            return None
+        entry = self._entries[index.row()]
+        if role == ENTRY_ROLE:
+            return entry
+        if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.AccessibleTextRole):
+            status = STATUS_LABELS.get(entry.status, "")
+            pinned = "pinned" if entry.scan_id in self._pins else ""
+            return ", ".join(
+                part for part in (f"Scan {entry.title}", entry.summary(), status, pinned) if part
+            )
+        if role == Qt.ItemDataRole.ToolTipRole:
+            return entry.file_path or None
+        return None
+
+    def set_entries(self, entries: list[ScanEntry]) -> None:
+        """
+        Replace all scans.
+
+        Args:
+            entries (list[ScanEntry]): The scans in any order.
+        """
+        self.beginResetModel()
+        self._entries = sorted(entries, key=self._sort_key, reverse=True)
+        known = {entry.scan_id for entry in self._entries}
+        self._pins = {scan_id: slot for scan_id, slot in self._pins.items() if scan_id in known}
+        self.endResetModel()
+
+    @staticmethod
+    def _sort_key(entry: ScanEntry) -> tuple:
+        return (entry.live, entry.start_time, entry.scan_number or 0)
+
+    def upsert(self, entry: ScanEntry) -> None:
+        """
+        Add a scan or replace the entry with the same scan id.
+
+        Args:
+            entry (ScanEntry): The scan.
+        """
+        for row, existing in enumerate(self._entries):
+            if existing.scan_id == entry.scan_id:
+                self._entries[row] = entry
+                index = self.index(row)
+                self.dataChanged.emit(index, index)
+                return
+        row = 0
+        key = self._sort_key(entry)
+        while row < len(self._entries) and self._sort_key(self._entries[row]) > key:
+            row += 1
+        self.beginInsertRows(QModelIndex(), row, row)
+        self._entries.insert(row, entry)
+        self.endInsertRows()
+
+    def remove(self, scan_id: str) -> None:
+        """
+        Remove a scan.
+
+        Args:
+            scan_id (str): Id of the scan.
+        """
+        for row, existing in enumerate(self._entries):
+            if existing.scan_id == scan_id:
+                self.beginRemoveRows(QModelIndex(), row, row)
+                del self._entries[row]
+                self.endRemoveRows()
+                self._pins.pop(scan_id, None)
+                return
+
+    def entry(self, scan_id: str) -> ScanEntry | None:
+        """
+        Find a scan.
+
+        Args:
+            scan_id (str): Id of the scan.
+
+        Returns:
+            ScanEntry | None: The scan, or None when it is not listed.
+        """
+        return next((entry for entry in self._entries if entry.scan_id == scan_id), None)
+
+    def entries(self) -> list[ScanEntry]:
+        """
+        All scans, the newest first.
+
+        Returns:
+            list[ScanEntry]: The scans.
+        """
+        return list(self._entries)
+
+    def pins(self) -> dict[str, int]:
+        """
+        The pinned scans and the palette slot of each.
+
+        Returns:
+            dict[str, int]: Scan id to slot, in the order of pinning.
+        """
+        return dict(self._pins)
+
+    def toggle_pin(self, scan_id: str) -> None:
+        """
+        Pin a scan for comparison, or let it go.
+
+        Args:
+            scan_id (str): Id of the scan.
+        """
+        if scan_id in self._pins:
+            del self._pins[scan_id]
+        else:
+            used = set(self._pins.values())
+            # Slot 0 belongs to the scan that is selected.
+            self._pins[scan_id] = next(slot for slot in range(1, 64) if slot not in used)
+        for row, entry in enumerate(self._entries):
+            if entry.scan_id == scan_id:
+                index = self.index(row)
+                self.dataChanged.emit(index, index)
+
+    def clear_pins(self) -> None:
+        """Let all pinned scans go."""
+        self._pins.clear()
+        if self._entries:
+            self.dataChanged.emit(self.index(0), self.index(len(self._entries) - 1))
+
+
+class ScanFilterModel(QSortFilterProxyModel):
+    """Keeps the scans that fit the search text and the chosen ending."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._text = ""
+        self._ending = "all"
+
+    def set_text(self, text: str) -> None:
+        """
+        Keep the scans that fit a search text.
+
+        Args:
+            text (str): Words to look for.
+        """
+        self._text = text.strip()
+        self.invalidate()
+
+    def set_ending(self, ending: str) -> None:
+        """
+        Keep the scans with one kind of ending.
+
+        Args:
+            ending (str): ``all``, ``finished`` or ``early``.
+        """
+        self._ending = ending
+        self.invalidate()
+
+    def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
+        entry: ScanEntry = self.sourceModel().index(source_row, 0).data(ENTRY_ROLE)
+        if entry.live:
+            return not self._text or entry.matches(self._text)
+        if self._ending == "finished" and entry.ended_early:
+            return False
+        if self._ending == "early" and not entry.ended_early:
+            return False
+        return not self._text or entry.matches(self._text)
+
+
+class ScanDelegate(QStyledItemDelegate):
+    """Draws a scan in two lines, with how it ended and a pin."""
+
+    ROW_HEIGHT = 46
+    PIN_SIZE = 18
+    MARGIN = 8
+
+    def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
+        return QSize(160, self.ROW_HEIGHT)
+
+    def pin_rect(self, rect: QRect) -> QRect:
+        """
+        Where the pin of a row is drawn and clicked.
+
+        Args:
+            rect (QRect): Rectangle of the row.
+
+        Returns:
+            QRect: Rectangle of the pin.
+        """
+        size = self.PIN_SIZE + 8
+        return QRect(
+            rect.right() - self.MARGIN - size + 4, rect.center().y() - size // 2, size, size
+        )
+
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
+        entry: ScanEntry = index.data(ENTRY_ROLE)
+        model: ScanListModel = index.model().sourceModel()
+        slot = model.pins().get(entry.scan_id)
+        selected = bool(option.state & QStyle.StateFlag.State_Selected)
+        hovered = bool(option.state & QStyle.StateFlag.State_MouseOver)
+        palette = option.palette
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        # The selected scan keeps its text colour on a tint, so that the bar in the colour
+        # it has in the plot stays visible.
+        if selected or hovered:
+            tint = QColor(palette.color(QPalette.ColorRole.Highlight))
+            tint.setAlpha(52 if selected else 22)
+            painter.fillRect(option.rect, tint)
+        text_color = palette.color(QPalette.ColorRole.Text)
+        muted = QColor(text_color)
+        muted.setAlphaF(0.66)
+
+        rect = option.rect.adjusted(self.MARGIN + 6, 5, -self.MARGIN, -5)
+        # A bar in the colour the scan has in the plot.
+        color_slot = 0 if selected else slot
+        if color_slot is not None:
+            bar = QRect(option.rect.left() + 3, option.rect.top() + 6, 4, option.rect.height() - 12)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QColor(series_color(color_slot)))
+            painter.drawRoundedRect(bar, 2, 2)
+
+        pin_rect = self.pin_rect(option.rect)
+        if slot is not None or hovered or selected:
+            icon_color = text_color if slot is not None else muted
+            pixmap = material_icon(
+                "keep",
+                size=(self.PIN_SIZE, self.PIN_SIZE),
+                color=icon_color.name(),
+                filled=slot is not None,
+            )
+            painter.setOpacity(1.0 if slot is not None else 0.7)
+            painter.drawPixmap(
+                pin_rect.center().x() - self.PIN_SIZE // 2,
+                pin_rect.center().y() - self.PIN_SIZE // 2,
+                pixmap,
+            )
+            painter.setOpacity(1.0)
+        rect.setRight(pin_rect.left() - 4)
+
+        bold = QFont(option.font)
+        bold.setWeight(QFont.Weight.DemiBold)
+        metrics = QFontMetrics(option.font)
+        line_height = metrics.height()
+        top = QRect(rect.left(), rect.top(), rect.width(), line_height)
+        bottom = QRect(rect.left(), rect.bottom() - line_height + 1, rect.width(), line_height)
+
+        when = format_when(entry.end_time or entry.start_time)
+        when_width = metrics.horizontalAdvance(when) + 6
+        painter.setPen(muted)
+        painter.setFont(option.font)
+        align_right = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        align_left = Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        painter.drawText(top, align_right, when)
+
+        painter.setPen(text_color)
+        painter.setFont(bold)
+        number = f"{entry.scan_number}" if entry.scan_number is not None else "?"
+        number_width = QFontMetrics(bold).horizontalAdvance(number) + 8
+        painter.drawText(top, align_left, number)
+        painter.setFont(option.font)
+        name_rect = top.adjusted(number_width, 0, -when_width, 0)
+        name = metrics.elidedText(entry.scan_name, Qt.TextElideMode.ElideRight, name_rect.width())
+        painter.drawText(name_rect, align_left, name)
+
+        status = STATUS_LABELS.get(entry.status, "")
+        status_width = 0
+        if status:
+            accents = get_accent_colors()
+            tone = QColor(accents.default if entry.live else accents.warning)
+            small = QFont(option.font)
+            small.setPointSizeF(option.font.pointSizeF() * 0.88)
+            small_metrics = QFontMetrics(small)
+            status_width = small_metrics.horizontalAdvance(status) + 14
+            pill = QRect(bottom.right() - status_width + 1, bottom.top(), status_width, line_height)
+            fill = QColor(tone)
+            fill.setAlpha(60)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(fill)
+            painter.drawRoundedRect(pill, line_height / 2, line_height / 2)
+            painter.setPen(text_color)
+            painter.setFont(small)
+            painter.drawText(pill, Qt.AlignmentFlag.AlignCenter, status)
+            painter.setFont(option.font)
+        painter.setPen(muted)
+        summary_rect = bottom.adjusted(0, 0, -(status_width + 6), 0)
+        summary = metrics.elidedText(
+            entry.summary(), Qt.TextElideMode.ElideRight, summary_rect.width()
+        )
+        painter.drawText(summary_rect, align_left, summary)
+        painter.restore()
+
+    def editorEvent(self, event, model, option, index) -> bool:
+        if event.type() == QEvent.Type.MouseButtonRelease and self.pin_rect(option.rect).contains(
+            event.position().toPoint()
+        ):
+            entry: ScanEntry = index.data(ENTRY_ROLE)
+            model.sourceModel().toggle_pin(entry.scan_id)
+            return True
+        return super().editorEvent(event, model, option, index)
+
+    def helpEvent(self, event, view, option, index) -> bool:
+        if index.isValid() and self.pin_rect(option.rect).contains(event.pos()):
+            entry: ScanEntry = index.data(ENTRY_ROLE)
+            pinned = entry.scan_id in index.model().sourceModel().pins()
+            view.setToolTip("")
+            # pylint: disable=import-outside-toplevel
+            from qtpy.QtWidgets import QToolTip
+
+            QToolTip.showText(
+                event.globalPos(),
+                "Unpin this scan (P)" if pinned else "Pin this scan to compare it (P)",
+                view,
+            )
+            return True
+        return super().helpEvent(event, view, option, index)
+
+
+class _ScanListView(QListView):
+    """List view that pins the current scan with the P key."""
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_P and self.currentIndex().isValid():
+            entry: ScanEntry = self.currentIndex().data(ENTRY_ROLE)
+            self.model().sourceModel().toggle_pin(entry.scan_id)
+            return
+        super().keyPressEvent(event)
+
+
+class ScanList(QWidget):
+    """Searchable list of scans with pins for comparison."""
+
+    #: The selected scan changed: a :class:`ScanEntry`, or None.
+    scan_selected = Signal(object)
+    #: The set of pinned scans changed.
+    pins_changed = Signal()
+
+    def __init__(self, parent: QWidget | None = None):
+        super().__init__(parent)
+        self._current_id: str | None = None
+        self._quiet = False
+        self.model = ScanListModel(self)
+        self.filter_model = ScanFilterModel(self)
+        self.filter_model.setSourceModel(self.model)
+
+        self.search_edit = QLineEdit(self)
+        self.search_edit.setPlaceholderText("Search scans")
+        self.search_edit.setAccessibleName("Search scans")
+        self.search_edit.setToolTip("Search by scan number, scan name or motor")
+        self.search_edit.setClearButtonEnabled(True)
+        self.search_edit.addAction(
+            material_icon("search", size=(16, 16), convert_to_pixmap=False),
+            QLineEdit.ActionPosition.LeadingPosition,
+        )
+
+        self.ending_group = QButtonGroup(self)
+        self.ending_group.setExclusive(True)
+        self.ending_buttons: dict[str, QToolButton] = {}
+        chips = QHBoxLayout()
+        chips.setContentsMargins(0, 0, 0, 0)
+        chips.setSpacing(4)
+        for key, label, tip in (
+            ("all", "All", "Show every scan"),
+            ("finished", "Finished", "Only scans that ran to their end"),
+            ("early", "Ended early", "Only scans that were stopped, halted or ended by hand"),
+        ):
+            button = QToolButton(self)
+            button.setText(label)
+            button.setToolTip(tip)
+            button.setCheckable(True)
+            button.setAutoRaise(True)
+            button.setChecked(key == "all")
+            button.clicked.connect(lambda _checked=False, key=key: self._set_ending(key))
+            self.ending_group.addButton(button)
+            self.ending_buttons[key] = button
+            chips.addWidget(button)
+        chips.addStretch(1)
+        self.unpin_button = QToolButton(self)
+        self.unpin_button.setText("Unpin all")
+        self.unpin_button.setAutoRaise(True)
+        self.unpin_button.setToolTip("Let all pinned scans go")
+        self.unpin_button.clicked.connect(self.model.clear_pins)
+        self.unpin_button.hide()
+        chips.addWidget(self.unpin_button)
+
+        self.view = _ScanListView(self)
+        self.view.setModel(self.filter_model)
+        self.delegate = ScanDelegate(self.view)
+        self.view.setItemDelegate(self.delegate)
+        self.view.setUniformItemSizes(True)
+        self.view.setMouseTracking(True)
+        self.view.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.view.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self.view.setAccessibleName("Scans")
+
+        self.note = QLabel(self)
+        self.note.setWordWrap(True)
+        self.note.setForegroundRole(QPalette.ColorRole.PlaceholderText)
+        self.note.setContentsMargins(6, 2, 6, 2)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(4)
+        layout.addWidget(self.search_edit)
+        layout.addLayout(chips)
+        layout.addWidget(self.view, 1)
+        layout.addWidget(self.note)
+
+        self.search_edit.textChanged.connect(self._on_search)
+        self.view.selectionModel().currentChanged.connect(self._on_current_changed)
+        self.model.dataChanged.connect(self._on_model_changed)
+        self.model.modelReset.connect(self._update_note)
+        self.model.rowsInserted.connect(self._update_note)
+        self.model.rowsRemoved.connect(self._update_note)
+        self._pins_seen = self.model.pins()
+        self._update_note()
+
+    ################################################################################
+    # Public interface
+    ################################################################################
+
+    def set_entries(self, entries: list[ScanEntry]) -> None:
+        """
+        Replace all scans and keep the selection where the scan is still listed.
+
+        Args:
+            entries (list[ScanEntry]): The scans.
+        """
+        current_id = self._current_id
+        self._quiet = True
+        try:
+            self.model.set_entries(entries)
+            kept = current_id is not None and self.model.entry(current_id) is not None
+            if kept:
+                self._show_current()
+        finally:
+            self._quiet = False
+        if kept:
+            self.scan_selected.emit(self.model.entry(current_id))
+        elif self.filter_model.rowCount():
+            self._current_id = None
+            self.view.setCurrentIndex(self.filter_model.index(0, 0))
+        else:
+            self.clear_selection()
+
+    def add_entry(self, entry: ScanEntry) -> None:
+        """
+        Add a scan, or update the one with the same id.
+
+        Args:
+            entry (ScanEntry): The scan.
+        """
+        first = self.model.rowCount() == 0
+        self.model.upsert(entry)
+        if first and self.filter_model.rowCount():
+            self.view.setCurrentIndex(self.filter_model.index(0, 0))
+        elif self._current_id == entry.scan_id:
+            self.scan_selected.emit(entry)
+
+    def current_entry(self) -> ScanEntry | None:
+        """
+        The selected scan. It stays selected while a search or a filter hides it.
+
+        Returns:
+            ScanEntry | None: The scan, or None when none is selected.
+        """
+        return self.model.entry(self._current_id) if self._current_id is not None else None
+
+    def clear_selection(self) -> None:
+        """Select no scan."""
+        had_selection = self._current_id is not None
+        self._current_id = None
+        self._quiet = True
+        try:
+            self.view.setCurrentIndex(self.filter_model.index(-1, 0))
+        finally:
+            self._quiet = False
+        if had_selection:
+            self.scan_selected.emit(None)
+
+    def select(self, scan_id: str) -> bool:
+        """
+        Select a scan.
+
+        Args:
+            scan_id (str): Id of the scan.
+
+        Returns:
+            bool: False when the scan is not in the list as it is filtered now.
+        """
+        for row in range(self.filter_model.rowCount()):
+            index = self.filter_model.index(row, 0)
+            if index.data(ENTRY_ROLE).scan_id == scan_id:
+                self.view.setCurrentIndex(index)
+                self.view.scrollTo(index)
+                return True
+        return False
+
+    def pinned_entries(self) -> list[tuple[ScanEntry, int]]:
+        """
+        The pinned scans with the palette slot of each.
+
+        Returns:
+            list[tuple[ScanEntry, int]]: Scan and slot, in the order of pinning.
+        """
+        out = []
+        for scan_id, slot in self.model.pins().items():
+            entry = self.model.entry(scan_id)
+            if entry is not None:
+                out.append((entry, slot))
+        return out
+
+    ################################################################################
+    # Internals
+    ################################################################################
+
+    def _set_ending(self, key: str) -> None:
+        self._filter(lambda: self.filter_model.set_ending(key))
+
+    def _on_search(self, text: str) -> None:
+        self._filter(lambda: self.filter_model.set_text(text))
+
+    def _filter(self, change) -> None:
+        """Change what is listed without changing which scan is selected."""
+        self._quiet = True
+        try:
+            change()
+            self._show_current()
+        finally:
+            self._quiet = False
+        self._update_note()
+
+    def _show_current(self) -> None:
+        """Put the cursor on the selected scan, or nowhere while it is not listed."""
+        if self._current_id is None or not self.select(self._current_id):
+            self.view.setCurrentIndex(self.filter_model.index(-1, 0))
+
+    def _on_current_changed(self, current: QModelIndex, _previous: QModelIndex) -> None:
+        self.view.viewport().update()
+        if self._quiet or not current.isValid():
+            return
+        entry: ScanEntry = current.data(ENTRY_ROLE)
+        if entry.scan_id != self._current_id:
+            self._current_id = entry.scan_id
+            self.scan_selected.emit(entry)
+
+    def _on_model_changed(self, *_args) -> None:
+        pins = self.model.pins()
+        if pins != self._pins_seen:
+            self._pins_seen = pins
+            self.unpin_button.setVisible(bool(pins))
+            self.pins_changed.emit()
+
+    def _update_note(self, *_args) -> None:
+        total = self.model.rowCount()
+        shown = self.filter_model.rowCount()
+        if total == 0:
+            self.note.setText("No scans yet. A scan shows up here when it is done.")
+        elif shown == 0:
+            self.note.setText("No scan fits. Clear the search or choose “All”.")
+        elif shown < total:
+            self.note.setText(f"{shown} of {total} scans")
+        else:
+            self.note.setText("1 scan" if total == 1 else f"{total} scans")
