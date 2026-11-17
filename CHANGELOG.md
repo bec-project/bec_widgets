@@ -1,6 +1,30 @@
 # CHANGELOG
 
 
+## v3.44.1 (2026-11-17)
+
+### Bug Fixes
+
+- **entry_validator**: Name validate_signal parameters device and signal
+  ([`08ab594`](https://github.com/bec-project/bec_widgets/commit/08ab59440da6bafa951f1d9a3a7a107388745c08))
+
+- **image**: Frame renders no longer disable colorbar autorange
+  ([`9237212`](https://github.com/bec-project/bec_widgets/commit/92372122e2d317c168777b1a5d1b740268f0ae79))
+
+- **signal_combobox**: Resolve the signal config from the displayed text
+  ([`4288bc6`](https://github.com/bec-project/bec_widgets/commit/4288bc661bf0e0f9cebabd319514b29113229292))
+
+### Continuous Integration
+
+- Add PR line count workflow
+  ([`590bf92`](https://github.com/bec-project/bec_widgets/commit/590bf92b9728d12ff0ecd6a0b0d79f473d789ba9))
+
+### Performance Improvements
+
+- **waveform**: Hide curve symbols above 1000 points
+  ([`9e0cfc8`](https://github.com/bec-project/bec_widgets/commit/9e0cfc851802f6a747c9e17d0449972da26928e7))
+
+
 ## v3.44.0 (2026-11-12)
 
 ### Bug Fixes
