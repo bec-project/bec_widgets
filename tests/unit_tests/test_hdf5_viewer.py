@@ -439,6 +439,8 @@ def test_preview_draws_a_long_signal_reduced_and_reads_the_rows_in_view(
     assert preview.x_combo.currentData() == "/entry/plot/energy"
     assert "lowest and highest" in preview.info_label.text()
     points_before = len(preview._curve.xData)
+    # The plot ranges itself once after a curve is added; zoom after that, as a person would.
+    qtbot.wait(300)
 
     preview._waveform.plot_item.vb.setXRange(7050.0, 7050.2, padding=0)
     qtbot.waitUntil(lambda: preview._detail_bins is not None)
