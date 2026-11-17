@@ -1165,3 +1165,13 @@ def test_history_picker_follows_the_scan_id_not_the_number(qtbot, twin_viewer, m
     assert picker.scan_list.select("scan-2")
     assert picker.signal_list.y_signals() == [("bpm3a", "bpm3a")]
     picker.cleanup()
+
+
+@pytest.mark.parametrize("platform, key", [("linux", "Ctrl"), ("darwin", "⌘")])
+def test_compare_hint_names_the_key_of_the_platform(qtbot, viewer, monkeypatch, platform, key):
+    # Qt reports Ctrl on Linux and Cmd on macOS as the same ControlModifier, so the click works
+    # on both; only the hint names the key a person presses there.
+    qtbot.waitUntil(lambda: len(viewer._curves) == 1)
+    monkeypatch.setattr("sys.platform", platform)
+    viewer._refresh_plot()
+    assert f"pin another scan or {key}-click it to compare" in viewer.plot_subtitle.full_text()
