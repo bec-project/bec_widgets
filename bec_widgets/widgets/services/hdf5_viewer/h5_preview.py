@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from collections.abc import Callable
+from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 
@@ -489,11 +490,25 @@ class H5DetailsPanel(QTreeWidget):
         self.resizeColumnToContents(0)
 
 
+@dataclass(frozen=True)
+class LineSource:
+    """What the Line view of the preview shows."""
+
+    node: H5Node
+    #: Position along the axes before the last one, for a row of a stack.
+    index: tuple[int, ...]
+    #: Path of the dataset used as x axis, or empty for the row number.
+    x_path: str
+    x_label: str
+
+
 class H5Preview(QWidget):
     """Shows the dataset that is selected in the tree."""
 
     #: The details of the shown node were read: an :class:`H5Details`, or None.
     details_changed = Signal(object)
+    #: What is shown changed: the node, the view, the row of a stack or the x axis.
+    shown_changed = Signal()
 
     def __init__(self, service: H5Service, client=None, parent: QWidget | None = None):
         super().__init__(parent)
@@ -525,7 +540,7 @@ class H5Preview(QWidget):
         self.view_group = QButtonGroup(self)
         self.view_group.setExclusive(True)
         self.view_buttons: dict[str, QToolButton] = {}
-        header = QHBoxLayout()
+        header = self._header = QHBoxLayout()
         header.setContentsMargins(0, 0, 0, 0)
         header.setSpacing(8)
         header.addWidget(self.name_label)
@@ -640,6 +655,33 @@ class H5Preview(QWidget):
         """The view that is shown: ``line``, ``image``, ``table``, ``value`` or empty."""
         return self._view
 
+    def add_header_widget(self, widget: QWidget) -> None:
+        """
+        Put a widget at the right end of the header, after the view buttons.
+
+        Args:
+            widget (QWidget): The widget, e.g. a button.
+        """
+        self._header.addWidget(widget)
+
+    def line_source(self) -> LineSource | None:
+        """
+        What the Line view shows: the dataset, the row of a stack and the x axis.
+
+        Returns:
+            LineSource | None: The source, or None when the Line view of a dataset is not shown.
+        """
+        node = self._node
+        if self._view != "line" or node is None or node.kind != "dataset":
+            return None
+        x_path = self.x_combo.currentData() or ""
+        return LineSource(
+            node=node,
+            index=self._lead(1),
+            x_path=x_path,
+            x_label=self.x_combo.currentText() if x_path else "Row number",
+        )
+
     def show_node(self, node: H5Node | None) -> None:
         """
         Show a node of a file, or the hint to pick one.
@@ -660,6 +702,7 @@ class H5Preview(QWidget):
         self._fresh_image = True
         self._index = [0] * (node.ndim if node is not None else 0)
         self.details_changed.emit(None)
+        self.shown_changed.emit()
         self.table_model.set_source(None, ())
         self.info_label.clear()
         self._set_views([])
@@ -907,6 +950,7 @@ class H5Preview(QWidget):
         node = self._node
         if node is None or node.kind != "dataset":
             return
+        self.shown_changed.emit()
         self._range_timer.stop()
         if self._view == "line":
             self._overview = None

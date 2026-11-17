@@ -1184,3 +1184,133 @@ def test_control_key_is_named_as_on_the_platform(monkeypatch, platform, key):
 
     monkeypatch.setattr("sys.platform", platform)
     assert control_key_name() == key
+
+
+def show_dataset(qtbot, viewer, file_path, dataset):
+    viewer.open_file(str(file_path), dataset)
+    qtbot.waitUntil(
+        lambda: viewer.preview.line_source() is not None
+        and viewer.preview.line_source().node.path == dataset,
+        timeout=5000,
+    )
+
+
+def file_target(qtbot, mocked_client):
+    # pylint: disable=import-outside-toplevel
+    from bec_widgets.widgets.plots.waveform.waveform import Waveform
+
+    target = create_widget(qtbot, Waveform, client=mocked_client)
+    target.setObjectName("TargetPlot")
+    return target
+
+
+def test_file_tab_adds_a_signal_dataset_as_the_same_history_curve(qtbot, viewer, mocked_client):
+    # pylint: disable=import-outside-toplevel
+    from bec_widgets.widgets.services.hdf5_viewer.plot_targets import held_history_curves
+
+    target = file_target(qtbot, mocked_client)
+    scan = viewer.scan_list.model.entry("scan-2")
+    show_dataset(qtbot, viewer, scan.file_path, "/entry/collection/devices/bpm4i/bpm4i/value")
+
+    assert viewer.file_history_source() == ("scan-2", "bpm4i", "bpm4i")
+    assert not viewer.file_add_button.isHidden()
+    assert viewer.file_add_button.toolTip() == "Adds bpm4i bpm4i of scan 12 as a history curve"
+    result = viewer.add_file_to_plot(target, "TargetPlot")
+    assert result.added == 1
+    assert held_history_curves(target) == {("scan-2", "bpm4i", "bpm4i")}
+    # Named exactly as from the Signals tab.
+    assert [curve.name() for curve in target.curves] == ["bpm4i-bpm4i-scan-12"]
+    assert viewer.add_file_to_plot(target, "TargetPlot").already == 1
+    assert viewer.file_add_button.property("feedback") == "Already on TargetPlot"
+
+
+def test_file_tab_finds_the_signal_through_the_readout_group_link(qtbot, viewer):
+    scan = viewer.scan_list.model.entry("scan-1")
+    show_dataset(
+        qtbot,
+        viewer,
+        scan.file_path,
+        "/entry/collection/readout_groups/monitored/bpm4i/bpm4i/value",
+    )
+    assert viewer.file_history_source() == ("scan-1", "bpm4i", "bpm4i")
+
+
+def test_file_tab_copies_the_timestamp_and_says_it_is_a_copy(qtbot, viewer, mocked_client):
+    # pylint: disable=import-outside-toplevel
+    from bec_widgets.widgets.services.hdf5_viewer.hdf5_viewer import COPY_TOOLTIP
+
+    target = file_target(qtbot, mocked_client)
+    scan = viewer.scan_list.model.entry("scan-2")
+    dataset = "/entry/collection/devices/bpm4i/bpm4i/timestamp"
+    show_dataset(qtbot, viewer, scan.file_path, dataset)
+
+    # Only the value dataset is the signal; its timestamp is a copy.
+    assert viewer.file_history_source() is None
+    assert viewer.file_add_button.toolTip() == COPY_TOOLTIP
+    viewer.add_file_to_plot(target, "TargetPlot")
+    label = f"S00012_master.h5 {dataset}"
+    qtbot.waitUntil(lambda: [curve.name() for curve in target.curves] == [label])
+    [curve] = target.curves
+    assert curve.config.source == "custom"
+    x, y = curve.getData()
+    assert len(y) == 20 and list(x) == list(range(20))
+    assert (
+        viewer.file_add_button.property("feedback")
+        == "Copied to TargetPlot, not saved with the workspace"
+    )
+
+    # A long message is cut so the button does not widen the pane; the tooltip gives it all.
+    shown = viewer.file_add_button.text()
+    assert viewer.file_add_button.fontMetrics().horizontalAdvance(shown) <= 172
+    if shown != viewer.file_add_button.property("feedback"):
+        assert viewer.file_add_button.toolTip() == viewer.file_add_button.property("feedback")
+    viewer.add_file_to_plot(target, "TargetPlot")
+    assert viewer.file_add_button.property("feedback") == "Already on TargetPlot"
+    assert len(target.curves) == 1
+
+
+def test_file_tab_copies_a_dataset_of_a_file_outside_the_history_at_full_length(
+    qtbot, viewer, mocked_client, data_file
+):
+    target = file_target(qtbot, mocked_client)
+    show_dataset(qtbot, viewer, data_file, "/entry/plot/counts")
+
+    assert viewer.file_history_source() is None
+    viewer.add_file_to_plot(target, "TargetPlot")
+    qtbot.waitUntil(lambda: len(target.curves) == 1, timeout=10000)
+    # All rows, not the reduced overview of the preview.
+    assert len(target.curves[0].getData()[1]) == ROWS
+
+
+def test_file_tab_does_not_copy_more_rows_than_the_cap(qtbot, viewer, data_file, monkeypatch):
+    # pylint: disable=import-outside-toplevel
+    from bec_widgets.widgets.services.hdf5_viewer import hdf5_viewer
+
+    monkeypatch.setattr(hdf5_viewer, "COPY_MAX_POINTS", 1000)
+    show_dataset(qtbot, viewer, data_file, "/entry/plot/counts")
+
+    assert not viewer.file_add_button.isEnabled()
+    assert "Too many rows to copy" in viewer.file_add_button.toolTip()
+
+
+def test_file_tab_does_not_copy_a_file_that_is_being_written(
+    qtbot, viewer, mocked_client, data_file
+):
+    target = file_target(qtbot, mocked_client)
+    show_dataset(qtbot, viewer, data_file, "/entry/plot/energy")
+
+    os.utime(data_file, None)  # written just now
+    viewer.add_file_to_plot(target, "TargetPlot")
+
+    qtbot.waitUntil(
+        lambda: viewer.file_add_button.property("feedback").startswith("Could not copy")
+    )
+    assert target.curves == []
+    assert viewer.file_add_button.isEnabled()
+
+
+def test_file_tab_shows_no_add_button_for_images_and_tables(qtbot, viewer, data_file):
+    show_dataset(qtbot, viewer, data_file, "/entry/plot/counts")
+    assert not viewer.file_add_button.isHidden()
+    viewer.preview.view_buttons["table"].click()
+    qtbot.waitUntil(lambda: viewer.file_add_button.isHidden())

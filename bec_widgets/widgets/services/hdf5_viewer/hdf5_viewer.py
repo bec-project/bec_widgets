@@ -12,6 +12,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import numpy as np
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
@@ -43,10 +44,13 @@ from bec_widgets.widgets.services.hdf5_viewer.plot_targets import (
     AddResult,
     CurveSource,
     add_history_curves,
+    copy_label,
     dock_area_for,
+    has_curve,
     other_plots,
     plot_name,
     shown_signals,
+    signal_of_dataset,
 )
 from bec_widgets.widgets.services.hdf5_viewer.scan_list import ScanEntry, ScanList, series_color
 from bec_widgets.widgets.services.hdf5_viewer.signal_list import SignalInfo, SignalList, SourceKey
@@ -65,6 +69,12 @@ BUSY_RETRY_MS = 2000
 ADD_BUTTON_TEXT = "Add to plot"
 #: How long the result of adding curves stays on that button.
 ADD_FEEDBACK_MS = 3000
+#: Widest the message on an "Add to plot" button gets, in pixels; longer ones are cut.
+ADD_FEEDBACK_MAX_WIDTH = 170
+#: Largest number of rows a dataset of the File tab may have to be copied to another plot.
+COPY_MAX_POINTS = 1_000_000
+#: What the File tab's button says about a copy before and after it is made.
+COPY_TOOLTIP = "Adds a copy of these values. A copy is not saved with the workspace."
 #: Time a scan that ended stays listed as running while its history entry is awaited.
 LIVE_LINGER_MS = 20000
 
@@ -143,21 +153,11 @@ class HDF5Viewer(BECWidget, QWidget):
         title_row.setSpacing(8)
         title_row.addWidget(self.plot_title)
         title_row.addWidget(self.plot_subtitle, 1)
-        self.add_button = QToolButton(self)
-        self.add_button.setText(ADD_BUTTON_TEXT)
-        self.add_button.setIcon(material_icon("add_chart", convert_to_pixmap=False))
-        self.add_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-        self.add_button.setAutoRaise(True)
-        self.add_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        self.add_button.setToolTip("Add the curves of this plot to another plot as history curves")
-        self.add_menu = QMenu(self.add_button)
+        self.add_button, self.add_menu, self._add_reset_timer = self._make_add_button(
+            "Add the curves of this plot to another plot as history curves"
+        )
         self.add_menu.aboutToShow.connect(self._fill_add_menu)
-        self.add_button.setMenu(self.add_menu)
         title_row.addWidget(self.add_button)
-        self._add_reset_timer = QTimer(self)
-        self._add_reset_timer.setSingleShot(True)
-        self._add_reset_timer.setInterval(ADD_FEEDBACK_MS)
-        self._add_reset_timer.timeout.connect(lambda: self.add_button.setText(ADD_BUTTON_TEXT))
         self.waveform = Waveform(parent=self, client=self.client)
         self.plot_state = StatePage(self)
         self.plot_stack = QStackedWidget(self)
@@ -170,6 +170,16 @@ class HDF5Viewer(BECWidget, QWidget):
         plot_layout.addLayout(title_row)
         plot_layout.addWidget(self.plot_stack, 1)
         self.preview = H5Preview(self.service, client=self.client, parent=self)
+        # The same button for the dataset shown in the File tab.
+        self.file_add_button, self.file_add_menu, self._file_add_reset_timer = (
+            self._make_add_button(COPY_TOOLTIP)
+        )
+        self.file_add_menu.aboutToShow.connect(self._fill_file_add_menu)
+        self.file_add_button.hide()
+        self._copy_channel = f"viewer-copy-{id(self)}"
+        self._copying = False
+        self.preview.add_header_widget(self.file_add_button)
+        self.preview.shown_changed.connect(self._update_file_add_button)
         self.right_stack = QStackedWidget(self)
         self.right_stack.addWidget(self.plot_page)
         self.right_stack.addWidget(self.preview)
@@ -698,27 +708,71 @@ class HDF5Viewer(BECWidget, QWidget):
         """
         return [key for key, (_curve, live) in self._curves.items() if not live]
 
-    def _fill_add_menu(self) -> None:
-        self.add_menu.clear()
+    def _make_add_button(self, tool_tip: str) -> tuple[QToolButton, QMenu, QTimer]:
+        """A button "Add to plot" with a menu of the other plots, and the timer of its text."""
+        button = QToolButton(self)
+        button.setText(ADD_BUTTON_TEXT)
+        button.setIcon(material_icon("add_chart", convert_to_pixmap=False))
+        button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        button.setAutoRaise(True)
+        button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        button.setToolTip(tool_tip)
+        menu = QMenu(button)
+        button.setMenu(menu)
+        timer = QTimer(self)
+        timer.setSingleShot(True)
+        timer.setInterval(ADD_FEEDBACK_MS)
+        timer.timeout.connect(lambda: self._end_saying(button))
+        return button, menu, timer
+
+    def _fill_menu(self, menu: QMenu, unavailable: str, add, say) -> None:
+        """
+        List the other plots in a menu of an "Add to plot" button.
+
+        Args:
+            menu (QMenu): The menu.
+            unavailable (str): Why there is nothing to add, or empty.
+            add: Called with a plot and its name to add to it.
+            say: Puts a message on the button.
+        """
+        menu.clear()
+        if unavailable:
+            menu.addAction(unavailable).setEnabled(False)
+            return
         plots = other_plots(self)
         area = dock_area_for(self)
-        if not self.curve_sources():
-            note = self.add_menu.addAction(
-                "Nothing to add: the plot is empty or shows a running scan"
-            )
-            note.setEnabled(False)
-            return
         for name, plot in plots:
-            action = self.add_menu.addAction(name)
-            action.triggered.connect(lambda _=False, p=plot, n=name: self.add_to_plot(p, n))
+            action = menu.addAction(name)
+            action.triggered.connect(lambda _=False, p=plot, n=name: add(p, n))
         if area is not None:
             if plots:
-                self.add_menu.addSeparator()
-            action = self.add_menu.addAction("New plot in workspace")
-            action.triggered.connect(lambda _=False, a=area: self.add_to_new_plot(a))
+                menu.addSeparator()
+            action = menu.addAction("New plot in workspace")
+            action.triggered.connect(lambda _=False, a=area: self._add_to_new(a, add, say))
         if not plots and area is None:
-            note = self.add_menu.addAction("No other plot is open and there is no workspace")
-            note.setEnabled(False)
+            menu.addAction("No other plot is open and there is no workspace").setEnabled(False)
+
+    def _add_to_new(self, dock_area, add, say):
+        try:
+            plot = dock_area.new("Waveform")
+        except Exception as exc:  # pylint: disable=broad-except
+            say(f"Could not open a new plot: {exc}")
+            return None
+        return add(plot, plot_name(plot))
+
+    def _add_sources(self, plot: Waveform, name: str | None, sources, say) -> AddResult:
+        """Add history curves to another plot and say how it went on the button."""
+        result = add_history_curves(plot, sources)
+        say(result.message(name or plot_name(plot)))
+        return result
+
+    def _fill_add_menu(self) -> None:
+        empty = (
+            ""
+            if self.curve_sources()
+            else "Nothing to add: the plot is empty or shows a running scan"
+        )
+        self._fill_menu(self.add_menu, empty, self.add_to_plot, self._say_on_add_button)
 
     def add_to_plot(self, plot: Waveform, name: str | None = None) -> AddResult:
         """
@@ -731,9 +785,7 @@ class HDF5Viewer(BECWidget, QWidget):
         Returns:
             AddResult: What happened.
         """
-        result = add_history_curves(plot, self.curve_sources())
-        self._say_on_add_button(result.message(name or plot_name(plot)))
-        return result
+        return self._add_sources(plot, name, self.curve_sources(), self._say_on_add_button)
 
     def add_to_new_plot(self, dock_area) -> AddResult | None:
         """
@@ -745,16 +797,181 @@ class HDF5Viewer(BECWidget, QWidget):
         Returns:
             AddResult | None: What happened, or None when no plot could be opened.
         """
-        try:
-            plot = dock_area.new("Waveform")
-        except Exception as exc:  # pylint: disable=broad-except
-            self._say_on_add_button(f"Could not open a new plot: {exc}")
-            return None
-        return self.add_to_plot(plot)
+        return self._add_to_new(dock_area, self.add_to_plot, self._say_on_add_button)
+
+    @staticmethod
+    def _say_on(
+        button: QToolButton, timer: QTimer, text: str, width: int = ADD_FEEDBACK_MAX_WIDTH
+    ) -> None:
+        """
+        Put a message on an "Add to plot" button for a few seconds. A message wider than
+        ``width`` is cut, so the button does not widen its pane, and is given in full in the
+        tooltip meanwhile.
+        """
+        shown = button.fontMetrics().elidedText(text, Qt.TextElideMode.ElideRight, width)
+        button.setText(shown)
+        button.setProperty("feedback", text)
+        if shown != text:
+            button.setProperty("tool_tip_before", button.toolTip())
+            button.setToolTip(text)
+        timer.start()
+
+    @staticmethod
+    def _end_saying(button: QToolButton) -> None:
+        button.setText(ADD_BUTTON_TEXT)
+        button.setProperty("feedback", "")
+        before = button.property("tool_tip_before")
+        if before:
+            button.setToolTip(before)
+            button.setProperty("tool_tip_before", "")
 
     def _say_on_add_button(self, text: str) -> None:
-        self.add_button.setText(text)
-        self._add_reset_timer.start()
+        self._say_on(self.add_button, self._add_reset_timer, text)
+
+    ################################################################################
+    # The dataset of the File tab on other plots
+    ################################################################################
+
+    def file_history_source(self) -> CurveSource | None:
+        """
+        The history curve of the dataset the File tab shows, if it is one: the ``value`` of a
+        BEC signal, 1D, in the file of a listed scan that stored that signal.
+
+        Returns:
+            CurveSource | None: (scan id, device, signal), or None for any other dataset.
+        """
+        line = self.preview.line_source()
+        if line is None or line.node.ndim != 1 or line.index:
+            return None
+        signal = signal_of_dataset(line.node.path)
+        if signal is None:
+            return None
+        entry = self._scan_of_file(line.node.file_path)
+        if entry is None or signal[1] not in (entry.stored_data_info or {}).get(signal[0], {}):
+            return None
+        return (entry.scan_id, *signal)
+
+    def _scan_of_file(self, file_path: str) -> ScanEntry | None:
+        """The listed scan whose file this is, matched by path, newest first."""
+        wanted = Path(file_path).resolve()
+        for entry in self.scan_list.model.entries():
+            if entry.file_path and Path(entry.file_path).resolve() == wanted:
+                return entry
+        return None
+
+    def _update_file_add_button(self) -> None:
+        line = self.preview.line_source()
+        button = self.file_add_button
+        button.setVisible(line is not None)
+        if line is None:
+            return
+        source = self.file_history_source()
+        if source is not None:
+            entry = self.scan_list.model.entry(source[0])
+            label = self.scan_list.model.scan_label(entry) if entry else "?"
+            button.setToolTip(f"Adds {source[1]} {source[2]} of scan {label} as a history curve")
+            button.setEnabled(not self._copying)
+            return
+        rows = int(line.node.shape[-1]) if line.node.shape else 1
+        if rows > COPY_MAX_POINTS:
+            button.setEnabled(False)
+            button.setToolTip(
+                f"Too many rows to copy: {rows:,} is more than {COPY_MAX_POINTS:,}. "
+                "Only BEC signals of listed scans can go to other plots at any length."
+            )
+            return
+        button.setToolTip(COPY_TOOLTIP)
+        button.setEnabled(not self._copying)
+
+    def _fill_file_add_menu(self) -> None:
+        empty = "" if self.preview.line_source() is not None else "Show a dataset as a line first"
+        self._fill_menu(self.file_add_menu, empty, self.add_file_to_plot, self._say_on_file_button)
+
+    def add_file_to_plot(self, plot: Waveform, name: str | None = None) -> AddResult | None:
+        """
+        Add the dataset the File tab shows to another plot: a BEC signal of a listed scan as a
+        history curve (as from the Signals tab), anything else as a copy of the values shown.
+
+        Args:
+            plot (Waveform): The other plot.
+            name (str | None): Its name, as shown on the button afterwards.
+
+        Returns:
+            AddResult | None: What happened for a history curve; None while a copy is read.
+        """
+        name = name or plot_name(plot)
+        source = self.file_history_source()
+        if source is not None:
+            return self._add_sources(plot, name, [source], self._say_on_file_button)
+        self._copy_to_plot(plot, name)
+        return None
+
+    def _copy_to_plot(self, plot: Waveform, name: str) -> None:
+        line = self.preview.line_source()
+        if line is None:
+            return
+        node = line.node
+        label = copy_label(node.file_path, node.path, line.index)
+        if has_curve(plot, label):
+            self._say_on_file_button(f"Already on {name}")
+            return
+        rows = int(node.shape[-1]) if node.shape else 1
+        if rows > COPY_MAX_POINTS:
+            self._say_on_file_button(f"Too many rows to copy to {name}")
+            return
+        self._copying = True
+        self.file_add_button.setEnabled(False)
+        self.file_add_button.setText("Reading…")
+        self.file_add_button.setProperty("feedback", "Reading…")
+        x_path = line.x_path or None
+
+        def done(curve_data):
+            self._copy_finished()
+            try:
+                plot.plot(
+                    x=np.asarray(curve_data.x),
+                    y=np.asarray(curve_data.y),
+                    label=label,
+                    _override_slot_params={"popup_error": False, "raise_error": True},
+                )
+            except Exception as exc:  # pylint: disable=broad-except
+                self._say_on_file_button(f"Could not add to {name}: {exc}")
+                return
+            self._say_on_file_button(f"Copied to {name}, not saved with the workspace")
+
+        def failed(error: H5ReadError):
+            self._copy_finished()
+            self._say_on_file_button(f"Could not copy: {error.message}")
+
+        self.service.request(
+            self._copy_channel,
+            node.file_path,
+            lambda ctx: h5_reader.read_curve(
+                node.file_path,
+                node.path,
+                line.index,
+                max_points=max(rows, 1),
+                cancel=ctx.cancelled,
+                x_path=x_path,
+            ),
+            done,
+            failed,
+        )
+
+    def _copy_finished(self) -> None:
+        self._copying = False
+        self._update_file_add_button()
+
+    def _say_on_file_button(self, text: str) -> None:
+        # The header of the preview is narrow: use only the room the other parts leave.
+        button = self.file_add_button
+        others = [self.preview.name_label, *self.preview.view_buttons.values()]
+        taken = sum(widget.width() + 8 for widget in others if widget.isVisible())
+        chrome = button.sizeHint().width() - button.fontMetrics().horizontalAdvance(button.text())
+        room = self.preview.width() - taken - chrome
+        least = button.fontMetrics().horizontalAdvance(ADD_BUTTON_TEXT)
+        width = max(least, min(room, ADD_FEEDBACK_MAX_WIDTH))
+        self._say_on(button, self._file_add_reset_timer, text, width)
 
     def _show_scan_menu(self, entry: ScanEntry, position) -> None:
         self.scan_menu(entry).popup(position)
@@ -832,6 +1049,8 @@ class HDF5Viewer(BECWidget, QWidget):
         self._paused_busy = self._busy_timer.isActive()
         self._busy_timer.stop()
         self.tree.pause()
+        self.service.cancel(self._copy_channel)
+        self._copy_finished()
         channel = self.preview._channel  # pylint: disable=protected-access
         self._paused_preview = self.service.has_pending(channel)
         self.service.cancel_all(channel)
@@ -867,6 +1086,8 @@ class HDF5Viewer(BECWidget, QWidget):
         """Stop the reads, release the history and scan status subscriptions."""
         self._busy_timer.stop()
         self._add_reset_timer.stop()
+        self._file_add_reset_timer.stop()
+        self.service.cancel(self._copy_channel)
         self.scan_list.cleanup()
         self.tree.cleanup()
         self.preview.cleanup()

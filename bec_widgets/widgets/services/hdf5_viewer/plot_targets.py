@@ -8,6 +8,7 @@ show up in its curve dialog and are saved with it.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from qtpy.QtWidgets import QApplication, QWidget
 
@@ -190,3 +191,59 @@ def shown_signals(plot: Waveform) -> list[tuple[str, str]]:
         if signals:
             break
     return list(signals)
+
+
+def signal_of_dataset(path: str) -> tuple[str, str] | None:
+    """
+    The BEC signal whose values a dataset of a scan file holds.
+
+    BEC stores the values of a signal at ``/entry/collection/devices/<device>/<signal>/value``
+    and links them from ``/entry/collection/readout_groups/<group>/<device>``. Only that
+    ``value`` dataset is the signal; its ``timestamp`` and everything else are not.
+
+    Args:
+        path (str): Path of the dataset in the file.
+
+    Returns:
+        tuple[str, str] | None: (device, signal), or None for any other dataset.
+    """
+    parts = [part for part in path.split("/") if part]
+    if len(parts) < 5 or parts[-1] != "value":
+        return None
+    if parts[-4] == "devices" and parts[-5] == "collection":
+        return parts[-3], parts[-2]
+    if len(parts) >= 6 and parts[-5] == "readout_groups" and parts[-6] == "collection":
+        return parts[-3], parts[-2]
+    return None
+
+
+def copy_label(file_path: str, path: str, index: tuple[int, ...] = ()) -> str:
+    """
+    Name of a copied dataset on another plot: the file, the dataset and the row of a stack.
+
+    Args:
+        file_path (str): Path of the file.
+        path (str): Path of the dataset in the file.
+        index (tuple[int, ...]): Position along the axes before the last one.
+
+    Returns:
+        str: For example ``"S00011_master.h5 /entry/data/counts [3]"``.
+    """
+    label = f"{Path(file_path).name} {path}"
+    if index:
+        label += f" [{', '.join(str(i) for i in index)}]"
+    return label
+
+
+def has_curve(plot: Waveform, label: str) -> bool:
+    """
+    Whether a plot holds a curve with this name.
+
+    Args:
+        plot (Waveform): The plot.
+        label (str): The name.
+
+    Returns:
+        bool: True when it does.
+    """
+    return any(curve.name() == label for curve in plot.curves)
