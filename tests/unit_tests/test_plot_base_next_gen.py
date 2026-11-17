@@ -3,8 +3,11 @@ import pytest
 from bec_lib import messages
 from bec_lib.scan_data_container import ScanDataContainer
 from bec_lib.scan_items import ScanItem
+from qtpy.QtOpenGLWidgets import QOpenGLWidget
 
+import bec_widgets.widgets.plots.plot_base as plot_base_module
 from bec_widgets.tests.client_mocks import mocked_client
+from bec_widgets.utils.gpu_acceleration import opengl_available
 from bec_widgets.widgets.plots.heatmap.heatmap import Heatmap
 from bec_widgets.widgets.plots.image.image import Image
 from bec_widgets.widgets.plots.motor_map.motor_map import MotorMap
@@ -792,3 +795,35 @@ def test_limits_accept_fractional_values(qtbot, mocked_client):
     pb.y_limits = (-1.75, 3.5)
     assert (pb.x_limits.x(), pb.x_limits.y()) == (0.5, 9.25)
     assert (pb.y_limits.x(), pb.y_limits.y()) == (-1.75, 3.5)
+
+
+def test_use_opengl_defaults_to_true_when_available(qtbot, mocked_client):
+    """PlotBase opts into the OpenGL viewport by default."""
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    assert pb.USE_OPENGL is True
+    assert pb.use_opengl is opengl_available(True)
+
+
+def test_use_opengl_can_be_toggled_at_runtime(qtbot, mocked_client):
+    """The viewport can be swapped after the widget is built."""
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    if not opengl_available(True):
+        pytest.skip("no hardware OpenGL available in this environment")
+
+    pb.use_opengl = False
+    assert pb.use_opengl is False
+    assert not isinstance(pb.plot_widget.viewport(), QOpenGLWidget)
+
+    pb.use_opengl = True
+    assert pb.use_opengl is True
+    assert isinstance(pb.plot_widget.viewport(), QOpenGLWidget)
+
+
+def test_use_opengl_declines_without_hardware_context(qtbot, mocked_client, monkeypatch):
+    """Requesting OpenGL on a software renderer leaves the raster viewport in place."""
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    monkeypatch.setattr(plot_base_module, "opengl_available", lambda requested=True: False)
+
+    pb.use_opengl = True
+    assert pb.use_opengl is False
+    assert not isinstance(pb.plot_widget.viewport(), QOpenGLWidget)

@@ -134,6 +134,53 @@ def opengl_available(requested: bool = True) -> bool:
     return True
 
 
+def _release_gl_state(view: GraphicsView) -> None:
+    """Drop the cached ``OpenGLState`` of every item in ``view``'s scene.
+
+    pyqtgraph creates that state once per item and parents it to the *viewport*
+    widget. Swapping the viewport deletes it on the C++ side while the item
+    keeps a stale Python reference, so the next ``paintGL`` raises
+    ``RuntimeError: Signal source has been deleted``. ``PlotCurveItem.paint``
+    swallows it, which shows up as a silently missing curve rather than a
+    crash. Clearing the reference makes the item rebuild its state against the
+    new context.
+    """
+    scene = view.scene()
+    if scene is None:
+        return
+    for item in scene.items():
+        # PlotDataItem delegates drawing to a PlotCurveItem held in .curve, which
+        # is itself in the scene; check both so nothing is missed.
+        for target in {item, getattr(item, "curve", None)}:
+            if target is None or getattr(target, "glstate", None) is None:
+                continue
+            signal = getattr(target, "sigPlotChanged", None)
+            if signal is not None:
+                try:
+                    signal.disconnect(target.glstate.verticesChanged)
+                except (RuntimeError, TypeError):
+                    # not connected, or the C++ side is already gone
+                    pass
+            target.glstate = None
+
+
+def set_view_opengl(view: GraphicsView, enabled: bool) -> bool:
+    """Switch ``view`` between the OpenGL and raster viewport at runtime.
+
+    Args:
+        view(GraphicsView): The view whose viewport should be swapped.
+        enabled(bool): Whether the OpenGL viewport is wanted.
+
+    Returns:
+        bool: Whether the OpenGL viewport is active afterwards.
+    """
+    if isinstance(view.viewport(), QOpenGLWidget) is enabled:
+        return enabled
+    _release_gl_state(view)
+    view.useOpenGL(enabled)
+    return isinstance(view.viewport(), QOpenGLWidget)
+
+
 def _accelerated_views(widget: QWidget) -> list[GraphicsView]:
     """GraphicsView descendants of ``widget`` that are on an OpenGL viewport."""
     views = widget.findChildren(GraphicsView)

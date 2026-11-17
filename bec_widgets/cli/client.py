@@ -2051,6 +2051,28 @@ class Heatmap(RPCBase):
         Minimum decimal places for crosshair when dynamic precision is enabled.
         """
 
+    @property
+    @rpc_call
+    def use_opengl(self) -> "bool":
+        """
+        Whether the plot currently renders through an OpenGL viewport.
+
+        Reflects the live viewport rather than the requested value: setting this to
+        True is best effort, and stays False when no hardware-accelerated context is
+        available (see `bec_widgets.utils.gpu_acceleration.opengl_available`).
+        """
+
+    @use_opengl.setter
+    @rpc_call
+    def use_opengl(self) -> "bool":
+        """
+        Whether the plot currently renders through an OpenGL viewport.
+
+        Reflects the live viewport rather than the requested value: setting this to
+        True is best effort, and stays False when no hardware-accelerated context is
+        available (see `bec_widgets.utils.gpu_acceleration.opengl_available`).
+        """
+
     @rpc_timeout(None)
     @rpc_call
     def screenshot(self, file_name: "str | None" = None):
@@ -2771,6 +2793,28 @@ class Image(RPCBase):
     def minimal_crosshair_precision(self) -> "int":
         """
         Minimum decimal places for crosshair when dynamic precision is enabled.
+        """
+
+    @property
+    @rpc_call
+    def use_opengl(self) -> "bool":
+        """
+        Whether the plot currently renders through an OpenGL viewport.
+
+        Reflects the live viewport rather than the requested value: setting this to
+        True is best effort, and stays False when no hardware-accelerated context is
+        available (see `bec_widgets.utils.gpu_acceleration.opengl_available`).
+        """
+
+    @use_opengl.setter
+    @rpc_call
+    def use_opengl(self) -> "bool":
+        """
+        Whether the plot currently renders through an OpenGL viewport.
+
+        Reflects the live viewport rather than the requested value: setting this to
+        True is best effort, and stays False when no hardware-accelerated context is
+        available (see `bec_widgets.utils.gpu_acceleration.opengl_available`).
         """
 
     @rpc_timeout(None)
@@ -3960,6 +4004,28 @@ class MotorMap(RPCBase):
         Minimum decimal places for crosshair when dynamic precision is enabled.
         """
 
+    @property
+    @rpc_call
+    def use_opengl(self) -> "bool":
+        """
+        Whether the plot currently renders through an OpenGL viewport.
+
+        Reflects the live viewport rather than the requested value: setting this to
+        True is best effort, and stays False when no hardware-accelerated context is
+        available (see `bec_widgets.utils.gpu_acceleration.opengl_available`).
+        """
+
+    @use_opengl.setter
+    @rpc_call
+    def use_opengl(self) -> "bool":
+        """
+        Whether the plot currently renders through an OpenGL viewport.
+
+        Reflects the live viewport rather than the requested value: setting this to
+        True is best effort, and stays False when no hardware-accelerated context is
+        available (see `bec_widgets.utils.gpu_acceleration.opengl_available`).
+        """
+
     @rpc_timeout(None)
     @rpc_call
     def screenshot(self, file_name: "str | None" = None):
@@ -4444,6 +4510,28 @@ class MultiWaveform(RPCBase):
     def minimal_crosshair_precision(self) -> "int":
         """
         Minimum decimal places for crosshair when dynamic precision is enabled.
+        """
+
+    @property
+    @rpc_call
+    def use_opengl(self) -> "bool":
+        """
+        Whether the plot currently renders through an OpenGL viewport.
+
+        Reflects the live viewport rather than the requested value: setting this to
+        True is best effort, and stays False when no hardware-accelerated context is
+        available (see `bec_widgets.utils.gpu_acceleration.opengl_available`).
+        """
+
+    @use_opengl.setter
+    @rpc_call
+    def use_opengl(self) -> "bool":
+        """
+        Whether the plot currently renders through an OpenGL viewport.
+
+        Reflects the live viewport rather than the requested value: setting this to
+        True is best effort, and stays False when no hardware-accelerated context is
+        available (see `bec_widgets.utils.gpu_acceleration.opengl_available`).
         """
 
     @rpc_timeout(None)
@@ -5721,6 +5809,28 @@ class ScatterWaveform(RPCBase):
         Minimum decimal places for crosshair when dynamic precision is enabled.
         """
 
+    @property
+    @rpc_call
+    def use_opengl(self) -> "bool":
+        """
+        Whether the plot currently renders through an OpenGL viewport.
+
+        Reflects the live viewport rather than the requested value: setting this to
+        True is best effort, and stays False when no hardware-accelerated context is
+        available (see `bec_widgets.utils.gpu_acceleration.opengl_available`).
+        """
+
+    @use_opengl.setter
+    @rpc_call
+    def use_opengl(self) -> "bool":
+        """
+        Whether the plot currently renders through an OpenGL viewport.
+
+        Reflects the live viewport rather than the requested value: setting this to
+        True is best effort, and stays False when no hardware-accelerated context is
+        available (see `bec_widgets.utils.gpu_acceleration.opengl_available`).
+        """
+
     @rpc_timeout(None)
     @rpc_call
     def screenshot(self, file_name: "str | None" = None):
@@ -6384,6 +6494,28 @@ class Waveform(RPCBase):
     def minimal_crosshair_precision(self) -> "int":
         """
         Minimum decimal places for crosshair when dynamic precision is enabled.
+        """
+
+    @property
+    @rpc_call
+    def use_opengl(self) -> "bool":
+        """
+        Whether the plot currently renders through an OpenGL viewport.
+
+        Reflects the live viewport rather than the requested value: setting this to
+        True is best effort, and stays False when no hardware-accelerated context is
+        available (see `bec_widgets.utils.gpu_acceleration.opengl_available`).
+        """
+
+    @use_opengl.setter
+    @rpc_call
+    def use_opengl(self) -> "bool":
+        """
+        Whether the plot currently renders through an OpenGL viewport.
+
+        Reflects the live viewport rather than the requested value: setting this to
+        True is best effort, and stays False when no hardware-accelerated context is
+        available (see `bec_widgets.utils.gpu_acceleration.opengl_available`).
         """
 
     @rpc_timeout(None)
