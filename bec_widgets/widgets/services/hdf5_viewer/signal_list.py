@@ -327,6 +327,8 @@ class SignalList(QWidget):
         self._colors: dict[SourceKey, str] = {}
         self._default_color = "#2a78d6"
         self._entry: ScanEntry | None = None
+        #: Why the last X could not be taken; shown in the note until the next change.
+        self._refusal = ""
 
         self.filter_edit = QLineEdit(self)
         self.filter_edit.setPlaceholderText("Filter signals")
@@ -478,9 +480,16 @@ class SignalList(QWidget):
         signal = self._signals.get(key)
         if signal is None or signal.group != "point":
             return
+        if self._x != key and any(self._signals[other].group != "point" for other in self._y):
+            # A motor has one value per scan point, a fast signal many: it cannot be their x.
+            # The fast signals stay on the plot against their sample number.
+            self._refusal = (
+                f"{signal.label} can only be the x axis of signals with one value per scan "
+                "point. The fast signals on the plot stay against their sample number."
+            )
+            self._update_note()
+            return
         self._x = None if self._x == key else key
-        if self._x is not None:
-            self._y = [other for other in self._y if self._signals[other].group == "point"]
         self._changed()
 
     def set_colors(self, colors: dict[SourceKey, str], default: str) -> None:
@@ -576,7 +585,21 @@ class SignalList(QWidget):
         else:
             self.open_requested.emit(signal)
 
+    def group_of(self, key: SourceKey) -> str:
+        """
+        The group of a listed signal.
+
+        Args:
+            key (SourceKey): (device, entry) of the signal.
+
+        Returns:
+            str: ``point``, ``fast``, ``array`` or ``single``, or empty when it is not listed.
+        """
+        signal = self._signals.get(key)
+        return signal.group if signal is not None else ""
+
     def _changed(self) -> None:
+        self._refusal = ""
         self.tree.viewport().update()
         self._update_note()
         self.selection_changed.emit()
@@ -593,6 +616,9 @@ class SignalList(QWidget):
         )
         if hidden:
             self.note.setText("No signal fits the filter.")
+            return
+        if self._refusal:
+            self.note.setText(self._refusal)
             return
         if self.picker:
             count = len(self._y)

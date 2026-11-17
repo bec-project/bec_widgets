@@ -102,9 +102,13 @@ def make_history(tmp_path, numbers):
                 "old_diode": {"old_diode": {"value": x * 2, "timestamp": np.arange(points)}},
             },
             "async": {
+                # A fast signal: many samples per scan point, one timestamp per point.
+                "wave": {
+                    "wave": {"value": np.arange(points * 50.0), "timestamp": np.arange(points)}
+                },
                 "camera": {
                     "camera": {"value": np.ones((points, 8, 8)), "timestamp": np.arange(points)}
-                }
+                },
             },
         }
         info = messages._StoredDataInfo  # pylint: disable=protected-access
@@ -113,6 +117,7 @@ def make_history(tmp_path, numbers):
             "bpm4i": {"bpm4i": info(shape=(points,), dtype="float64")},
             "bpm3a": {"bpm3a": info(shape=(points,), dtype="float64")},
             "old_diode": {"old_diode": info(shape=(points,), dtype="float64")},
+            "wave": {"wave": info(shape=(points * 50,), dtype="float64")},
             "camera": {"camera": info(shape=(points, 8, 8), dtype="float64")},
             "mono": {"mono": info(shape=(1,), dtype="float64")},
         }
@@ -1316,3 +1321,71 @@ def test_file_tab_shows_no_add_button_for_images_and_tables(qtbot, viewer, data_
     assert not viewer.file_add_button.isHidden()
     viewer.preview.view_buttons["table"].click()
     qtbot.waitUntil(lambda: viewer.file_add_button.isHidden())
+
+
+WAVE, SAMX, BPM = ("wave", "wave"), ("samx", "samx"), ("bpm3a", "bpm3a")
+
+
+def plot_state(viewer):
+    waveform = viewer.waveform
+    return waveform.x_mode, waveform.x_axis_mode["entry"], viewer.signal_list.note.text()
+
+
+def test_x_axis_stays_in_step_with_the_x_choice_through_fast_and_point_signals(qtbot, viewer):
+    qtbot.waitUntil(lambda: len(viewer._curves) == 1)
+    signals = viewer.signal_list
+    assert signals.group_of(WAVE) == "fast"
+
+    signals.toggle_y(WAVE)  # a fast signal alone: against its sample number
+    assert plot_state(viewer)[:2] == ("index", None)
+    assert "x axis: sample number" in signals.note.text()
+
+    signals.toggle_x(SAMX)  # samx cannot be its x: refused, said, the plot keeps its curve
+    assert signals.x_signal() is None and signals.y_signals() == [WAVE]
+    assert "can only be the x axis of signals with one value per scan point" in signals.note.text()
+    assert plot_state(viewer)[:2] == ("index", None)
+    assert set(viewer._curves) == {("scan-2", "wave", "wave")}
+
+    signals.toggle_y(BPM)  # a point signal takes over the plot
+    signals.toggle_x(SAMX)
+    assert plot_state(viewer)[:2] == ("samx", "samx")
+    assert "x axis: samx" in signals.note.text()
+
+    signals.toggle_x(SAMX)  # off again: no stale x entry stays behind
+    assert plot_state(viewer)[:2] == ("auto", None)
+    signals.toggle_y(WAVE)
+    assert plot_state(viewer)[:2] == ("index", None)
+    assert "x axis: sample number" in signals.note.text()
+
+
+def test_every_curve_has_points_and_the_view_covers_them_after_a_zoom(qtbot, viewer):
+    qtbot.waitUntil(lambda: len(viewer._curves) == 1)
+    viewer.scan_list.model.toggle_pin("scan-0")
+    viewer.signal_list.toggle_y(WAVE)
+    curves = [curve for curve, _live in viewer._curves.values()]
+    qtbot.waitUntil(lambda: all(c.yData is not None and len(c.yData) == 1000 for c in curves))
+
+    viewer.waveform.plot_item.vb.setXRange(100, 200, padding=0)
+    viewer.signal_list.toggle_y(SAMX)  # another curve set ...
+    viewer.signal_list.toggle_y(WAVE)  # ... and back: the view shows all of it again
+
+    curves = [curve for curve, _live in viewer._curves.values()]
+    qtbot.waitUntil(lambda: all(c.yData is not None and len(c.yData) == 1000 for c in curves))
+
+    def covered():
+        (x0, x1), _ = viewer.waveform.plot_item.vb.viewRange()
+        return x0 <= 0 and x1 >= 999
+
+    qtbot.waitUntil(covered)
+    assert not viewer.plot_subtitle.full_text().startswith("Nothing to draw")
+
+
+def test_viewer_names_a_curve_that_has_nothing_to_draw(qtbot, viewer):
+    qtbot.waitUntil(lambda: len(viewer._curves) == 1)
+    [curve] = [curve for curve, _live in viewer._curves.values()]
+    qtbot.waitUntil(lambda: curve.yData is not None and len(curve.yData) > 0)
+    curve.setVisible(False)  # e.g. the plot hid it: its x does not fit
+
+    viewer._check_empty_curves()
+
+    assert viewer.plot_subtitle.full_text().startswith("Nothing to draw for bpm3a of scan 12")

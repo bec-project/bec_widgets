@@ -65,6 +65,9 @@ logger = bec_logger.logger
 PEN_STYLES = ("solid", "dash", "dot", "dashdot")
 #: Pause between two looks at a file that is still being written.
 BUSY_RETRY_MS = 2000
+#: Pause before the curves are checked for points, and how often while they still load.
+EMPTY_CHECK_MS = 1500
+EMPTY_CHECK_TRIES = 20
 #: Text of the button that adds the curves to another plot.
 ADD_BUTTON_TEXT = "Add to plot"
 #: How long the result of adding curves stays on that button.
@@ -106,7 +109,8 @@ class HDF5Viewer(BECWidget, QWidget):
         self._keep_file = False
         self._select_when_listed = ""
         self._curves: dict[CurveKey, tuple[object, bool]] = {}
-        self._x_applied: SourceKey | None | str = "unset"
+        #: The curves and the x axis of the last refresh: a change of either ranges the plot.
+        self._shown_state: tuple | None = None
         self._plot_note = ""
 
         self.service = H5Service(self)
@@ -212,6 +216,12 @@ class HDF5Viewer(BECWidget, QWidget):
         layout.addWidget(self.splitter, 1)
         layout.addLayout(status_row)
 
+        # Looks for curves without points once their data is in.
+        self._empty_checks = 0
+        self._empty_timer = QTimer(self)
+        self._empty_timer.setSingleShot(True)
+        self._empty_timer.setInterval(EMPTY_CHECK_MS)
+        self._empty_timer.timeout.connect(self._check_empty_curves)
         self._busy_timer = QTimer(self)
         self._busy_timer.setSingleShot(True)
         self._busy_timer.setInterval(BUSY_RETRY_MS)
@@ -520,6 +530,42 @@ class HDF5Viewer(BECWidget, QWidget):
             self.plot_stack.setCurrentWidget(self.plot_state)
         if self._plot_note:
             self.plot_subtitle.setText(self._plot_note)
+        shown = (frozenset(self._curves), self._wanted_x(x_key))
+        if shown != self._shown_state:
+            # Other curves or another x: show all of them again, even after a zoom.
+            self._shown_state = shown
+            self.waveform.plot_item.enableAutoRange(x=True, y=True)
+        self._empty_checks = 0
+        self._empty_timer.start()
+
+    def _check_empty_curves(self) -> None:
+        """Say which curves of the legend have nothing to draw, once their data is in."""
+        waveform = self.waveform
+        loading = set(getattr(waveform, "_history_curves_awaiting_data", ())) | set(
+            getattr(waveform, "_history_curves_loading", ())
+        )
+        if any(curve.name() in loading for curve, _live in self._curves.values()):
+            self._empty_checks += 1
+            if self._empty_checks < EMPTY_CHECK_TRIES:
+                self._empty_timer.start()
+            return
+        label = self.scan_list.model.scan_label
+        axis = self.waveform.x_mode
+        problems = []
+        for (scan_id, device, signal), (curve, live) in self._curves.items():
+            if live:
+                continue
+            entry = self.scan_list.model.entry(scan_id)
+            name = f"{device} of scan {label(entry) if entry else '?'}"
+            values = curve.yData
+            if not curve.isVisible():
+                problems.append(f"{name}: the x axis {axis} does not fit it")
+            elif values is None or len(values) == 0:
+                problems.append(f"{name}: no points")
+            elif not np.isfinite(np.asarray(values, dtype=float)).any():
+                problems.append(f"{name}: no finite values")
+        if problems:
+            self.plot_subtitle.setText("Nothing to draw for " + "; ".join(problems))
 
     def _drop_curve(self, key: CurveKey) -> None:
         curve, _live = self._curves.pop(key)
@@ -528,21 +574,30 @@ class HDF5Viewer(BECWidget, QWidget):
         except Exception as exc:  # pylint: disable=broad-except
             logger.debug(f"HDF5 viewer: curve {key} was already gone: {exc}")
 
+    def _wanted_x(self, x_key: SourceKey | None) -> tuple[str, str | None]:
+        """
+        The x mode of the plot for the X choice of the signal list: the chosen signal, the
+        sample number when only fast signals are on, else the axis the plot picks.
+        """
+        if x_key is not None:
+            return x_key
+        y_keys = self.signal_list.y_signals()
+        if y_keys and all(self.signal_list.group_of(key) == "fast" for key in y_keys):
+            return ("index", None)
+        return ("auto", None)
+
     def _apply_x(self, x_key: SourceKey | None) -> None:
-        if x_key == self._x_applied:
-            return
+        """Give the plot the x axis the signal list says, checked against what it has now."""
+        mode, entry = self._wanted_x(x_key)
+        waveform = self.waveform
         try:
-            if x_key is None:
-                self.waveform.x_mode = "auto"
-            else:
-                self.waveform.x_mode = x_key[0]
-                if self.waveform.signal_x != x_key[1]:
-                    self.waveform.signal_x = x_key[1]
-            self._x_applied = x_key
+            if waveform.x_mode != mode:
+                waveform.x_mode = mode
+            if entry is not None and waveform.signal_x != entry:
+                waveform.signal_x = entry
         except Exception as exc:  # pylint: disable=broad-except
             logger.warning(f"HDF5 viewer: the x axis could not be set to {x_key}: {exc}")
-            self._plot_note = f"{x_key[0] if x_key else 'This'} cannot be the x axis here: {exc}"
-            self._x_applied = "unset"
+            self._plot_note = f"{mode} cannot be the x axis here: {exc}"
 
     def _update_plot_title(self, scans: list[tuple[ScanEntry, int]]) -> None:
         if self._entry is None:
@@ -1085,6 +1140,7 @@ class HDF5Viewer(BECWidget, QWidget):
     def cleanup(self):
         """Stop the reads, release the history and scan status subscriptions."""
         self._busy_timer.stop()
+        self._empty_timer.stop()
         self._add_reset_timer.stop()
         self._file_add_reset_timer.stop()
         self.service.cancel(self._copy_channel)
