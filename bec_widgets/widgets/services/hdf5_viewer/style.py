@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sys
+
 from qtpy.QtGui import QColor, QPalette
 from qtpy.QtWidgets import QWidget
 
@@ -81,3 +83,14 @@ def tone_color(tone: Tone) -> QColor:
             Tone.ACCENT: colors["primary"],
         }.get(tone, colors["muted"])
     )
+
+
+def control_key_name() -> str:
+    """
+    Name of the key that Qt reports as ``Qt.KeyboardModifier.ControlModifier``: Ctrl on Linux,
+    the main platform, and the Command key (⌘) on macOS.
+
+    Returns:
+        str: ``"Ctrl"``, or ``"⌘"`` on macOS.
+    """
+    return "⌘" if sys.platform == "darwin" else "Ctrl"

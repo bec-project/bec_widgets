@@ -50,7 +50,7 @@ from bec_widgets.widgets.services.hdf5_viewer.plot_targets import (
 )
 from bec_widgets.widgets.services.hdf5_viewer.scan_list import ScanEntry, ScanList, series_color
 from bec_widgets.widgets.services.hdf5_viewer.signal_list import SignalInfo, SignalList, SourceKey
-from bec_widgets.widgets.services.hdf5_viewer.style import mute, remute
+from bec_widgets.widgets.services.hdf5_viewer.style import control_key_name, mute, remute
 from bec_widgets.widgets.services.scan_history_browser.components.scan_history_view import (
     BECHistoryManager,
 )
@@ -552,7 +552,7 @@ class HDF5Viewer(BECWidget, QWidget):
         elif self._entry.live:
             self.plot_subtitle.setText("running  ·  drawn live, its file is not opened")
         else:
-            key = "⌘" if sys.platform == "darwin" else "Ctrl"
+            key = control_key_name()
             self.plot_subtitle.setText(
                 f"{self._entry.summary()}  ·  pin another scan or {key}-click it to compare"
             )

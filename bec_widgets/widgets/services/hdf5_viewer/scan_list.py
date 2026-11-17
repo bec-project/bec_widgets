@@ -43,7 +43,12 @@ from qtpy.QtWidgets import (
 
 from bec_widgets.utils.colors import get_theme_name
 from bec_widgets.widgets.progress.stage_bar import Tone
-from bec_widgets.widgets.services.hdf5_viewer.style import mute, muted_color, tone_color
+from bec_widgets.widgets.services.hdf5_viewer.style import (
+    control_key_name,
+    mute,
+    muted_color,
+    tone_color,
+)
 
 ENTRY_ROLE = Qt.ItemDataRole.UserRole + 1
 
@@ -661,7 +666,7 @@ class ScanDelegate(QStyledItemDelegate):
                 (
                     "Take this scan off the plot (P)"
                     if pinned
-                    else "Keep this scan on the plot to compare (P)"
+                    else f"Keep this scan on the plot to compare (P or {control_key_name()}-click)"
                 ),
                 view,
             )

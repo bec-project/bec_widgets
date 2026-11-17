@@ -1175,3 +1175,12 @@ def test_compare_hint_names_the_key_of_the_platform(qtbot, viewer, monkeypatch, 
     monkeypatch.setattr("sys.platform", platform)
     viewer._refresh_plot()
     assert f"pin another scan or {key}-click it to compare" in viewer.plot_subtitle.full_text()
+
+
+@pytest.mark.parametrize("platform, key", [("linux", "Ctrl"), ("darwin", "⌘")])
+def test_control_key_is_named_as_on_the_platform(monkeypatch, platform, key):
+    # pylint: disable=import-outside-toplevel
+    from bec_widgets.widgets.services.hdf5_viewer.style import control_key_name
+
+    monkeypatch.setattr("sys.platform", platform)
+    assert control_key_name() == key
