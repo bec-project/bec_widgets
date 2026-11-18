@@ -218,6 +218,16 @@ def test_service_does_not_read_a_file_that_is_being_written(qtbot, service, data
     qtbot.waitUntil(lambda: results == ["data"])
 
 
+def test_reader_joins_a_file_another_reader_holds_open_with_the_default_lock(data_file):
+    # The DataAPI opens scan files with h5py's default locking; while it holds one open,
+    # HDF5 refuses an open with locking=False in the same process.
+    with h5py.File(data_file, "r"):
+        with h5_reader.open_readonly(str(data_file)) as handle:
+            assert "plot" in handle["entry"]
+        curve = h5_reader.read_curve(str(data_file), "/entry/plot/counts", stop=10)
+    assert len(curve.y) == 10
+
+
 def test_service_counts_the_bytes_it_read(qtbot, service, data_file):
     changed = []
     service.bytes_read_changed.connect(changed.append)

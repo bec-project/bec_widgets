@@ -237,6 +237,13 @@ def _open(file_path: str, swmr: bool = False) -> h5py.File:
         # An HDF5 library without the locking switch, or one that insists on a lock for
         # this mode. The file is then locked for the length of this one short read only.
         return h5py.File(file_path, "r", **kwargs)
+    except OSError as exc:
+        if "flag values don't match" not in str(exc):
+            raise
+        # Another reader of this process holds the file open with the default lock, e.g.
+        # the DataAPI reading a history curve. HDF5 refuses a second open with other
+        # locking flags; one with the same flags joins that open and takes no lock of its own.
+        return h5py.File(file_path, "r", **kwargs)
 
 
 @contextlib.contextmanager
