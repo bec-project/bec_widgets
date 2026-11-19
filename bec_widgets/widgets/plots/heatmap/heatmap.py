@@ -361,7 +361,9 @@ class Heatmap(ImageBase):
             oversampling_factor (float | None): Factor to oversample the grid resolution.
             lock_aspect_ratio (bool | None): Whether to lock the aspect ratio of the image.
             show_config_label (bool | None): Whether to show the configuration label in the heatmap.
-            scan_id (str | None): Optional scan ID to fetch from history instead of using the live/latest scan.
+            scan_id (str | None): A stored scan to show, and keep showing while other scans
+                run; the pin is saved with the profile. None follows the running scan, or the
+                latest one while none runs.
             reload (bool): Whether to reload the heatmap with new data.
         """
         if validate_bec:
@@ -453,6 +455,7 @@ class Heatmap(ImageBase):
         if self._history_scan_id is not None:
             self.update_with_scan_history(scan_id=self._history_scan_id)
             return
+        self._say_scan_missing(None)
         self._fetch_running_scan()
         if self.scan_item is not None and not hasattr(self.scan_item, "live_data"):
             self._setup_data_api_subscription(scan=self.scan_id)
@@ -485,7 +488,13 @@ class Heatmap(ImageBase):
         """Update the heatmap with a scan fetched from history."""
         scan_item = self.get_history_scan_item(scan_id=scan_id)
         if scan_item is None:
+            if scan_id is not None:
+                # Pinned to a scan the history does not have: keep the pin, say so.
+                self._cleanup_data_api_subscription()
+                self.main_image.clear()
+                self._say_scan_missing(scan_id)
             return
+        self._say_scan_missing(None)
 
         self._cleanup_data_api_subscription()
 
@@ -1619,7 +1628,12 @@ class Heatmap(ImageBase):
 
     @SafeProperty(str)
     def history_scan_id(self) -> str:
-        """The stored scan the heatmap shows, or empty when it follows the running scan."""
+        """
+        The stored scan the heatmap is pinned to, or empty when it follows the running scan.
+
+        A pinned heatmap keeps showing its scan while other scans run, and the pin is saved with
+        the profile. Set a scan id to pin it, or an empty string to follow the running scan again.
+        """
         return self._history_scan_id or ""
 
     @history_scan_id.setter

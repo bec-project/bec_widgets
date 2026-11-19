@@ -239,7 +239,8 @@ class ScatterWaveform(PlotBase):
             label (str | None): The label of the curve.
             validate_bec (bool): Whether to validate the device signals with current BEC instance.
             scan_id (str | None): A stored scan to show, and keep showing while other scans
-                run. None follows the running scan, or the latest one while none runs.
+                run; the pin is saved with the profile. None follows the running scan, or the
+                latest one while none runs.
 
         Returns:
             ScatterCurve: The scatter curve object.
@@ -307,6 +308,7 @@ class ScatterWaveform(PlotBase):
         if self.config.scan_id:
             self.update_with_scan_history(scan_id=self.config.scan_id)
         else:
+            self._say_scan_missing(None)
             self._setup_data_api_subscription()
 
     ################################################################################
@@ -647,7 +649,12 @@ class ScatterWaveform(PlotBase):
 
     @SafeProperty(str)
     def history_scan_id(self) -> str:
-        """The stored scan the plot shows, or empty when it follows the running scan."""
+        """
+        The stored scan the plot is pinned to, or empty when it follows the running scan.
+
+        A pinned plot keeps showing its scan while other scans run, and the pin is saved with
+        the profile. Set a scan id to pin it, or an empty string to follow the running scan again.
+        """
         return self.config.scan_id or ""
 
     @history_scan_id.setter
@@ -751,6 +758,14 @@ class ScatterWaveform(PlotBase):
         if scan_index is None:
             self.scan_id = scan_id
             self.scan_item = self.client.history.get_by_scan_id(scan_id)
+            if self.scan_item is None:
+                # A scan the history does not have, e.g. the pin of an old profile: say so.
+                self._cleanup_data_api_subscription()
+                if self._main_curve is not None:
+                    self._main_curve.clear()
+                self._say_scan_missing(scan_id)
+                return
+            self._say_scan_missing(None)
             self.update_scan_info_from_source(self.scan_item)
             self._setup_data_api_subscription(scan=scan_id)
             return

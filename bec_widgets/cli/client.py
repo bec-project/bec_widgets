@@ -2377,7 +2377,9 @@ class Heatmap(RPCBase):
             oversampling_factor (float | None): Factor to oversample the grid resolution.
             lock_aspect_ratio (bool | None): Whether to lock the aspect ratio of the image.
             show_config_label (bool | None): Whether to show the configuration label in the heatmap.
-            scan_id (str | None): Optional scan ID to fetch from history instead of using the live/latest scan.
+            scan_id (str | None): A stored scan to show, and keep showing while other scans
+                run; the pin is saved with the profile. None follows the running scan, or the
+                latest one while none runs.
             reload (bool): Whether to reload the heatmap with new data.
         """
 
@@ -2475,14 +2477,20 @@ class Heatmap(RPCBase):
     @rpc_call
     def history_scan_id(self) -> "str":
         """
-        The stored scan the heatmap shows, or empty when it follows the running scan.
+        The stored scan the heatmap is pinned to, or empty when it follows the running scan.
+
+        A pinned heatmap keeps showing its scan while other scans run, and the pin is saved with
+        the profile. Set a scan id to pin it, or an empty string to follow the running scan again.
         """
 
     @history_scan_id.setter
     @rpc_call
     def history_scan_id(self) -> "str":
         """
-        The stored scan the heatmap shows, or empty when it follows the running scan.
+        The stored scan the heatmap is pinned to, or empty when it follows the running scan.
+
+        A pinned heatmap keeps showing its scan while other scans run, and the pin is saved with
+        the profile. Set a scan id to pin it, or an empty string to follow the running scan again.
         """
 
 
@@ -5917,7 +5925,8 @@ class ScatterWaveform(RPCBase):
             label (str | None): The label of the curve.
             validate_bec (bool): Whether to validate the device signals with current BEC instance.
             scan_id (str | None): A stored scan to show, and keep showing while other scans
-                run. None follows the running scan, or the latest one while none runs.
+                run; the pin is saved with the profile. None follows the running scan, or the
+                latest one while none runs.
 
         Returns:
             ScatterCurve: The scatter curve object.
@@ -6028,14 +6037,20 @@ class ScatterWaveform(RPCBase):
     @rpc_call
     def history_scan_id(self) -> "str":
         """
-        The stored scan the plot shows, or empty when it follows the running scan.
+        The stored scan the plot is pinned to, or empty when it follows the running scan.
+
+        A pinned plot keeps showing its scan while other scans run, and the pin is saved with
+        the profile. Set a scan id to pin it, or an empty string to follow the running scan again.
         """
 
     @history_scan_id.setter
     @rpc_call
     def history_scan_id(self) -> "str":
         """
-        The stored scan the plot shows, or empty when it follows the running scan.
+        The stored scan the plot is pinned to, or empty when it follows the running scan.
+
+        A pinned plot keeps showing its scan while other scans run, and the pin is saved with
+        the profile. Set a scan id to pin it, or an empty string to follow the running scan again.
         """
 
 
