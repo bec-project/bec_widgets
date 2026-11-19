@@ -1112,6 +1112,18 @@ class DapComboBox(RPCBase):
         """
 
 
+class DataView(RPCBase):
+    """A view to browse the scans BEC has written and to look into HDF5 files, with the HDF5"""
+
+    _IMPORT_MODULE = "bec_widgets.applications.views.data_view.data_view"
+
+    @rpc_call
+    def activate(self) -> "None":
+        """
+        Switch the parent application to this view.
+        """
+
+
 class DeveloperView(RPCBase):
     """A view for users to write scripts and macros and execute them within the application."""
 
@@ -1759,8 +1771,9 @@ class HDF5Viewer(RPCBase):
         """
         Show an HDF5 file in the file view.
 
-        The file is opened for each read and closed again, without a file lock. A file that
-        is still being written is not read until its writer is done.
+        The file is opened for each read and closed again: the file of a scan BEC lists as the
+        Data API opens it, any other file without a file lock. A file that is still being
+        written is not read until its writer is done.
 
         Args:
             file_path (str): Path of the file.
@@ -1771,6 +1784,9 @@ class HDF5Viewer(RPCBase):
     def show_scan(self, scan: "int | str") -> "None":
         """
         Select a scan of the scan history.
+
+        Scan numbers can repeat (e.g. after a counter reset): for a number shared by several
+        scans the newest of them is selected. A scan id always names one scan.
 
         Args:
             scan (int | str): Scan number or scan id.
@@ -6791,6 +6807,9 @@ class Waveform(RPCBase):
                 the y‑data (and optional x‑data) are fetched from that historical scan. Such curves are
                 never cleared by live‑scan resets.
             scan_number(int): Optional scan index. When provided, the curve is treated as a **history** curve and
+                the data come from the scan with that number. Scan numbers can repeat (e.g. after
+                a counter reset); the newest scan with the number is taken then. Give scan_id to
+                pick one of them.
 
         Returns:
             Curve: The curve object.
