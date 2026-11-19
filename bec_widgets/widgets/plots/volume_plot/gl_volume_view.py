@@ -139,13 +139,13 @@ def plane_rgba(normalized: np.ndarray, lut: np.ndarray, floor: int = 70) -> np.n
     return rgba
 
 
-def glow_rgba(normalized: np.ndarray, color: QColor, strength: float = 0.9) -> np.ndarray:
+def glow_rgba(normalized: np.ndarray, color: QColor, strength: float = 0.75) -> np.ndarray:
     """A projection drawn as a glow of one colour whose alpha follows the value."""
     rgba = np.empty(normalized.shape + (4,), dtype=np.ubyte)
     rgba[..., 0] = color.red()
     rgba[..., 1] = color.green()
     rgba[..., 2] = color.blue()
-    rgba[..., 3] = (np.clip(np.nan_to_num(normalized), 0, 1) ** 0.8 * strength * 255).astype(
+    rgba[..., 3] = (np.clip(np.nan_to_num(normalized), 0, 1) ** 1.6 * strength * 255).astype(
         np.ubyte
     )
     return rgba

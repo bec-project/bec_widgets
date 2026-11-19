@@ -175,6 +175,10 @@ class VolumePlot(ImageBase):
         self._volume_rgba: np.ndarray | None = None
         self._data_bridge: QtDataSubscription | None = None
         self._planned_positions: np.ndarray | None = None
+        self._data_bridge_scope: str | None = None
+        #: While True the cut follows the newest data of a running scan; any cut the user
+        #: makes (slider, click, axis, pinned cut) ends it until the next scan.
+        self._follow_live = False
         self.scan_id: str | None = None
         self._cut_timer = QTimer(self)
         self._cut_timer.setSingleShot(True)
@@ -182,6 +186,11 @@ class VolumePlot(ImageBase):
         self._cut_timer.timeout.connect(self._apply_cut)
 
         self._build_layout()
+        self._empty_hint = pg.TextItem("No data in this cut yet", anchor=(0.5, 0.5))
+        self._empty_hint.setZValue(50)
+        self._empty_hint.hide()
+        self.plot_item.addItem(self._empty_hint, ignoreBounds=True)
+        self.plot_item.vb.sigRangeChanged.connect(lambda *_: self._place_empty_hint())
         self._init_volume_toolbar()
         self._init_shortcuts()
         self.toolbar.show_bundles(
@@ -201,6 +210,9 @@ class VolumePlot(ImageBase):
                 action().action.setVisible(False)
         self.bec_dispatcher.connect_slot(self.on_scan_status, MessageEndpoints.scan_status())
         self.autorange_mode = "max"
+        # Coordinates carry their own units (µm, mm, motor units); no extra SI scaling.
+        for side in ("bottom", "left"):
+            self.plot_item.getAxis(side).enableAutoSIPrefix(False)
         self._splitter_sized = False
         self._sync_controls()
         self._update_theme(None)
@@ -256,7 +268,7 @@ class VolumePlot(ImageBase):
             )
             self.axis_buttons.addButton(button, axis)
             layout.addWidget(button)
-        self.axis_buttons.idClicked.connect(lambda axis: setattr(self, "cut_axis", axis))
+        self.axis_buttons.idClicked.connect(self._on_axis_clicked)
 
         self.cut_slider = QSlider(Qt.Orientation.Horizontal, bar)
         self.cut_slider.setObjectName("volume_cut_slider")
@@ -278,6 +290,10 @@ class VolumePlot(ImageBase):
         self.cut_index_label.setMinimumWidth(64)
         layout.addWidget(self.cut_index_label)
         return bar
+
+    def _on_axis_clicked(self, axis: int):
+        self._stop_following()
+        self.cut_axis = axis
 
     def _build_cut_strip(self, parent: QWidget) -> QWidget:
         strip = QWidget(parent)
@@ -381,7 +397,7 @@ class VolumePlot(ImageBase):
         shortcut("C", lambda: setattr(self, "clip_volume", not self.clip_volume))
         shortcut("R", self.reset_camera)
         for axis, name in enumerate(AXIS_NAMES):
-            shortcut(name.upper(), lambda a=axis: setattr(self, "cut_axis", a))
+            shortcut(name.upper(), lambda a=axis: self._on_axis_clicked(a))
 
     def _sync_controls(self):
         """Bring toolbar and cut bar in line with the configuration."""
@@ -595,6 +611,7 @@ class VolumePlot(ImageBase):
                 min_emit_interval=self.update_interval_s,
             )
             self._data_bridge.updated.connect(self._on_data_update)
+            self._data_bridge_scope = scan
         except Exception as exc:
             logger.warning(f"VolumePlot could not subscribe to its data: {exc}")
             self._stop_data_feed()
@@ -620,6 +637,7 @@ class VolumePlot(ImageBase):
         self.scan_id = scan_id
         self._planned_positions = self._planned_from_status(msg)
         self.volume = None
+        self._follow_live = True
 
     def _planned_from_status(self, msg: dict) -> np.ndarray | None:
         """Planned positions in (x, y, z) order of a grid scan over our three devices."""
@@ -646,7 +664,7 @@ class VolumePlot(ImageBase):
         if sources is None or self._data_bridge is None:
             return
         if self._alignment_binding_changed(update):
-            self._warn_if_unaligned(list(dict.fromkeys(sources)), self._data_bridge.scan)
+            self._warn_if_unaligned(list(dict.fromkeys(sources)), self._data_bridge_scope)
         columns = update.aligned()
         try:
             expanded = expand_sample_columns(*(columns[tuple(s)] for s in sources))
@@ -659,6 +677,7 @@ class VolumePlot(ImageBase):
             self.scan_id = update.scan_id
             self._planned_positions = None
             self.volume = None
+            self._follow_live = self._data_bridge_scope == ScanTarget.LIVE
         grid, axes = grid_from_points(x, y, z, values, planned=self._planned_positions)
         labels = tuple(
             d.device for d in (self.config.device_x, self.config.device_y, self.config.device_z)
@@ -670,13 +689,39 @@ class VolumePlot(ImageBase):
             units=tuple(self._device_unit(name) for name in labels),
             value_label=self.config.device_value.signal,
         )
-        self.show_volume(volume, keep_view=self.volume is not None)
+        first = self.volume is None
+        self.show_volume(volume, keep_view=not first)
+        if self._follow_live:
+            self._follow_newest(np.column_stack([x, y, z]), choose_axis=first)
+
+    def _follow_newest(self, points: np.ndarray, choose_axis: bool):
+        """
+        Keep the cut on the layer that receives data, so a running scan is visible.
+
+        Args:
+            points (np.ndarray): Measured positions of shape (n, 3), newest last.
+            choose_axis (bool): Also switch the cut to the slowest scan axis (first update).
+        """
+        volume = self.volume
+        if volume is None or points.size == 0:
+            return
+        if choose_axis and len(points) > 1:
+            changes = np.count_nonzero(np.abs(np.diff(points, axis=0)) > 0, axis=0)
+            self.config.cut_axis = int(np.argmin(changes))
+            self._sync_controls()
+            self._refresh_scene_decor()
+        axis = self.config.cut_axis
+        self._cut_index = volume.index_of(axis, float(points[-1, axis]))
+        self._configure_slider()
+        self._apply_cut()
+
+    def _stop_following(self):
+        self._follow_live = False
 
     def _device_unit(self, device: str) -> str:
         try:
-            return (
-                self.dev[device]._info["signals"].get(device, {}).get("describe", {}).get("egu", "")
-            )
+            device_obj = self.dev[device]
+            return str(device_obj.egu()) if hasattr(device_obj, "egu") else ""
         except Exception:  # pylint: disable=broad-except
             return ""
 
@@ -695,6 +740,7 @@ class VolumePlot(ImageBase):
 
     @SafeSlot(int)
     def _on_slider(self, value: int):
+        self._stop_following()
         self._cut_index = int(value)
         self._schedule_cut()
 
@@ -729,18 +775,26 @@ class VolumePlot(ImageBase):
         self.cut_changed.emit(axis, index, coordinate)
 
     def _show_cut_image(self, cut: np.ndarray, axis: int):
-        """Put the cut into the image plot, the longer display axis horizontal."""
+        """Put the cut into the image plot; a clearly longer display axis goes horizontal."""
         volume = self.volume
         p, q = VolumeData.plane_axes(axis)
         box = volume.display_box()
         image = cut
-        if box[q] > box[p]:
+        if box[q] >= 1.5 * box[p]:
+            # a clearly longer side (the beam axis of a caustic) reads better horizontally
             image, p, q = cut.T, q, p
         transform = QTransform()
         sp, sq = volume.spacing(p), volume.spacing(q)
         transform.translate(volume.extent(p)[0], volume.extent(q)[0])
         transform.scale(sp, sq)
-        self.main_image.set_data(np.ascontiguousarray(image), transform=transform)
+        empty = not np.isfinite(image).any()
+        self._empty_hint.setVisible(empty)
+        if empty:
+            # ImageItem skips all-NaN data and would keep showing the previous cut
+            self.main_image.clear()
+        else:
+            self.main_image.set_data(np.ascontiguousarray(image), transform=transform)
+        self._place_empty_hint()
         self.x_label = volume.labels[p]
         self.x_label_units = volume.units[p]
         self.y_label = volume.labels[q]
@@ -748,11 +802,18 @@ class VolumePlot(ImageBase):
         self.lock_aspect_ratio = volume.units[p] == volume.units[q] and bool(volume.units[p])
         self.image_updated.emit()
 
+    def _place_empty_hint(self):
+        if not self._empty_hint.isVisible():
+            return
+        rect = self.plot_item.vb.viewRect()
+        self._empty_hint.setPos(rect.center())
+
     def _on_gl_hover(self, pos: QPointF):
         if self.volume is None or self.config.mouse_mode != "follow":
             return
         index = self.gl_view.pick(pos, self.volume, self.config.cut_axis)
         if index is not None and index != self._cut_index:
+            self._stop_following()
             self._cut_index = index
             self._schedule_cut()
 
@@ -766,6 +827,7 @@ class VolumePlot(ImageBase):
         index = self.gl_view.pick(pos, self.volume, self.config.cut_axis)
         if index is None:
             return
+        self._stop_following()
         self._cut_index = index
         self._apply_cut()
         if shift:
@@ -822,6 +884,7 @@ class VolumePlot(ImageBase):
         self._rebuild_thumbs()
 
     def _go_to_pin(self, key: tuple):
+        self._stop_following()
         axis, index = key[:2]
         if axis != self.config.cut_axis:
             self.config.cut_axis = axis
@@ -859,7 +922,7 @@ class VolumePlot(ImageBase):
         volume = self.volume
         cut = volume.slice(axis, index)
         p, q = VolumeData.plane_axes(axis)
-        if volume.display_box()[q] > volume.display_box()[p]:
+        if volume.display_box()[q] >= 1.5 * volume.display_box()[p]:
             cut = cut.T
         finite = cut[np.isfinite(cut)]
         low, high = (finite.min(), finite.max()) if finite.size else (0.0, 1.0)
@@ -889,8 +952,8 @@ class VolumePlot(ImageBase):
                 if elongated and axis == longest:
                     continue
                 proj = self.volume.projection(axis, "sum")
-                top = float(np.nanmax(proj)) if proj.size else 0.0
-                projections[axis] = proj / top if top > 0 else proj
+                low, high = float(np.min(proj)), float(np.max(proj))
+                projections[axis] = (proj - low) / (high - low) if high > low else proj * 0
             dark = self.palette().window().color().lightness() < 128
             glow = QColor(235, 235, 245) if dark else QColor(40, 40, 60)
             self.gl_view.set_projections(projections, glow)
