@@ -1759,3 +1759,18 @@ def test_heatmap_history_scan_id_property_pins_and_unpins(heatmap_widget, fake_b
     heatmap_widget.history_scan_id = ""
     assert heatmap_widget._history_scan_id is None
     assert fake_bridges[-1].scan != "scan-456"
+
+
+def test_heatmap_image_grid_places_its_first_and_last_pixel_on_the_outermost_points():
+    """The centres of the outermost pixels lie on the outermost scan points, at any size."""
+    x, y = np.meshgrid(np.linspace(-5, 5, 11), np.linspace(-5, 5, 11))
+    positions = np.column_stack([x.ravel(), y.ravel()])
+    for oversampling in (1.0, 2.0, 3.5):
+        grid_x, grid_y, transform = Heatmap.build_image_grid(positions, oversampling)
+        width, height = grid_x.shape
+        for i, j in ((0, 0), (width - 1, height - 1), (width // 2, height // 3)):
+            centre = transform.map(QPointF(i + 0.5, j + 0.5))
+            assert centre.x() == pytest.approx(grid_x[i, j])
+            assert centre.y() == pytest.approx(grid_y[i, j])
+        last = transform.map(QPointF(width - 0.5, height - 0.5))
+        assert (last.x(), last.y()) == (pytest.approx(5.0), pytest.approx(5.0))

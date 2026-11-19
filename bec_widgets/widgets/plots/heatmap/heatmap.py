@@ -1310,10 +1310,10 @@ class Heatmap(ImageBase):
 
         x_min, x_max = min(positions[:, 0]), max(positions[:, 0])
         y_min, y_max = min(positions[:, 1]), max(positions[:, 1])
-        x_range = x_max - x_min
-        y_range = y_max - y_min
-        x_scale = x_range / width
-        y_scale = y_range / height
+        # The grid has width (height) samples from min to max, so width - 1 steps between
+        # them: pixel i is centred on sample i, the outermost on the outermost points.
+        x_scale = (x_max - x_min) / (width - 1) if width > 1 and x_max > x_min else 1.0
+        y_scale = (y_max - y_min) / (height - 1) if height > 1 and y_max > y_min else 1.0
 
         transform = QTransform()
         transform.scale(x_scale, y_scale)
