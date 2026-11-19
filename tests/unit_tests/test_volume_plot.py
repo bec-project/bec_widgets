@@ -133,9 +133,13 @@ def test_grid_from_points_merges_readback_jitter():
     xs, ys, zs = np.meshgrid([0, 1, 2, 3], [0, 1, 2], [0, 0.5], indexing="ij")
     points = np.column_stack([xs.ravel(), ys.ravel(), zs.ravel()])
     measured = points + rng.uniform(-2e-3, 2e-3, size=points.shape)
+    # the slow axes keep one readback per row, as a real grid scan reports them
+    row = rng.uniform(-8e-3, 8e-3, size=(1, 3, 2))
+    measured[:, 1] = (ys + row).ravel()
     grid, axes = grid_from_points(*measured.T, np.arange(len(points), dtype=float))
     assert grid.shape == (4, 3, 2)
     np.testing.assert_allclose(axes[0], [0, 1, 2, 3], atol=2e-3)
+    np.testing.assert_allclose(axes[1], [0, 1, 2], atol=8e-3)
     assert np.isfinite(grid).all()
 
 
