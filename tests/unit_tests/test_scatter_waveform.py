@@ -992,3 +992,52 @@ def test_scatter_waveform_bound_groups_ignore_sources_without_data(
     bridges[-1].unbound_sources = [("samy", "samy")]
     swf._on_data_update(_make_update("scan_1"))
     assert not any(label.text.startswith("Warning:") for _, label in swf.info_label.items)
+
+
+def test_scatter_waveform_pinned_to_a_stored_scan_ignores_other_scans(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    bridges = _fake_bridge_factory(monkeypatch)
+    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+    inject_scan_history(swf, scan_history_factory, ("dummy", 24))
+
+    swf.plot("samx", "samy", "bpm4i", scan_id="dummy")
+    assert bridges[-1].scan == "dummy"
+    assert swf.history_scan_id == "dummy" and swf.config.scan_id == "dummy"
+
+    # A scan that starts does not take the plot over.
+    count = len(bridges)
+    swf.on_scan_status({"scan_id": "new-live-scan"}, {})
+    assert len(bridges) == count and swf.scan_id == "dummy"
+
+    # Unpinned it follows the running scan again.
+    swf.history_scan_id = ""
+    assert bridges[-1].scan == "live" and swf.config.scan_id is None
+    swf.plot("samx", "samy", "bpm4i", scan_id="dummy")
+    swf.plot("samx", "samy", "bpm3a")  # a plot without a scan follows the running one
+    assert swf.history_scan_id == "" and bridges[-1].scan == "live"
+
+
+def test_scatter_waveform_pin_is_saved_and_restored_with_a_profile(
+    qtbot, mocked_client, scan_history_factory, monkeypatch, tmp_path
+):
+    # pylint: disable=import-outside-toplevel
+    from bec_widgets.utils.widget_state_manager import WidgetStateManager
+
+    bridges = _fake_bridge_factory(monkeypatch)
+    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+    swf.setObjectName("pinned_scatter")
+    inject_scan_history(swf, scan_history_factory, ("dummy", 24))
+    swf.plot("samx", "samy", "bpm4i", scan_id="dummy")
+    profile = str(tmp_path / "profile.ini")
+    WidgetStateManager(swf).save_state(profile)
+
+    restored = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+    restored.setObjectName("pinned_scatter")
+    inject_scan_history(restored, scan_history_factory, ("dummy", 24))
+    WidgetStateManager(restored).load_state(profile)
+
+    assert (restored.device_x, restored.device_y, restored.device_z) == ("samx", "samy", "bpm4i")
+    assert restored.history_scan_id == "dummy"
+    assert bridges[-1].scan == "dummy"
+    assert bridges[-1].sources == [("samx", "samx"), ("samy", "samy"), ("bpm4i", "bpm4i")]

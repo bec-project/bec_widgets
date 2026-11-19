@@ -5887,6 +5887,7 @@ class ScatterWaveform(RPCBase):
         color_map: "str | None" = "plasma",
         label: "str | None" = None,
         validate_bec: "bool" = True,
+        scan_id: "str | None" = None,
     ) -> "ScatterCurve":
         """
         Plot the data from the device signals.
@@ -5901,6 +5902,8 @@ class ScatterWaveform(RPCBase):
             color_map (str | None): The color map of the scatter waveform.
             label (str | None): The label of the curve.
             validate_bec (bool): Whether to validate the device signals with current BEC instance.
+            scan_id (str | None): A stored scan to show, and keep showing while other scans
+                run. None follows the running scan, or the latest one while none runs.
 
         Returns:
             ScatterCurve: The scatter curve object.
@@ -6005,6 +6008,20 @@ class ScatterWaveform(RPCBase):
     def signal_z(self) -> "str":
         """
         Signal entry for the Z (color) axis device.
+        """
+
+    @property
+    @rpc_call
+    def history_scan_id(self) -> "str":
+        """
+        The stored scan the plot shows, or empty when it follows the running scan.
+        """
+
+    @history_scan_id.setter
+    @rpc_call
+    def history_scan_id(self) -> "str":
+        """
+        The stored scan the plot shows, or empty when it follows the running scan.
         """
 
 
