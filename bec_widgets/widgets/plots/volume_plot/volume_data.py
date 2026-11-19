@@ -211,12 +211,23 @@ class VolumeData:
 
 # ---------------------------------------------------------------------- gridding
 def _levels(coords: np.ndarray, tolerance: float) -> np.ndarray:
-    """Distinct values of ``coords`` merged within ``tolerance``."""
+    """
+    Distinct levels of ``coords``: values closer than ``tolerance`` are one level.
+
+    Measured readbacks scatter a little around each set point. When most gaps between
+    sorted values are tiny and a few are large, the tolerance grows to 50 times the median
+    gap, so each cloud of readbacks becomes one level at its mean.
+    """
     ordered = np.sort(coords[np.isfinite(coords)])
-    if ordered.size == 0:
+    if ordered.size < 2:
         return ordered
-    keep = np.concatenate(([True], np.diff(ordered) > tolerance))
-    return ordered[keep]
+    gaps = np.diff(ordered)
+    threshold = tolerance
+    jitter = 50.0 * float(np.median(gaps))
+    if tolerance < jitter < float(gaps.max()):
+        threshold = jitter
+    groups = np.cumsum(np.concatenate(([True], gaps > threshold))) - 1
+    return np.bincount(groups, weights=ordered) / np.bincount(groups)
 
 
 def _nearest_level_index(levels: np.ndarray, coords: np.ndarray) -> np.ndarray:

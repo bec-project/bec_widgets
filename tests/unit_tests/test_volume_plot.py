@@ -128,6 +128,25 @@ def test_grid_from_points_uses_the_planned_grid_for_a_running_scan():
     np.testing.assert_array_equal(axes[2], [0, 1, 2])
 
 
+def test_grid_from_points_merges_readback_jitter():
+    rng = np.random.default_rng(3)
+    xs, ys, zs = np.meshgrid([0, 1, 2, 3], [0, 1, 2], [0, 0.5], indexing="ij")
+    points = np.column_stack([xs.ravel(), ys.ravel(), zs.ravel()])
+    measured = points + rng.uniform(-2e-3, 2e-3, size=points.shape)
+    grid, axes = grid_from_points(*measured.T, np.arange(len(points), dtype=float))
+    assert grid.shape == (4, 3, 2)
+    np.testing.assert_allclose(axes[0], [0, 1, 2, 3], atol=2e-3)
+    assert np.isfinite(grid).all()
+
+
+def test_grid_from_points_keeps_distinct_single_positions():
+    # a line of positions, each visited once, is not mistaken for jitter
+    x = np.linspace(0, 1, 11)
+    grid, axes = grid_from_points(x, np.zeros(11), np.zeros(11), np.ones(11))
+    assert grid.shape == (11, 1, 1)
+    np.testing.assert_allclose(axes[0], x)
+
+
 def test_grid_from_points_bins_scattered_points():
     rng = np.random.default_rng(1)
     points = rng.uniform(0, 1, size=(2000, 3))
@@ -436,6 +455,47 @@ def test_live_grid_scan_fills_the_planned_grid(volume_plot):
     volume_plot._on_data_update(_update("s1", planned_xyz, np.arange(12.0)))
     assert volume_plot.cut_index == 0
     assert np.isfinite(volume_plot.volume.values).all()
+
+
+def _grid_status(scan_id):
+    slow, mid, fast = np.meshgrid([0, 1, 2], [0, 1], [0, 1], indexing="ij")
+    planned_zxy = np.column_stack([slow.ravel(), mid.ravel(), fast.ravel()]).astype(float)
+    status = {
+        "scan_id": scan_id,
+        "scan_name": "grid_scan",
+        "request_inputs": {"arg_bundle": ["samz", 0, 2, 3, "samx", 0, 1, 2, "samy", 0, 1, 2]},
+        "info": {"positions": planned_zxy.tolist()},
+    }
+    return status, planned_zxy[:, [1, 2, 0]]
+
+
+def test_scan_status_after_the_first_data_still_gives_the_full_grid(volume_plot):
+    with mock.patch(
+        "bec_widgets.widgets.plots.volume_plot.volume_plot.QtDataSubscription", _FakeBridge
+    ):
+        volume_plot.plot("samx", "samy", "samz", "bpm4i")
+    status, planned_xyz = _grid_status("s2")
+    volume_plot._on_data_update(_update("s2", planned_xyz[:5], np.arange(5.0)))
+    assert volume_plot.volume.shape != (2, 2, 3)
+    volume_plot.on_scan_status(status, {})
+    assert volume_plot.volume.shape == (2, 2, 3)
+    assert np.count_nonzero(np.isfinite(volume_plot.volume.values)) == 5
+    # later updates of the same scan keep the plan; repeated status messages change nothing
+    volume_plot.on_scan_status(status, {})
+    volume_plot._on_data_update(_update("s2", planned_xyz[:7], np.arange(7.0)))
+    assert volume_plot.volume.shape == (2, 2, 3)
+    assert np.count_nonzero(np.isfinite(volume_plot.volume.values)) == 7
+
+
+def test_scan_status_is_ignored_while_a_static_volume_is_shown(volume_plot):
+    with mock.patch(
+        "bec_widgets.widgets.plots.volume_plot.volume_plot.QtDataSubscription", _FakeBridge
+    ):
+        volume_plot.plot("samx", "samy", "samz", "bpm4i")
+    volume_plot.set_volume(_ramp_volume().values)
+    volume_plot.on_scan_status(_grid_status("s3")[0], {})
+    assert volume_plot.volume is not None
+    assert volume_plot.scan_id != "s3"
 
 
 def test_planned_positions_only_for_grid_scans_over_our_devices(volume_plot):

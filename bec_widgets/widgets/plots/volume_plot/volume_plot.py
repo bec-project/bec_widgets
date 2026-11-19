@@ -175,6 +175,10 @@ class VolumePlot(ImageBase):
         self._volume_rgba: np.ndarray | None = None
         self._data_bridge: QtDataSubscription | None = None
         self._planned_positions: np.ndarray | None = None
+        #: Scan the planned positions belong to; its status can arrive after its first data.
+        self._planned_scan_id: str | None = None
+        #: Last measured (x, y, z, value) columns, re-gridded when the plan arrives late.
+        self._last_points: tuple[np.ndarray, ...] | None = None
         self._data_bridge_scope: str | None = None
         #: While True the cut follows the newest data of a running scan; any cut the user
         #: makes (slider, click, axis, pinned cut) ends it until the next scan.
@@ -584,6 +588,8 @@ class VolumePlot(ImageBase):
         ) = signals
         self.volume = None
         self._planned_positions = None
+        self._planned_scan_id = None
+        self._last_points = None
         self._setup_data_api_subscription(scan=scan_id or ScanTarget.LIVE)
 
     def _config_sources(self) -> list[tuple[str, str]] | None:
@@ -629,15 +635,22 @@ class VolumePlot(ImageBase):
     @SafeSlot(dict, dict)
     def on_scan_status(self, msg: dict, meta: dict):
         """Take the planned positions of a new scan, for grid scans."""
-        if self._config_sources() is None:
-            return
+        if self._data_bridge is None or self._data_bridge_scope != ScanTarget.LIVE:
+            return  # nothing plotted, a finished scan or a static volume (demo)
         scan_id = msg.get("scan_id")
-        if scan_id is None or scan_id == self.scan_id:
+        if scan_id is None or scan_id == self._planned_scan_id:
             return
-        self.scan_id = scan_id
+        self._planned_scan_id = scan_id
         self._planned_positions = self._planned_from_status(msg)
-        self.volume = None
-        self._follow_live = True
+        if scan_id != self.scan_id:
+            self.scan_id = scan_id
+            self.volume = None
+            self._last_points = None
+            self._follow_live = True
+        elif self._planned_positions is not None and self._last_points is not None:
+            # the data came first: grid it again on the scan's full grid
+            self.volume = None
+            self._show_points(*self._last_points)
 
     def _planned_from_status(self, msg: dict) -> np.ndarray | None:
         """Planned positions in (x, y, z) order of a grid scan over our three devices."""
@@ -675,9 +688,15 @@ class VolumePlot(ImageBase):
         x, y, z, values = (np.asarray(c, dtype=float) for c in expanded)
         if update.scan_id != self.scan_id:
             self.scan_id = update.scan_id
-            self._planned_positions = None
+            if self._planned_scan_id != update.scan_id:
+                self._planned_positions = None
             self.volume = None
             self._follow_live = self._data_bridge_scope == ScanTarget.LIVE
+        self._show_points(x, y, z, values)
+
+    def _show_points(self, x: np.ndarray, y: np.ndarray, z: np.ndarray, values: np.ndarray):
+        """Grid measured points (on the planned grid when known) and show them."""
+        self._last_points = (x, y, z, values)
         grid, axes = grid_from_points(x, y, z, values, planned=self._planned_positions)
         labels = tuple(
             d.device for d in (self.config.device_x, self.config.device_y, self.config.device_z)
