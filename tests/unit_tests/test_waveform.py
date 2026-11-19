@@ -2546,6 +2546,157 @@ def test_skip_large_dataset_warning_suppresses_dialog(qtbot, mocked_client, monk
     assert kept == []
 
 
+def _failed_source(device, error):
+    """A source whose stored data could not be read, as the Data API hands it over."""
+    return SourceData(
+        device=device,
+        entry=device,
+        kind="monitored",
+        ordinals=(),
+        values=(),
+        timestamps=(),
+        complete=True,
+        metadata={"error": error},
+    )
+
+
+def _history_waveform(qtbot, mocked_client, scan_history_factory, *scans):
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    inject_scan_history(wf, scan_history_factory, *scans)
+    return wf
+
+
+@pytest.mark.parametrize(
+    "sources, reason",
+    [
+        # (1) its own source failed
+        (
+            [_failed_source("bpm4i", "file locking flag values don't match")],
+            "file locking flag values don't match",
+        ),
+        # (2) the x source of its scan failed
+        (
+            [
+                _monitored_source("bpm4i", values=(5, 6, 7)),
+                _failed_source("samx", "Stored signal is missing."),
+            ],
+            "Stored signal is missing.",
+        ),
+        # (5) its source is not in the scan: the read ended without it
+        ([_monitored_source("samx", values=(10, 20, 30))], "not available in this scan"),
+    ],
+    ids=["own-source", "x-source", "not-in-scan"],
+)
+def test_history_curve_that_can_get_no_data_stops_waiting_with_the_reason(
+    qtbot, mocked_client, scan_history_factory, monkeypatch, sources, reason
+):
+    _fake_bridge_factory(monkeypatch)
+    wf = _history_waveform(qtbot, mocked_client, scan_history_factory, ("hist1", 1))
+    c = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist1")
+    assert wf.history_curve_waiting(c.name())
+    assert wf.history_curve_error(c.name()) is None
+
+    with qtbot.waitSignal(wf.history_read_failed) as failed:
+        wf._on_history_data_update(_make_update(sources, scan_id="hist1", reason="history"))
+    assert failed.args == ["hist1"]
+    assert wf.history_curve_error(c.name()) == reason
+    assert not wf.history_curve_waiting(c.name())
+
+
+def test_history_curve_keeps_waiting_while_the_read_of_its_scan_goes_on(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    _fake_bridge_factory(monkeypatch)
+    wf = _history_waveform(qtbot, mocked_client, scan_history_factory, ("hist1", 1))
+    c = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist1")
+    # More of the x source is to come, and a rebind carries no data at all: no verdict yet.
+    loading = replace(_monitored_source("samx", values=(10, 20)), complete=False)
+    wf._on_history_data_update(_make_update([loading], scan_id="hist1", reason="history"))
+    wf._on_history_data_update(_make_update([], scan_id="hist1", reason="rebind"))
+    assert wf.history_curve_waiting(c.name())
+    assert wf.history_curve_error(c.name()) is None
+
+
+def test_history_curve_of_a_declined_dataset_fails_without_a_read(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    # (3) the user said no to loading it
+    bridges = _fake_bridge_factory(monkeypatch)
+    wf = _history_waveform(qtbot, mocked_client, scan_history_factory, ("hist1", 1))
+    _oversized(monkeypatch, wf)
+    with mock.patch.object(wf, "_confirm_large_dataset", return_value=False):
+        c = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist1")
+    assert "hist1" not in wf._history_subscriptions
+    assert not [bridge for bridge in bridges if bridge.scan == "hist1"]
+    assert wf.history_curve_error(c.name()) == "not loaded: it is larger than the size limit"
+    assert not wf.history_curve_waiting(c.name())
+
+    # Loading it anyway reads the scan again, without asking a second time.
+    with mock.patch.object(wf, "_confirm_large_dataset", return_value=False) as ask:
+        wf.load_history_sources("hist1", [("bpm4i", "bpm4i")])
+    ask.assert_not_called()
+    assert [bridge.scan for bridge in bridges] == ["hist1"]
+    assert wf.history_curve_error(c.name()) is None
+    assert wf.history_curve_waiting(c.name())
+
+
+def test_history_curve_fails_when_the_read_of_its_scan_cannot_start(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    # (4) the subscription itself raised
+    def refuse(*_args, **_kwargs):
+        raise RuntimeError("no data path serves this scan")
+
+    fake_data_subscriptions(monkeypatch, refuse)
+    wf = _history_waveform(qtbot, mocked_client, scan_history_factory, ("hist1", 1))
+    c = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist1")
+    assert wf.history_curve_error(c.name()) == "no data path serves this scan"
+    assert not wf.history_curve_waiting(c.name())
+
+
+def test_read_history_again_reads_only_the_scan_that_failed(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    _fake_bridge_factory(monkeypatch)
+    wf = _history_waveform(qtbot, mocked_client, scan_history_factory, ("hist1", 1), ("hist2", 2))
+    failed = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist1")
+    drawn = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist2")
+    wf._on_history_data_update(
+        _make_update(
+            [_monitored_source("bpm4i", values=(1, 2)), _monitored_source("samx", values=(3, 4))],
+            scan_id="hist2",
+            reason="history",
+        )
+    )
+    wf._on_history_data_update(
+        _make_update([_failed_source("bpm4i", "busy")], scan_id="hist1", reason="history")
+    )
+    old_bridge, other_bridge = (
+        wf._history_subscriptions["hist1"],
+        wf._history_subscriptions["hist2"],
+    )
+    assert wf.history_curve_error(failed.name()) == "busy"
+
+    wf.read_history_again("hist1")
+
+    assert old_bridge.closed
+    assert wf._history_subscriptions["hist1"] is not old_bridge
+    assert wf._history_subscriptions["hist2"] is other_bridge and not other_bridge.closed
+    assert wf.history_curve_error(failed.name()) is None
+    assert wf.history_curve_waiting(failed.name())
+    np.testing.assert_array_equal(drawn.get_data()[1], [1, 2])
+    # The new read delivers: the curve draws and has no error any more.
+    wf._on_history_data_update(
+        _make_update(
+            [_monitored_source("bpm4i", values=(7, 8)), _monitored_source("samx", values=(1, 2))],
+            scan_id="hist1",
+            reason="history",
+        )
+    )
+    np.testing.assert_array_equal(failed.get_data()[1], [7, 8])
+    assert not wf.history_curve_waiting(failed.name())
+
+
 def test_history_subscription_gates_before_reading(qtbot, mocked_client, monkeypatch):
     """No bridge (and therefore no file read) is created for a declined
     dataset."""

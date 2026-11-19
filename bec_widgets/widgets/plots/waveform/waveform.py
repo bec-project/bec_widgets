@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Literal
 import numpy as np
 import pyqtgraph as pg
 from bec_lib import bec_logger, messages
-from bec_lib.data_api import SCAN_GROUP, AxisMode, ScanTarget, SourceKind
+from bec_lib.data_api import SCAN_GROUP, AxisMode, ScanTarget, SourceKind, UpdateReason
 from bec_lib.device import Positioner
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.lmfit_serializer import serialize_lmfit_params, serialize_param_object
@@ -341,6 +341,9 @@ class Waveform(PlotBase):
     dap_summary_update = Signal(dict, dict)
     new_scan = Signal()
     new_scan_id = Signal(str)
+    #: Scan id of a finished scan whose history curves can get no data from its read; the
+    #: reason of each is in :meth:`history_curve_error`.
+    history_read_failed = Signal(str)
     _overlay_data_loaded = Signal(object, object, object)
 
     roi_changed = Signal(tuple)
@@ -386,6 +389,11 @@ class Waveform(PlotBase):
         # History curves whose stored data is still arriving block by block, and the view
         # range the plot was given for them (to tell whether the user changed it since).
         self._history_curves_loading: set[str] = set()
+        # History curves whose stored data could not be read, with the reason. No data
+        # comes for them any more, so they wait neither for data nor for more blocks.
+        self._history_curve_errors: dict[str, str] = {}
+        # Sources of a pinned scan that are not read, with the reason, per scan id.
+        self._history_unread: dict[str, dict[tuple[str, str], str]] = {}
         self._history_view_range: list | None = None
         self._shutting_down = False
 
@@ -2184,6 +2192,7 @@ class Waveform(PlotBase):
             self._history_curves.remove(curve)
         self._history_curves_awaiting_data.discard(curve.name())
         self._history_curves_loading.discard(curve.name())
+        self._history_curve_errors.pop(curve.name(), None)
         if curve in self._dap_curves:
             self._dap_curves.remove(curve)
 
@@ -2720,6 +2729,11 @@ class Waveform(PlotBase):
         self._cleanup_history_subscriptions()
         if self._shutting_down:
             return
+        for scan_id, sources in self._history_sources_by_scan().items():
+            self._open_history_subscription(scan_id, sources)
+
+    def _history_sources_by_scan(self) -> dict[str, list[tuple[str, str]]]:
+        """The sources of the history curves, per pinned scan."""
         sources_by_scan: dict[str, list[tuple[str, str]]] = {}
         for curve in self._history_curves:
             if curve in self._accumulated_curves:
@@ -2729,30 +2743,64 @@ class Waveform(PlotBase):
             if not scan_id or signal is None:
                 continue
             sources_by_scan.setdefault(scan_id, []).append((signal.device, signal.signal))
-        for scan_id, sources in sources_by_scan.items():
-            sources = self._filter_oversized_sources(sources, scan_id)
-            if not sources:
-                continue
-            scan_item = self.get_history_scan_item(scan_id=scan_id)
-            x_key = self._history_x_source_key(scan_item)
-            if x_key is not None:
-                sources.append(x_key)
-            self._history_x_keys[scan_id] = x_key
-            try:
-                self._history_subscriptions[scan_id] = (
-                    self.bec_dispatcher.connect_data_subscription(
-                        self._on_history_data_update,
-                        sources=list(dict.fromkeys(sources)),
-                        scan=scan_id,
-                        progress_slot=self._on_data_load_progress,
-                        update_rate=self.update_rate,
-                        view_limit_bytes=self._view_limit_bytes(scan_id, sources),
-                    )
-                )
-            except Exception as exc:
-                logger.warning(
-                    f"Failed to configure history data subscription for scan {scan_id}: {exc}"
-                )
+        return sources_by_scan
+
+    def _open_history_subscription(self, scan_id: str, sources: list[tuple[str, str]]) -> None:
+        """
+        Start the read of one pinned scan. Its curves that failed before wait again; those
+        that cannot get data from this read fail at once.
+
+        Args:
+            scan_id(str): The scan.
+            sources(list[tuple[str, str]]): The (device, entry) sources of its curves.
+        """
+        for curve in self._history_curves:
+            name = curve.name()
+            if curve.config.scan_id == scan_id and self._history_curve_errors.pop(name, None):
+                self._history_curves_awaiting_data.add(name)
+        kept = self._filter_oversized_sources(sources, scan_id)
+        self._history_unread[scan_id] = {
+            tuple(source): "not loaded: it is larger than the size limit"
+            for source in sources
+            if source not in kept
+        }
+        if not kept:
+            self._fail_history_curves(scan_id, self._history_unread_reason)
+            return
+        scan_item = self.get_history_scan_item(scan_id=scan_id)
+        x_key = self._history_x_source_key(scan_item)
+        if x_key is not None:
+            kept.append(x_key)
+        self._history_x_keys[scan_id] = x_key
+        try:
+            subscription = self.bec_dispatcher.connect_data_subscription(
+                self._on_history_data_update,
+                sources=list(dict.fromkeys(kept)),
+                scan=scan_id,
+                progress_slot=self._on_data_load_progress,
+                update_rate=self.update_rate,
+                view_limit_bytes=self._view_limit_bytes(scan_id, kept),
+            )
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.warning(
+                f"Failed to configure history data subscription for scan {scan_id}: {exc}"
+            )
+            reason = str(exc) or type(exc).__name__
+            self._fail_history_curves(
+                scan_id,
+                lambda curve: (reason if self.history_curve_waiting(curve.name()) else None),
+            )
+            return
+        self._history_subscriptions[scan_id] = subscription
+
+    def _history_unread_reason(self, curve: Curve) -> str | None:
+        """Why a history curve's source is not read at all, if it is not."""
+        signal = curve.config.signal
+        if signal is None or not self.history_curve_waiting(curve.name()):
+            return None
+        return self._history_unread.get(curve.config.scan_id, {}).get(
+            (signal.device, signal.signal)
+        )
 
     def _cleanup_history_subscriptions(self):
         for subscription in self._history_subscriptions.values():
@@ -2762,6 +2810,7 @@ class Waveform(PlotBase):
                 pass
         self._history_subscriptions = {}
         self._history_x_keys = {}
+        self._history_unread = {}
 
     def _estimate_source_bytes(self, scan: str, source: tuple[str, str]) -> int | None:
         """
@@ -3028,18 +3077,33 @@ class Waveform(PlotBase):
         first_data = False
         grew = False
         for curve in history_curves:
-            if self._render_curve_from_update(curve, update, aligned_columns, x_key):
-                updated_any = True
-                name = curve.name()
-                if name in self._history_curves_awaiting_data:
-                    self._history_curves_awaiting_data.discard(name)
-                    first_data = True
-                if self._history_curve_is_loading(curve, update):
-                    self._history_curves_loading.add(name)
-                    grew = True
-                elif name in self._history_curves_loading:
-                    self._history_curves_loading.discard(name)
-                    grew = True
+            name = curve.name()
+            if not self._render_curve_from_update(curve, update, aligned_columns, x_key):
+                continue
+            self._history_curve_errors.pop(name, None)
+            updated_any = True
+            if name in self._history_curves_awaiting_data:
+                self._history_curves_awaiting_data.discard(name)
+                first_data = True
+            if self._history_curve_is_loading(curve, update):
+                self._history_curves_loading.add(name)
+                grew = True
+            elif name in self._history_curves_loading:
+                self._history_curves_loading.discard(name)
+                grew = True
+        ended = update.reason == UpdateReason.HISTORY and all(
+            self._history_source_done(source) for source in update.sources.values()
+        )
+        subscription = self._history_subscriptions.get(update.scan_id)
+        unbound = (
+            {tuple(key) for key in subscription.unbound_sources}
+            if subscription is not None
+            else set()
+        )
+        self._fail_history_curves(
+            update.scan_id,
+            lambda curve: self._history_failure(curve, update, x_key, unbound, ended),
+        )
         if self._view_box_follows() and all(c._full_bounds is not None for c in history_curves):
             # The view box sets the range itself at the next paint, from the bounds of the
             # whole series. A second range from here would use another padding and move
@@ -3057,6 +3121,133 @@ class Waveform(PlotBase):
                 curve.setClipToView(True)
         if updated_any:
             self.request_dap_update.emit()
+
+    @staticmethod
+    def _history_source_done(source) -> bool:
+        """Whether nothing more of a source comes from the read of its scan."""
+        if source.metadata.get("error"):
+            return True
+        view = source.metadata.get("view")
+        if view is not None:
+            return view["loaded_rows"] >= view["total_rows"]
+        return bool(source.complete)
+
+    def _history_failure(
+        self, curve: Curve, update, x_key: tuple[str, str] | None, unbound: set, ended: bool
+    ) -> str | None:
+        """
+        Why a history curve can get no data from the read of its scan, if it cannot.
+
+        A failed source fails its curves at once. Once the read has ended, a curve that
+        still has no data failed too: its source was not loaded or is not in the scan.
+        """
+        error = self._history_source_error(curve, update, x_key)
+        if error is not None:
+            return error
+        name = curve.name()
+        if not ended or name not in self._history_curves_awaiting_data:
+            return None
+        signal = curve.config.signal
+        key = (signal.device, signal.signal) if signal else None
+        unread = self._history_unread.get(update.scan_id, {}).get(key)
+        if unread is not None:
+            return unread
+        if key in unbound or key not in update.sources:
+            return "not available in this scan"
+        return "no data in this scan"
+
+    def _fail_history_curves(self, scan_id: str, reason_of) -> None:
+        """
+        Mark the history curves of a scan that can get no data, and tell it once.
+
+        Args:
+            scan_id(str): The scan.
+            reason_of(Callable[[Curve], str | None]): Why a curve can get no data, or None.
+        """
+        changed = False
+        for curve in self._history_curves:
+            if curve.config.scan_id != scan_id or curve in self._accumulated_curves:
+                continue
+            reason = reason_of(curve)
+            if reason is None:
+                continue
+            name = curve.name()
+            changed = changed or self._history_curve_errors.get(name) != reason
+            self._history_curve_errors[name] = reason
+            self._history_curves_awaiting_data.discard(name)
+            self._history_curves_loading.discard(name)
+        if changed:
+            self.history_read_failed.emit(scan_id)
+
+    @staticmethod
+    def _history_source_error(curve: Curve, update, x_key: tuple[str, str] | None) -> str | None:
+        """The reason the y or x source of a history curve could not be read, if it failed."""
+        signal = curve.config.signal
+        keys = [(signal.device, signal.signal)] if signal else []
+        if x_key is not None:
+            keys.append(tuple(x_key))
+        for key in keys:
+            source = update.sources.get(key)
+            if source is not None and source.metadata.get("error"):
+                return str(source.metadata["error"])
+        return None
+
+    def history_curve_error(self, name: str) -> str | None:
+        """
+        Why the stored data of a history curve could not be read.
+
+        Args:
+            name(str): The name of the curve.
+
+        Returns:
+            str | None: The reason, or None while the curve has data or still waits for it.
+        """
+        return self._history_curve_errors.get(name)
+
+    def history_curve_waiting(self, name: str) -> bool:
+        """
+        Whether a history curve still waits for its stored data, or for more of it.
+
+        Args:
+            name(str): The name of the curve.
+
+        Returns:
+            bool: True until its scan's read has delivered all of it or failed.
+        """
+        return name in self._history_curves_awaiting_data or name in self._history_curves_loading
+
+    def read_history_again(self, scan_id: str) -> None:
+        """
+        Read the stored data of one pinned scan again, for example after a failed read.
+
+        Only the read of this scan starts anew: the curves of other scans keep what they show.
+
+        Args:
+            scan_id(str): The scan.
+        """
+        subscription = self._history_subscriptions.pop(scan_id, None)
+        if subscription is not None:
+            try:
+                self.bec_dispatcher.disconnect_data_subscription(subscription)
+            except Exception:  # pylint: disable=broad-except
+                pass
+        self._history_x_keys.pop(scan_id, None)
+        sources = self._history_sources_by_scan().get(scan_id)
+        if sources and not self._shutting_down:
+            self._open_history_subscription(scan_id, sources)
+
+    def load_history_sources(self, scan_id: str, sources: list[tuple[str, str]]) -> None:
+        """
+        Load sources of a pinned scan that were not loaded for their size, without asking,
+        and read the scan again.
+
+        Args:
+            scan_id(str): The scan.
+            sources(list[tuple[str, str]]): The (device, entry) sources to load.
+        """
+        for source in sources:
+            self._size_confirmed_sources.add((scan_id, tuple(source)))
+        self.read_history_again(scan_id)
 
     @staticmethod
     def _history_curve_is_loading(curve: Curve, update) -> bool:
