@@ -37,6 +37,32 @@ from bec_widgets.widgets.progress.scan_progressbar.scan_ui import ElidedLabel, a
 from bec_widgets.widgets.progress.stage_bar import Tone, mono_font
 from bec_widgets.widgets.services.bec_queue.queue_model import QueueEntry
 
+#: The look of a row of the queue, shared with other lists of scans drawn in the same style.
+#: Corner radius of a row.
+ROW_RADIUS = 7
+#: Space around the content of a row: left, top, right, bottom.
+ROW_MARGINS = (6, 3, 6, 3)
+#: Space between the parts of a row's line.
+ROW_SPACING = 8
+#: Space between two rows of a list.
+ROW_GAP = 1
+#: Size of the status icon at the start of a finished row.
+ROW_ICON_SIZE = 14
+#: Size of a button at the end of a row, and of its icon.
+ROW_BUTTON_SIZE = 22
+ROW_BUTTON_ICON_SIZE = 16
+#: Opacity of the foreground colour over a hovered row.
+ROW_HOVER_ALPHA = 0.06
+#: Opacity of the primary colour over a selected row.
+ROW_SELECTED_ALPHA = 0.16
+#: Group titles: font size and letter spacing in pixels.
+GROUP_TITLE_FONT_PX = 11
+GROUP_TITLE_LETTER_SPACING = 1
+#: Count badges: corner radius, side padding in pixels and the opacity of their fill.
+BADGE_RADIUS = 9
+BADGE_PADDING = 7
+BADGE_ALPHA = 0.15
+
 
 def set_style(widget: QWidget, sheet: str) -> None:
     """Set a stylesheet only when it changed; restyling on every update makes rows flicker."""
@@ -204,11 +230,11 @@ class CountBadge(QLabel):
     def refresh_style(self) -> None:
         """Re-read the theme colours."""
         colors = theme_colors()
-        bg = css(colors["primary"], 0.15 + 0.75 * self._pulse)
+        bg = css(colors["primary"], BADGE_ALPHA + (0.9 - BADGE_ALPHA) * self._pulse)
         fg = css(colors["on_primary"]) if self._pulse > 0.4 else css(colors["primary"])
         self.setStyleSheet(
-            f"QLabel {{ background: {bg}; color: {fg}; border-radius: 9px; padding: 0 7px;"
-            " font-weight: 600; }"
+            f"QLabel {{ background: {bg}; color: {fg}; border-radius: {BADGE_RADIUS}px;"
+            f" padding: 0 {BADGE_PADDING}px; font-weight: 600; }}"
         )
 
 
@@ -222,8 +248,8 @@ class GroupTitle(QLabel):
     def refresh_style(self) -> None:
         """Re-read the theme colours."""
         self.setStyleSheet(
-            f"color: {css(theme_colors()['muted'])}; font-weight: 700; letter-spacing: 1px;"
-            " font-size: 11px;"
+            f"color: {css(theme_colors()['muted'])}; font-weight: 700;"
+            f" letter-spacing: {GROUP_TITLE_LETTER_SPACING}px; font-size: {GROUP_TITLE_FONT_PX}px;"
         )
 
 
@@ -382,7 +408,7 @@ class AnimatedRow(QFrame):
         self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
         self.body = QVBoxLayout(self)
-        self.body.setContentsMargins(6, 3, 6, 3)
+        self.body.setContentsMargins(*ROW_MARGINS)
         self.body.setSpacing(3)
 
         self._flash_anim = QVariantAnimation(self)
@@ -493,14 +519,14 @@ class AnimatedRow(QFrame):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         rect = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
         path = QPainterPath()
-        path.addRoundedRect(rect, 7, 7)
+        path.addRoundedRect(rect, ROW_RADIUS, ROW_RADIUS)
         if self.selected:
             sel = QColor(colors["primary"])
-            sel.setAlphaF(0.16)
+            sel.setAlphaF(ROW_SELECTED_ALPHA)
             painter.fillPath(path, sel)
         elif self._hover:
             hov = QColor(colors["fg"])
-            hov.setAlphaF(0.06)
+            hov.setAlphaF(ROW_HOVER_ALPHA)
             painter.fillPath(path, hov)
         if self._flash > 0:
             flash = QColor(tone_color(self._flash_tone))

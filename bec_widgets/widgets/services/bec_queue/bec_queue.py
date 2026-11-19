@@ -36,6 +36,11 @@ from bec_widgets.widgets.services.bec_queue.queue_model import (
     ScanQueueModel,
 )
 from bec_widgets.widgets.services.bec_queue.queue_ui import (
+    ROW_BUTTON_ICON_SIZE,
+    ROW_BUTTON_SIZE,
+    ROW_GAP,
+    ROW_ICON_SIZE,
+    ROW_SPACING,
     AnimatedRow,
     CountBadge,
     DetailGrid,
@@ -66,9 +71,9 @@ class ListRow(AnimatedRow):
         self.finished = finished
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         line = QHBoxLayout()
-        line.setSpacing(8)
+        line.setSpacing(ROW_SPACING)
         if finished:
-            self.lead = StatusIcon(self, size=14)
+            self.lead = StatusIcon(self, size=ROW_ICON_SIZE)
         else:
             self.lead = QLabel(self)
             self.lead.setFont(mono_font(-1))
@@ -91,8 +96,8 @@ class ListRow(AnimatedRow):
             self.rerun_button = IconButton(
                 "replay", "Run again with the same parameters", parent=self
             )
-            self.rerun_button.setFixedSize(22, 22)
-            self.rerun_button.setIconSize(QSize(16, 16))
+            self.rerun_button.setFixedSize(ROW_BUTTON_SIZE, ROW_BUTTON_SIZE)
+            self.rerun_button.setIconSize(QSize(ROW_BUTTON_ICON_SIZE, ROW_BUTTON_ICON_SIZE))
             # clicking the button must not also select the row
             self.rerun_button.clicked.connect(lambda: owner.rerun_scan(self.key))
             keep = self.rerun_button.sizePolicy()
@@ -113,8 +118,8 @@ class ListRow(AnimatedRow):
             actions = QHBoxLayout()
             actions.setSpacing(0)
             for button in self.buttons:
-                button.setFixedSize(22, 22)
-                button.setIconSize(QSize(16, 16))
+                button.setFixedSize(ROW_BUTTON_SIZE, ROW_BUTTON_SIZE)
+                button.setIconSize(QSize(ROW_BUTTON_ICON_SIZE, ROW_BUTTON_ICON_SIZE))
                 actions.addWidget(button)
             line.addLayout(actions)
         self.body.addLayout(line)
@@ -621,7 +626,7 @@ class BECQueue(BECWidget, QWidget):
         self.waiting_empty = QLabel("No scans waiting.", self.content)
         layout.addWidget(self.waiting_empty)
         self.waiting_rows = KeyedRowList(
-            lambda e: ListRow(self, e, finished=False), self._update_waiting, self.content, 1
+            lambda e: ListRow(self, e, finished=False), self._update_waiting, self.content, ROW_GAP
         )
         layout.addWidget(self.waiting_rows)
         self.finished_rule = QFrame(self.content)
@@ -632,7 +637,7 @@ class BECQueue(BECWidget, QWidget):
         self.finished_header, self.finished_badge = self._group_header("Finished", badge=True)
         layout.addWidget(self.finished_header)
         self.finished_rows = KeyedRowList(
-            lambda e: ListRow(self, e, finished=True), self._update_finished, self.content, 1
+            lambda e: ListRow(self, e, finished=True), self._update_finished, self.content, ROW_GAP
         )
         layout.addWidget(self.finished_rows)
         layout.addStretch(1)
