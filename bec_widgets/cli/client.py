@@ -56,6 +56,7 @@ _Widgets = {
     "ScatterWaveform": "ScatterWaveform",
     "SignalLabel": "SignalLabel",
     "TextBox": "TextBox",
+    "VolumePlot": "VolumePlot",
     "Waveform": "Waveform",
     "WebsiteWidget": "WebsiteWidget",
 }
@@ -1039,6 +1040,11 @@ class Curve(RPCBase):
     def get_data(self) -> "tuple[np.ndarray | None, np.ndarray | None]":
         """
         Get the data of the curve.
+
+        A curve of more than a million points is drawn reduced; its data is the series
+        it retains, not the points on the screen, so an export or a fit sees every
+        sample at its own x.
+
         Returns:
             tuple[np.ndarray,np.ndarray]: X and Y data of the curve.
         """
@@ -6179,6 +6185,627 @@ class ViewBase(RPCBase):
     def activate(self) -> "None":
         """
         Switch the parent application to this view.
+        """
+
+
+class VolumePlot(RPCBase):
+    """3D view of volume data with cuts along x, y or z, for example of a 3D grid scan."""
+
+    _IMPORT_MODULE = "bec_widgets.widgets.plots.volume_plot.volume_plot"
+
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
+    @property
+    @rpc_call
+    def enable_toolbar(self) -> "bool":
+        """
+        Show Toolbar.
+        """
+
+    @enable_toolbar.setter
+    @rpc_call
+    def enable_toolbar(self) -> "bool":
+        """
+        Show Toolbar.
+        """
+
+    @property
+    @rpc_call
+    def enable_side_panel(self) -> "bool":
+        """
+        Show Side Panel
+        """
+
+    @enable_side_panel.setter
+    @rpc_call
+    def enable_side_panel(self) -> "bool":
+        """
+        Show Side Panel
+        """
+
+    @property
+    @rpc_call
+    def enable_fps_monitor(self) -> "bool":
+        """
+        Enable the FPS monitor.
+        """
+
+    @enable_fps_monitor.setter
+    @rpc_call
+    def enable_fps_monitor(self) -> "bool":
+        """
+        Enable the FPS monitor.
+        """
+
+    @property
+    @rpc_call
+    def show_info_label(self) -> "bool":
+        """
+        Whether the plot info label is shown.
+        """
+
+    @show_info_label.setter
+    @rpc_call
+    def show_info_label(self) -> "bool":
+        """
+        Whether the plot info label is shown.
+        """
+
+    @rpc_call
+    def set(self, **kwargs):
+        """
+        Set the properties of the plot widget.
+
+        Args:
+            **kwargs: Keyword arguments for the properties to be set.
+
+        Possible properties:
+            - title: str
+            - x_label: str
+            - y_label: str
+            - x_scale: Literal["linear", "log"]
+            - y_scale: Literal["linear", "log"]
+            - x_lim: tuple
+            - y_lim: tuple
+            - legend_label_size: int
+        """
+
+    @property
+    @rpc_call
+    def title(self) -> "str":
+        """
+        Set title of the plot.
+        """
+
+    @title.setter
+    @rpc_call
+    def title(self) -> "str":
+        """
+        Set title of the plot.
+        """
+
+    @property
+    @rpc_call
+    def x_label(self) -> "str":
+        """
+        The set label for the x-axis.
+        """
+
+    @x_label.setter
+    @rpc_call
+    def x_label(self) -> "str":
+        """
+        The set label for the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def y_label(self) -> "str":
+        """
+        The set label for the y-axis.
+        """
+
+    @y_label.setter
+    @rpc_call
+    def y_label(self) -> "str":
+        """
+        The set label for the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def x_limits(self) -> "QPointF":
+        """
+        Get the x limits of the plot.
+        """
+
+    @x_limits.setter
+    @rpc_call
+    def x_limits(self) -> "QPointF":
+        """
+        Get the x limits of the plot.
+        """
+
+    @property
+    @rpc_call
+    def y_limits(self) -> "QPointF":
+        """
+        Get the y limits of the plot.
+        """
+
+    @y_limits.setter
+    @rpc_call
+    def y_limits(self) -> "QPointF":
+        """
+        Get the y limits of the plot.
+        """
+
+    @property
+    @rpc_call
+    def x_grid(self) -> "bool":
+        """
+        Show grid on the x-axis.
+        """
+
+    @x_grid.setter
+    @rpc_call
+    def x_grid(self) -> "bool":
+        """
+        Show grid on the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def y_grid(self) -> "bool":
+        """
+        Show grid on the y-axis.
+        """
+
+    @y_grid.setter
+    @rpc_call
+    def y_grid(self) -> "bool":
+        """
+        Show grid on the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def inner_axes(self) -> "bool":
+        """
+        Show inner axes of the plot widget.
+        """
+
+    @inner_axes.setter
+    @rpc_call
+    def inner_axes(self) -> "bool":
+        """
+        Show inner axes of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def outer_axes(self) -> "bool":
+        """
+        Show the outer axes of the plot widget.
+        """
+
+    @outer_axes.setter
+    @rpc_call
+    def outer_axes(self) -> "bool":
+        """
+        Show the outer axes of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Whether the aspect ratio is locked.
+        """
+
+    @lock_aspect_ratio.setter
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Whether the aspect ratio is locked.
+        """
+
+    @rpc_call
+    def auto_range(self, value: "bool" = True):
+        """
+        On demand apply autorange to the plot item based on the visible curves.
+
+        Args:
+            value(bool): If True, apply autorange to the visible curves.
+        """
+
+    @property
+    @rpc_call
+    def auto_range_x(self) -> "bool":
+        """
+        Set auto range for the x-axis.
+        """
+
+    @auto_range_x.setter
+    @rpc_call
+    def auto_range_x(self) -> "bool":
+        """
+        Set auto range for the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def auto_range_y(self) -> "bool":
+        """
+        Set auto range for the y-axis.
+        """
+
+    @auto_range_y.setter
+    @rpc_call
+    def auto_range_y(self) -> "bool":
+        """
+        Set auto range for the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        Set X-axis to log scale if True, linear if False.
+        """
+
+    @x_log.setter
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        Set X-axis to log scale if True, linear if False.
+        """
+
+    @property
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        Set Y-axis to log scale if True, linear if False.
+        """
+
+    @y_log.setter
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        Set Y-axis to log scale if True, linear if False.
+        """
+
+    @property
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        The font size of the legend font.
+        """
+
+    @legend_label_size.setter
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        The font size of the legend font.
+        """
+
+    @property
+    @rpc_call
+    def minimal_crosshair_precision(self) -> "int":
+        """
+        Minimum decimal places for crosshair when dynamic precision is enabled.
+        """
+
+    @minimal_crosshair_precision.setter
+    @rpc_call
+    def minimal_crosshair_precision(self) -> "int":
+        """
+        Minimum decimal places for crosshair when dynamic precision is enabled.
+        """
+
+    @property
+    @rpc_call
+    def update_rate(self) -> "float":
+        """
+        Rate at which data subscriptions deliver updates to the widget, in Hz.
+
+        Clamped to 1-100 Hz. Each widget class defines its own default via
+        ``DEFAULT_UPDATE_RATE`` (25 Hz unless overridden).
+        """
+
+    @update_rate.setter
+    @rpc_call
+    def update_rate(self) -> "float":
+        """
+        Rate at which data subscriptions deliver updates to the widget, in Hz.
+
+        Clamped to 1-100 Hz. Each widget class defines its own default via
+        ``DEFAULT_UPDATE_RATE`` (25 Hz unless overridden).
+        """
+
+    @rpc_timeout(None)
+    @rpc_call
+    def screenshot(self, file_name: "str | None" = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
+        """
+
+    @property
+    @rpc_call
+    def color_map(self) -> "str":
+        """
+        Colour map of the volume, the cut and the pinned cuts.
+        """
+
+    @color_map.setter
+    @rpc_call
+    def color_map(self) -> "str":
+        """
+        Colour map of the volume, the cut and the pinned cuts.
+        """
+
+    @property
+    @rpc_call
+    def v_range(self) -> "QPointF":
+        """
+        Set the v_range of the main image.
+        """
+
+    @v_range.setter
+    @rpc_call
+    def v_range(self) -> "QPointF":
+        """
+        Set the v_range of the main image.
+        """
+
+    @property
+    @rpc_call
+    def autorange(self) -> "bool":
+        """
+        Whether autorange is enabled.
+        """
+
+    @autorange.setter
+    @rpc_call
+    def autorange(self) -> "bool":
+        """
+        Whether autorange is enabled.
+        """
+
+    @property
+    @rpc_call
+    def enable_simple_colorbar(self) -> "bool":
+        """
+        Enable the simple colorbar.
+        """
+
+    @enable_simple_colorbar.setter
+    @rpc_call
+    def enable_simple_colorbar(self) -> "bool":
+        """
+        Enable the simple colorbar.
+        """
+
+    @property
+    @rpc_call
+    def enable_full_colorbar(self) -> "bool":
+        """
+        Enable the full colorbar.
+        """
+
+    @enable_full_colorbar.setter
+    @rpc_call
+    def enable_full_colorbar(self) -> "bool":
+        """
+        Enable the full colorbar.
+        """
+
+    @property
+    @rpc_call
+    def main_image(self) -> "ImageItem":
+        """
+        The image item showing the current cut.
+        """
+
+    @rpc_call
+    def plot(
+        self,
+        device_x: "str",
+        device_y: "str",
+        device_z: "str",
+        device_value: "str",
+        signal_x: "str | None" = None,
+        signal_y: "str | None" = None,
+        signal_z: "str | None" = None,
+        signal_value: "str | None" = None,
+        scan_id: "str | None" = None,
+    ) -> "None":
+        """
+        Plot a monitored signal against three positioners, live or from a finished scan.
+
+        A 3D grid scan fills its whole grid from the start; other scans are gridded from
+        the measured positions.
+
+        Args:
+            device_x (str): Positioner of the first axis.
+            device_y (str): Positioner of the second axis.
+            device_z (str): Positioner of the third axis.
+            device_value (str): Device whose signal is shown.
+            signal_x (str | None): Entry of device_x; the device's hinted signal by default.
+            signal_y (str | None): Entry of device_y.
+            signal_z (str | None): Entry of device_z.
+            signal_value (str | None): Entry of device_value.
+            scan_id (str | None): A finished scan; the running or next scan when None.
+        """
+
+    @rpc_call
+    def set_volume(
+        self,
+        values: "np.ndarray",
+        x: "np.ndarray | None" = None,
+        y: "np.ndarray | None" = None,
+        z: "np.ndarray | None" = None,
+        labels: "tuple[str, str, str] | None" = None,
+        units: "tuple[str, str, str] | None" = None,
+        value_label: "str" = "value",
+    ) -> "None":
+        """
+        Show a 3D array.
+
+        Args:
+            values (np.ndarray): Array of shape (nx, ny, nz); NaN marks voxels without data.
+            x (np.ndarray | None): Voxel centre coordinates of the first axis.
+            y (np.ndarray | None): Voxel centre coordinates of the second axis.
+            z (np.ndarray | None): Voxel centre coordinates of the third axis.
+            labels (tuple[str, str, str] | None): Axis names.
+            units (tuple[str, str, str] | None): Axis units.
+            value_label (str): Name of the values.
+        """
+
+    @rpc_call
+    def load_demo(self, astigmatism: "float" = 1.0, central_stop: "float" = 0.25) -> "None":
+        """
+        Show the simulated astigmatic beam (soft X-ray zone plate, about 1.24 keV).
+
+        Args:
+            astigmatism (float): Astigmatism in waves; it sets the distance of the foci.
+            central_stop (float): Central stop radius as a fraction of the aperture.
+        """
+
+    @property
+    @rpc_call
+    def cut_axis(self) -> "str":
+        """
+        Axis the cut is perpendicular to: "x", "y" or "z".
+        """
+
+    @cut_axis.setter
+    @rpc_call
+    def cut_axis(self) -> "str":
+        """
+        Axis the cut is perpendicular to: "x", "y" or "z".
+        """
+
+    @property
+    @rpc_call
+    def cut_index(self) -> "int":
+        """
+        Voxel index of the cut along the cut axis.
+        """
+
+    @cut_index.setter
+    @rpc_call
+    def cut_index(self) -> "int":
+        """
+        Voxel index of the cut along the cut axis.
+        """
+
+    @rpc_call
+    def cut_coordinate(self) -> "float | None":
+        """
+        Coordinate of the current cut along the cut axis.
+        """
+
+    @property
+    @rpc_call
+    def mouse_mode(self) -> "str":
+        """
+        What the pointer does over the volume: "click" (click to cut) or "follow".
+        """
+
+    @mouse_mode.setter
+    @rpc_call
+    def mouse_mode(self) -> "str":
+        """
+        What the pointer does over the volume: "click" (click to cut) or "follow".
+        """
+
+    @property
+    @rpc_call
+    def clip_volume(self) -> "bool":
+        """
+        Hide the volume in front of the cut.
+        """
+
+    @clip_volume.setter
+    @rpc_call
+    def clip_volume(self) -> "bool":
+        """
+        Hide the volume in front of the cut.
+        """
+
+    @property
+    @rpc_call
+    def show_projections(self) -> "bool":
+        """
+        Show projections on the far walls of the box.
+        """
+
+    @show_projections.setter
+    @rpc_call
+    def show_projections(self) -> "bool":
+        """
+        Show projections on the far walls of the box.
+        """
+
+    @property
+    @rpc_call
+    def opacity(self) -> "float":
+        """
+        Opacity of the brightest voxel, 0..1.
+        """
+
+    @opacity.setter
+    @rpc_call
+    def opacity(self) -> "float":
+        """
+        Opacity of the brightest voxel, 0..1.
+        """
+
+    @rpc_call
+    def pin_cut(self, label: "str | None" = None) -> "None":
+        """
+        Pin the current cut: it stays outlined in 3D and appears in the cut strip.
+
+        Args:
+            label (str | None): Name of the cut; its coordinate when None.
+        """
+
+    @rpc_call
+    def clear_pinned_cuts(self) -> "None":
+        """
+        Remove all pinned cuts.
+        """
+
+    @rpc_call
+    def pinned_cuts(self) -> "list[dict]":
+        """
+        The pinned cuts.
+
+        Returns:
+            list[dict]: One dict per cut with axis, index, coordinate and label.
+        """
+
+    @rpc_call
+    def reset_camera(self) -> "None":
+        """
+        Look at the whole volume from the default direction.
         """
 
 

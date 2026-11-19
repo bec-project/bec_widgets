@@ -104,6 +104,7 @@ designer_plugins = {
     "StopButton": ("bec_widgets.widgets.control.buttons.stop_button.stop_button", "StopButton"),
     "TextBox": ("bec_widgets.widgets.editors.text_box.text_box", "TextBox"),
     "ToggleSwitch": ("bec_widgets.widgets.utility.toggle.toggle", "ToggleSwitch"),
+    "VolumePlot": ("bec_widgets.widgets.plots.volume_plot.volume_plot", "VolumePlot"),
     "Waveform": ("bec_widgets.widgets.plots.waveform.waveform", "Waveform"),
     "WebsiteWidget": ("bec_widgets.widgets.editors.website.website", "WebsiteWidget"),
     "WidgetFinderComboBox": (
@@ -158,6 +159,7 @@ widget_icons = {
     "StopButton": "dangerous",
     "TextBox": "chat",
     "ToggleSwitch": "toggle_on",
+    "VolumePlot": "view_in_ar",
     "Waveform": "show_chart",
     "WebsiteWidget": "travel_explore",
     "WidgetFinderComboBox": "frame_inspect",
