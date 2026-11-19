@@ -90,6 +90,11 @@ class HeatmapConfig(ConnectionConfig):
     device_z: HeatmapDeviceSignal | None = Field(
         None, description="The z device signal of the heatmap."
     )
+    scan_id: str | None = Field(
+        None,
+        description="The stored scan the heatmap shows; None follows the running scan, or the "
+        "latest one while none runs.",
+    )
 
     model_config: dict = {"validate_assignment": True}
     _validate_color_palette = field_validator("color_map")(Colors.validate_color_map)
@@ -237,6 +242,8 @@ class Heatmap(ImageBase):
         "device_z.setter",
         "signal_z",
         "signal_z.setter",
+        "history_scan_id",
+        "history_scan_id.setter",
     ]
 
     PLUGIN = True
@@ -281,8 +288,6 @@ class Heatmap(ImageBase):
         self.heatmap_dialog = None
         self.scan_history_dialog = None
         self.scan_history_widget = None
-        # Scan ID the widget is pinned to when plotting from history; None means live mode.
-        self._history_scan_id: str | None = None
         self._selected_history_scan_id: str | None = None
         self.show_info_label = self._image_config.show_config_label
         self.reload = False
@@ -410,6 +415,7 @@ class Heatmap(ImageBase):
             enforce_interpolation=enforce_interpolation,
             lock_aspect_ratio=lock_aspect_ratio,
             show_config_label=show_config_label,
+            scan_id=scan_id or None,
         )
         self.show_info_label = show_config_label
         self.color_map = color_map
@@ -428,12 +434,25 @@ class Heatmap(ImageBase):
         # Also notifies settings widgets, which re-render via update_plot
         self.heatmap_property_changed.emit()
 
+    @property
+    def _history_scan_id(self) -> str | None:
+        """The stored scan the widget is pinned to; None means it follows the running scan."""
+        config = getattr(self, "_image_config", None)
+        return None if config is None else config.scan_id
+
+    @_history_scan_id.setter
+    def _history_scan_id(self, scan_id: str | None) -> None:
+        self._image_config.scan_id = scan_id
+
     def _start_data_feed(self):
         """
-        Bind the widget to the running scan or, while idle, to the latest
-        finished scan (served by the history plugin); a live-follow subscription
-        replaces the idle binding when the next scan starts.
+        Bind the widget to the stored scan it is pinned to, else to the running scan or,
+        while idle, to the latest finished scan (served by the history plugin); a
+        live-follow subscription replaces the idle binding when the next scan starts.
         """
+        if self._history_scan_id is not None:
+            self.update_with_scan_history(scan_id=self._history_scan_id)
+            return
         self._fetch_running_scan()
         if self.scan_item is not None and not hasattr(self.scan_item, "live_data"):
             self._setup_data_api_subscription(scan=self.scan_id)
@@ -1592,10 +1611,37 @@ class Heatmap(ImageBase):
                     signal_y=signal_y,
                     signal_z=signal_z,
                     validate_bec=False,  # Don't validate - entries already validated
+                    scan_id=self._history_scan_id,
                 )
             except Exception as e:
                 logger.debug(f"Auto-plot failed: {e}")
                 pass  # Silently fail if plot cannot be called yet
+
+    @SafeProperty(str)
+    def history_scan_id(self) -> str:
+        """The stored scan the heatmap shows, or empty when it follows the running scan."""
+        return self._history_scan_id or ""
+
+    @history_scan_id.setter
+    def history_scan_id(self, scan_id: str) -> None:
+        """
+        Show a stored scan, and keep showing it while other scans run; saved with a profile.
+
+        Args:
+            scan_id(str): The scan's id, or empty to follow the running scan again.
+        """
+        scan_id = scan_id or None
+        if scan_id == self._history_scan_id:
+            return
+        self._history_scan_id = scan_id
+        self.property_changed.emit("history_scan_id", scan_id or "")
+        if self._config_sources() is None:
+            return  # without its three devices the heatmap binds when they are set
+        if scan_id is None:
+            self._start_data_feed()
+            self.heatmap_property_changed.emit()
+        else:
+            self.update_with_scan_history(scan_id=scan_id)
 
     @SafeProperty(str)
     def interpolation_method(self) -> str:

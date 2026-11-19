@@ -1712,3 +1712,50 @@ def test_heatmap_alignment_warning_follows_the_bound_scan(heatmap_widget, fake_b
     assert not any(
         label.text.startswith("Warning:") for _, label in heatmap_widget.info_label.items
     )
+
+
+def test_heatmap_pin_is_saved_and_restored_with_a_profile(
+    qtbot, mocked_client, fake_bridges, tmp_path
+):
+    # pylint: disable=import-outside-toplevel
+    from bec_widgets.utils.widget_state_manager import WidgetStateManager
+
+    history_scan = mock.MagicMock()
+    history_scan.scan_id = "scan-456"
+    heatmap = Heatmap(client=mocked_client)
+    qtbot.addWidget(heatmap)
+    heatmap.setObjectName("pinned_heatmap")
+    with mock.patch.object(Heatmap, "get_history_scan_item", return_value=history_scan):
+        heatmap.plot(device_x="samx", device_y="samy", device_z="bpm4i", scan_id="scan-456")
+        assert heatmap.history_scan_id == "scan-456"
+        profile = str(tmp_path / "profile.ini")
+        WidgetStateManager(heatmap).save_state(profile)
+
+        restored = Heatmap(client=mocked_client)
+        qtbot.addWidget(restored)
+        restored.setObjectName("pinned_heatmap")
+        WidgetStateManager(restored).load_state(profile)
+
+    assert (restored.device_x, restored.device_y, restored.device_z) == ("samx", "samy", "bpm4i")
+    assert restored.history_scan_id == "scan-456"
+    assert restored.scan_id == "scan-456"
+    assert fake_bridges[-1].scan == "scan-456"
+    assert fake_bridges[-1].sources == [("samx", "samx"), ("samy", "samy"), ("bpm4i", "bpm4i")]
+
+
+def test_heatmap_history_scan_id_property_pins_and_unpins(heatmap_widget, fake_bridges):
+    history_scan = mock.MagicMock()
+    history_scan.scan_id = "scan-456"
+    heatmap_widget.plot(device_x="samx", device_y="samy", device_z="bpm4i")
+    with mock.patch.object(heatmap_widget, "get_history_scan_item", return_value=history_scan):
+        heatmap_widget.history_scan_id = "scan-456"
+    assert heatmap_widget._history_scan_id == "scan-456"
+    assert fake_bridges[-1].scan == "scan-456"
+
+    # A redraw by property keeps the pin; plot() rebuilds the config but takes it along.
+    heatmap_widget.device_z = "bpm4i"
+    assert heatmap_widget.history_scan_id == "scan-456"
+
+    heatmap_widget.history_scan_id = ""
+    assert heatmap_widget._history_scan_id is None
+    assert fake_bridges[-1].scan != "scan-456"

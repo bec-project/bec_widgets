@@ -2471,6 +2471,20 @@ class Heatmap(RPCBase):
         Signal entry for the Z (color) axis device.
         """
 
+    @property
+    @rpc_call
+    def history_scan_id(self) -> "str":
+        """
+        The stored scan the heatmap shows, or empty when it follows the running scan.
+        """
+
+    @history_scan_id.setter
+    @rpc_call
+    def history_scan_id(self) -> "str":
+        """
+        The stored scan the heatmap shows, or empty when it follows the running scan.
+        """
+
 
 class Image(RPCBase):
     """Image widget for displaying 2D data."""
