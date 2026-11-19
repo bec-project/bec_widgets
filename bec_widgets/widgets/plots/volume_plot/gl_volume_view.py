@@ -13,7 +13,10 @@ widget keeps working with its 2D cut.
 
 from __future__ import annotations
 
+import ctypes
+import ctypes.util
 import os
+import sys
 from dataclasses import dataclass
 
 import numpy as np
@@ -58,6 +61,10 @@ def opengl_status(refresh: bool = False) -> GLInfo:
     global _STATUS
     if os.environ.get(DISABLE_ENV, "").strip() not in ("", "0"):
         return GLInfo(False, f"3D view turned off ({DISABLE_ENV} is set).")
+    if os.environ.get("LIBGL_ALWAYS_INDIRECT", "").strip() not in ("", "0"):
+        # Indirect GLX offers OpenGL 1.4 at best, and creating a context through it can
+        # take the X connection down (seen with Xvfb +iglx), so do not even try.
+        return GLInfo(False, "3D view is off: LIBGL_ALWAYS_INDIRECT is set (indirect GLX).")
     if _STATUS is not None and not refresh:
         return GLInfo(*_STATUS)
     info = _probe_opengl()
@@ -65,12 +72,25 @@ def opengl_status(refresh: bool = False) -> GLInfo:
     return info
 
 
-def _probe_opengl() -> GLInfo:
+def _current_egl_context() -> bool:
+    """
+    Whether the current OpenGL context is an EGL one (Linux only).
+
+    Qt picks EGL on Wayland and, on X11, when the X server has no GLX (some VNC and remote
+    setups). PyOpenGL must then use its EGL platform as well, or every call fails with
+    "no valid context".
+    """
+    if not sys.platform.startswith("linux"):
+        return False
     try:
-        import pyqtgraph.opengl  # noqa: F401  pylint: disable=unused-import
-        from OpenGL import GL
-    except Exception as exc:  # ImportError, or a broken libGL
-        return GLInfo(False, f"3D view needs PyOpenGL ({exc.__class__.__name__}).")
+        egl = ctypes.CDLL(ctypes.util.find_library("EGL") or "libEGL.so.1")
+        egl.eglGetCurrentContext.restype = ctypes.c_void_p
+        return bool(egl.eglGetCurrentContext())
+    except (OSError, AttributeError):
+        return False
+
+
+def _probe_opengl() -> GLInfo:
     from qtpy.QtGui import QGuiApplication, QOffscreenSurface, QOpenGLContext
 
     platform = QGuiApplication.platformName()
@@ -82,21 +102,44 @@ def _probe_opengl() -> GLInfo:
     surface = QOffscreenSurface()
     surface.setFormat(context.format())
     surface.create()
+    if not context.makeCurrent(surface):
+        return GLInfo(False, "3D view needs OpenGL; the OpenGL context does not start.")
     try:
-        if not context.makeCurrent(surface):
-            return GLInfo(False, "3D view needs OpenGL; the OpenGL context does not start.")
+        if _current_egl_context() and "OpenGL" not in sys.modules:
+            # PyOpenGL chooses its platform once, at import; make it match Qt's.
+            os.environ.setdefault("PYOPENGL_PLATFORM", "egl")
+        try:
+            import pyqtgraph.opengl  # noqa: F401  pylint: disable=unused-import
+            from OpenGL import GL
+            from OpenGL import platform as gl_platform
+        except Exception as exc:  # ImportError, or a broken libGL
+            return GLInfo(False, f"3D view needs PyOpenGL ({exc.__class__.__name__}).")
+        if not gl_platform.PLATFORM.GetCurrentContext():
+            name = os.environ.get("PYOPENGL_PLATFORM", "default")
+            return GLInfo(
+                False,
+                "3D view needs OpenGL; Qt and PyOpenGL use different OpenGL platforms "
+                f"(PYOPENGL_PLATFORM={name}).",
+            )
         version = context.format().version()
         renderer = GL.glGetString(GL.GL_RENDERER)
         renderer = renderer.decode(errors="replace") if isinstance(renderer, bytes) else ""
-        context.doneCurrent()
     except Exception as exc:  # pragma: no cover - driver specific
         return GLInfo(False, f"3D view needs OpenGL; probing failed ({exc}).")
+    finally:
+        context.doneCurrent()
     if not context.isOpenGLES() and tuple(version) < (2, 1):
         return GLInfo(
             False, f"3D view needs OpenGL 2.1; this display has {version[0]}.{version[1]}."
         )
     software = any(name in renderer.lower() for name in ("llvmpipe", "softpipe", "swrast"))
     return GLInfo(True, f"OpenGL {version[0]}.{version[1]}, {renderer}", software)
+
+
+def remote_x11_display() -> bool:
+    """Whether the X display is forwarded over SSH (ssh -X): every frame crosses the network."""
+    display = os.environ.get("DISPLAY", "")
+    return bool(os.environ.get("SSH_CONNECTION")) and bool(display) and not display.startswith(":")
 
 
 def volume_rgba(
@@ -269,7 +312,10 @@ class VolumeGLView(QWidget):
         self.renderer_label.setObjectName("volume_gl_renderer")
         self.renderer_label.setProperty("variant", "muted")
         self.renderer_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-        if self.info.available and self.info.software:
+        if self.info.available and remote_x11_display():
+            self.renderer_label.setText("Forwarded display: turning may be slow")
+            self.renderer_label.setToolTip(self.info.message)
+        elif self.info.available and self.info.software:
             self.renderer_label.setText("Software OpenGL: turning may be slow")
             self.renderer_label.setToolTip(self.info.message)
         self.renderer_label.setVisible(bool(self.renderer_label.text()))

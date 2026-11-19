@@ -206,6 +206,27 @@ def test_opengl_status_can_be_turned_off(monkeypatch):
     assert gl_volume_view.DISABLE_ENV in info.message
 
 
+def test_opengl_status_refuses_indirect_glx(monkeypatch):
+    monkeypatch.delenv(gl_volume_view.DISABLE_ENV, raising=False)
+    monkeypatch.setenv("LIBGL_ALWAYS_INDIRECT", "1")
+    info = opengl_status(refresh=True)
+    assert not info.available and "LIBGL_ALWAYS_INDIRECT" in info.message
+
+
+@pytest.mark.parametrize(
+    "ssh, display, remote",
+    [
+        ("1.2.3.4 5 6.7.8.9 22", "localhost:10.0", True),
+        ("", "localhost:10.0", False),
+        ("1.2.3.4 5 6.7.8.9 22", ":0", False),
+    ],
+)
+def test_remote_x11_display(monkeypatch, ssh, display, remote):
+    monkeypatch.setenv("SSH_CONNECTION", ssh)
+    monkeypatch.setenv("DISPLAY", display)
+    assert gl_volume_view.remote_x11_display() is remote
+
+
 def test_opengl_status_reports_the_offscreen_platform(monkeypatch):
     monkeypatch.delenv(gl_volume_view.DISABLE_ENV, raising=False)
     info = opengl_status(refresh=True)
