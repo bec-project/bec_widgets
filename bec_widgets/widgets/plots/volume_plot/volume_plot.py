@@ -439,7 +439,7 @@ class VolumePlot(ImageBase):
             return
         dark = theme != "light"
         palette = self.palette()
-        background = QColor("#0b0b0f") if dark else palette.base().color()
+        background = QColor("#0b0b0f") if dark else palette.window().color()
         self.gl_view.set_dark(dark, background)
         self.gl_view.set_box_color(QColor(255, 255, 255, 70) if dark else QColor(0, 0, 0, 90))
         self._refresh_scene_decor()
