@@ -1952,6 +1952,37 @@ def test_x_label_says_index_when_no_curve_can_be_drawn_against_the_x_device(
     assert wf.x_label_suffix == " (custom: samx-samx)"
 
 
+def test_auto_x_uses_the_scan_motor_for_async_curves_of_the_scan_group(
+    qtbot, mocked_client, monkeypatch
+):
+    """
+    An async signal that declares the correlation group "monitored" delivers one value per
+    scan point. In auto mode it is drawn against the scan motor like a monitored signal;
+    an async curve of another group keeps the plot on the index.
+    """
+    created = _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    curve = wf.plot(arg1="async_device", label="async_device-async_device")
+    wf.scan_id = "dummy"
+    monkeypatch.setattr(wf, "_report_devices_no_file_io", lambda scan_item: ["samx"])
+    wf.scan_item = mock.MagicMock()
+    wf._async_curves = [curve]
+    y = _async_source("async_device", values=(1, 2, 3))
+    x = _monitored_source("samx", values=(10, 20, 30))
+    key = ("async_device", "async_device")
+
+    created[-1].groups = {CorrelationGroup.standalone(*key): [key]}
+    wf._on_data_update(_make_update([y, x]))
+    assert wf._curve_data_axes[curve] == "index"
+    assert wf.x_label_suffix == " (auto: index)"
+
+    created[-1].groups = {SCAN_GROUP: [("samx", "samx"), key]}
+    wf._on_data_update(_make_update([y, x]))
+    np.testing.assert_array_equal(curve.get_data()[0], [10, 20, 30])
+    assert wf._curve_data_axes[curve] == ("samx", "samx")
+    assert wf.x_label_suffix == " (auto: samx-samx)"
+
+
 def test_async_row_is_paired_with_the_x_row_of_the_same_acquisition(
     qtbot, mocked_client, monkeypatch
 ):

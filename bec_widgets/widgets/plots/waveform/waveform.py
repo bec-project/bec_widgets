@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Literal
 import numpy as np
 import pyqtgraph as pg
 from bec_lib import bec_logger, messages
-from bec_lib.data_api import AxisMode, ScanTarget, SourceKind
+from bec_lib.data_api import SCAN_GROUP, AxisMode, ScanTarget, SourceKind
 from bec_lib.device import Positioner
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.lmfit_serializer import serialize_lmfit_params, serialize_param_object
@@ -2226,9 +2226,10 @@ class Waveform(PlotBase):
     def _auto_x_source_key(self) -> tuple[str, str] | None:
         """
         The x source the auto mode resolves to for the current scan: None (index) when
-        async curves are present, otherwise the first device from the scan report.
+        an async curve is present that is not recorded point by point, otherwise the
+        first device from the scan report.
         """
-        if self._async_curves:
+        if not self._async_curves_follow_the_scan():
             return None
         if self.scan_item is None:
             return None
@@ -2249,6 +2250,22 @@ class Waveform(PlotBase):
         except Exception:
             return None
         return (device_x, signal_x)
+
+    def _async_curves_follow_the_scan(self) -> bool:
+        """
+        Whether every async curve can be drawn against the scan motor.
+
+        That holds for async signals of the scan group: they declare the correlation
+        group ``"monitored"``, one value per scan point. The bound subscription tells.
+        """
+        if not self._async_curves:
+            return True
+        groups = {} if self._data_bridge is None else self._data_bridge.groups
+        scan_group = {tuple(key) for key in groups.get(SCAN_GROUP, ())}
+        return all(
+            (curve.config.signal.device, curve.config.signal.signal) in scan_group
+            for curve in self._async_curves
+        )
 
     def _history_x_source_key(self, scan_item) -> tuple[str, str] | None:
         """
@@ -2984,7 +3001,7 @@ class Waveform(PlotBase):
                     axis = "timestamp"
                 except (TypeError, ValueError):
                     x_data = None
-        elif mode not in ("index", "auto") and x_key is not None:
+        elif mode != "index" and x_key is not None:
             x_source = update.sources.get(x_key)
             # Same update, so same correlation group: pair acquisition by acquisition.
             paired = None if x_source is None else _pair_with_x(update, source, x_source)
