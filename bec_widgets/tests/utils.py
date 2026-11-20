@@ -33,6 +33,12 @@ def global_mock_qt_redis_connector(*_, **__):
     return _REDIS_CONN
 
 
+def reset_mock_qt_redis_connector() -> None:
+    """Forget the shared connector; a shut-down one cannot receive publications in the next test."""
+    global _REDIS_CONN
+    _REDIS_CONN = None
+
+
 def mock_client(*_, **__):
     """Create a BECClient on a shared fakeredis connector, populated with the fake DEVICES."""
     with (

@@ -55,7 +55,6 @@ class PositionerBox(PositionerBoxBase):
 
         self.init_ui()
         self.device = device
-        self._init_device(self.device, self.position_update.emit, self.update_limits)
 
     def init_ui(self):
         """Init the ui"""
@@ -108,9 +107,9 @@ class PositionerBox(PositionerBoxBase):
     @device.setter
     def device(self, value: str):
         """Setter, checks if device is a string"""
-        if not value or not isinstance(value, str):
+        if not isinstance(value, str):
             return
-        if not self._check_device_is_valid(value):
+        if value and not self._check_device_is_valid(value):
             return
         old_device = self._device
         self._device = value
@@ -155,14 +154,13 @@ class PositionerBox(PositionerBoxBase):
             old_device (str): The old device name.
             new_device (str): The new device name.
         """
-        if not self._check_device_is_valid(new_device):
+        if new_device and not self._check_device_is_valid(new_device):
             return
         self._on_device_change(
             old_device,
             new_device,
             self.position_update.emit,
             self.update_limits,
-            self.on_device_readback,
             self._device_ui_components(new_device),
         )
 
@@ -179,23 +177,6 @@ class PositionerBox(PositionerBoxBase):
             "tweak_decrease": self.ui.tweak_left,
             "units": self.ui.units,
         }
-
-    @SafeSlot(dict, dict)
-    def on_device_readback(self, msg_content: dict, metadata: dict):
-        """Callback for device readback.
-
-        Args:
-            msg_content (dict): The message content.
-            metadata (dict): The message metadata.
-        """
-        self._on_device_readback(
-            self.device,
-            self._device_ui_components(self.device),
-            msg_content,
-            metadata,
-            self.position_update.emit,
-            self.update_limits,
-        )
 
     def update_limits(self, limits: tuple):
         """Update limits
@@ -238,16 +219,35 @@ class PositionerBox(PositionerBoxBase):
         self.scans.mv(self.dev[self.device], target, relative=False)
 
     def _get_setpoint(self) -> float | None:
-        """Get the setpoint of the motor"""
-        setpoint = getattr(self.dev[self.device], "setpoint", None)
-        if not setpoint:
-            setpoint = getattr(self.dev[self.device], "user_setpoint", None)
-        if not setpoint:
+        """
+        The setpoint the motor has now, read from the device.
+
+        A tweak is an absolute move from this value, so it must be the current one. The
+        value of the subscription is what the box displays; it can be behind the device.
+
+        Returns:
+            float | None: The setpoint, or None when the device has none or it cannot be
+                read (the tweak then is a relative move).
+        """
+        if not self.device or self.device not in self.dev:
             return None
-        try:
-            return float(setpoint.get())
-        except Exception:
-            return None
+        device = self.dev[self.device]
+        signals = device._info.get("signals", {})
+        for role in ("setpoint", "user_setpoint"):
+            # The attribute of the signal that plays the role; by default it has its name.
+            names = [
+                component
+                for component, info in signals.items()
+                if info.get("component_name", component) == role
+            ] or [role]
+            signal = getattr(device, names[0], None)
+            if signal is None:
+                continue
+            try:
+                return float(signal.get())
+            except Exception:  # pylint: disable=broad-except
+                return None
+        return None
 
     @SafeSlot()
     def on_setpoint_change(self):

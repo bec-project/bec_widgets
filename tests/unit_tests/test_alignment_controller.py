@@ -25,15 +25,13 @@ def create_alignment_controller(qtbot, mocked_client):
 def test_alignment_controller_shows_marker_only_when_visible(qtbot, mocked_client):
     _, panel, controller = create_alignment_controller(qtbot, mocked_client)
 
-    controller.update_context(
-        AlignmentContext(visible=False, positioner_name="samx", precision=3, readback=1.0)
-    )
+    controller.update_context(AlignmentContext(visible=False, positioner_name="samx", precision=3))
+    panel.position_readback_changed.emit(1.0)
     controller.update_position(4.2)
     assert controller.marker_line is None
 
-    controller.update_context(
-        AlignmentContext(visible=True, positioner_name="samx", precision=3, readback=4.2)
-    )
+    controller.update_context(AlignmentContext(visible=True, positioner_name="samx", precision=3))
+    panel.position_readback_changed.emit(4.2)
 
     assert controller.marker_line is not None
     assert np.isclose(controller.marker_line.value(), 4.2)
@@ -47,10 +45,9 @@ def test_alignment_controller_target_line_uses_readback_and_limits(qtbot, mocked
     _, panel, controller = create_alignment_controller(qtbot, mocked_client)
 
     controller.update_context(
-        AlignmentContext(
-            visible=True, positioner_name="samx", precision=3, limits=(0.0, 2.0), readback=5.0
-        )
+        AlignmentContext(visible=True, positioner_name="samx", precision=3, limits=(0.0, 2.0))
     )
+    panel.position_readback_changed.emit(5.0)
 
     panel.target_toggle.setChecked(True)
     assert controller.target_line is not None
@@ -60,10 +57,9 @@ def test_alignment_controller_target_line_uses_readback_and_limits(qtbot, mocked
     assert controller.target_line is None
 
     controller.update_context(
-        AlignmentContext(
-            visible=True, positioner_name="samx", precision=3, limits=None, readback=5.0
-        )
+        AlignmentContext(visible=True, positioner_name="samx", precision=3, limits=None)
     )
+    panel.position_readback_changed.emit(5.0)
     panel.target_toggle.setChecked(True)
     assert controller.target_line is not None
     assert np.isclose(controller.target_line.value(), 5.0)
@@ -73,18 +69,16 @@ def test_alignment_controller_preserves_dragged_target_on_context_refresh(qtbot,
     _, panel, controller = create_alignment_controller(qtbot, mocked_client)
 
     controller.update_context(
-        AlignmentContext(
-            visible=True, positioner_name="samx", precision=3, limits=(0.0, 5.0), readback=1.0
-        )
+        AlignmentContext(visible=True, positioner_name="samx", precision=3, limits=(0.0, 5.0))
     )
+    panel.position_readback_changed.emit(1.0)
     panel.target_toggle.setChecked(True)
     controller.target_line.setValue(3.0)
 
     controller.update_context(
-        AlignmentContext(
-            visible=True, positioner_name="samx", precision=3, limits=(0.0, 5.0), readback=2.0
-        )
+        AlignmentContext(visible=True, positioner_name="samx", precision=3, limits=(0.0, 5.0))
     )
+    panel.position_readback_changed.emit(2.0)
 
     assert controller.target_line is not None
     assert np.isclose(controller.target_line.value(), 3.0)
@@ -96,9 +90,8 @@ def test_alignment_controller_emits_move_request_for_fit_center(qtbot, mocked_cl
     move_callback = MagicMock()
     controller.move_absolute_requested.connect(move_callback)
 
-    controller.update_context(
-        AlignmentContext(visible=True, positioner_name="samx", precision=3, readback=1.0)
-    )
+    controller.update_context(AlignmentContext(visible=True, positioner_name="samx", precision=3))
+    panel.position_readback_changed.emit(1.0)
     controller.update_dap_summary(make_alignment_fit_summary(center=2.5), {"curve_id": "fit"})
 
     assert panel.fit_dialog.action_buttons["center"].isEnabled() is True
@@ -113,9 +106,8 @@ def test_alignment_controller_requests_autoscale_for_marker_and_target(qtbot, mo
     autoscale_callback = MagicMock()
     controller.autoscale_requested.connect(autoscale_callback)
 
-    controller.update_context(
-        AlignmentContext(visible=True, positioner_name="samx", precision=3, readback=1.0)
-    )
+    controller.update_context(AlignmentContext(visible=True, positioner_name="samx", precision=3))
+    panel.position_readback_changed.emit(1.0)
     panel.target_toggle.setChecked(True)
 
     assert autoscale_callback.call_count >= 2
@@ -128,10 +120,9 @@ def test_alignment_controller_emits_move_request_for_target(qtbot, mocked_client
     controller.move_absolute_requested.connect(move_callback)
 
     controller.update_context(
-        AlignmentContext(
-            visible=True, positioner_name="samx", precision=3, limits=(0.0, 5.0), readback=1.0
-        )
+        AlignmentContext(visible=True, positioner_name="samx", precision=3, limits=(0.0, 5.0))
     )
+    panel.position_readback_changed.emit(1.0)
     panel.target_toggle.setChecked(True)
     controller.target_line.setValue(1.25)
     panel.move_to_target_button.click()
@@ -142,9 +133,8 @@ def test_alignment_controller_emits_move_request_for_target(qtbot, mocked_client
 def test_alignment_controller_removes_deleted_dap_curve(qtbot, mocked_client):
     _, panel, controller = create_alignment_controller(qtbot, mocked_client)
 
-    controller.update_context(
-        AlignmentContext(visible=True, positioner_name="samx", precision=3, readback=1.0)
-    )
+    controller.update_context(AlignmentContext(visible=True, positioner_name="samx", precision=3))
+    panel.position_readback_changed.emit(1.0)
     controller.update_dap_summary(make_alignment_fit_summary(center=1.5), {"curve_id": "fit"})
 
     assert "fit" in panel.fit_dialog.summary_data
@@ -154,3 +144,22 @@ def test_alignment_controller_removes_deleted_dap_curve(qtbot, mocked_client):
     assert "fit" not in panel.fit_dialog.summary_data
     assert panel.fit_dialog.fit_curve_id is None
     assert panel.fit_dialog.enable_actions is False
+
+
+def test_alignment_target_waits_for_readback_after_device_change(qtbot, mocked_client):
+    _, panel, controller = create_alignment_controller(qtbot, mocked_client)
+    controller.update_context(AlignmentContext(visible=True, positioner_name="samx"))
+    panel.target_toggle.setChecked(True)
+    assert controller.target_line is None
+    assert not panel.move_to_target_button.isEnabled()
+
+    panel.position_readback_changed.emit(2.0)
+    assert controller.target_line.value() == 2.0
+    assert panel.move_to_target_button.isEnabled()
+
+    controller.update_context(AlignmentContext(visible=True, positioner_name="samy"))
+    assert controller.marker_line is None
+    assert controller.target_line is None
+    assert not panel.move_to_target_button.isEnabled()
+    panel.position_readback_changed.emit(4.0)
+    assert controller.target_line.value() == 4.0
