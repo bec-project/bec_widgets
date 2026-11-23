@@ -14,6 +14,7 @@ from qtpy.QtGui import QColor, QFont, QFontMetrics, QPainter, QPixmap
 from qtpy.QtWidgets import (
     QAbstractButton,
     QAbstractItemView,
+    QApplication,
     QButtonGroup,
     QFrame,
     QHBoxLayout,
@@ -28,6 +29,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from bec_widgets.utils.error_popups import SafeConnect, SafeSlot
 from bec_widgets.utils.quick.host import ThemeTokens
 from bec_widgets.widgets.utility.command_palette.palette_core import (
     ROLES,
@@ -352,6 +354,11 @@ class PaletteCardWidget(QFrame):
         self._sync_scope()
         self._sync_results()
 
+        self._theme_connection = None
+        theme = getattr(QApplication.instance(), "theme", None)
+        if theme is not None:
+            self._theme_connection = SafeConnect(self, theme.theme_changed, self._on_theme_changed)
+
     # ------------------------------------------------------------------ host API
     def focus_input(self) -> None:
         """Give the keyboard focus to the search field."""
@@ -402,6 +409,27 @@ class PaletteCardWidget(QFrame):
             )
         )
         self.list.viewport().update()
+
+    @SafeSlot(str)
+    @SafeSlot()
+    def _on_theme_changed(self, _theme: str | None = None) -> None:
+        """Repaint in the new theme, also while the palette is open."""
+        self.refresh_theme(ThemeTokens())
+        overlay = self.parentWidget()
+        if overlay is not None:
+            overlay.update()
+
+    def release(self) -> None:
+        """Stop following the application theme."""
+        connection, self._theme_connection = self._theme_connection, None
+        theme = getattr(QApplication.instance(), "theme", None)
+        if connection is None or theme is None:
+            return
+        connection.invalidate()
+        try:
+            theme.theme_changed.disconnect(connection)
+        except (RuntimeError, TypeError):
+            pass  # already gone with the theme object
 
     # ------------------------------------------------------------------ sync from controller
     def _pick_scope(self, scope: str) -> None:

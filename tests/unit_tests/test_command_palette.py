@@ -284,6 +284,21 @@ def test_qwidget_card_typed_prefix_leaves_the_field(qtbot, palette_window):
     assert palette.controller.query == "sam"
 
 
+def test_qwidget_card_follows_theme_while_open(qtbot, palette_window):
+    from bec_widgets.utils.colors import apply_theme
+
+    _window, palette = palette_window
+    if palette.flavour != "qwidget":
+        pytest.skip("QWidget card only")
+    apply_theme("dark")
+    palette.open_palette()
+    dark = palette.card.styleSheet()
+    apply_theme("light")
+    qtbot.waitUntil(lambda: palette.card.styleSheet() != dark)
+    apply_theme("dark")
+    qtbot.waitUntil(lambda: palette.card.styleSheet() == dark)
+
+
 def test_qml_card_loads(qtbot, palette_window):
     _window, palette = palette_window
     if palette.flavour != "qml":
