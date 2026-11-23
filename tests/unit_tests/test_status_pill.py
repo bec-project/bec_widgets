@@ -90,7 +90,7 @@ def test_generic_item_shows_any_indicator_and_content(generic_item, qtbot):
     item.set_indicator(down)  # unchanged: no second signal
     assert seen == [down]
     assert (item.pill.mode, item.pill.text) == (BarMode.ERROR, "2 services down")
-    assert item.pill.toolTip() == "x"
+    assert item.pill.toolTip() == f"x\n{item.EXPAND_HINT}"
     assert item.badge_chip.text() == "2 down" and item.badge_chip._tone == Tone.BAD
     assert item.badge_reveal.shown
 
@@ -156,9 +156,126 @@ def test_card_stays_on_screen_and_follows_the_pill(generic_item, qtbot, monkeypa
     item.close_card()
 
 
+def _press_in_window(item, global_pos, button=Qt.MouseButton.LeftButton):
+    """A mouse press as the platform delivers it: to the window, before any widget."""
+    from qtpy.QtCore import QEvent, QPointF
+    from qtpy.QtGui import QMouseEvent
+    from qtpy.QtWidgets import QApplication
+
+    window = item.window().windowHandle()
+    local = QPointF(window.mapFromGlobal(global_pos))
+    event = QMouseEvent(
+        QEvent.Type.MouseButtonPress,
+        local,
+        QPointF(global_pos),
+        button,
+        button,
+        Qt.KeyboardModifier.NoModifier,
+    )
+    QApplication.sendEvent(window, event)
+
+
+def test_click_opens_and_closes_the_card_and_hover_only_outlines(generic_item, qtbot, monkeypatch):
+    from qtpy.QtCore import QPoint, QPointF
+    from qtpy.QtGui import QEnterEvent
+    from qtpy.QtWidgets import QApplication
+
+    item = generic_item
+    item.show()
+    qtbot.waitExposed(item)
+    inside = item.pill.mapToGlobal(QPoint(5, 5))
+    _cursor_at(monkeypatch, inside)
+    point = QPointF(5, 5)
+    QApplication.sendEvent(item.pill, QEnterEvent(point, point, QPointF(inside)))
+    qtbot.wait(item.GRACE_MS + 150)
+    assert item.pill.hovered and not item.card.isVisible()  # hover alone opens nothing
+    assert not item._poll.isActive()
+
+    qtbot.mouseClick(item.pill, Qt.MouseButton.LeftButton)
+    assert item.card.isVisible() and item.pill.expanded and item.pill.outlined
+    _cursor_at(monkeypatch, QPoint(-5000, -5000))
+    qtbot.wait(item.GRACE_MS + 150)
+    assert item.card.isVisible()  # the cursor leaving does not close it
+
+    _cursor_at(monkeypatch, inside)
+    qtbot.mouseClick(item.pill, Qt.MouseButton.LeftButton)  # a second click closes it
+    assert not item.card.isVisible() and not item.pill.expanded
+    assert item.pill.hovered  # the cursor is still on the pill
+
+    qtbot.mouseClick(item.pill, Qt.MouseButton.RightButton)
+    assert not item.card.isVisible()  # the right button is for the settings menu
+
+
+def test_click_elsewhere_or_esc_closes_the_card_but_not_on_a_trailing_widget(
+    generic_item, qtbot, monkeypatch
+):
+    from qtpy.QtCore import QEvent, QPoint
+    from qtpy.QtGui import QKeyEvent
+    from qtpy.QtWidgets import QApplication, QPushButton
+
+    item = generic_item
+    stop = QPushButton("Stop", item)
+    item.add_trailing(stop, reveal=False)
+    other = QPushButton("Elsewhere", item)
+    item.row.addWidget(other)
+    item.show()
+    qtbot.waitExposed(item)
+    _cursor_at(monkeypatch, QPoint(-5000, -5000))
+
+    _press_in_window(item, item.pill.mapToGlobal(QPoint(5, 5)))
+    assert item.card.isVisible()  # the window passes the press on to the pill: it opens
+    _press_in_window(item, stop.mapToGlobal(stop.rect().center()))
+    assert item.card.isVisible()  # the Stop next to the pill keeps it
+    _press_in_window(item, item.pill.mapToGlobal(QPoint(5, 5)))
+    assert not item.card.isVisible()  # a second press on the pill closes it
+
+    item.open_card()
+    _press_in_window(item, other.mapToGlobal(other.rect().center()))
+    assert not item.card.isVisible()  # anywhere else in the window closes it
+
+    item.open_card()
+    window = item.window().windowHandle()
+    esc = QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_Escape, Qt.KeyboardModifier.NoModifier)
+    QApplication.sendEvent(window, esc)
+    assert not item.card.isVisible()
+    assert item.hover._click_window is None  # stops watching the window once closed
+
+    _press_in_window(item, other.mapToGlobal(other.rect().center()))  # nothing open: no effect
+    assert not item.card.isVisible()
+
+
+def test_resizing_the_window_closes_the_card_and_moving_it_takes_it_along(
+    generic_item, qtbot, monkeypatch
+):
+    from qtpy.QtCore import QPoint
+    from qtpy.QtGui import QResizeEvent
+    from qtpy.QtWidgets import QApplication
+
+    item = generic_item
+    item.show()
+    qtbot.waitExposed(item)
+    _cursor_at(monkeypatch, QPoint(-5000, -5000))
+    window = item.window().windowHandle()
+
+    item.open_card()
+    size = window.size()
+    QApplication.sendEvent(window, QResizeEvent(size, size))
+    assert item.card.isVisible()  # Qt sends Resize without a change, e.g. on expose
+
+    item.resize(item.width() + 40, item.height())
+    qtbot.waitUntil(lambda: not item.card.isVisible(), timeout=2000)
+    assert not item.pill.expanded
+
+    item.open_card()
+    before = item.card.pos()
+    item.move(item.pos() + QPoint(30, 0))
+    qtbot.waitUntil(lambda: item.card.pos() == before + QPoint(30, 0), timeout=2000)
+    assert item.card.isVisible()  # dragged: the card goes with the pill
+    item.close_card()
+
+
 def test_card_stays_open_while_a_dialog_of_its_content_is_open(generic_item, qtbot, monkeypatch):
     from qtpy.QtCore import QPoint, Qt
-    from qtpy.QtGui import QCursor
     from qtpy.QtWidgets import QDialog
 
     item = generic_item
@@ -169,16 +286,121 @@ def test_card_stays_open_while_a_dialog_of_its_content_is_open(generic_item, qtb
     dialog = QDialog(item.card.content)
     dialog.setWindowModality(Qt.WindowModality.ApplicationModal)
     dialog.show()
-    qtbot.waitUntil(dialog.isVisible)
-    qtbot.wait(item.GRACE_MS + 300)
+    dialog.activateWindow()
+    qtbot.waitUntil(dialog.isActiveWindow)
+    qtbot.wait(20)
+    assert item.card.isVisible()  # the dialog took the focus, but it belongs to the card
+    elsewhere = item.mapToGlobal(QPoint(item.width() - 2, item.height() // 2))
+    _press_in_window(item, elsewhere)
     assert item.card.isVisible()  # e.g. a restart confirmation of the status box
 
-    away = item.card.frameGeometry().bottomRight() + QPoint(2000, 2000)
-    QCursor.setPos(away)  # so Qt itself does not re-enter the card when the dialog closes
-    _cursor_at(monkeypatch, away)
     dialog.close()
-    qtbot.waitUntil(lambda: not item.card.isVisible(), timeout=2000)
+    assert item.card.isVisible()
+    _press_in_window(item, elsewhere)
+    assert not item.card.isVisible()
     dialog.deleteLater()
+
+
+def test_another_window_taking_the_focus_closes_the_card(generic_item, qtbot, monkeypatch):
+    from qtpy.QtCore import QPoint
+    from qtpy.QtWidgets import QWidget
+
+    item = generic_item
+    item.show()
+    item.activateWindow()
+    qtbot.waitUntil(item.isActiveWindow)
+    _cursor_at(monkeypatch, QPoint(-5000, -5000))
+    item.open_card()
+    qtbot.wait(20)
+    assert item.card.isVisible()
+
+    other = QWidget()  # e.g. a floating dock or a second window of the app
+    qtbot.addWidget(other)
+    other.show()
+    other.activateWindow()
+    qtbot.waitUntil(other.isActiveWindow)
+    qtbot.waitUntil(lambda: not item.card.isVisible(), timeout=2000)
+    other.close()
+
+
+def test_esc_closes_the_card_before_a_shortcut_of_the_focused_widget(generic_item, qtbot):
+    from qtpy.QtGui import QKeySequence, QShortcut
+    from qtpy.QtTest import QTest
+    from qtpy.QtWidgets import QLineEdit
+
+    item = generic_item
+    edit = QLineEdit(item)
+    item.row.addWidget(edit)
+    fired = []
+    shortcut = QShortcut(QKeySequence(Qt.Key.Key_Escape), edit)
+    shortcut.setContext(Qt.ShortcutContext.WidgetShortcut)  # as in the Log Panel
+    shortcut.activated.connect(lambda: fired.append(True))
+    item.show()
+    qtbot.waitExposed(item)
+    window = item.window().windowHandle()
+
+    def focus_edit():  # offscreen hands the focus to a shown card, real platforms do not
+        item.activateWindow()
+        qtbot.waitUntil(item.isActiveWindow)
+        edit.setFocus()
+        qtbot.waitUntil(edit.hasFocus)
+
+    item.open_card()
+    focus_edit()
+    assert item.card.isVisible()
+    QTest.keyClick(window, Qt.Key.Key_Escape)
+    assert not item.card.isVisible()
+    assert not fired  # the open card takes the Esc
+    focus_edit()
+    QTest.keyClick(window, Qt.Key.Key_Escape)
+    assert fired  # with the card closed the shortcut works again
+
+
+def test_a_click_just_outside_the_pill_closes_the_card(generic_item, qtbot, monkeypatch):
+    from qtpy.QtCore import QPoint
+
+    item = generic_item
+    item.show()
+    qtbot.waitExposed(item)
+    _cursor_at(monkeypatch, QPoint(-5000, -5000))
+    pill = item.pill
+    just_outside = pill.mapToGlobal(QPoint(pill.width() + 1, pill.height() // 2))
+    assert item.rect().contains(item.mapFromGlobal(just_outside))
+
+    item.open_card()
+    _cursor_at(monkeypatch, just_outside)
+    _press_in_window(item, just_outside)
+    assert not item.card.isVisible()  # hit testing uses the real bounds, not the hover margin
+    assert not item.pill.outlined  # no Leave comes from out there, so no outline is left on
+
+
+def test_space_or_enter_toggles_the_card_and_tab_only_outlines(generic_item, qtbot, monkeypatch):
+    from qtpy.QtCore import QEvent, QPoint
+    from qtpy.QtGui import QFocusEvent, QKeyEvent
+    from qtpy.QtWidgets import QApplication
+
+    item = generic_item
+    item.show()
+    qtbot.waitExposed(item)
+    _cursor_at(monkeypatch, QPoint(-5000, -5000))
+    QApplication.sendEvent(
+        item.pill, QFocusEvent(QEvent.Type.FocusIn, Qt.FocusReason.TabFocusReason)
+    )
+    assert item.pill.keyboard_focus and item.pill.outlined
+    assert not item.card.isVisible()
+    qtbot.keyClick(item.pill, Qt.Key.Key_Space)
+    assert item.card.isVisible()
+    qtbot.keyClick(item.pill, Qt.Key.Key_Return)
+    assert not item.card.isVisible()
+
+    for key in (Qt.Key.Key_Space, Qt.Key.Key_Return, Qt.Key.Key_Enter):
+        qtbot.keyPress(item.pill, key)
+        for _ in range(3):  # holding the key: auto-repeat presses do not toggle again
+            repeat = QKeyEvent(QEvent.Type.KeyPress, key, Qt.KeyboardModifier.NoModifier, "", True)
+            QApplication.sendEvent(item.pill, repeat)
+        assert item.card.isVisible()
+        qtbot.keyClick(item.pill, key)
+        assert not item.card.isVisible()
 
 
 class DockablePill(StatusPillItem):
@@ -205,12 +427,13 @@ def test_dock_hint_only_with_a_dock_widget_and_a_handler(generic_item, dockable_
     assert hint is not None and hint.isHidden()  # no handler yet
     available = [False]
     dockable_item.set_dock_handler(lambda: available[0])
-    assert hint.isHidden() and dockable_item.pill.accessibleDescription() == ""
+    expand = dockable_item.EXPAND_HINT
+    assert hint.isHidden() and dockable_item.pill.accessibleDescription() == expand
     available[0] = True
     dockable_item._prepare_card()  # asked again each time the card opens
     assert not hint.isHidden()
     assert hint.text() == dockable_item.DOCK_HINT
-    assert dockable_item.pill.accessibleDescription() == dockable_item.DOCK_HINT
+    assert dockable_item.pill.accessibleDescription() == f"{expand}\n{dockable_item.DOCK_HINT}"
     dockable_item.set_dock_handler(None)
     assert hint.isHidden()
 
@@ -237,17 +460,55 @@ def test_double_click_does_nothing_without_a_dock_area(dockable_item, generic_it
         qtbot.mouseDClick(dockable_item.pill, Qt.MouseButton.RightButton)
 
 
-def test_tooltip_tells_how_to_dock(dockable_item, generic_item):
+def test_tooltip_tells_how_to_expand_and_dock(dockable_item, generic_item):
+    expand, dock = dockable_item.EXPAND_HINT, dockable_item.DOCK_HINT
+    assert expand == "Click to expand" and "current dock area" in dock
     dockable_item.set_indicator(ToolIndicator(summary="ok", tooltip="All good"))
-    assert dockable_item.pill.toolTip() == "All good"  # no dock area yet
+    assert dockable_item.pill.toolTip() == f"All good\n{expand}"  # no dock area yet
     dockable_item.set_dock_handler(lambda: True)
-    assert dockable_item.pill.toolTip() == f"All good\n{dockable_item.DOCK_HINT}"
-    assert "current dock area" in dockable_item.DOCK_HINT
+    assert dockable_item.pill.toolTip() == f"All good\n{expand}\n{dock}"
     dockable_item.set_indicator(ToolIndicator(summary="ok", tooltip="Still good"))
-    assert dockable_item.pill.toolTip() == f"Still good\n{dockable_item.DOCK_HINT}"
-    generic_item.set_dock_handler(lambda: True)  # no DOCK_WIDGET: no hint
+    assert dockable_item.pill.toolTip() == f"Still good\n{expand}\n{dock}"
+    generic_item.set_dock_handler(lambda: True)  # no DOCK_WIDGET: no dock hint
     generic_item.set_indicator(ToolIndicator(summary="ok", tooltip="Plain"))
-    assert generic_item.pill.toolTip() == "Plain"
+    assert generic_item.pill.toolTip() == f"Plain\n{expand}"
+    generic_item.set_indicator(ToolIndicator(summary="ok"))
+    assert generic_item.pill.toolTip() == expand
+
+
+def test_no_tooltip_over_an_open_card(generic_item, qtbot, monkeypatch):
+    from qtpy.QtCore import QEvent, QPoint
+    from qtpy.QtGui import QHelpEvent
+
+    item = generic_item
+    item.show()
+    qtbot.waitExposed(item)
+    _cursor_at(monkeypatch, QPoint(-5000, -5000))
+
+    def tooltip_shown() -> bool:
+        event = QHelpEvent(QEvent.Type.ToolTip, QPoint(5, 5), item.pill.mapToGlobal(QPoint(5, 5)))
+        item.pill.event(event)
+        return event.isAccepted()
+
+    assert tooltip_shown()
+    item.open_card()
+    assert not tooltip_shown()
+    item.close_card()
+    assert tooltip_shown()
+
+
+def test_tooltip_survives_a_resize_of_the_pill(generic_item, qtbot):
+    """The bar's own cut-label tooltip used to replace the pill's tooltip on every resize."""
+    item = generic_item
+    item.set_indicator(ToolIndicator(summary="ok", tooltip="All good"))
+    item.show()
+    qtbot.waitExposed(item)
+    item.set_width_mode("wide")
+    assert item.pill.toolTip() == f"All good\n{item.EXPAND_HINT}"
+    long = "A very long label that does not fit into the compact pill at all"
+    item.set_indicator(ToolIndicator(summary=long, tooltip="All good"))
+    item.set_width_mode("compact")
+    assert item.pill.toolTip() == f"{long}\nAll good\n{item.EXPAND_HINT}"
 
 
 def test_hover_cleanup_can_run_twice(generic_item, recwarn):
@@ -256,28 +517,25 @@ def test_hover_cleanup_can_run_twice(generic_item, recwarn):
     assert not [w for w in recwarn if "Failed to disconnect" in str(w.message)]
 
 
-def test_late_enter_opens_no_card_for_a_hidden_or_cleaned_up_pill(generic_item, qtbot):
+def test_late_enter_does_not_outline_a_hidden_pill_and_cleanup_stops_clicks(generic_item, qtbot):
     from qtpy.QtCore import QPointF
     from qtpy.QtGui import QEnterEvent
     from qtpy.QtWidgets import QApplication
 
     item = generic_item
-
-    def enter():
-        point = QPointF(5, 5)
-        QApplication.sendEvent(item.pill, QEnterEvent(point, point, point))
-
-    enter()  # Qt can still deliver a queued Enter after the window was hidden or closed
-    assert not item.card.isVisible()
+    point = QPointF(5, 5)
+    # Qt can still deliver a queued Enter after the window was hidden or closed
+    QApplication.sendEvent(item.pill, QEnterEvent(point, point, point))
+    assert not item.pill.hovered and not item.card.isVisible()
 
     item.show()
     qtbot.waitExposed(item)
-    enter()
-    assert item.card.isVisible()
-    item.close_card()
-
+    item.open_card()
+    window = item.hover._click_window
+    assert window is item.window().windowHandle()
     item.hover.cleanup()
-    enter()
+    assert item.hover._click_window is None and not item.card.isVisible()
+    qtbot.mouseClick(item.pill, Qt.MouseButton.LeftButton)
     assert not item.card.isVisible()
 
 

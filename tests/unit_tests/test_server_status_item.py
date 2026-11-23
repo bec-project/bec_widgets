@@ -57,7 +57,9 @@ def test_pill_follows_the_core_state(item, qtbot):
     assert item.indicator.severity == ToolSeverity.OK
     assert item.indicator.badge is None
     assert (item.pill.icon_name, item.pill.text) == ("check_circle", "BEC")
-    assert item.pill.toolTip() == "All core services running\n5/5 core services up · 1 other"
+    assert item.pill.toolTip() == (
+        f"All core services running\n5/5 core services up · 1 other\n{item.EXPAND_HINT}"
+    )
     assert item.pill.accessibleName() == "All core services running"
 
     item.status_box.update_service_status(*_all_services(skip=["ScanBundler", "SciHub"]))

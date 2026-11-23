@@ -1,7 +1,7 @@
 """
 A frameless card window that opens next to a widget, with any content widget, and the controller
-that opens it on hover. Used by the status bar pills, the client info in the status bar and as a
-rich tooltip.
+that opens it on hover or on a click. Used by the status bar pills (click), the client info in the
+status bar (hover) and as a rich tooltip.
 """
 
 from __future__ import annotations
@@ -11,8 +11,8 @@ from enum import StrEnum
 from typing import Callable
 
 import shiboken6
-from qtpy.QtCore import QEvent, QObject, QPoint, QRect, Qt, QTimer
-from qtpy.QtGui import QColor, QCursor, QGuiApplication
+from qtpy.QtCore import QEvent, QObject, QPoint, QRect, QSize, Qt, QTimer
+from qtpy.QtGui import QColor, QCursor, QGuiApplication, QWindow
 from qtpy.QtWidgets import (
     QApplication,
     QFrame,
@@ -34,6 +34,13 @@ class CardAlign(StrEnum):
 
     LEFT = "left"  # left edges aligned
     CENTER = "center"  # centred on the anchor, e.g. a wide label
+
+
+class CardTrigger(StrEnum):
+    """What opens and closes a card of a HoverCardController."""
+
+    HOVER = "hover"  # opens on hover, closes when the cursor has left
+    CLICK = "click"  # a click on the anchor opens and closes it; a click elsewhere closes it
 
 
 class HoverCard(QWidget):
@@ -157,23 +164,32 @@ class HoverCard(QWidget):
 
 class HoverCardController(QObject):
     """
-    Opens a HoverCard above an anchor widget on hover and keeps it open while the cursor is over
-    the anchor, the card, the gap between them or one of the extra widgets, while the anchor has
-    keyboard focus, or while a popup or dialog of the card is open. The card closes GRACE_MS after
-    the cursor has left, on Esc, and when the application is deactivated. It is kept on the
-    screen of the anchor and follows it when either moves or changes size.
+    Opens a HoverCard above an anchor widget, on hover or on a click (trigger). It is kept on the
+    screen of the anchor and follows it when either moves or changes size. It closes on Esc and
+    when the application is deactivated.
 
-    Only a cursor poll decides inside or outside: Enter and Leave events are not reliable while
-    the card window is shown (e.g. on macOS).
+    Hover: the card stays open while the cursor is over the anchor, the card, the gap between them
+    or one of the extra widgets, while the anchor has keyboard focus, or while a popup or dialog of
+    the card is open, and closes GRACE_MS after the cursor has left. Only a cursor poll decides
+    inside or outside: Enter and Leave events are not reliable while the card window is shown
+    (e.g. on macOS).
+
+    Click: a left click on the anchor, or Space / Enter while it has keyboard focus, opens and
+    closes the card. A click anywhere else in the anchor's window closes it, except on one of the
+    extra widgets or while a popup or dialog of the card is open; so does resizing that window
+    or switching to another one. When the window is moved, the card moves with the pill. The
+    cursor leaving does not close it.
 
     Args:
-        anchor(QWidget): The widget the card opens above; its Enter opens the card.
+        anchor(QWidget): The widget the card opens above; its Enter or a click on it opens the
+            card.
         card(HoverCard): The card window.
         keep_open(Callable[[], bool] | None): Asked on each poll; True keeps the card open.
         can_open(Callable[[], bool] | None): Asked before opening; False keeps the card closed.
         on_close(Callable[[], None] | None): Called when the card closes.
         align(CardAlign): LEFT aligns the card to the anchor's left edge, CENTER centres it on
             the anchor (for a wide anchor such as the client info label).
+        trigger(CardTrigger): HOVER opens the card on hover, CLICK on a click on the anchor.
     """
 
     GRACE_MS = 250  # how long the cursor may be outside before the card closes
@@ -189,11 +205,16 @@ class HoverCardController(QObject):
         can_open: Callable[[], bool] | None = None,
         on_close: Callable[[], None] | None = None,
         align: CardAlign | str = CardAlign.LEFT,
+        trigger: CardTrigger | str = CardTrigger.HOVER,
     ):
         super().__init__(anchor)
         self.anchor = anchor
         self.card = card
         self.align = CardAlign(align)
+        self.trigger = CardTrigger(trigger)
+        self._click_window: QWindow | None = None  # watched for clicks outside while open
+        self._click_window_size = QSize()
+        self._focus_widget: QWidget | None = None  # watched for Esc while the card is open
         self._keep_open = keep_open
         self._can_open = can_open
         self._on_close = on_close
@@ -225,17 +246,33 @@ class HoverCardController(QObject):
             self._outside_since = None
             self.poll.start()
 
+    @property
+    def click_trigger(self) -> bool:
+        """Whether a click opens and closes the card (instead of hover)."""
+        return self.trigger == CardTrigger.CLICK
+
     def open(self) -> None:
         """Show the card above the anchor."""
         if self._can_open is not None and not self._can_open():
             return
-        self.start_watching()
+        if self.click_trigger:
+            self._watch_clicks()
+        else:
+            self.start_watching()
         if self.card.isVisible():
             return
         self.card.refresh_style()  # the theme may have changed while it was closed
         self.card.adjustSize()
         self.place()
         self.card.show()
+        self._set_anchor_state("set_expanded", True)
+
+    def toggle(self) -> None:
+        """Open the card, or close it when it is open."""
+        if self.card.isVisible():
+            self.close()
+        else:
+            self.open()
 
     def close(self) -> None:
         """Hide the card and stop watching the cursor."""
@@ -247,10 +284,77 @@ class HoverCardController(QObject):
         """Hide the card without the on_close hook (the cursor left)."""
         self.poll.stop()
         self._outside_since = None
+        self._unwatch_clicks()
         self.card.hide()
-        set_hovered = getattr(self.anchor, "set_hovered", None)
-        if callable(set_hovered):
-            set_hovered(False)
+        self._set_anchor_state("set_expanded", False)
+        # a click closes the card with the cursor still on the anchor: keep its hover outline
+        # (real bounds: from just outside no Leave would come to clear it)
+        hovered = self.click_trigger and self._over(self.anchor, tolerance=0)
+        self._set_anchor_state("set_hovered", hovered)
+
+    def _set_anchor_state(self, setter: str, value: bool) -> None:
+        method = getattr(self.anchor, setter, None)
+        if callable(method) and shiboken6.isValid(self.anchor):
+            method(value)
+
+    def _watch_clicks(self) -> None:
+        """Watch the anchor's window for a click outside the anchor and the extras, and moves."""
+        window = self.anchor.window().windowHandle()
+        if window is self._click_window:
+            return
+        self._unwatch_clicks()
+        if window is not None:
+            window.installEventFilter(self)
+            self._click_window = window
+            self._click_window_size = window.size()
+            app = QApplication.instance()
+            app.focusChanged.connect(self._follow_focus)
+            self._follow_focus(None, app.focusWidget())
+
+    def _window_resized(self) -> bool:
+        """Whether the watched window changed size since the card opened; Qt also sends Resize
+        events without a change, e.g. when the window is exposed."""
+        window = self._click_window
+        return window is not None and window.size() != self._click_window_size
+
+    def _unwatch_clicks(self) -> None:
+        window, self._click_window = self._click_window, None
+        if window is not None:
+            try:
+                QApplication.instance().focusChanged.disconnect(self._follow_focus)
+            except (TypeError, RuntimeError):
+                pass
+            if shiboken6.isValid(window):
+                window.removeEventFilter(self)
+        self._follow_focus(None, None)
+
+    @SafeSlot(object, object)
+    def _follow_focus(self, _old: QWidget | None, new: QWidget | None) -> None:
+        """
+        Watch the focused widget of the anchor's window: Qt offers Esc to its shortcuts (e.g. the
+        one of the Log Panel) before the window sees the key press.
+        """
+        widget, self._focus_widget = self._focus_widget, None
+        if widget is not None and shiboken6.isValid(widget):
+            widget.removeEventFilter(self)
+        if new is None or new in (self.anchor, self.card, *self._extras):
+            return  # filtered anyway, and their filter must stay
+        if self._click_window is not None and new.window().windowHandle() is self._click_window:
+            new.installEventFilter(self)
+            self._focus_widget = new
+
+    def _over(self, widget: QWidget, tolerance: int | None = None) -> bool:
+        """Whether the cursor is over a shown widget (with HOVER_TOLERANCE by default)."""
+        rect = self._global_rect(widget, tolerance)
+        return widget.isVisible() and rect.contains(QCursor.pos())
+
+    def _click_outside(self, event) -> bool:
+        """Whether a mouse press in the anchor's window is outside the anchor and the extras."""
+        pos = event.globalPosition().toPoint()
+        inside = [self.anchor, *self._extras]
+        if any(w.isVisible() and self._global_rect(w, tolerance=0).contains(pos) for w in inside):
+            return False
+        return not self.own_window_open()
 
     def place(self) -> None:
         """
@@ -271,9 +375,10 @@ class HoverCardController(QObject):
             y = max(area.top(), min(y, area.bottom() - self.card.height() + 1))
         self.card.move(x, y)
 
-    def _global_rect(self, widget: QWidget) -> QRect:
+    def _global_rect(self, widget: QWidget, tolerance: int | None = None) -> QRect:
+        """The widget's rect on screen, grown by tolerance (default HOVER_TOLERANCE)."""
         rect = QRect(widget.mapToGlobal(QPoint(0, 0)), widget.size())
-        tol = self.HOVER_TOLERANCE
+        tol = self.HOVER_TOLERANCE if tolerance is None else tolerance
         return rect.adjusted(-tol, -tol, tol, tol)
 
     def hovered(self) -> bool:
@@ -331,22 +436,76 @@ class HoverCardController(QObject):
         if state != Qt.ApplicationState.ApplicationActive:
             self.close()
 
+    def _click_event(self, obj, event) -> bool | None:
+        """
+        Handle an event of the click trigger; True consumes it, False passes it on and None
+        leaves it to the shared handling in eventFilter.
+        """
+        kind = event.type()
+        if (
+            kind == QEvent.Type.ShortcutOverride
+            and event.key() == Qt.Key.Key_Escape
+            and self.card.isVisible()
+            and obj is QApplication.focusWidget()
+        ):
+            event.accept()  # no Esc shortcut while the card is open: the key press closes it
+            return True
+        if obj is self._click_window:
+            if kind == QEvent.Type.MouseButtonPress and self._click_outside(event):
+                self.close()
+            elif kind == QEvent.Type.KeyPress and event.key() == Qt.Key.Key_Escape:
+                self.close()  # the card never has focus: Esc anywhere in the window closes it
+                return True
+            elif kind == QEvent.Type.Resize and self._window_resized():
+                self.close()  # the window was resized, maximized or restored: the card goes away
+            elif kind == QEvent.Type.Move and self.card.isVisible():
+                self.place()  # the window was dragged: the card goes with the pill
+            return False
+        if obj is self.anchor:
+            if kind == QEvent.Type.Enter:
+                if self.anchor.isVisible():
+                    self._set_anchor_state("set_hovered", True)
+                return False
+            if kind == QEvent.Type.Leave:
+                self._set_anchor_state("set_hovered", False)
+                return False
+            if kind == QEvent.Type.FocusIn:
+                return False  # tabbing to the pill only outlines it
+            if kind == QEvent.Type.MouseButtonPress and event.button() == Qt.MouseButton.LeftButton:
+                self.toggle()
+                return False
+            if kind == QEvent.Type.KeyPress and event.key() in (
+                Qt.Key.Key_Space,
+                Qt.Key.Key_Return,
+                Qt.Key.Key_Enter,
+            ):
+                if not event.isAutoRepeat():  # a held key toggles once
+                    self.toggle()
+                return True
+        if kind == QEvent.Type.Enter:
+            return False  # neither the card nor an extra opens it
+        return None
+
     def eventFilter(self, obj, event):  # pylint: disable=invalid-name
         kind = event.type()
+        if kind == QEvent.Type.WindowDeactivate and obj in (self.anchor, self.card):
+            # e.g. another window of the app took the focus; Qt sends it to every widget of the
+            # window, and the new active window is only known once the event is through
+            QTimer.singleShot(0, self, self._check_activation)
+        if self.click_trigger:
+            handled = self._click_event(obj, event)
+            if handled is not None:
+                return handled or super().eventFilter(obj, event)
         # Qt can deliver a late Enter to a widget that was hidden or closed in the meantime
         if kind == QEvent.Type.Enter and obj is self.anchor and self.anchor.isVisible():
-            set_hovered = getattr(self.anchor, "set_hovered", None)
-            if callable(set_hovered):
-                set_hovered(True)
+            self._set_anchor_state("set_hovered", True)
             self.open()
         elif kind == QEvent.Type.Enter and obj is self.card:
             self.open()
         elif kind == QEvent.Type.Enter and obj in self._extras:
             self.start_watching()
         elif kind == QEvent.Type.Leave and obj is self.anchor and not self.card.isVisible():
-            set_hovered = getattr(self.anchor, "set_hovered", None)
-            if callable(set_hovered):
-                set_hovered(False)
+            self._set_anchor_state("set_hovered", False)
         elif (
             kind == QEvent.Type.FocusIn
             and obj is self.anchor
@@ -363,14 +522,19 @@ class HoverCardController(QObject):
                 self.place()
         return super().eventFilter(obj, event)
 
-    def anchor_window_deactivated(self) -> None:
-        """Close unless the card itself or one of its popups or dialogs took the activation."""
-        if not self.card.isActiveWindow() and not self.own_window_open():
-            self.close()
+    @SafeSlot()
+    def _check_activation(self) -> None:
+        """Close once another window is active than the anchor's, the card or its own windows."""
+        if not self.card.isVisible() or not shiboken6.isValid(self.anchor):
+            return
+        if self.anchor.isActiveWindow() or self.card.isActiveWindow() or self.own_window_open():
+            return
+        self.close()
 
     def cleanup(self) -> None:
         """Stop the poll, close the card and stop listening to the anchor, card and extras."""
         self.poll.stop()
+        self._unwatch_clicks()
         for widget in (self.anchor, self.card, *self._extras):
             if shiboken6.isValid(widget):
                 widget.removeEventFilter(self)

@@ -1,6 +1,6 @@
 """
 Status-bar pills for the main window: a small state bar that opens a card with its full widget on
-hover. A pill item shows a ToolIndicator (severity, summary, badge, progress); subclasses feed the
+a click. A pill item shows a ToolIndicator (severity, summary, badge, progress); subclasses feed the
 indicator and give the card its content, e.g. the scan pill with the full ScanProgressBar.
 
 The card and its hover handling live in bec_widgets.utils.hover_card.
@@ -32,7 +32,12 @@ from qtpy.QtWidgets import QGraphicsOpacityEffect, QHBoxLayout, QMenu, QSizePoli
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
-from bec_widgets.utils.hover_card import KEYBOARD_FOCUS_REASONS, HoverCard, HoverCardController
+from bec_widgets.utils.hover_card import (
+    KEYBOARD_FOCUS_REASONS,
+    CardTrigger,
+    HoverCard,
+    HoverCardController,
+)
 from bec_widgets.utils.theme_utils import DPR_EVENTS, crisp_pixmap, theme_colors
 from bec_widgets.widgets.progress.stage_bar import BarMode, Chip, StageBar, Tone
 
@@ -219,7 +224,10 @@ class Reveal(QObject):
 
 
 class StatusBarPill(StageBar):
-    """The StageBar in the status bar: a hover outline, a hand cursor and a settings menu."""
+    """
+    The StageBar in the status bar: a hand cursor, a settings menu and an outline while hovered,
+    tabbed to or while its card is open. No tooltip while the card is open.
+    """
 
     menu_requested = Signal(QPoint)
     double_clicked = Signal()
@@ -232,11 +240,39 @@ class StatusBarPill(StageBar):
         self.setAttribute(Qt.WidgetAttribute.WA_Hover)
         self._hovered = False
         self._keyboard_focus = False
+        self._expanded = False
+        self._hint = ""
 
     @property
     def hovered(self) -> bool:
-        """Whether the hover outline is shown."""
+        """Whether the cursor is over the pill (the outline is shown)."""
         return self._hovered
+
+    @property
+    def expanded(self) -> bool:
+        """Whether the pill's card is open."""
+        return self._expanded
+
+    @property
+    def outlined(self) -> bool:
+        """Whether the outline is drawn: hovered, tabbed to or with its card open."""
+        return self._hovered or self._keyboard_focus or self._expanded
+
+    def set_hint(self, hint: str) -> None:
+        """Lines the owner adds to the tooltip, e.g. the state and how to open the card."""
+        if hint != self._hint:
+            self._hint = hint
+            self._sync_tooltip()
+
+    def tooltip_text(self) -> str:
+        """The cut label (if it is cut) and the owner's hint; kept when the pill resizes."""
+        return "\n".join(line for line in (super().tooltip_text(), self._hint) if line)
+
+    def set_expanded(self, expanded: bool) -> None:
+        """Mark the pill's card as open or closed; the controller calls it."""
+        if expanded != self._expanded:
+            self._expanded = expanded
+            self.update()
 
     @property
     def keyboard_focus(self) -> bool:
@@ -268,6 +304,9 @@ class StatusBarPill(StageBar):
             self.set_hovered(True)
         elif event.type() == QEvent.Type.HoverLeave:
             self.set_hovered(False)
+        elif event.type() == QEvent.Type.ToolTip and self._expanded:
+            event.ignore()  # the card shows it all; a tooltip would cover it
+            return True
         return super().event(event)
 
     def contextMenuEvent(self, event):  # pylint: disable=invalid-name
@@ -282,7 +321,7 @@ class StatusBarPill(StageBar):
 
     def paintEvent(self, event):  # pylint: disable=invalid-name
         super().paintEvent(event)
-        if not (self._hovered or self._keyboard_focus):
+        if not self.outlined:
             return
         rect = self._bar_rect()
         painter = QPainter(self)
@@ -343,6 +382,10 @@ class StatusIconPill(StatusBarPill):
         self._sync_spin()
         self.update()
 
+    def tooltip_text(self) -> str:
+        """The owner's hint; the label is never cut."""
+        return self._hint
+
     def set_text(self, text: str) -> None:
         """Set the label; the pill resizes to fit it."""
         if text != self._text:
@@ -399,7 +442,7 @@ class StatusIconPill(StatusBarPill):
         radius = min(self.corner_radius or 5, rect.height() / 2)
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        outline = self._hovered or self._keyboard_focus
+        outline = self.outlined
         painter.setPen(QPen(colors["primary"] if outline else with_alpha(accent, 0.45), 1))
         painter.setBrush(with_alpha(accent, 0.12))
         painter.drawRoundedRect(rect, radius, radius)
@@ -434,8 +477,9 @@ class StatusIconPill(StatusBarPill):
 class StatusPillItem(BECWidget, QWidget):
     """
     A status-bar pill with a badge chip and optional widgets next to it, and a card with the full
-    widget on hover. Subclasses set the indicator (set_indicator) and the card content, and call
-    apply_sizes() once their own widgets exist.
+    widget that a click on the pill opens and closes (a click elsewhere closes it too). Subclasses
+    set the indicator (set_indicator) and the card content, and call apply_sizes() once their own
+    widgets exist.
 
     The pill width (compact, normal, wide, fill) and the large size are chosen in its right-click
     menu and saved per user under the settings prefix. An icon-style pill (PILL_STYLE) shows a
@@ -461,6 +505,7 @@ class StatusPillItem(BECWidget, QWidget):
     # class name of the widget a double-click on the pill opens in the dock area; None: no docking
     DOCK_WIDGET: str | None = None
     DOCK_HINT = "Double-click to add it to the current dock area"
+    EXPAND_HINT = "Click to expand"
 
     def __init__(
         self,
@@ -507,10 +552,11 @@ class StatusPillItem(BECWidget, QWidget):
             keep_open=self.keep_card_open,
             can_open=self._prepare_card,
             on_close=self.on_card_closed,
+            trigger=CardTrigger.CLICK,
         )
 
     def create_card(self) -> HoverCard:
-        """The hover card; subclasses may return their own, e.g. with a fixed content widget."""
+        """The card; subclasses may return their own, e.g. with a fixed content widget."""
         return HoverCard(self, self._card_content, width=self._card_width)
 
     ################################################################################
@@ -519,7 +565,7 @@ class StatusPillItem(BECWidget, QWidget):
 
     def add_trailing(self, widget: QWidget, reveal: bool = True) -> Reveal | None:
         """
-        Put a widget between the pill and the badge; it counts as part of the pill for the hover.
+        Put a widget between the pill and the badge; a click on it does not close the card.
 
         Args:
             widget(QWidget): The widget, e.g. a Stop button.
@@ -738,18 +784,18 @@ class StatusPillItem(BECWidget, QWidget):
         can_dock = self.can_dock
         if self.card.hint is not None:
             self.card.hint.setVisible(can_dock)
-        self.pill.setAccessibleDescription(self.DOCK_HINT if can_dock else "")
+        self.pill.setAccessibleDescription("\n".join(self._hints()))
         self._update_tooltip()
         return True
 
+    def _hints(self) -> list[str]:
+        """How to open the card, and how to dock its widget when a double-click can dock."""
+        return [self.EXPAND_HINT, self.DOCK_HINT] if self.can_dock else [self.EXPAND_HINT]
+
     def _update_tooltip(self) -> None:
-        """The indicator's tooltip, with the docking hint when a double-click can dock."""
+        """The indicator's tooltip, with how to open the card and, if possible, to dock."""
         lines = [self._indicator.tooltip] if self._indicator.tooltip else []
-        if self.can_dock:
-            lines.append(self.DOCK_HINT)
-        tooltip = "\n".join(lines)
-        if self.pill.toolTip() != tooltip:
-            self.pill.setToolTip(tooltip)
+        self.pill.set_hint("\n".join(lines + self._hints()))
 
     @SafeSlot()
     def _request_dock(self) -> None:
@@ -766,7 +812,7 @@ class StatusPillItem(BECWidget, QWidget):
         self.hover.open()
 
     def close_card(self) -> None:
-        """Hide the card and clear the hover state."""
+        """Hide the card."""
         self.hover.close()
 
     @property
@@ -784,13 +830,8 @@ class StatusPillItem(BECWidget, QWidget):
         super().hideEvent(event)
         self.close_card()
 
-    def changeEvent(self, event):  # pylint: disable=invalid-name
-        super().changeEvent(event)
-        if event.type() == QEvent.Type.WindowDeactivate:
-            self.hover.anchor_window_deactivated()
-
     def cleanup(self):
-        """Stop the hover poll and the animations and close the card."""
+        """Stop the card controller and the animations and close the card."""
         self.hover.cleanup()
         for widget_reveal in self._reveals:
             widget_reveal.stop()
