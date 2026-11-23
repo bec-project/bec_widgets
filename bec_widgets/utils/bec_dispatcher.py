@@ -19,6 +19,7 @@ from bec_lib.service_config import ServiceConfig
 from qtpy.QtCore import QObject
 from qtpy.QtCore import Signal as pyqtSignal
 
+from bec_widgets.utils.bec_connection import BECConnection
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.rpc_logging import elapsed_seconds, format_elapsed
 from bec_widgets.utils.serialization import register_serializer_extension
@@ -108,6 +109,8 @@ class QtThreadSafeCallback(QObject):
         self._active = True
         self.cb_signal.connect(self._deliver)
         self.topics = set()
+        # subscriptions made while the client was not connected: (topic, register kwargs)
+        self.pending: list[tuple[EndpointInfo | str, dict]] = []
 
     @property
     def cb(self) -> Callable | None:
@@ -235,10 +238,56 @@ class BECDispatcher:
 
         register_serializer_extension()
 
+        self.connection = BECConnection(self, connected=bool(self.client.started))
+        if not self.connection.connected:
+            logger.warning(
+                "Started without a connection to Redis: subscriptions are made on reconnect."
+            )
+
         logger.success("Initialized BECDispatcher")
 
+        self._gui_id = gui_id
         self.start_cli_server(gui_id=gui_id)
         self._initialized = True
+
+    @property
+    def connected(self) -> bool:
+        """Whether the client is connected, i.e. subscriptions go to Redis right away."""
+        return self.connection.connected
+
+    def on_client_connected(self) -> None:
+        """Make the subscriptions kept while the app ran without Redis and start the CLI server.
+
+        Called by ``BECConnection`` on the GUI thread once a reconnect started the client.
+        """
+        self.cleanup_dead_slots()
+        count = 0
+        for qt_slot in list(self._registered_slots.values()):
+            pending, qt_slot.pending = qt_slot.pending, []
+            for topic, kwargs in pending:
+                topic_str = self.client.connector.extract_raw_endpoints_from_info(topic)[0][0]
+                if topic_str not in qt_slot.topics:
+                    continue  # released while offline
+                if self.client.connector.any_stream_is_registered(topic, qt_slot):
+                    continue
+                self.client.connector.register(topic, cb=qt_slot, **kwargs)
+                count += 1
+        logger.info(f"Made {count} subscription(s) kept while the app ran without Redis")
+        if self.cli_server is None:
+            self.start_cli_server(gui_id=self._gui_id)
+        # pylint: disable=import-outside-toplevel
+        from bec_widgets.utils.bec_connector import BECConnector
+
+        BECConnector.refresh_bec_shortcuts()
+
+    def _unregister(self, topics: list[str] | None = None, cb=None) -> None:
+        """Unregister from the connector; without a connection there is nothing to undo."""
+        if not self.connected:
+            return
+        if cb is None:
+            self.client.connector.unregister(topics)
+        else:
+            self.client.connector.unregister(topics, cb=cb)
 
     @classmethod
     def reset_singleton(cls):
@@ -278,6 +327,15 @@ class BECDispatcher:
         # before adding new ones, so stale registrations never accumulate.
         self.cleanup_dead_slots()
         qt_slot = QtThreadSafeCallback(cb=slot, cb_info=cb_info, owner=owner)
+        if not self.connected:
+            # no Redis: keep the subscription and make it once the client connects
+            qt_slot = self._registered_slots.setdefault(qt_slot, qt_slot)
+            topic_list = topics if isinstance(topics, list) else [topics]
+            for topic in topic_list:
+                qt_slot.pending.append((topic, kwargs))
+            topics_str, _ = self.client.connector.extract_raw_endpoints_from_info(topics)
+            qt_slot.topics.update(set(topics_str))
+            return
         if not self.client.connector.any_stream_is_registered(topics, qt_slot):
             if qt_slot not in self._registered_slots:
                 self._registered_slots[qt_slot] = qt_slot
@@ -341,7 +399,7 @@ class BECDispatcher:
                 continue
             # unregister only what this wrapper actually holds; the same requested list
             # may span several wrappers of the same callback
-            self.client.connector.unregister(list(overlap), cb=connected_slot)
+            self._unregister(list(overlap), cb=connected_slot)
             connected_slot.topics.difference_update(overlap)
         if not matched and candidates:
             logger.warning(
@@ -365,7 +423,7 @@ class BECDispatcher:
                 connected_slot.invalidate()
                 remove_slots.append(connected_slot)
 
-        self.client.connector.unregister(topics)
+        self._unregister(topics)
         for connected_slot in self._registered_slots.values():
             connected_slot.topics.difference_update(topics_str)
         for connected_slot in remove_slots:
@@ -418,8 +476,9 @@ class BECDispatcher:
         qt_slot.invalidate()
         topics = list(qt_slot.topics)
         if topics:
-            self.client.connector.unregister(topics, cb=qt_slot)
+            self._unregister(topics, cb=qt_slot)
         qt_slot.topics.clear()
+        qt_slot.pending.clear()
         self._registered_slots.pop(qt_slot, None)
 
     def cleanup_dead_slots(self) -> int:

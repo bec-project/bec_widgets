@@ -67,6 +67,7 @@ class ToolIndicator:
         tooltip(str): Tooltip of the pill.
         active(bool): Something runs without a known progress; shows the moving stripes. Only
             while it runs, so a long-lived state (a busy server) does not animate all the time.
+        icon(str | None): Material icon of an icon pill instead of the one of the severity.
     """
 
     severity: ToolSeverity = ToolSeverity.INFO
@@ -76,6 +77,7 @@ class ToolIndicator:
     attention: bool = False
     tooltip: str = ""
     active: bool = False
+    icon: str | None = None
 
 
 def stage_mode(indicator: ToolIndicator) -> tuple[BarMode, float]:
@@ -130,7 +132,8 @@ def indicator_icon(indicator: "ToolIndicator") -> tuple[str, str, bool]:
     """
     if indicator.active and indicator.severity != ToolSeverity.CRITICAL:
         return (*ACTIVE_ICON, True)
-    return (*SEVERITY_ICONS[ToolSeverity(indicator.severity)], False)
+    icon, color_key = SEVERITY_ICONS[ToolSeverity(indicator.severity)]
+    return (indicator.icon or icon, color_key, False)
 
 
 class Reveal(QObject):

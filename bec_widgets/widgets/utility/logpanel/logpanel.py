@@ -177,15 +177,12 @@ class BecLogsQueue(BECConnector, QObject):
         self._paused = False
         self._attached_panels = 0
         self._cleaned = False
-        self._data = deque(
-            (
-                item["data"]
-                for item in self.bec_dispatcher.client.connector.xread(
-                    MessageEndpoints.log(), count=self._max_length, id="0"
-                )
-            ),
-            maxlen=self._max_length,
-        )
+        history = []
+        if self.bec_dispatcher.connected:
+            history = self.bec_dispatcher.client.connector.xread(
+                MessageEndpoints.log(), count=self._max_length, id="0"
+            )
+        self._data = deque((item["data"] for item in history), maxlen=self._max_length)
         self._incoming: deque[LogMessage] = deque([], maxlen=self._max_length)
         self.bec_dispatcher.connect_slot(self._process_incoming_log_msg, MessageEndpoints.log())
 

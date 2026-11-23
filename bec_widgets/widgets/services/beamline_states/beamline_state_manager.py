@@ -333,7 +333,7 @@ class BeamlineStateManager(BECWidget, QWidget):
         self._selected_devices: set[str] | None = None
         self._device_filter_text = ""
         self._hidden_expanded = False
-        self._scan_interlock = self.client.builtin_actors.scan_interlock
+        self._scan_interlock = self._get_scan_interlock()
         self._interlock_enabled = False
         self._interlock_states: dict[str, list[str]] = {}
         self._pending_interlock_statuses: dict[str, list[str]] = {}
@@ -375,12 +375,30 @@ class BeamlineStateManager(BECWidget, QWidget):
         )
         # Scan Interlock updates from HLI
         self.scan_interlock_enabled_changed.connect(self._on_interlock_enabled_changed)
-        self._enabled_config = getattr(self._scan_interlock, "_enabled", None)
-        if self._enabled_config is not None and hasattr(self._enabled_config, "subscribe"):
-            self._enabled_config.subscribe(self._on_interlock_enabled_stream)
+        self._enabled_config = None
+        self._subscribe_interlock_enabled()
+        self.bec_dispatcher.connection.reconnected.connect(self._on_bec_reconnected)
         self._refresh_scan_interlock()
         self.refresh_states()
         self._refresh_hidden_summary()
+
+    def _get_scan_interlock(self):
+        """The scan interlock actor of the client, or None while BEC is not connected."""
+        actors = getattr(self.client, "builtin_actors", None)
+        return getattr(actors, "scan_interlock", None)
+
+    def _subscribe_interlock_enabled(self) -> None:
+        self._enabled_config = getattr(self._scan_interlock, "_enabled", None)
+        if self._enabled_config is not None and hasattr(self._enabled_config, "subscribe"):
+            self._enabled_config.subscribe(self._on_interlock_enabled_stream)
+
+    @SafeSlot()
+    def _on_bec_reconnected(self) -> None:
+        """Read the states and the scan interlock once BEC is connected again."""
+        self._scan_interlock = self._get_scan_interlock()
+        self._subscribe_interlock_enabled()
+        self._refresh_scan_interlock()
+        self.refresh_states()
 
     def _create_toolbar(self) -> ModularToolBar:
         toolbar = ModularToolBar(parent=self)
@@ -548,6 +566,8 @@ class BeamlineStateManager(BECWidget, QWidget):
     @SafeSlot()
     def refresh_states(self) -> None:
         """Fetch the latest cached available beamline states and update the list immediately."""
+        if not self.bec_dispatcher.connected:
+            return
         msg = self.client.connector.get_last(
             MessageEndpoints.available_beamline_states(), key="data"
         )
@@ -569,6 +589,8 @@ class BeamlineStateManager(BECWidget, QWidget):
         self, _content: dict[str, Any] | None = None, _metadata: dict[str, Any] | None = None
     ) -> None:
         """Re-read the scan-interlock state from BEC and refresh the displayed pills."""
+        if self._scan_interlock is None:
+            return  # not connected to BEC
         try:
             self._interlock_enabled = bool(self._scan_interlock.enabled)
             self._interlock_states = dict(self._scan_interlock.states_watched)

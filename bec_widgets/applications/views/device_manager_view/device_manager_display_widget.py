@@ -127,7 +127,9 @@ class DeviceManagerDisplayWidget(DockAreaWidget):
         # State variable for config upload
         self._config_upload_active: bool = False
         self._config_in_sync: bool = False
-        scan_status = self.bec_dispatcher.client.connector.get(MessageEndpoints.scan_status())
+        scan_status = None
+        if self.bec_dispatcher.connected:
+            scan_status = self.bec_dispatcher.client.connector.get(MessageEndpoints.scan_status())
         initial_status = scan_status.status if scan_status is not None else "closed"
         self._scan_is_running: bool = initial_status in ["open", "paused"]
 
