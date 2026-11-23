@@ -359,7 +359,7 @@ def test_main_app_commands(main_app):
     commands = _by_uid(main_app)
     assert "view:DM" in commands
     assert "widget:Waveform" in commands and "widget:ScanControl" in commands
-    assert "device:samx" in commands and commands["device:samx"].hint == "Move"
+    assert "device:samx" in commands and commands["device:samx"].hint == "Add box"
     assert commands["device:bpm4i"].hint == "Plot"
     assert "menu:View/Dark Theme" in commands
     assert "workspace_action:save" in commands

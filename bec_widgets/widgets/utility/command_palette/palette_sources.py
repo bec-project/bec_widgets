@@ -258,7 +258,7 @@ def device_commands(dock_area: BECDockArea, activate: Callable[[], None]) -> lis
                 category="devices",
                 icon="open_with" if positioner else "sensors",
                 keywords=f"{device_class} {' '.join(map(str, tags))} {description}",
-                hint="Move" if positioner else "Plot",
+                hint="Add box" if positioner else "Plot",
             )
         )
     return commands
