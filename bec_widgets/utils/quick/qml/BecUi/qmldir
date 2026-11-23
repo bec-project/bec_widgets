@@ -1,0 +1,10 @@
+module BecUi
+Icon 1.0 Icon.qml
+IconButton 1.0 IconButton.qml
+TextButton 1.0 TextButton.qml
+StatusPill 1.0 StatusPill.qml
+Card 1.0 Card.qml
+FieldFrame 1.0 FieldFrame.qml
+InputField 1.0 InputField.qml
+SelectField 1.0 SelectField.qml
+SwitchField 1.0 SwitchField.qml
