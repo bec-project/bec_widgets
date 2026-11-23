@@ -31,6 +31,13 @@ from bec_widgets.widgets.services.bec_status_box.status_model import (
     ServiceStatusModel,
 )
 
+# the hint under the header while the app is not connected to BEC
+OFFLINE_HINTS = {
+    "offline": "Scans, devices and live data come back once this app is connected to BEC. "
+    "Tools that work on files keep working.",
+    "lost": "BEC connects again by itself as soon as Redis answers.",
+}
+
 
 def tone_color(colors: dict[str, QColor], tone: Tone | str) -> QColor:
     """Map a tone to a theme colour; neutral is the muted colour."""
@@ -480,11 +487,7 @@ class StatusBoxWidgetView(QWidget):
         self.list_layout.setSpacing(2)
         self.list_layout.addStretch()
         self.scroll.setWidget(self.list_widget)
-        self.offline_label = QLabel(
-            "Scans, devices and live data come back once this app is connected to BEC. "
-            "Tools that work on files keep working.",
-            self,
-        )
+        self.offline_label = QLabel(OFFLINE_HINTS["offline"], self)
         self.offline_label.setObjectName("offlineHint")
         self.offline_label.setWordWrap(True)
         self.offline_label.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -519,6 +522,11 @@ class StatusBoxWidgetView(QWidget):
             self.header.set_summary(self.model.headline, self.model.detail, tone)
         self.header.set_restart(state, self.model.can_restart)
         self.header.set_connection(self.model.connection)
+        self.offline_label.setText(
+            OFFLINE_HINTS["lost"]
+            if self.model.connection == ConnectionState.LOST
+            else OFFLINE_HINTS["offline"]
+        )
         self.offline_label.setVisible(not self.model.connected)
 
     def sync(self) -> None:

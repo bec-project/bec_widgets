@@ -199,3 +199,10 @@ def test_status_box_reconnect_button(qtbot, offline):
     assert header.reconnect_button.isHidden()
     assert not header.restart_button.isHidden()
     assert box.view.offline_label.isHidden()
+
+
+def test_lost_connection_says_it_comes_back_by_itself(qtbot, bec_dispatcher):
+    box = create_widget(qtbot, BECStatusBox, bec_service_status_mixin=mock.MagicMock())
+    bec_dispatcher.connection._set_state(ConnectionState.LOST)
+    assert box.view.header.reconnect_button.isHidden()
+    assert "by itself" in box.view.offline_label.text()
