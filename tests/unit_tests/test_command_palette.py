@@ -11,6 +11,7 @@ from bec_widgets.widgets.utility.command_palette.command_palette import (
     default_flavour,
 )
 from bec_widgets.widgets.utility.command_palette.palette_core import (
+    MAX_RESULTS,
     CommandPaletteController,
     PaletteCommand,
     fuzzy_match,
@@ -297,6 +298,26 @@ def test_qwidget_card_follows_theme_while_open(qtbot, palette_window):
     qtbot.waitUntil(lambda: palette.card.styleSheet() != dark)
     apply_theme("dark")
     qtbot.waitUntil(lambda: palette.card.styleSheet() == dark)
+
+
+def test_qwidget_card_says_when_results_are_cut(qtbot, palette_window):
+    _window, palette = palette_window
+    if palette.flavour != "qwidget":
+        pytest.skip("QWidget card only")
+    many = [
+        PaletteCommand(uid=f"device:d{i}", title=f"d{i}", callback=lambda: None, category="devices")
+        for i in range(MAX_RESULTS + 15)
+    ]
+    palette.controller.add_source(lambda: many)
+    palette.open_palette()
+    card = palette.card
+    assert card.count_label.text() == ""  # browsing everything: a sample per section
+    palette.controller.set_scope("devices")
+    devices = sum(cmd.category == "devices" for cmd in palette.controller.commands)
+    assert devices > MAX_RESULTS and palette.controller.totalCount == devices
+    assert card.count_label.text() == f"First {MAX_RESULTS} of {devices}, type to narrow"
+    palette.controller.set_query("d1")
+    assert card.count_label.text() == f"{palette.controller.resultCount} results"
 
 
 def test_qml_card_loads(qtbot, palette_window):

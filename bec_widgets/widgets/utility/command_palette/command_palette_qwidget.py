@@ -453,10 +453,19 @@ class PaletteCardWidget(QFrame):
         count = self.controller.resultCount
         self.stack.setCurrentWidget(self.list if count else self.empty)
         self.empty_title.setText(self.controller.empty_text())
-        self.count_label.setText(f"{count} result{'s' if count != 1 else ''}" if count else "")
+        self.count_label.setText(self._count_text())
         # row heights depend on the section headers
         self.list.doItemsLayout()
         self.list.scrollToTop()
+
+    def _count_text(self) -> str:
+        controller = self.controller
+        count, total = controller.resultCount, controller.totalCount
+        if total > count:
+            return f"First {count} of {total}, type to narrow"
+        if not controller.query or not count:
+            return ""
+        return f"{count} result{'s' if count != 1 else ''}"
 
     def _sync_current(self) -> None:
         row = self.controller.currentIndex

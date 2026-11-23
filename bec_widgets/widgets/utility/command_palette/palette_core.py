@@ -245,6 +245,7 @@ class CommandPaletteController(QObject):
         self._scope = "all"
         self._current = -1
         self._results: list[PaletteCommand] = []
+        self._total = 0
         self._positions: dict[str, list[int]] = {}
         self._sections: dict[str, str] = {}
         self._highlight = "#3b82f6"
@@ -340,6 +341,9 @@ class CommandPaletteController(QObject):
     def _get_result_count(self) -> int:
         return len(self._results)
 
+    def _get_total_count(self) -> int:
+        return self._total
+
     def _get_sectioned(self) -> bool:
         return not self._query
 
@@ -347,6 +351,8 @@ class CommandPaletteController(QObject):
     scope = Property(str, _get_scope, set_scope, notify=scopeChanged)
     currentIndex = Property(int, _get_current, set_current_index, notify=currentIndexChanged)
     resultCount = Property(int, _get_result_count, notify=resultsChanged)
+    # matches before MAX_RESULTS cut the list; equals resultCount when nothing was cut
+    totalCount = Property(int, _get_total_count, notify=resultsChanged)
     sectioned = Property(bool, _get_sectioned, notify=resultsChanged)
     scopes = Property(
         "QVariantList",
@@ -442,6 +448,7 @@ class CommandPaletteController(QObject):
         sections: dict[str, str] = {}
         if not self._query:
             results = self._browse(candidates, sections)
+            total = len(candidates) if self._scope != "all" else len(results)
         else:
             tokens = self._query.split()
             ranked = []
@@ -457,7 +464,9 @@ class CommandPaletteController(QObject):
                 positions[cmd.uid] = pos
             ranked.sort(key=lambda item: (item[0], item[1]))
             results = [cmd for _score, _order, cmd in ranked[:MAX_RESULTS]]
+            total = len(ranked)
         self._results = results
+        self._total = total
         self._positions = positions
         self._sections = sections
         self._publish()
