@@ -21,6 +21,7 @@ from qtpy.QtWidgets import (
     QLabel,
     QLineEdit,
     QListView,
+    QPushButton,
     QStackedWidget,
     QStyle,
     QStyledItemDelegate,
@@ -324,12 +325,15 @@ class PaletteCardWidget(QFrame):
         self.empty_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.empty_title = QLabel(self.empty)
         self.empty_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.empty_hint = QLabel(
-            "Type  >  for actions,  +  for widgets,  @  for devices,  #  for workspaces", self.empty
-        )
-        self.empty_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        for widget in (self.empty_icon, self.empty_title, self.empty_hint):
-            empty_layout.addWidget(widget)
+        self.search_all_button = QPushButton("Search all", self.empty)
+        self.search_all_button.setObjectName("PaletteSearchAll")
+        self.search_all_button.setFlat(True)
+        self.search_all_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.search_all_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.search_all_button.clicked.connect(lambda: self._pick_scope("all"))
+        empty_layout.addWidget(self.empty_icon)
+        empty_layout.addWidget(self.empty_title)
+        empty_layout.addWidget(self.search_all_button, 0, Qt.AlignmentFlag.AlignHCenter)
         empty_layout.addStretch(2)
         self.stack.addWidget(self.list)
         self.stack.addWidget(self.empty)
@@ -395,7 +399,11 @@ class PaletteCardWidget(QFrame):
         self.search_icon.setPixmap(_icon("search", tokens.fg_muted.name(), 20))
         self.empty_icon.setPixmap(_icon("search_off", tokens.fg_subtle.name(), 32))
         self.empty_title.setStyleSheet(f"color: {tokens.fg_muted.name()}; font-size: 14px;")
-        self.empty_hint.setStyleSheet(f"color: {tokens.fg_muted.name()}; font-size: 12px;")
+        self.search_all_button.setStyleSheet(
+            f"QPushButton {{ color: {primary}; background: transparent; border: none;"
+            f" font-size: 13px; padding: 4px 8px; }}"
+            f" QPushButton:hover {{ text-decoration: underline; }}"
+        )
         key = f"<span style='color:{tokens.fg_muted.name()}; font-weight:600'>{{}}</span>"
         self.footer_hints.setText(
             "&nbsp;&nbsp;&nbsp;".join(
@@ -456,6 +464,10 @@ class PaletteCardWidget(QFrame):
         self.delegate.single_section = len(sections) <= 1
         self.stack.setCurrentWidget(self.list if count else self.empty)
         self.empty_title.setText(self.controller.empty_text())
+        # a scoped search that finds nothing offers the same query in every scope
+        self.search_all_button.setVisible(
+            not count and bool(self.controller.query) and self.controller.scope != "all"
+        )
         self.count_label.setText(self._count_text())
         # row heights depend on the section headers
         self.list.doItemsLayout()

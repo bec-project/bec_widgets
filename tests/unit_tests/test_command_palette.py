@@ -332,6 +332,22 @@ def test_qwidget_card_hides_labels_that_repeat_the_scope(qtbot, palette_window):
     assert not card.delegate.has_header(palette.controller.model.index(0, 0))
 
 
+def test_qwidget_card_offers_search_all_after_a_scoped_miss(qtbot, palette_window):
+    _window, palette = palette_window
+    if palette.flavour != "qwidget":
+        pytest.skip("QWidget card only")
+    palette.open_palette()
+    card = palette.card
+    palette.controller.set_query("@waveform")
+    assert card.stack.currentWidget() is card.empty
+    assert card.search_all_button.isVisibleTo(card)
+    qtbot.mouseClick(card.search_all_button, Qt.MouseButton.LeftButton)
+    assert palette.controller.scope == "all" and palette.controller.query == "waveform"
+    assert card.stack.currentWidget() is card.list
+    palette.controller.set_query("nothing-matches")
+    assert not card.search_all_button.isVisibleTo(card)
+
+
 def test_qml_card_loads(qtbot, palette_window):
     _window, palette = palette_window
     if palette.flavour != "qml":
