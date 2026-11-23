@@ -108,7 +108,7 @@ class PaletteDelegate(QStyledItemDelegate):
 
         if self.has_header(index):
             header = QRectF(rect.left() + 18, rect.top(), rect.width() - 36, HEADER_HEIGHT)
-            painter.setPen(tokens.fg_subtle)
+            painter.setPen(tokens.fg_muted)
             painter.setFont(_font(11, QFont.Weight.DemiBold))
             painter.drawText(
                 header.adjusted(0, 8, 0, 0),
@@ -153,7 +153,7 @@ class PaletteDelegate(QStyledItemDelegate):
             right = draw_keycap(painter, right, row.center().y(), shortcut, tokens) - 10
         elif not self.controller.sectioned:
             painter.setFont(_font(11))
-            painter.setPen(tokens.fg_subtle)
+            painter.setPen(tokens.fg_muted)
             category = str(index.data(_role("category")) or "")
             width = QFontMetrics(painter.font()).horizontalAdvance(category)
             painter.drawText(
@@ -192,7 +192,7 @@ class PaletteDelegate(QStyledItemDelegate):
         subtitle = str(index.data(_role("subtitle")) or "")
         if subtitle:
             painter.setFont(_font(11))
-            painter.setPen(tokens.fg_subtle)
+            painter.setPen(tokens.fg_muted)
             painter.drawText(
                 QRectF(left, row.top() + 24, available, 16),
                 Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
@@ -237,7 +237,7 @@ class ScopeChip(QAbstractButton):
         painter.setPen(tokens.soft(tokens.primary, 0.5) if active else tokens.border)
         painter.drawRoundedRect(rect, rect.height() / 2, rect.height() / 2)
         painter.setFont(_font(12, QFont.Weight.DemiBold if active else QFont.Weight.Normal))
-        painter.setPen(tokens.primary if active else tokens.fg_muted)
+        painter.setPen(tokens.fg if active else tokens.fg_muted)
         painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, self.text())
         painter.end()
 
@@ -342,6 +342,7 @@ class PaletteCardWidget(QFrame):
         footer_row.setSpacing(14)
         self.footer_hints = QLabel(self.footer)
         self.count_label = QLabel(self.footer)
+        self.count_label.setObjectName("PaletteCount")
         footer_row.addWidget(self.footer_hints, 1)
         footer_row.addWidget(self.count_label)
         layout.addWidget(self.footer)
@@ -384,8 +385,9 @@ class PaletteCardWidget(QFrame):
             #PaletteFooter {{ background: {tokens.field.name()}; border: none;
                 border-top: 1px solid {tokens.border.name()};
                 border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }}
-            #PaletteFooter QLabel {{ color: {tokens.fg_subtle.name()}; font-size: 11px;
+            #PaletteFooter QLabel {{ color: {tokens.fg_muted.name()}; font-size: 11px;
                 background: transparent; }}
+            #PaletteFooter #PaletteCount {{ color: {tokens.fg.name()}; }}
             QScrollBar:vertical {{ background: transparent; width: 8px; margin: 4px 2px; }}
             QScrollBar::handle:vertical {{ background: {tokens.track.name()};
                 border-radius: 2px; min-height: 24px; }}
@@ -395,7 +397,7 @@ class PaletteCardWidget(QFrame):
         self.search_icon.setPixmap(_icon("search", tokens.fg_muted.name(), 20))
         self.empty_icon.setPixmap(_icon("search_off", tokens.fg_subtle.name(), 32))
         self.empty_title.setStyleSheet(f"color: {tokens.fg_muted.name()}; font-size: 14px;")
-        self.empty_hint.setStyleSheet(f"color: {tokens.fg_subtle.name()}; font-size: 12px;")
+        self.empty_hint.setStyleSheet(f"color: {tokens.fg_muted.name()}; font-size: 12px;")
         key = f"<span style='color:{tokens.fg_muted.name()}; font-weight:600'>{{}}</span>"
         self.footer_hints.setText(
             "&nbsp;&nbsp;&nbsp;".join(
