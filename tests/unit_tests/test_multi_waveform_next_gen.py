@@ -41,12 +41,12 @@ def _fake_bridge_factory(monkeypatch):
 
     class _FakeBridge:
         def __init__(
-            self, client, sources, scan="live", owner=None, min_emit_interval=0.1, max_points=None
+            self, client, sources, scan="live", owner=None, update_rate=10.0, max_buffer_size=None
         ):
             self.client = client
             self.sources = list(sources)
             self.scan = scan
-            self.max_points = max_points
+            self.max_buffer_size = max_buffer_size
             self.healthy = True
             # What the widgets read of a real bridge about its binding.
             self.groups = {}
@@ -58,8 +58,8 @@ def _fake_bridge_factory(monkeypatch):
         def close(self):
             self.closed = True
 
-    def factory(client, sources, scan="live", owner=None, min_emit_interval=0.1, max_points=None):
-        bridge = _FakeBridge(client, sources, scan=scan, max_points=max_points)
+    def factory(client, sources, scan="live", owner=None, update_rate=10.0, max_buffer_size=None):
+        bridge = _FakeBridge(client, sources, scan=scan, max_buffer_size=max_buffer_size)
         created.append(bridge)
         return bridge
 
@@ -206,8 +206,8 @@ def test_multiwaveform_preview_buffer_is_not_the_display_limit(qtbot, mocked_cli
     mw.config.flush_buffer = False
 
     mw.plot("waveform1d")
-    assert bridges[-1].max_points != 2
-    assert bridges[-1].max_points == MultiWaveform.PREVIEW_MAX_TRACES
+    assert bridges[-1].max_buffer_size != 2
+    assert bridges[-1].max_buffer_size == MultiWaveform.PREVIEW_MAX_TRACES
 
 
 def test_multiwaveform_bridge_lifecycle(qtbot, mocked_client, monkeypatch):
@@ -219,7 +219,7 @@ def test_multiwaveform_bridge_lifecycle(qtbot, mocked_client, monkeypatch):
     assert len(bridges) == 1
     assert bridges[-1].sources == [("waveform1d", TRACE)]
     assert bridges[-1].scan is None
-    assert bridges[-1].max_points == MultiWaveform.PREVIEW_MAX_TRACES
+    assert bridges[-1].max_buffer_size == MultiWaveform.PREVIEW_MAX_TRACES
     assert mw.connected is True
 
     first = bridges[-1]
@@ -256,7 +256,7 @@ def test_multiwaveform_async_signal_routes_live(qtbot, mocked_client, monkeypatc
     assert mw.connected is True
     assert bridges[-1].scan == "live"
     assert bridges[-1].sources == [("eiger", "eiger_data")]
-    assert bridges[-1].max_points is None
+    assert bridges[-1].max_buffer_size is None
     _clear_signal_config(mocked_client, "eiger", "data")
 
 
@@ -314,7 +314,7 @@ def test_multiwaveform_preview_signal_routes_scanless(qtbot, mocked_client, monk
     assert mw.monitor_signal == "wave_prev"
     assert bridges[-1].scan is None
     assert bridges[-1].sources == [("waveform1d", "wave_prev")]
-    assert bridges[-1].max_points == MultiWaveform.PREVIEW_MAX_TRACES
+    assert bridges[-1].max_buffer_size == MultiWaveform.PREVIEW_MAX_TRACES
     _clear_signal_config(mocked_client, "waveform1d", "wave_prev")
 
 

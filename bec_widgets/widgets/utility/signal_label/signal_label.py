@@ -267,7 +267,7 @@ class SignalLabel(BECWidget, QWidget):
             self._on_data_update,
             sources=[(self._device, self._signal_key)],
             scan=None,
-            max_points=1,
+            max_buffer_size=1,
         )
         self._connected = True
 

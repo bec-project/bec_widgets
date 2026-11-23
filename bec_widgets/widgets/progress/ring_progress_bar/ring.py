@@ -376,7 +376,7 @@ class Ring(BECWidget, QWidget):
                     break
             self._source_key = (device, entry)
             self._data_subscription = self.bec_dispatcher.connect_data_subscription(
-                self._on_data_update, sources=[self._source_key], scan=None, max_points=1
+                self._on_data_update, sources=[self._source_key], scan=None, max_buffer_size=1
             )
             return signal
 

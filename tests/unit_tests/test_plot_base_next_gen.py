@@ -800,7 +800,6 @@ def test_update_rate_default_and_clamp(qtbot, mocked_client):
     """update_rate defaults to the class rate and clamps to 1-100 Hz."""
     pb = create_widget(qtbot, PlotBase, client=mocked_client)
     assert pb.update_rate == 25.0
-    assert pb.update_interval_s == 1.0 / 25.0
 
     pb.update_rate = 0.2
     assert pb.update_rate == 1.0
@@ -823,7 +822,7 @@ def test_update_rate_propagates_to_bridges(qtbot, mocked_client):
             pb.update_rate = 5
     assert signal.args == ["update_rate", 5.0]
     subscriptions.assert_called_once_with(pb)
-    bridge.set_min_emit_interval.assert_called_once_with(0.2)
+    bridge.set_update_rate.assert_called_once_with(5.0)
 
 
 def test_update_rate_widget_defaults():

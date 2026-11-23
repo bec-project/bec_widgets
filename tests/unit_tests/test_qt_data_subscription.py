@@ -116,15 +116,15 @@ def test_size_limit_is_forwarded_to_the_backend(fake_api):
 def test_routing_options_are_forwarded_to_the_backend(fake_api):
     api, _ = fake_api
     bridge, _, _ = collecting(
-        api, devices=["samx", "samy"], scan=None, correlation="continuous", force_source="redis"
+        api, devices=["samx", "samy"], scan=None, pair_sources=True, force_source="redis"
     )
     kwargs = api.subscribe.call_args.kwargs
     assert kwargs["sources"] is None and kwargs["devices"] == ["samx", "samy"]
-    assert kwargs["correlation"] == "continuous" and kwargs["force_source"] == "redis"
+    assert kwargs["pair_sources"] is True and kwargs["force_source"] == "redis"
     bridge.close()
     bridge, _, _ = collecting(api, sources=[("samx", "samx")])
     kwargs = api.subscribe.call_args.kwargs
-    assert kwargs["devices"] is None and kwargs["correlation"] == "ordinal"
+    assert kwargs["devices"] is None and kwargs["pair_sources"] is False
     assert kwargs["force_source"] is None
     bridge.close()
 

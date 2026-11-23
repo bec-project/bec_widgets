@@ -124,7 +124,7 @@ class PositionerBoxBase(BECWidget, QWidget):
                     sources=[(device, entry) for entry in entries],
                     scan=None,
                     owner=self,
-                    max_points=1,
+                    max_buffer_size=1,
                 )
             )
 

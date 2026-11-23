@@ -31,11 +31,11 @@ def heatmap_widget(qtbot, mocked_client):
 class _FakeBridge:
     """Stand-in for QtDataSubscription."""
 
-    def __init__(self, client, sources, scan="live", owner=None, min_emit_interval=0.1):
+    def __init__(self, client, sources, scan="live", owner=None, update_rate=10.0):
         self.client = client
         self.sources = list(sources)
         self.scan = scan
-        self.min_emit_interval = min_emit_interval
+        self.update_rate = update_rate
         self.healthy = True
         # What the widgets read of a real bridge about its binding.
         self.groups = {}
@@ -52,8 +52,8 @@ class _FakeBridge:
 def fake_bridges(monkeypatch):
     created = []
 
-    def factory(client, sources, scan="live", owner=None, min_emit_interval=0.1):
-        bridge = _FakeBridge(client, sources, scan=scan, min_emit_interval=min_emit_interval)
+    def factory(client, sources, scan="live", owner=None, update_rate=10.0):
+        bridge = _FakeBridge(client, sources, scan=scan, update_rate=update_rate)
         created.append(bridge)
         return bridge
 

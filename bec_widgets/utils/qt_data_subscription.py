@@ -18,7 +18,7 @@ from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
 from bec_lib.data_api import (
-    CorrelationMode,
+    DEFAULT_UPDATE_RATE,
     ScanTarget,
     SourceKey,
     Subscription,
@@ -61,12 +61,12 @@ class QtDataSubscription(QtOwnedCallback):
         scan: str | None = ScanTarget.LIVE,
         owner: object | None = None,
         progress_slot: Callable[[float], Any] | None = None,
-        min_emit_interval: float = 0.1,
-        max_points: int | None = None,
+        update_rate: float | None = DEFAULT_UPDATE_RATE,
+        max_buffer_size: int | None = None,
         size_limit_bytes: int | None = None,
         force_source: str | None = None,
         devices: list[str] | None = None,
-        correlation: CorrelationMode | str = CorrelationMode.ORDINAL,
+        pair_sources: bool = False,
         **options: Any,
     ):
         """
@@ -86,8 +86,9 @@ class QtDataSubscription(QtOwnedCallback):
             owner (object | None): Lifetime anchor for a slot that is not a bound method.
             progress_slot (Callable | None): Called on the Qt thread with the fraction
                 (0..1) of a stored scan that is loaded. It belongs to the same owner.
-            min_emit_interval (float): Backend emission coalescing interval.
-            max_points (int | None): Per-source retention cap; oldest points
+            update_rate (float | None): Most live updates a second, in Hz; faster updates
+                are coalesced in the backend. ``None`` delivers every update.
+            max_buffer_size (int | None): Most points kept per source; the oldest
                 are dropped beyond it. Recommended for endless device-stream
                 subscriptions (``scan=None``).
             size_limit_bytes (int | None): Withhold the load when the backend
@@ -101,8 +102,8 @@ class QtDataSubscription(QtOwnedCallback):
             devices (list[str] | None): Shorthand for hub signals,
                 ``devices=["samx", "samy"]`` is ``sources=[("samx", "samx"),
                 ("samy", "samy")]``. Exclusive with ``sources``.
-            correlation (CorrelationMode | str): ``CorrelationMode.ORDINAL`` (default) or,
-                for scan-less streams, ``CorrelationMode.CONTINUOUS``: every source forms one
+            pair_sources (bool): Only for scan-less streams (``scan=None``). False
+                (default): every source is its own stream. True: all sources form one
                 sample-and-hold group whose updates carry equal-length,
                 already paired columns (the (x, y) trail of a motor map).
 
@@ -128,13 +129,13 @@ class QtDataSubscription(QtOwnedCallback):
             sources=sources,
             scan=scan,
             callback=self._deliver,
-            min_emit_interval=min_emit_interval,
-            max_points=max_points,
+            update_rate=update_rate,
+            max_buffer_size=max_buffer_size,
             size_limit_bytes=size_limit_bytes,
             progress_callback=self._deliver_progress,
             force_source=force_source,
             devices=devices,
-            correlation=correlation,
+            pair_sources=pair_sources,
             **options,
         )
 
@@ -223,14 +224,15 @@ class QtDataSubscription(QtOwnedCallback):
             return False
         return self._subscription.request_view(source, start, stop, max_points)
 
-    def set_min_emit_interval(self, seconds: float) -> None:
+    def set_update_rate(self, update_rate: float | None) -> None:
         """
-        Change the backend coalescing interval of the live subscription.
+        Change how often the live subscription delivers updates.
 
         Args:
-            seconds (float): New interval in seconds; 0 disables coalescing.
+            update_rate (float | None): Most live updates a second, in Hz; ``None``
+                delivers every update.
         """
-        self._subscription.set_min_emit_interval(seconds)
+        self._subscription.set_update_rate(update_rate)
 
     @property
     def scan_id(self) -> str | None:

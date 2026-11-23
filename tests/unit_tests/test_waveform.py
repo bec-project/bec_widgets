@@ -95,7 +95,7 @@ def _fake_bridge_factory(monkeypatch, gated_bytes: int | None = None):
             sources,
             scan="live",
             owner=None,
-            min_emit_interval=0.1,
+            update_rate=10.0,
             size_limit_bytes=None,
             view_limit_bytes=None,
         ):
@@ -114,7 +114,7 @@ def _fake_bridge_factory(monkeypatch, gated_bytes: int | None = None):
             self.updated = MagicMock()
             self.progress = MagicMock()
             self.size_limit_bytes = size_limit_bytes
-            self.min_emit_interval = min_emit_interval
+            self.update_rate = update_rate
             self.estimated_bytes = gated_bytes
             self.size_gated = (
                 gated_bytes is not None
@@ -139,12 +139,12 @@ def _fake_bridge_factory(monkeypatch, gated_bytes: int | None = None):
         sources,
         scan="live",
         owner=None,
-        min_emit_interval=0.1,
+        update_rate=10.0,
         size_limit_bytes=None,
         view_limit_bytes=None,
     ):
         bridge = _FakeBridge(
-            client, sources, scan, owner, min_emit_interval, size_limit_bytes, view_limit_bytes
+            client, sources, scan, owner, update_rate, size_limit_bytes, view_limit_bytes
         )
         created.append(bridge)
         return bridge
@@ -291,13 +291,13 @@ def test_plot_single_arg_input_2d(qtbot, mocked_client):
 
 
 def test_update_rate_reaches_bridge(qtbot, mocked_client, monkeypatch):
-    """The widget's update_rate defines the bridge coalescing interval."""
+    """The widget's update_rate reaches the subscription."""
     created = _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     assert wf.update_rate == 15.0  # Waveform default (benchmarked)
     wf.plot(arg1="bpm4i")
     assert created, "no data bridge was created"
-    assert created[-1].min_emit_interval == pytest.approx(1.0 / 15.0)
+    assert created[-1].update_rate == 15.0
 
 
 def test_plot_single_arg_input_sync(qtbot, mocked_client):

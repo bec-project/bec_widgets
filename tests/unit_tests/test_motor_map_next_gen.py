@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import shiboken6
 from bec_lib import messages
-from bec_lib.data_api import CONTINUOUS_GROUP
+from bec_lib.data_api import PAIRED_GROUP
 from bec_lib.data_api.models import SourceData, SubscriptionUpdate
 from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtTest import QSignalSpy
@@ -30,9 +30,9 @@ def _fake_bridge_factory(monkeypatch):
             self.client = client
             self.sources = list(sources) if sources is not None else None
             self.devices = list(kwargs.get("devices") or [])
-            self.correlation = kwargs.get("correlation", "ordinal")
+            self.pair_sources = kwargs.get("pair_sources", False)
             self.scan = scan
-            self.max_points = kwargs.get("max_points")
+            self.max_buffer_size = kwargs.get("max_buffer_size")
             self.healthy = True
             # What the widgets read of a real bridge about its binding.
             self.groups = {}
@@ -74,7 +74,7 @@ def _pair_update(xs, ys, start=0):
         sources=sources,
         aligned_ordinals=ordinals,
         complete=True,
-        metadata={"group": CONTINUOUS_GROUP},
+        metadata={"group": PAIRED_GROUP},
     )
 
 
@@ -254,7 +254,7 @@ def test_motor_map_reset_history(qtbot, mocked_client):
 
 
 def test_motor_map_on_data_update(qtbot, mocked_client):
-    """The trail is the continuous group's paired (x, y) columns."""
+    """The trail is the paired group's (x, y) columns."""
     mm = create_widget(qtbot, MotorMap, client=mocked_client)
     mm.map(device_x="samx", device_y="samy")
     mm._on_data_update(_pair_update([1.0], [2.0]))
@@ -291,16 +291,16 @@ def test_motor_map_reset_history_hides_earlier_rows(qtbot, mocked_client):
 
 
 def test_motor_map_bridge_lifecycle(qtbot, mocked_client, monkeypatch):
-    """map() creates one continuous scan-less readback bridge; re-map replaces it."""
+    """map() creates one scan-less readback bridge with paired sources; re-map replaces it."""
     bridges = _fake_bridge_factory(monkeypatch)
     mm = create_widget(qtbot, MotorMap, client=mocked_client)
 
     mm.map(device_x="samx", device_y="samy")
     assert len(bridges) == 1
     assert bridges[-1].devices == ["samx", "samy"] and bridges[-1].sources is None
-    assert bridges[-1].correlation == "continuous"
+    assert bridges[-1].pair_sources is True
     assert bridges[-1].scan is None
-    assert bridges[-1].max_points == mm.config.max_points
+    assert bridges[-1].max_buffer_size == mm.config.max_points
 
     first = bridges[-1]
     mm.map(device_x="samx", device_y="samz")

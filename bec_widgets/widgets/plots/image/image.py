@@ -438,7 +438,7 @@ class Image(ImageBase):
             # Scan-less device stream served by the DataAPI device plugin.
             scan = None
             entry = self._config.signal
-            max_points = self.PREVIEW_1D_MAX_ROWS if ndim == 1 else self.PREVIEW_2D_MAX_FRAMES
+            max_buffer_size = self.PREVIEW_1D_MAX_ROWS if ndim == 1 else self.PREVIEW_2D_MAX_FRAMES
         else:
             # Scan-scoped async stream; the DataAPI rebinds on new scans and
             # hands terminal scans over to history automatically.
@@ -448,15 +448,15 @@ class Image(ImageBase):
             )
             scan = ScanTarget.LIVE
             entry = config.async_signal_name
-            max_points = self.ASYNC_2D_MAX_FRAMES if ndim == 2 else None
+            max_buffer_size = self.ASYNC_2D_MAX_FRAMES if ndim == 2 else None
 
         try:
             self._data_subscription = self.bec_dispatcher.connect_data_subscription(
                 self._on_data_update,
                 sources=[(self._config.device, entry)],
                 scan=scan,
-                min_emit_interval=self.update_interval_s,
-                max_points=max_points,
+                update_rate=self.update_rate,
+                max_buffer_size=max_buffer_size,
             )
         except Exception as exc:  # pylint: disable=broad-except
             logger.warning(

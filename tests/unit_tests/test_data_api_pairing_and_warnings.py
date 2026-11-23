@@ -51,8 +51,8 @@ def _bridges(monkeypatch) -> list:
         def set_sources(self, sources):
             self.sources = list(sources)
 
-        def set_min_emit_interval(self, seconds):
-            self.min_emit_interval = seconds
+        def set_update_rate(self, update_rate):
+            self.update_rate = update_rate
 
         def close(self):
             self.closed = True
@@ -103,7 +103,7 @@ def test_update_rate_reaches_the_subscriptions_of_the_plot(qtbot, mocked_client,
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     wf.plot("bpm4i")
     wf.update_rate = 5  # Hz
-    assert created[-1].min_emit_interval == 0.2
+    assert created[-1].update_rate == 5.0
 
 
 def test_data_warning_lists_what_the_update_reports():

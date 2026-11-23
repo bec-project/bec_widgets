@@ -347,10 +347,7 @@ class ScatterWaveform(PlotBase):
             return
         try:
             self._data_subscription = self.bec_dispatcher.connect_data_subscription(
-                self._on_data_update,
-                sources=sources,
-                scan=scan,
-                min_emit_interval=self.update_interval_s,
+                self._on_data_update, sources=sources, scan=scan, update_rate=self.update_rate
             )
         except Exception as exc:
             logger.warning(f"Failed to configure scatter waveform data subscription: {exc}")

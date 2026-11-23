@@ -3,7 +3,6 @@ from __future__ import annotations
 import numpy as np
 import pyqtgraph as pg
 from bec_lib import bec_logger
-from bec_lib.data_api import CorrelationMode
 from bec_lib.endpoints import MessageEndpoints
 from pydantic import BaseModel, Field, field_validator
 from pydantic_core import PydanticCustomError
@@ -151,7 +150,7 @@ class MotorMap(PlotBase):
         self.motor_map_settings = None
 
         # Data delivery through the DataAPI device streams (readback), paired
-        # into (x, y) rows by the backend's continuous correlation.
+        # into (x, y) rows by the backend (pair_sources).
         self._data_subscription: QtDataSubscription | None = None
         self._connected_limit_endpoints: list = []
         # First row ordinal shown in the trail (advanced by reset_history)
@@ -597,14 +596,14 @@ class MotorMap(PlotBase):
         """
         Update the motor map trail from one columnar DataAPI update.
 
-        The two readbacks form one continuous correlation group: the backend
+        The two readbacks form one paired group: the backend
         holds each motor's latest position and appends a paired (x, y) row on
         every new sample, so the update's aligned columns *are* the trail.
         Rows before :meth:`reset_history` are skipped.
 
         Args:
             update (SubscriptionUpdate): Full-state snapshot of the paired
-                readback streams (``"continuous"`` group).
+                readback streams (``"paired"`` group).
         """
         device_x = self.config.device_x.device
         device_y = self.config.device_y.device
@@ -679,9 +678,9 @@ class MotorMap(PlotBase):
                 self._on_data_update,
                 devices=[device_x, device_y],
                 scan=None,
-                min_emit_interval=self.update_interval_s,
-                max_points=self.config.max_points,
-                correlation=CorrelationMode.CONTINUOUS,
+                update_rate=self.update_rate,
+                max_buffer_size=self.config.max_points,
+                pair_sources=True,
             )
         except Exception as exc:
             logger.warning(f"Failed to configure motor map data subscription: {exc}")
