@@ -80,7 +80,10 @@ def menu_commands(menu_bar: QMenuBar, skip: Iterable[QAction] = ()) -> list[Pale
 def main_app_commands(app: BECMainApp) -> list[PaletteCommand]:
     """Navigation between the app's views, app-level actions and the views' own commands."""
     commands: list[PaletteCommand] = []
+    current_index = app.stack.currentIndex()
     for view_id in app._view_index:  # pylint: disable=protected-access
+        if app._view_index[view_id] == current_index:  # pylint: disable=protected-access
+            continue  # going to the view on screen does nothing
         view = app.stack.widget(app._view_index[view_id])  # pylint: disable=protected-access
         item = app.sidebar.components.get(view_id)
         title = getattr(view, "view_title", None) or view_id

@@ -367,6 +367,14 @@ def test_main_app_commands(main_app):
     assert not any("Command Palette" in cmd.title for cmd in commands.values())
 
 
+def test_main_app_leaves_out_the_current_view(main_app):
+    # the view shown at start-up was never selected through the sidebar
+    assert "view:Docks" not in _by_uid(main_app)
+    main_app.set_current("DM")
+    commands = _by_uid(main_app)
+    assert "view:DM" not in commands and "view:Docks" in commands
+
+
 def test_main_app_navigation_command(qtbot, main_app):
     _by_uid(main_app)["view:DM"].callback()
     assert main_app.stack.currentIndex() == main_app._view_index["DM"]
