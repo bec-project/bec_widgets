@@ -215,7 +215,8 @@ class BECMainWindow(BECWidget, QMainWindow):
     ################################################################################
     # Progress‑bar helpers
     def _add_scan_progress_bar(self):
-        # Scan pill: live progress, Stop and the waiting count; the full ScanProgressBar on hover
+        # Scan pill: progress, Stop, waiting count; a click shows the ScanProgressBar, a double-click
+        # docks the queue
         self._scan_status_item = ScanStatusItem(
             self, rpc_exposed=False, rpc_passthrough_children=False
         )
