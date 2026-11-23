@@ -39,8 +39,15 @@ from bec_widgets.widgets.utility.command_palette.palette_core import (
 )
 
 ROW_HEIGHT = 46
+SINGLE_LINE_ROW_HEIGHT = 36
 HEADER_HEIGHT = 28
 PAGE_STEP = 8
+# every leading edge (search icon, chips, section headers, row icons, footer) sits on
+# CONTENT_INSET; the row highlight is set back to ROW_INSET so its content stays on that line
+CONTENT_INSET = 16
+ROW_INSET = 8
+ICON_SIZE = 18
+ICON_GAP = 12
 
 
 def _role(key: str) -> int:
@@ -76,7 +83,7 @@ def draw_keycap(painter: QPainter, right: float, center_y: float, text: str, tok
 
 
 class PaletteDelegate(QStyledItemDelegate):
-    """Paints result rows: icon tile, highlighted title, subtitle and a right-hand hint."""
+    """Paints result rows: icon, highlighted title, subtitle and a right-hand hint."""
 
     def __init__(self, controller: CommandPaletteController, parent: QObject | None = None):
         super().__init__(parent)
@@ -98,7 +105,8 @@ class PaletteDelegate(QStyledItemDelegate):
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
         # pylint: disable=invalid-name
-        height = ROW_HEIGHT + (HEADER_HEIGHT if self.has_header(index) else 0)
+        height = ROW_HEIGHT if index.data(_role("subtitle")) else SINGLE_LINE_ROW_HEIGHT
+        height += HEADER_HEIGHT if self.has_header(index) else 0
         return QSize(option.rect.width(), height)
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
@@ -109,35 +117,37 @@ class PaletteDelegate(QStyledItemDelegate):
         rect = QRectF(option.rect)
 
         if self.has_header(index):
-            header = QRectF(rect.left() + 18, rect.top(), rect.width() - 36, HEADER_HEIGHT)
+            header = QRectF(
+                rect.left() + CONTENT_INSET,
+                rect.top(),
+                rect.width() - 2 * CONTENT_INSET,
+                HEADER_HEIGHT,
+            )
             painter.setPen(tokens.fg_muted)
             painter.setFont(_font(11, QFont.Weight.DemiBold))
             painter.drawText(
                 header.adjusted(0, 8, 0, 0),
                 Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-                str(index.data(_role("section"))).upper(),
+                str(index.data(_role("section"))),
             )
             rect.setTop(rect.top() + HEADER_HEIGHT)
 
         current = index.row() == self.controller.currentIndex
         hovered = bool(option.state & QStyle.StateFlag.State_MouseOver)
-        row = rect.adjusted(8, 1, -8, -1)
+        row = rect.adjusted(ROW_INSET, 1, -ROW_INSET, -1)
         if current or hovered:
             painter.setPen(Qt.PenStyle.NoPen)
             painter.setBrush(tokens.soft(tokens.primary, 0.16) if current else tokens.hover)
             painter.drawRoundedRect(row, 8, 8)
 
-        # icon tile
-        tile = QRectF(row.left() + 8, row.center().y() - 15, 30, 30)
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(tokens.soft(tokens.primary, 0.24) if current else tokens.track)
-        painter.drawRoundedRect(tile, 7, 7)
+        # icon on the content line, no tile behind it
+        icon_left = rect.left() + CONTENT_INSET
         icon_color = tokens.primary if current else tokens.fg_muted
-        pixmap = _icon(str(index.data(_role("icon")) or "bolt"), icon_color.name(), 18)
-        painter.drawPixmap(QPointF(tile.center().x() - 9, tile.center().y() - 9), pixmap)
+        pixmap = _icon(str(index.data(_role("icon")) or "bolt"), icon_color.name(), ICON_SIZE)
+        painter.drawPixmap(QPointF(icon_left, row.center().y() - ICON_SIZE / 2), pixmap)
 
         # right-hand side: shortcut keycaps, run hint on the current row, else the category
-        right = row.right() - 10
+        right = rect.right() - CONTENT_INSET
         shortcut = str(index.data(_role("shortcut")) or "")
         if current:
             right = draw_keycap(painter, right, row.center().y(), "↵", tokens) - 6
@@ -166,7 +176,7 @@ class PaletteDelegate(QStyledItemDelegate):
             right -= width + 12
 
         # title with matched characters, subtitle below
-        left = tile.right() + 12
+        left = icon_left + ICON_SIZE + ICON_GAP
         available = max(20.0, right - left)
         title = str(index.data(_role("title")) or "")
         matched = set(index.data(_role("positions")) or [])
@@ -271,10 +281,10 @@ class PaletteCardWidget(QFrame):
         search_bar = QWidget(self)
         search_bar.setFixedHeight(54)
         search_row = QHBoxLayout(search_bar)
-        search_row.setContentsMargins(18, 4, 14, 0)
-        search_row.setSpacing(10)
+        search_row.setContentsMargins(CONTENT_INSET, 0, CONTENT_INSET, 0)
+        search_row.setSpacing(ICON_GAP)
         self.search_icon = QLabel(self)
-        self.search_icon.setFixedSize(20, 20)
+        self.search_icon.setFixedSize(ICON_SIZE, ICON_SIZE)
         self.input = QLineEdit(self)
         self.input.setObjectName("PaletteInput")
         self.input.setPlaceholderText("Search actions, widgets, devices and workspaces…")
@@ -287,8 +297,8 @@ class PaletteCardWidget(QFrame):
 
         # scope chips
         chip_row = QHBoxLayout()
-        chip_row.setContentsMargins(14, 0, 14, 10)
-        chip_row.setSpacing(6)
+        chip_row.setContentsMargins(CONTENT_INSET, 0, CONTENT_INSET, 12)
+        chip_row.setSpacing(8)
         self.chips = QButtonGroup(self)
         self.chips.setExclusive(True)
         for scope, label, prefix in SCOPES:
@@ -343,8 +353,8 @@ class PaletteCardWidget(QFrame):
         self.footer = QFrame(self)
         self.footer.setObjectName("PaletteFooter")
         footer_row = QHBoxLayout(self.footer)
-        footer_row.setContentsMargins(16, 7, 16, 7)
-        footer_row.setSpacing(14)
+        footer_row.setContentsMargins(CONTENT_INSET, 8, CONTENT_INSET, 8)
+        footer_row.setSpacing(16)
         self.footer_hints = QLabel(self.footer)
         self.count_label = QLabel(self.footer)
         self.count_label.setObjectName("PaletteCount")
@@ -382,7 +392,7 @@ class PaletteCardWidget(QFrame):
             #PaletteCard {{ background: {tokens.card.name()}; border: 1px solid
                 {tokens.border.name()}; border-radius: 12px; }}
             #PaletteInput {{ background: transparent; border: none; color: {tokens.fg.name()};
-                font-size: 16px; selection-background-color: {primary}; }}
+                font-size: 16px; padding: 0px; selection-background-color: {primary}; }}
             #PaletteList {{ background: transparent; border: none; }}
             #PaletteFooter {{ background: {tokens.field.name()}; border: none;
                 border-top: 1px solid {tokens.border.name()};
@@ -396,7 +406,7 @@ class PaletteCardWidget(QFrame):
             QScrollBar::add-line, QScrollBar::sub-line {{ height: 0; }}
             """)
         self.divider.setStyleSheet(f"background: {tokens.border.name()};")
-        self.search_icon.setPixmap(_icon("search", tokens.fg_muted.name(), 20))
+        self.search_icon.setPixmap(_icon("search", tokens.fg_muted.name(), ICON_SIZE))
         self.empty_icon.setPixmap(_icon("search_off", tokens.fg_subtle.name(), 32))
         self.empty_title.setStyleSheet(f"color: {tokens.fg_muted.name()}; font-size: 14px;")
         self.search_all_button.setStyleSheet(
