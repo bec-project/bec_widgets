@@ -20,6 +20,7 @@ import pytest
 from bec_lib.data_api.models import SCAN_GROUP, SourceData, SubscriptionUpdate
 
 from bec_widgets.tests.client_mocks import mocked_client
+from bec_widgets.tests.utils import fake_data_subscriptions
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
 from tests.unit_tests.conftest import create_widget
 
@@ -41,7 +42,7 @@ def waveform_widget(qtbot, mocked_client, monkeypatch):
         bridge.healthy = True
         return bridge
 
-    monkeypatch.setattr("bec_widgets.widgets.plots.waveform.waveform.QtDataSubscription", factory)
+    fake_data_subscriptions(monkeypatch, factory)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     yield wf
 

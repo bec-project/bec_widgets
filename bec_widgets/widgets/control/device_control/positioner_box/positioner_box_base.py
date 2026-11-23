@@ -116,19 +116,17 @@ class PositionerBoxBase(BECWidget, QWidget):
         self._device_roles[device] = roles
         entries = list(dict.fromkeys([*self.dev[device]._hints, *roles.values()]))
         if entries:
-            subscription = QtDataSubscription(
-                self.client,
-                sources=[(device, entry) for entry in entries],
-                scan=None,
-                parent=self,
-                max_points=1,
-            )
-            subscription.updated.connect(
-                lambda update: self._on_device_update(
-                    device, ui, update, position_emit, limit_update
+            self._readback_subscriptions[ui["readback"]] = (
+                self.bec_dispatcher.connect_data_subscription(
+                    lambda update: self._on_device_update(
+                        device, ui, update, position_emit, limit_update
+                    ),
+                    sources=[(device, entry) for entry in entries],
+                    scan=None,
+                    owner=self,
+                    max_points=1,
                 )
             )
-            self._readback_subscriptions[ui["readback"]] = subscription
 
         if not ui.get("units"):
             return
@@ -292,7 +290,7 @@ class PositionerBoxBase(BECWidget, QWidget):
 
     def cleanup(self):
         for subscription in self._readback_subscriptions.values():
-            subscription.close()
+            self.bec_dispatcher.disconnect_data_subscription(subscription)
         self._readback_subscriptions.clear()
         self._device_values.clear()
         self._device_roles.clear()

@@ -195,7 +195,7 @@ def test_set_update_same_device_resubscribes(ring_widget_with_device):
     # Set to same device mode again (should resubscribe)
     ring_widget.set_update("device", device=test_device)
 
-    assert previous_subscription._closed
+    assert previous_subscription.closed
     assert ring_widget._data_subscription is not previous_subscription
     ring_widget.bec_dispatcher.connect_slot.assert_not_called()
 
@@ -643,7 +643,7 @@ def test_ring_receives_cached_and_live_data_api_values(qtbot, ring_widget_with_d
     qtbot.waitUntil(lambda: ring.config.value == 56.78)
     subscription = ring._data_subscription
     ring.set_update("manual")
-    assert subscription._closed
+    assert subscription.closed
     assert ring._data_subscription is None
 
 
@@ -662,7 +662,7 @@ def test_ring_component_name_resolves_data_api_value(qtbot, ring_widget_with_dev
     qtbot.waitUntil(lambda: ring.config.value == 42.0)
     subscription = ring._data_subscription
     ring.close()
-    assert subscription._closed
+    assert subscription.closed
 
 
 ###################################

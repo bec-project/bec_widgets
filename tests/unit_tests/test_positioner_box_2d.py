@@ -172,7 +172,7 @@ def test_positioner_axes_receive_independent_data_api_updates(qtbot, positioner_
     assert widget.ui.readback_ver.text() == "3.000"
     subscriptions = list(widget._readback_subscriptions.values())
     widget.close()
-    assert all(subscription._closed for subscription in subscriptions)
+    assert all(subscription.closed for subscription in subscriptions)
 
 
 def test_positioner_clearing_one_axis_keeps_other_subscription(positioner_box_2d):
@@ -180,8 +180,8 @@ def test_positioner_clearing_one_axis_keeps_other_subscription(positioner_box_2d
     horizontal = widget._readback_subscriptions[widget.ui.readback_hor]
     vertical = widget._readback_subscriptions[widget.ui.readback_ver]
     widget.device_hor = ""
-    assert horizontal._closed
-    assert not vertical._closed
+    assert horizontal.closed
+    assert not vertical.closed
     assert widget.ui.readback_ver.text() == "3.000"
     assert all(not button.isEnabled() for button in _hor_buttons(widget))
     assert widget.ui.stop_button.isEnabled()

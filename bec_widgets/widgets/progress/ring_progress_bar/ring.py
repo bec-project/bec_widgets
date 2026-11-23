@@ -247,10 +247,8 @@ class Ring(BECWidget, QWidget):
                 raise ValueError(f"Unsupported mode: {mode}")
 
     def _disconnect_registered_update(self):
-        if self._data_subscription is not None:
-            self._data_subscription.close()
-            self._data_subscription.deleteLater()
-            self._data_subscription = None
+        self.bec_dispatcher.disconnect_data_subscription(self._data_subscription)
+        self._data_subscription = None
         self._source_key = None
         if self.registered_slot is not None:
             self.bec_dispatcher.disconnect_slot(*self.registered_slot)
@@ -377,10 +375,9 @@ class Ring(BECWidget, QWidget):
                     entry = info.get("obj_name", signal)
                     break
             self._source_key = (device, entry)
-            self._data_subscription = QtDataSubscription(
-                self.client, sources=[self._source_key], scan=None, parent=self, max_points=1
+            self._data_subscription = self.bec_dispatcher.connect_data_subscription(
+                self._on_data_update, sources=[self._source_key], scan=None, max_points=1
             )
-            self._data_subscription.updated.connect(self._on_data_update)
             return signal
 
         raise ValueError(

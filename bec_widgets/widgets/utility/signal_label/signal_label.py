@@ -263,22 +263,18 @@ class SignalLabel(BECWidget, QWidget):
         self.set_display_value(self._value)
         if not self._device or self._device not in self.dev or not self._signal_key:
             return
-        self._data_subscription = QtDataSubscription(
-            self.client,
+        self._data_subscription = self.bec_dispatcher.connect_data_subscription(
+            self._on_data_update,
             sources=[(self._device, self._signal_key)],
             scan=None,
             max_points=1,
-            parent=self,
         )
-        self._data_subscription.updated.connect(self._on_data_update)
         self._connected = True
 
     def disconnect_device(self):
         """Close the selected signal's DataAPI subscription."""
-        if self._data_subscription is not None:
-            self._data_subscription.close()
-            self._data_subscription.deleteLater()
-            self._data_subscription = None
+        self.bec_dispatcher.disconnect_data_subscription(self._data_subscription)
+        self._data_subscription = None
         self._connected = False
 
     @SafeSlot()

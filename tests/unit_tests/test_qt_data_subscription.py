@@ -1,8 +1,13 @@
 """Tests for the QtDataSubscription bridge."""
 
+import gc
+import threading
+import weakref
+from dataclasses import replace
 from unittest import mock
 
 import pytest
+import shiboken6
 from bec_lib.data_api import SCAN_GROUP, CorrelationGroup, UpdateReason
 from bec_lib.data_api.models import SubscriptionUpdate
 from qtpy.QtCore import QObject
@@ -25,6 +30,18 @@ def fake_api():
     return api, subscription
 
 
+def collecting(api, **options):
+    """A subscription with the updates and progress values its slots were called with."""
+    received, progress = [], []
+    bridge = QtDataSubscription(
+        mock.MagicMock(data_api=api),
+        lambda update: received.append(update),
+        progress_slot=lambda fraction: progress.append(fraction),
+        **options,
+    )
+    return bridge, received, progress
+
+
 def make_update(scan_id="scan_1"):
     return SubscriptionUpdate(
         scan_id=scan_id, reason="live", sources={}, aligned_ordinals=(), complete=True
@@ -38,9 +55,7 @@ def test_every_update_reason_has_a_rank():
 
 def test_updates_are_marshalled_to_qt_thread(qtbot, fake_api):
     api, subscription = fake_api
-    bridge = QtDataSubscription(mock.MagicMock(data_api=fake_api[0]), sources=[("samx", "samx")])
-    received = []
-    bridge.updated.connect(received.append)
+    bridge, received, _ = collecting(api, sources=[("samx", "samx")])
 
     callback = api.subscribe.call_args.kwargs["callback"]
     update = make_update()
@@ -53,9 +68,7 @@ def test_updates_are_marshalled_to_qt_thread(qtbot, fake_api):
 
 def test_stale_scan_payload_dropped(qtbot, fake_api):
     api, subscription = fake_api
-    bridge = QtDataSubscription(mock.MagicMock(data_api=fake_api[0]), sources=[("samx", "samx")])
-    received = []
-    bridge.updated.connect(received.append)
+    bridge, received, _ = collecting(api, sources=[("samx", "samx")])
     callback = api.subscribe.call_args.kwargs["callback"]
 
     subscription.scan_id = "scan_2"
@@ -67,12 +80,8 @@ def test_stale_scan_payload_dropped(qtbot, fake_api):
 
 
 def test_payload_queued_before_same_scan_rebind_is_dropped(qtbot, fake_api):
-    from dataclasses import replace
-
     api, subscription = fake_api
-    bridge = QtDataSubscription(mock.MagicMock(data_api=fake_api[0]), devices=["samx"])
-    received = []
-    bridge.updated.connect(received.append)
+    bridge, received, _ = collecting(api, devices=["samx"])
     callback = api.subscribe.call_args.kwargs["callback"]
     callback(make_update())
     subscription.generation = 1
@@ -85,7 +94,7 @@ def test_payload_queued_before_same_scan_rebind_is_dropped(qtbot, fake_api):
 
 def test_health_and_source_delegation(fake_api):
     api, subscription = fake_api
-    bridge = QtDataSubscription(mock.MagicMock(data_api=fake_api[0]), sources=[("samx", "samx")])
+    bridge, _, _ = collecting(api, sources=[("samx", "samx")])
     assert bridge.healthy
     subscription.unbound_sources = [("samx", "samx")]
     assert not bridge.healthy
@@ -98,31 +107,22 @@ def test_health_and_source_delegation(fake_api):
 
 
 def test_size_limit_is_forwarded_to_the_backend(fake_api):
-    api, subscription = fake_api
-    bridge = QtDataSubscription(
-        mock.MagicMock(data_api=fake_api[0]),
-        sources=[("samx", "samx")],
-        scan="scan_1",
-        size_limit_bytes=1024,
-    )
+    api, _ = fake_api
+    bridge, _, _ = collecting(api, sources=[("samx", "samx")], scan="scan_1", size_limit_bytes=1024)
     assert api.subscribe.call_args.kwargs["size_limit_bytes"] == 1024
     bridge.close()
 
 
 def test_routing_options_are_forwarded_to_the_backend(fake_api):
     api, _ = fake_api
-    bridge = QtDataSubscription(
-        mock.MagicMock(data_api=fake_api[0]),
-        devices=["samx", "samy"],
-        scan=None,
-        correlation="continuous",
-        force_source="redis",
+    bridge, _, _ = collecting(
+        api, devices=["samx", "samy"], scan=None, correlation="continuous", force_source="redis"
     )
     kwargs = api.subscribe.call_args.kwargs
     assert kwargs["sources"] is None and kwargs["devices"] == ["samx", "samy"]
     assert kwargs["correlation"] == "continuous" and kwargs["force_source"] == "redis"
     bridge.close()
-    bridge = QtDataSubscription(mock.MagicMock(data_api=fake_api[0]), sources=[("samx", "samx")])
+    bridge, _, _ = collecting(api, sources=[("samx", "samx")])
     kwargs = api.subscribe.call_args.kwargs
     assert kwargs["devices"] is None and kwargs["correlation"] == "ordinal"
     assert kwargs["force_source"] is None
@@ -131,21 +131,16 @@ def test_routing_options_are_forwarded_to_the_backend(fake_api):
 
 def test_size_limit_defaults_to_none(fake_api):
     api, _ = fake_api
-    bridge = QtDataSubscription(mock.MagicMock(data_api=fake_api[0]), sources=[("samx", "samx")])
+    bridge, _, _ = collecting(api, sources=[("samx", "samx")])
     assert api.subscribe.call_args.kwargs["size_limit_bytes"] is None
     bridge.close()
 
 
 def test_size_gate_properties_and_confirm(fake_api):
-    _, subscription = fake_api
+    api, subscription = fake_api
     subscription.size_gated = True
     subscription.estimated_bytes = 4096
-    bridge = QtDataSubscription(
-        mock.MagicMock(data_api=fake_api[0]),
-        sources=[("samx", "samx")],
-        scan="scan_1",
-        size_limit_bytes=1024,
-    )
+    bridge, _, _ = collecting(api, sources=[("samx", "samx")], scan="scan_1", size_limit_bytes=1024)
 
     assert bridge.size_gated is True
     assert bridge.estimated_bytes == 4096
@@ -174,11 +169,8 @@ def test_synchronous_initial_delivery_is_queued(qtbot):
 
     api.subscribe.side_effect = synchronous_subscribe
 
-    bridge = QtDataSubscription(mock.MagicMock(data_api=api), sources=[("samx", "samx")])
-    received = []
-    # Widgets connect AFTER the constructor returns — the queued initial
-    # emission must still reach them.
-    bridge.updated.connect(received.append)
+    bridge, received, _ = collecting(api, sources=[("samx", "samx")])
+    assert received == []  # not from inside the constructor
 
     qtbot.waitUntil(lambda: bool(received), timeout=2000)
     assert received[0].scan_id == "scan_1"
@@ -187,7 +179,7 @@ def test_synchronous_initial_delivery_is_queued(qtbot):
 
 def test_client_owns_the_bridge_api(qtbot, bec_dispatcher):
     client = bec_dispatcher.client
-    bridge = QtDataSubscription(client, devices=["samx"], scan=None, max_points=1)
+    bridge = QtDataSubscription(client, lambda update: None, devices=["samx"], scan=None)
     assert bridge._api is client.data_api
     assert client._data_api is bridge._api
     client.shutdown()
@@ -197,10 +189,7 @@ def test_client_owns_the_bridge_api(qtbot, bec_dispatcher):
 
 def test_queued_updates_and_progress_are_discarded_after_api_shutdown(qtbot, fake_api):
     api, _ = fake_api
-    bridge = QtDataSubscription(mock.MagicMock(data_api=api), devices=["samx"])
-    received, progress = [], []
-    bridge.updated.connect(received.append)
-    bridge.progress.connect(progress.append)
+    bridge, received, progress = collecting(api, devices=["samx"])
     callbacks = api.subscribe.call_args.kwargs
     callbacks["callback"](make_update())
     callbacks["progress_callback"](0.5)
@@ -211,13 +200,19 @@ def test_queued_updates_and_progress_are_discarded_after_api_shutdown(qtbot, fak
     bridge.close()
 
 
+def test_progress_reaches_its_slot(qtbot, fake_api):
+    api, _ = fake_api
+    bridge, _, progress = collecting(api, devices=["samx"])
+    api.subscribe.call_args.kwargs["progress_callback"](0.5)
+    qtbot.waitUntil(lambda: progress == [0.5], timeout=2000)
+    bridge.close()
+
+
 def test_queued_updates_collapse_to_the_latest_per_group(qtbot, fake_api):
     """A busy Qt thread receives the newest snapshot, not a backlog; a superseded
     transition reason ("rebind") is kept."""
     api, _ = fake_api
-    bridge = QtDataSubscription(mock.MagicMock(data_api=api), sources=[("samx", "samx")])
-    received = []
-    bridge.updated.connect(received.append)
+    bridge, received, _ = collecting(api, sources=[("samx", "samx")])
     callback = api.subscribe.call_args.kwargs["callback"]
 
     def update(reason, value, group=SCAN_GROUP):
@@ -243,14 +238,206 @@ def test_queued_updates_collapse_to_the_latest_per_group(qtbot, fake_api):
     bridge.close()
 
 
-def test_deleting_the_parent_closes_the_subscription_without_error(qtbot, fake_api):
-    """A bridge that dies with its parent closes the data subscription, nothing else."""
-    api, subscription = fake_api
-    parent = QObject()
-    QtDataSubscription(mock.MagicMock(data_api=api), sources=[("samx", "samx")], parent=parent)
+def test_closed_subscription_is_inactive_for_data_threads_and_queued_updates(qtbot, fake_api):
+    """The safeguard of the Redis slots: after close nothing is queued and nothing delivered."""
+    api, _ = fake_api
+    bridge, received, progress = collecting(api, sources=[("samx", "samx")])
+    callbacks = api.subscribe.call_args.kwargs
+    callbacks["callback"](make_update())  # queued for the GUI thread
+    bridge.close()
+    assert bridge.closed
+    callbacks["callback"](make_update())  # a data thread that is late
+    callbacks["progress_callback"](0.5)
+    qtbot.wait(50)
+    assert received == [] and progress == []
 
-    with qtbot.captureExceptions() as exceptions:
-        parent.deleteLater()
-        qtbot.waitUntil(lambda: subscription.close.called, timeout=2000)
-    assert exceptions == []
+
+# --- owned by the dispatcher ---------------------------------------------------------------
+
+
+class Owner(QObject):
+    """A widget as the dispatcher sees it: a Qt object with slots."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.received = []
+        self.progress = []
+
+    def on_update(self, update):
+        self.received.append(update)
+
+    def on_progress(self, fraction):
+        self.progress.append(fraction)
+
+
+@pytest.fixture
+def dispatcher(bec_dispatcher, fake_api):
+    """The dispatcher with a DataAPI stand-in; yields it with the API's subscription mock."""
+    api, subscription = fake_api
+    bec_dispatcher.client._data_api = api
+    yield bec_dispatcher, api, subscription
+    bec_dispatcher.client._data_api = None
+
+
+def connect(dispatcher, owner):
+    """Connect ``owner`` through the dispatcher; returns the bridge and the data-thread callback."""
+    bec_dispatcher, api, _ = dispatcher
+    bridge = bec_dispatcher.connect_data_subscription(
+        owner.on_update, sources=[("samx", "samx")], progress_slot=owner.on_progress
+    )
+    return bridge, api.subscribe.call_args.kwargs["callback"]
+
+
+def test_connect_delivers_to_the_slot_and_disconnect_ends_it(qtbot, dispatcher):
+    bec_dispatcher, api, subscription = dispatcher
+    owner = Owner()
+    bridge, callback = connect(dispatcher, owner)
+    assert isinstance(bridge, QtDataSubscription) and bridge.parent() is None
+    assert bec_dispatcher.data_subscriptions(owner) == [bridge]
+    assert api.subscribe.call_args.kwargs["sources"] == [("samx", "samx")]
+
+    callback(make_update())
+    qtbot.waitUntil(lambda: len(owner.received) == 1, timeout=2000)
+
+    bec_dispatcher.disconnect_data_subscription(bridge)
     subscription.close.assert_called_once()
+    assert bec_dispatcher.data_subscriptions(owner) == []
+    bec_dispatcher.disconnect_data_subscription(bridge)  # idempotent
+    bec_dispatcher.disconnect_data_subscription(None)
+    subscription.close.assert_called_once()
+
+
+def test_the_dispatcher_never_keeps_the_owner_alive(dispatcher):
+    owner = Owner()
+    connect(dispatcher, owner)
+    alive = weakref.ref(owner)
+    del owner
+    gc.collect()
+    assert alive() is None
+
+
+def test_disconnect_owner_closes_the_owners_subscriptions(dispatcher):
+    """What BECWidget.cleanup calls; widgets need not disconnect at teardown."""
+    bec_dispatcher, _, subscription = dispatcher
+    owner, other = Owner(), Owner()
+    connect(dispatcher, owner)
+    kept, _ = connect(dispatcher, other)
+    subscription.close.reset_mock()
+
+    bec_dispatcher.disconnect_owner(owner)
+    subscription.close.assert_called_once()
+    assert bec_dispatcher._data_subscriptions == [kept]
+
+
+def test_subscription_survives_the_destruction_of_its_owner_and_is_swept(qtbot, dispatcher):
+    """The owner dies with its Qt parent, without any cleanup or close event."""
+    bec_dispatcher, _, subscription = dispatcher
+    parent = QObject()
+    owner = Owner(parent)
+    bridge, callback = connect(dispatcher, owner)
+    received = owner.received
+    shiboken6.delete(parent)
+
+    assert shiboken6.isValid(bridge)  # the object data threads emit on is still there
+    with qtbot.captureExceptions() as exceptions:
+        callback(make_update())  # a data thread that still delivers
+        qtbot.wait(50)
+    assert exceptions == [] and received == []
+
+    bec_dispatcher.cleanup_dead_slots()
+    subscription.close.assert_called_once()
+    assert bec_dispatcher._data_subscriptions == []
+
+
+@pytest.mark.parametrize("death", ["qt object destroyed", "garbage collected"])
+def test_dead_slot_sweep_closes_the_subscriptions_of_dead_owners(dispatcher, death):
+    bec_dispatcher, _, subscription = dispatcher
+    owner = Owner()
+    connect(dispatcher, owner)
+    if death == "qt object destroyed":
+        shiboken6.delete(owner)
+    else:
+        del owner
+        gc.collect()
+
+    bec_dispatcher.cleanup_dead_slots()
+    subscription.close.assert_called_once()
+    assert bec_dispatcher._data_subscriptions == []
+
+
+def test_update_queued_before_the_owner_died_is_not_delivered(qtbot, dispatcher):
+    owner = Owner()
+    _, callback = connect(dispatcher, owner)
+    received = owner.received
+    callback(make_update())  # queued for the GUI thread
+    shiboken6.delete(owner)
+    qtbot.wait(50)
+    assert received == []
+
+
+def test_widget_in_cleanup_gets_no_update(qtbot, dispatcher):
+    owner = Owner()
+    _, callback = connect(dispatcher, owner)
+    owner._destroyed = True  # what BECWidget sets before its cleanup runs
+    callback(make_update())
+    qtbot.wait(50)
+    assert owner.received == []
+
+
+def test_slot_without_a_method_is_bound_to_its_owner(qtbot, dispatcher):
+    """A lambda has no owner of its own; ``owner=`` ties it to a widget, as for connect_slot."""
+    bec_dispatcher, api, subscription = dispatcher
+    owner = Owner()
+    received = []
+    bec_dispatcher.connect_data_subscription(
+        lambda update: received.append(update), sources=[("samx", "samx")], owner=owner
+    )
+    callback = api.subscribe.call_args.kwargs["callback"]
+    callback(make_update())
+    qtbot.waitUntil(lambda: len(received) == 1, timeout=2000)
+
+    shiboken6.delete(owner)
+    callback(make_update())
+    qtbot.wait(50)
+    assert len(received) == 1
+    bec_dispatcher.cleanup_dead_slots()
+    subscription.close.assert_called_once()
+
+
+def test_disconnect_all_closes_every_subscription(dispatcher):
+    bec_dispatcher, _, subscription = dispatcher
+    owner = Owner()
+    connect(dispatcher, owner)
+    bec_dispatcher.disconnect_all()
+    subscription.close.assert_called_once()
+    assert bec_dispatcher._data_subscriptions == []
+
+
+def test_data_thread_delivering_while_the_owner_is_destroyed(qtbot, dispatcher):
+    """A data thread keeps delivering while the GUI thread destroys the owner."""
+    bec_dispatcher, _, subscription = dispatcher
+    owner = Owner()
+    bridge, callback = connect(dispatcher, owner)
+    stop = threading.Event()
+    errors = []
+
+    def deliver():
+        while not stop.is_set():
+            try:
+                callback(make_update())
+            except Exception as exc:  # pylint: disable=broad-except
+                errors.append(exc)
+
+    thread = threading.Thread(target=deliver)
+    thread.start()
+    try:
+        qtbot.wait(20)
+        shiboken6.delete(owner)
+        qtbot.wait(20)
+        bec_dispatcher.cleanup_dead_slots()
+    finally:
+        stop.set()
+        thread.join(2)
+    assert not thread.is_alive() and errors == []
+    subscription.close.assert_called_once()
+    assert bridge.closed and bec_dispatcher._data_subscriptions == []

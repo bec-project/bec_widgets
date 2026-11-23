@@ -80,8 +80,8 @@ class PlotBase(BECWidget, QWidget):
     #: render cost (see the ``update_rate`` property).
     DEFAULT_UPDATE_RATE: float = 25.0
     #: The DataAPI subscription of the widget; the subclasses that plot through one set it.
-    _data_bridge: QtDataSubscription | None = None
-    #: The (bridge, scan, binding revision) the alignment of the sources was last checked for.
+    _data_subscription: QtDataSubscription | None = None
+    #: The (subscription, scan, binding revision) the alignment of the sources was last checked for.
     _alignment_binding: tuple | None = None
     BASE_USER_ACCESS = [
         "enable_toolbar",
@@ -395,15 +395,18 @@ class PlotBase(BECWidget, QWidget):
             self._render_info_label()
 
     def report_data_state(
-        self, update: SubscriptionUpdate, bridge: QtDataSubscription | None = None, scope: str = ""
+        self,
+        update: SubscriptionUpdate,
+        subscription: QtDataSubscription | None = None,
+        scope: str = "",
     ) -> None:
         """Show the warnings of one DataAPI update (see :meth:`data_warning_of`)."""
         group = update.metadata.get("group", "")
-        self.set_data_warning(self.data_warning_of(update, bridge), f"{scope}/{group}")
+        self.set_data_warning(self.data_warning_of(update, subscription), f"{scope}/{group}")
 
     @staticmethod
     def data_warning_of(
-        update: SubscriptionUpdate, bridge: QtDataSubscription | None = None
+        update: SubscriptionUpdate, subscription: QtDataSubscription | None = None
     ) -> str | None:
         """
         Put what a DataAPI update says about its sources into one line for the user.
@@ -414,7 +417,7 @@ class PlotBase(BECWidget, QWidget):
 
         Args:
             update (SubscriptionUpdate): The update.
-            bridge (QtDataSubscription | None): The subscription it came from, for the
+            subscription (QtDataSubscription | None): The subscription it came from, for the
                 unserved sources.
 
         Returns:
@@ -434,7 +437,7 @@ class PlotBase(BECWidget, QWidget):
         lagging = update.metadata.get("lagging_sources") or []
         if lagging:
             parts.append(f"{', '.join(name(key) for key in lagging)}: behind the other signals")
-        unbound = bridge.unbound_sources if bridge is not None else []
+        unbound = subscription.unbound_sources if subscription is not None else []
         if unbound:
             reason = (
                 "not available in this scan" if update.has_scan else "has no live value to follow"
@@ -464,11 +467,11 @@ class PlotBase(BECWidget, QWidget):
         the DataAPI classifies ``scan`` (for an idle ``"live"``: a guess from the
         device configuration).
         """
-        bridge = self._data_bridge
-        groups = bridge.groups if bridge is not None else {}
+        subscription = self._data_subscription
+        groups = subscription.groups if subscription is not None else {}
         if not groups:
             return self._alignment_labels(sources, scan)
-        unbound = set(bridge.unbound_sources)
+        unbound = set(subscription.unbound_sources)
         return {
             tuple(key): label
             for label, keys in groups.items()
@@ -478,7 +481,7 @@ class PlotBase(BECWidget, QWidget):
 
     def _alignment_binding_changed(self, update: SubscriptionUpdate) -> bool:
         """Whether ``update`` comes from a binding the alignment was not checked against."""
-        binding = (id(self._data_bridge), update.scan_id, update.generation)
+        binding = (id(self._data_subscription), update.scan_id, update.generation)
         if binding == self._alignment_binding:
             return False
         self._alignment_binding = binding
@@ -1418,10 +1421,10 @@ class PlotBase(BECWidget, QWidget):
         return 1.0 / self._update_rate
 
     def _apply_update_rate(self):
-        """Propagate the current update rate to every active data bridge."""
+        """Propagate the current update rate to every active data subscription."""
         interval = self.update_interval_s
-        for bridge in self.findChildren(QtDataSubscription):
-            bridge.set_min_emit_interval(interval)
+        for subscription in self.bec_dispatcher.data_subscriptions(self):
+            subscription.set_min_emit_interval(interval)
 
     ################################################################################
     # FPS Counter

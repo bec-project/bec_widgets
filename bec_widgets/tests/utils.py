@@ -15,7 +15,7 @@ from bec_lib.messages import _StoredDataInfo
 from qtpy.QtCore import QEvent, QEventLoop
 
 from bec_widgets.tests.fake_devices import DEVICES, DMMock
-from bec_widgets.utils.bec_dispatcher import QtRedisConnector
+from bec_widgets.utils.bec_dispatcher import BECDispatcher, QtRedisConnector
 
 
 def process_all_deferred_deletes(qapp):
@@ -55,6 +55,45 @@ def mock_client(*_, **__):
         client.start()
     client.device_manager.add_devices(DEVICES)
     return client
+
+
+def fake_data_subscriptions(monkeypatch, factory) -> None:
+    """
+    Let the dispatcher hand out stand-ins instead of real DataAPI subscriptions.
+
+    For widget tests that feed updates to the widget's slot themselves. The dispatcher's
+    ``connect_data_subscription``, ``disconnect_data_subscription`` and
+    ``data_subscriptions`` are replaced for the test.
+
+    Args:
+        monkeypatch: The pytest fixture.
+        factory: ``factory(client, sources, scan=..., **options)`` builds one stand-in: any
+            object with a ``close()``. It gets the attributes ``slot``, ``progress_slot``
+            and ``owner`` of the connect call.
+    """
+    made = []
+
+    def connect(
+        dispatcher, slot, sources=None, scan="live", owner=None, progress_slot=None, **options
+    ):
+        subscription = factory(dispatcher.client, sources, scan=scan, **options)
+        subscription.slot, subscription.progress_slot = slot, progress_slot
+        subscription.owner = getattr(slot, "__self__", owner)
+        made.append(subscription)
+        return subscription
+
+    def disconnect(_dispatcher, subscription):
+        if subscription in made:
+            made.remove(subscription)
+        if subscription is not None:
+            subscription.close()
+
+    def of_owner(_dispatcher, owner):
+        return [subscription for subscription in made if subscription.owner is owner]
+
+    monkeypatch.setattr(BECDispatcher, "connect_data_subscription", connect)
+    monkeypatch.setattr(BECDispatcher, "disconnect_data_subscription", disconnect)
+    monkeypatch.setattr(BECDispatcher, "data_subscriptions", of_owner)
 
 
 def create_widget(qtbot, widget, *args, **kwargs):

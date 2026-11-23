@@ -10,6 +10,7 @@ from bec_lib.data_api.models import SourceData, SubscriptionUpdate
 from qtpy.QtCore import QPointF, Qt
 
 from bec_widgets.tests.client_mocks import mocked_client
+from bec_widgets.tests.utils import fake_data_subscriptions
 from bec_widgets.widgets.plots.image.bec_histogram_lut_item import (
     BECColorBarItem,
     BECHistogramLUTItem,
@@ -41,7 +42,7 @@ def _fake_bridge_factory(monkeypatch):
 
     class _FakeBridge:
         def __init__(
-            self, client, sources, scan="live", parent=None, min_emit_interval=0.1, max_points=None
+            self, client, sources, scan="live", owner=None, min_emit_interval=0.1, max_points=None
         ):
             self.client = client
             self.sources = list(sources)
@@ -58,12 +59,12 @@ def _fake_bridge_factory(monkeypatch):
         def close(self):
             self.closed = True
 
-    def factory(client, sources, scan="live", parent=None, min_emit_interval=0.1, max_points=None):
+    def factory(client, sources, scan="live", owner=None, min_emit_interval=0.1, max_points=None):
         bridge = _FakeBridge(client, sources, scan=scan, max_points=max_points)
         created.append(bridge)
         return bridge
 
-    monkeypatch.setattr("bec_widgets.widgets.plots.image.image.QtDataSubscription", factory)
+    fake_data_subscriptions(monkeypatch, factory)
     return created
 
 

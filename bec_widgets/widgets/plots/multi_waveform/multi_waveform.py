@@ -126,7 +126,7 @@ class MultiWaveform(PlotBase):
 
         # Data delivery through the DataAPI: scan-less preview signals or
         # scan-scoped async signals.
-        self._data_bridge: QtDataSubscription | None = None
+        self._data_subscription: QtDataSubscription | None = None
         self._source_key: tuple[str, str] | None = None
         # The newest ordinal drawn, and the one up to which traces are gone for good.
         self._last_ordinal: int | None = None
@@ -858,15 +858,13 @@ class MultiWaveform(PlotBase):
             return
         scan, entry, max_points = route
         try:
-            self._data_bridge = QtDataSubscription(
-                self.client,
+            self._data_subscription = self.bec_dispatcher.connect_data_subscription(
+                self._on_data_update,
                 sources=[(device, entry)],
                 scan=scan,
-                parent=self,
                 min_emit_interval=self.update_interval_s,
                 max_points=max_points,
             )
-            self._data_bridge.updated.connect(self._on_data_update)
         except Exception as exc:  # pylint: disable=broad-except
             logger.warning(
                 f"Failed to configure multi waveform data subscription for "
@@ -885,12 +883,12 @@ class MultiWaveform(PlotBase):
         self._evicted_through = None
         self._source_key = None
         self.connected = False
-        if self._data_bridge is None:
+        if self._data_subscription is None:
             return
         try:
-            self._data_bridge.close()
+            self.bec_dispatcher.disconnect_data_subscription(self._data_subscription)
         finally:
-            self._data_bridge = None
+            self._data_subscription = None
 
     def _set_connection_status(self, status: str, message: str | None = None) -> None:
         self.config.connection_status = status

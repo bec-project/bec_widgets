@@ -308,12 +308,12 @@ def test_signal_rebind_discards_queued_values_and_closes_subscription(
     signal_label.signal = "readback"
     previous = signal_label._data_subscription
     signal_label.device = "samy"
-    assert previous._closed
+    assert previous.closed
     qtbot.waitUntil(lambda: signal_label._value == 2.5)
     assert signal_label._data_subscription.sources == [("samy", "samy")]
     current = signal_label._data_subscription
     signal_label.close()
-    assert current._closed
+    assert current.closed
 
 
 def test_data_api_preserves_array_signal_values(signal_label, qtbot, mocked_client):

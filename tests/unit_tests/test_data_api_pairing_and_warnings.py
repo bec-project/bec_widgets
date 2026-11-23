@@ -6,7 +6,7 @@ from unittest import mock
 from bec_lib.data_api import SCAN_GROUP, CorrelationGroup
 from bec_lib.data_api.data_bundler import DataBundler
 
-from bec_widgets.tests.utils import create_widget
+from bec_widgets.tests.utils import create_widget, fake_data_subscriptions
 from bec_widgets.widgets.plots.plot_base import PlotBase
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
 
@@ -51,13 +51,13 @@ def _bridges(monkeypatch) -> list:
         def set_sources(self, sources):
             self.sources = list(sources)
 
-        def set_min_emit_interval(self, _seconds):
-            pass
+        def set_min_emit_interval(self, seconds):
+            self.min_emit_interval = seconds
 
         def close(self):
             self.closed = True
 
-    monkeypatch.setattr("bec_widgets.widgets.plots.waveform.waveform.QtDataSubscription", Bridge)
+    fake_data_subscriptions(monkeypatch, Bridge)
     return created
 
 
@@ -89,12 +89,21 @@ def test_adding_a_curve_keeps_the_subscription(qtbot, mocked_client, monkeypatch
     created = _bridges(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     wf.plot("bpm4i")
-    first = wf._data_bridge
+    first = wf._data_subscription
     wf.plot("bpm3a")
-    assert wf._data_bridge is first and not first.closed
+    assert wf._data_subscription is first and not first.closed
     assert ("bpm3a", "bpm3a") in first.sources and len(created) == 1
     wf._setup_data_api_subscription(scan="scan-9")  # another target: a new subscription
-    assert wf._data_bridge is not first and first.closed
+    assert wf._data_subscription is not first and first.closed
+
+
+def test_update_rate_reaches_the_subscriptions_of_the_plot(qtbot, mocked_client, monkeypatch):
+    """The plot does not hold its subscriptions as Qt children; the dispatcher knows them."""
+    created = _bridges(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.plot("bpm4i")
+    wf.update_rate = 5  # Hz
+    assert created[-1].min_emit_interval == 0.2
 
 
 def test_data_warning_lists_what_the_update_reports():
@@ -138,7 +147,7 @@ def test_data_warnings_go_with_their_subscription(qtbot, mocked_client, monkeypa
     # The source of one group is removed: its warning goes, the others stay.
     live.groups = {SCAN_GROUP: [("samx", "samx")]}
     wf._setup_data_api_subscription(scan="live")
-    assert wf._data_bridge is live
+    assert wf._data_subscription is live
     assert wf._data_rows == [("Data", "samx.samx: boom; scan 7: file missing")]
 
     # Another target: the subscription is replaced, and what the old one reported goes.

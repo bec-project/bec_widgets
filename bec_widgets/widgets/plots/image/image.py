@@ -129,8 +129,8 @@ class Image(ImageBase):
         self.subscriptions: defaultdict[str, ImageLayerConfig] = defaultdict(ImageLayerConfig)
         # Store signal configs separately (not serialized to QSettings)
         self._signal_configs: dict[str, dict] = {}
-        # Data delivery through the DataAPI (one bridge for the main layer).
-        self._data_bridge: QtDataSubscription | None = None
+        # Data delivery through the DataAPI (one subscription for the main layer).
+        self._data_subscription: QtDataSubscription | None = None
         self._source_key: tuple[str, str] | None = None
         self._min_display_ordinal: int | None = None
         self._waterfall_cache: dict | None = None
@@ -451,15 +451,13 @@ class Image(ImageBase):
             max_points = self.ASYNC_2D_MAX_FRAMES if ndim == 2 else None
 
         try:
-            self._data_bridge = QtDataSubscription(
-                self.client,
+            self._data_subscription = self.bec_dispatcher.connect_data_subscription(
+                self._on_data_update,
                 sources=[(self._config.device, entry)],
                 scan=scan,
-                parent=self,
                 min_emit_interval=self.update_interval_s,
                 max_points=max_points,
             )
-            self._data_bridge.updated.connect(self._on_data_update)
         except Exception as exc:  # pylint: disable=broad-except
             logger.warning(
                 f"Failed to configure image data subscription for "
@@ -479,16 +477,16 @@ class Image(ImageBase):
         self._autorange_on_next_update = True
 
     def _cleanup_data_api_subscription(self):
-        """Close the active DataAPI bridge, if any."""
+        """Close the active DataAPI subscription, if any."""
         self._source_key = None
         self._min_display_ordinal = None
         self._waterfall_cache = None
-        if self._data_bridge is None:
+        if self._data_subscription is None:
             return
         try:
-            self._data_bridge.close()
+            self.bec_dispatcher.disconnect_data_subscription(self._data_subscription)
         finally:
-            self._data_bridge = None
+            self._data_subscription = None
 
     def _disconnect_current_monitor(self):
         """

@@ -10,6 +10,7 @@ from bec_lib.data_api.models import SourceData, SubscriptionUpdate
 from bec_lib.scan_items import ScanItem
 
 from bec_widgets.tests.client_mocks import mocked_client
+from bec_widgets.tests.utils import fake_data_subscriptions
 from bec_widgets.widgets.plots.multi_waveform.multi_waveform import MultiWaveform
 
 from .conftest import create_widget
@@ -40,7 +41,7 @@ def _fake_bridge_factory(monkeypatch):
 
     class _FakeBridge:
         def __init__(
-            self, client, sources, scan="live", parent=None, min_emit_interval=0.1, max_points=None
+            self, client, sources, scan="live", owner=None, min_emit_interval=0.1, max_points=None
         ):
             self.client = client
             self.sources = list(sources)
@@ -57,14 +58,12 @@ def _fake_bridge_factory(monkeypatch):
         def close(self):
             self.closed = True
 
-    def factory(client, sources, scan="live", parent=None, min_emit_interval=0.1, max_points=None):
+    def factory(client, sources, scan="live", owner=None, min_emit_interval=0.1, max_points=None):
         bridge = _FakeBridge(client, sources, scan=scan, max_points=max_points)
         created.append(bridge)
         return bridge
 
-    monkeypatch.setattr(
-        "bec_widgets.widgets.plots.multi_waveform.multi_waveform.QtDataSubscription", factory
-    )
+    fake_data_subscriptions(monkeypatch, factory)
     return created
 
 
@@ -174,7 +173,7 @@ def test_multiwaveform_initialization(qtbot, mocked_client):
     assert mw.opacity == 50
     assert mw.scan_id is None
     assert mw.highlighted_index == 0
-    assert mw._data_bridge is None
+    assert mw._data_subscription is None
     assert mw.config.connection_status == "disconnected"
 
 
@@ -190,9 +189,9 @@ def test_multiwaveform_set_monitor(qtbot, mocked_client):
     assert mw.config.monitor_signal == TRACE
     assert mw.connected is True
     assert mw.config.connection_status == "connected"
-    assert mw._data_bridge is not None
-    assert mw._data_bridge.sources == [("waveform1d", TRACE)]
-    assert mw._data_bridge.scan_id == ""  # device scope
+    assert mw._data_subscription is not None
+    assert mw._data_subscription.sources == [("waveform1d", TRACE)]
+    assert mw._data_subscription.scan_id == ""  # device scope
 
 
 def test_multiwaveform_preview_buffer_is_not_the_display_limit(qtbot, mocked_client, monkeypatch):
@@ -231,7 +230,7 @@ def test_multiwaveform_bridge_lifecycle(qtbot, mocked_client, monkeypatch):
     mw._cleanup_data_api_subscription()
     assert bridges[-1].closed is True
     assert mw.connected is False
-    assert mw._data_bridge is None
+    assert mw._data_subscription is None
 
 
 ##################################################

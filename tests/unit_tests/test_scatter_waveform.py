@@ -10,6 +10,7 @@ from bec_widgets.tests.client_mocks import (
     inject_scan_history,
     mocked_client,
 )
+from bec_widgets.tests.utils import fake_data_subscriptions
 from bec_widgets.widgets.plots.scatter_waveform.scatter_curve import (
     ScatterCurveConfig,
     ScatterDeviceSignal,
@@ -60,7 +61,7 @@ def _fake_bridge_factory(monkeypatch):
     created = []
 
     class _FakeBridge:
-        def __init__(self, client, sources, scan="live", parent=None, min_emit_interval=0.1):
+        def __init__(self, client, sources, scan="live", owner=None, min_emit_interval=0.1):
             self.client = client
             self.sources = list(sources)
             self.scan = scan
@@ -75,14 +76,12 @@ def _fake_bridge_factory(monkeypatch):
         def close(self):
             self.closed = True
 
-    def factory(client, sources, scan="live", parent=None, min_emit_interval=0.1):
+    def factory(client, sources, scan="live", owner=None, min_emit_interval=0.1):
         bridge = _FakeBridge(client, sources, scan=scan)
         created.append(bridge)
         return bridge
 
-    monkeypatch.setattr(
-        "bec_widgets.widgets.plots.scatter_waveform.scatter_waveform.QtDataSubscription", factory
-    )
+    fake_data_subscriptions(monkeypatch, factory)
     return created
 
 

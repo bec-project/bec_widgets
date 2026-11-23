@@ -96,8 +96,8 @@ class ScatterWaveform(PlotBase):
 
         # Data delivery through the DataAPI; scan_status is only used for
         # per-scan bookkeeping (reset, auto range, new_scan signals).
-        self._data_bridge: QtDataSubscription | None = None
-        self._data_bridge_scope: str | None = ScanTarget.LIVE
+        self._data_subscription: QtDataSubscription | None = None
+        self._data_subscription_scope: str | None = ScanTarget.LIVE
         self.bec_dispatcher.connect_slot(self.on_scan_status, MessageEndpoints.scan_status())
 
         self._init_scatter_curve_settings()
@@ -315,9 +315,9 @@ class ScatterWaveform(PlotBase):
             self.scan_id = current_scan_id
             self.scan_item = self.queue.scan_storage.find_scan_by_ID(self.scan_id)
             self.update_scan_info_from_source(self.scan_item)
-            if self._data_bridge is None or self._data_bridge_scope != ScanTarget.LIVE:
+            if self._data_subscription is None or self._data_subscription_scope != ScanTarget.LIVE:
                 # The widget started idle and bound to the latest finished
-                # scan (or has no bridge yet); a scan is running now, so
+                # scan (or has no subscription yet); a scan is running now, so
                 # switch to a live-follow subscription.
                 self._setup_data_api_subscription()
 
@@ -341,19 +341,17 @@ class ScatterWaveform(PlotBase):
     def _setup_data_api_subscription(self, scan: str = ScanTarget.LIVE):
         """(Re)create the DataAPI subscription for the configured sources."""
         self._cleanup_data_api_subscription()
-        self._data_bridge_scope = scan
+        self._data_subscription_scope = scan
         sources = self._config_sources()
         if sources is None:
             return
         try:
-            self._data_bridge = QtDataSubscription(
-                self.client,
+            self._data_subscription = self.bec_dispatcher.connect_data_subscription(
+                self._on_data_update,
                 sources=sources,
                 scan=scan,
-                parent=self,
                 min_emit_interval=self.update_interval_s,
             )
-            self._data_bridge.updated.connect(self._on_data_update)
         except Exception as exc:
             logger.warning(f"Failed to configure scatter waveform data subscription: {exc}")
             self._cleanup_data_api_subscription()
@@ -361,12 +359,12 @@ class ScatterWaveform(PlotBase):
         self._warn_if_unaligned(sources, scan)
 
     def _cleanup_data_api_subscription(self):
-        if self._data_bridge is None:
+        if self._data_subscription is None:
             return
         try:
-            self._data_bridge.close()
+            self.bec_dispatcher.disconnect_data_subscription(self._data_subscription)
         finally:
-            self._data_bridge = None
+            self._data_subscription = None
 
     @SafeSlot(object)
     def _on_data_update(self, update) -> None:
@@ -381,7 +379,7 @@ class ScatterWaveform(PlotBase):
         if curve is None or sources is None:
             return
         if self._alignment_binding_changed(update):
-            self._warn_if_unaligned(sources, self._data_bridge_scope)
+            self._warn_if_unaligned(sources, self._data_subscription_scope)
         columns = update.aligned()
         try:
             config = curve.config
