@@ -81,10 +81,11 @@ class PaletteDelegate(QStyledItemDelegate):
         super().__init__(parent)
         self.controller = controller
         self.tokens = ThemeTokens()
+        self.single_section = False
 
     def has_header(self, index: QModelIndex) -> bool:
         """Whether a section header is drawn above ``index``."""
-        if not self.controller.sectioned:
+        if not self.controller.sectioned or self.single_section:
             return False
         section = index.data(_role("section"))
         if not section:
@@ -151,7 +152,7 @@ class PaletteDelegate(QStyledItemDelegate):
             right -= width + 12
         elif shortcut:
             right = draw_keycap(painter, right, row.center().y(), shortcut, tokens) - 10
-        elif not self.controller.sectioned:
+        elif not self.controller.sectioned and self.controller.scope == "all":
             painter.setFont(_font(11))
             painter.setPen(tokens.fg_muted)
             category = str(index.data(_role("category")) or "")
@@ -279,12 +280,8 @@ class PaletteCardWidget(QFrame):
         self.input.setFrame(False)
         self.input.installEventFilter(self)
         self.input.textEdited.connect(self._on_text_edited)
-        self.esc_label = QLabel("esc", self)
-        self.esc_label.setObjectName("PaletteKey")
-        self.esc_label.setFixedHeight(20)
         search_row.addWidget(self.search_icon)
         search_row.addWidget(self.input, 1)
-        search_row.addWidget(self.esc_label)
         layout.addWidget(search_bar)
 
         # scope chips
@@ -382,9 +379,6 @@ class PaletteCardWidget(QFrame):
                 {tokens.border.name()}; border-radius: 12px; }}
             #PaletteInput {{ background: transparent; border: none; color: {tokens.fg.name()};
                 font-size: 16px; selection-background-color: {primary}; }}
-            #PaletteKey {{ color: {tokens.fg_muted.name()}; background: {tokens.field.name()};
-                border: 1px solid {tokens.border.name()}; border-radius: 5px; padding: 0px 5px;
-                font-size: 11px; font-weight: 600; }}
             #PaletteList {{ background: transparent; border: none; }}
             #PaletteFooter {{ background: {tokens.field.name()}; border: none;
                 border-top: 1px solid {tokens.border.name()};
@@ -457,6 +451,9 @@ class PaletteCardWidget(QFrame):
 
     def _sync_results(self) -> None:
         count = self.controller.resultCount
+        model = self.controller.model
+        sections = {model.index(row, 0).data(_role("section")) for row in range(count)}
+        self.delegate.single_section = len(sections) <= 1
         self.stack.setCurrentWidget(self.list if count else self.empty)
         self.empty_title.setText(self.controller.empty_text())
         self.count_label.setText(self._count_text())

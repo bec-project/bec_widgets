@@ -320,6 +320,18 @@ def test_qwidget_card_says_when_results_are_cut(qtbot, palette_window):
     assert card.count_label.text() == f"{palette.controller.resultCount} results"
 
 
+def test_qwidget_card_hides_labels_that_repeat_the_scope(qtbot, palette_window):
+    _window, palette = palette_window
+    if palette.flavour != "qwidget":
+        pytest.skip("QWidget card only")
+    palette.open_palette()
+    card = palette.card
+    first = palette.controller.model.index(0, 0)
+    assert card.delegate.has_header(first)  # browsing everything: one header per section
+    palette.controller.set_scope("devices")
+    assert not card.delegate.has_header(palette.controller.model.index(0, 0))
+
+
 def test_qml_card_loads(qtbot, palette_window):
     _window, palette = palette_window
     if palette.flavour != "qml":
