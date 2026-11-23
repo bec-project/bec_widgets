@@ -272,7 +272,7 @@ class PaletteCardWidget(QFrame):
         self.input.setPlaceholderText("Search actions, widgets, devices and workspaces…")
         self.input.setFrame(False)
         self.input.installEventFilter(self)
-        self.input.textEdited.connect(controller.set_query)
+        self.input.textEdited.connect(self._on_text_edited)
         self.esc_label = QLabel("esc", self)
         self.esc_label.setObjectName("PaletteKey")
         self.esc_label.setFixedHeight(20)
@@ -407,6 +407,11 @@ class PaletteCardWidget(QFrame):
     def _pick_scope(self, scope: str) -> None:
         self.controller.set_scope(scope)
         self.input.setFocus()
+
+    def _on_text_edited(self, text: str) -> None:
+        self.controller.set_query(text)
+        # a typed scope prefix (">", "+", "@", "#") selects the chip and leaves the field
+        self._sync_query()
 
     def _sync_query(self) -> None:
         if self.input.text() != self.controller.query:

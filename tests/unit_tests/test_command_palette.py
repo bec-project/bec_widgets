@@ -270,6 +270,20 @@ def test_qwidget_card_follows_controller(qtbot, palette_window):
     assert card.count_label.text() == ""
 
 
+def test_qwidget_card_typed_prefix_leaves_the_field(qtbot, palette_window):
+    _window, palette = palette_window
+    if palette.flavour != "qwidget":
+        pytest.skip("QWidget card only")
+    palette.open_palette()
+    card = palette.card
+    qtbot.keyClicks(card.input, "@")
+    assert palette.controller.scope == "devices"
+    assert card.input.text() == ""
+    qtbot.keyClicks(card.input, "sam")
+    assert card.input.text() == "sam"
+    assert palette.controller.query == "sam"
+
+
 def test_qml_card_loads(qtbot, palette_window):
     _window, palette = palette_window
     if palette.flavour != "qml":
