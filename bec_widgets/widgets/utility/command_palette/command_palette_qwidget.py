@@ -170,8 +170,13 @@ class PaletteDelegate(QStyledItemDelegate):
         matched = set(index.data(_role("positions")) or [])
         regular = _font(13)
         bold = _font(13, QFont.Weight.Bold)
+        subtitle = str(index.data(_role("subtitle")) or "")
         x = left
-        baseline = row.top() + 20
+        if subtitle:
+            baseline = row.top() + 20
+        else:  # a title on its own sits on the row's centre line
+            metrics = QFontMetrics(regular)
+            baseline = row.center().y() + (metrics.ascent() - metrics.descent()) / 2
         elided = QFontMetrics(regular).elidedText(
             title, Qt.TextElideMode.ElideRight, int(available)
         )
@@ -189,7 +194,6 @@ class PaletteDelegate(QStyledItemDelegate):
             painter.drawText(QPointF(x, baseline), text)
             x += QFontMetrics(font).horizontalAdvance(text)
 
-        subtitle = str(index.data(_role("subtitle")) or "")
         if subtitle:
             painter.setFont(_font(11))
             painter.setPen(tokens.fg_muted)

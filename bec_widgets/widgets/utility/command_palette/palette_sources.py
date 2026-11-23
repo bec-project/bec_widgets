@@ -91,7 +91,6 @@ def main_app_commands(app: BECMainApp) -> list[PaletteCommand]:
             PaletteCommand(
                 uid=f"view:{view_id}",
                 title=f"Go to {title}",
-                subtitle="View",
                 callback=lambda vid=view_id: app.set_current(vid),
                 category="navigate",
                 icon=getattr(item, "_icon_name", None) or "view_quilt",
@@ -103,7 +102,6 @@ def main_app_commands(app: BECMainApp) -> list[PaletteCommand]:
         PaletteCommand(
             uid="app:toggle_sidebar",
             title="Toggle Sidebar",
-            subtitle="Expand or collapse the navigation sidebar",
             callback=app.sidebar.toggle.click,
             category="actions",
             icon="side_navigation",
@@ -117,7 +115,6 @@ def main_app_commands(app: BECMainApp) -> list[PaletteCommand]:
         PaletteCommand(
             uid="app:toggle_theme",
             title=f"Switch to {target.title()} Theme",
-            subtitle="Appearance",
             callback=lambda: app.change_theme(target),
             category="actions",
             icon="light_mode" if target == "light" else "dark_mode",
@@ -164,11 +161,10 @@ def dock_area_commands(
                 PaletteCommand(
                     uid=f"widget:{widget_type}",
                     title=label.strip(),
-                    subtitle=f"Add to dock area · {group}",
                     callback=lambda t=widget_type: add_widget(t),
                     category="widgets",
                     icon=icon,
-                    keywords=f"add new dock {widget_type} {pascal_to_title(widget_type)}",
+                    keywords=f"add new dock {group} {widget_type} {pascal_to_title(widget_type)}",
                     hint="Add",
                 )
             )
@@ -183,7 +179,7 @@ def dock_area_commands(
             PaletteCommand(
                 uid=f"workspace:{name}",
                 title=name,
-                subtitle="Current workspace" if name == current else "Open workspace",
+                subtitle="Current workspace" if name == current else "",
                 callback=lambda n=name: load(n),
                 category="workspaces",
                 icon="space_dashboard",
@@ -208,7 +204,6 @@ def dock_area_commands(
             PaletteCommand(
                 uid=f"workspace_action:{key}",
                 title=title,
-                subtitle="Workspace",
                 callback=lambda f=func: (activate(), f()),
                 category="actions",
                 icon=icon,
@@ -246,8 +241,6 @@ def device_commands(dock_area: BECDockArea, activate: Callable[[], None]) -> lis
         tags = _config_value(device, "deviceTags", None) or ()
         description = str(_config_value(device, "description", "") or "")
         details = [short_class or ("Positioner" if positioner else "Device")]
-        if priority:
-            details.append(priority)
         if not enabled:
             details.append("disabled")
         commands.append(
@@ -260,7 +253,7 @@ def device_commands(dock_area: BECDockArea, activate: Callable[[], None]) -> lis
                 ),
                 category="devices",
                 icon="open_with" if positioner else "sensors",
-                keywords=f"{device_class} {' '.join(map(str, tags))} {description}",
+                keywords=f"{device_class} {priority} {' '.join(map(str, tags))} {description}",
                 hint="Add box" if positioner else "Plot",
             )
         )
