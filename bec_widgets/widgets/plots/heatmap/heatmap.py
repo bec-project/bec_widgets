@@ -275,8 +275,8 @@ class Heatmap(ImageBase):
         self._interpolation_thread: QThread | None = None
         self._interpolation_worker: _StepInterpolationWorker | None = None
         self._pending_interpolation_request: _InterpolationRequest | None = None
-        self._data_bridge: QtDataSubscription | None = None
-        self._data_bridge_scope: str | None = ScanTarget.LIVE
+        self._data_subscription: QtDataSubscription | None = None
+        self._data_subscription_scope: str | None = ScanTarget.LIVE
         self._last_columns = None
         self.heatmap_dialog = None
         self.scan_history_dialog = None
@@ -431,7 +431,7 @@ class Heatmap(ImageBase):
     def _start_data_feed(self):
         """
         Bind the widget to the running scan or, while idle, to the latest
-        finished scan (served by the history plugin); a live-follow bridge
+        finished scan (served by the history plugin); a live-follow subscription
         replaces the idle binding when the next scan starts.
         """
         self._fetch_running_scan()
@@ -669,12 +669,12 @@ class Heatmap(ImageBase):
         self.toolbar.components.get_action("heatmap_settings").action.setChecked(False)
 
     def _cleanup_data_api_subscription(self):
-        if self._data_bridge is None:
+        if self._data_subscription is None:
             return
         try:
-            self._data_bridge.close()
+            self.bec_dispatcher.disconnect_data_subscription(self._data_subscription)
         finally:
-            self._data_bridge = None
+            self._data_subscription = None
 
     def _config_sources(self):
         if self._image_config is None:
@@ -690,7 +690,7 @@ class Heatmap(ImageBase):
 
     def _setup_data_api_subscription(self, scan: str = ScanTarget.LIVE):
         self._cleanup_data_api_subscription()
-        self._data_bridge_scope = scan
+        self._data_subscription_scope = scan
         # The columns of the previous binding are not those of this scan or these sources:
         # a redraw before the new subscription delivered must not show them as its data.
         self._last_columns = None
@@ -702,14 +702,12 @@ class Heatmap(ImageBase):
             return
 
         try:
-            self._data_bridge = QtDataSubscription(
-                self.client,
+            self._data_subscription = self.bec_dispatcher.connect_data_subscription(
+                self._on_data_update,
                 sources=sources,
                 scan=scan,
-                parent=self,
                 min_emit_interval=self.update_interval_s,
             )
-            self._data_bridge.updated.connect(self._on_data_update)
         except Exception as exc:
             logger.warning(f"Failed to configure heatmap data-api subscription: {exc}")
             self._cleanup_data_api_subscription()
@@ -738,9 +736,9 @@ class Heatmap(ImageBase):
             self.old_scan_id = self.scan_id
             self.scan_id = current_scan_id
             self.scan_item = self.queue.scan_storage.find_scan_by_ID(self.scan_id)  # type: ignore
-            if self._data_bridge is None or self._data_bridge_scope != ScanTarget.LIVE:
+            if self._data_subscription is None or self._data_subscription_scope != ScanTarget.LIVE:
                 # The widget started idle and bound to the latest finished
-                # scan (or has no bridge yet); a scan is running now, so
+                # scan (or has no subscription yet); a scan is running now, so
                 # switch to a live-follow subscription.
                 self._setup_data_api_subscription()
 
@@ -753,12 +751,12 @@ class Heatmap(ImageBase):
             update (SubscriptionUpdate): Aligned full-state snapshot.
         """
         sources = self._config_sources()
-        if sources is None or self._data_bridge is None:
+        if sources is None or self._data_subscription is None:
             return
         if self._history_scan_id is not None and update.scan_id != self._history_scan_id:
             return
         if self._alignment_binding_changed(update):
-            self._warn_if_unaligned(list(dict.fromkeys(sources)), self._data_bridge_scope)
+            self._warn_if_unaligned(list(dict.fromkeys(sources)), self._data_subscription_scope)
         columns = update.aligned()
         try:
             expanded = expand_sample_columns(*(columns[tuple(source)] for source in sources[:3]))

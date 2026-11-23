@@ -1,3 +1,5 @@
+from unittest import mock
+
 import numpy as np
 import pytest
 from bec_lib import messages
@@ -811,26 +813,17 @@ def test_update_rate_default_and_clamp(qtbot, mocked_client):
 
 
 def test_update_rate_propagates_to_bridges(qtbot, mocked_client):
-    """Setting update_rate reconfigures every child data bridge in place."""
-    from unittest import mock
-
-    from qtpy.QtCore import QObject
-
-    from bec_widgets.utils.qt_data_subscription import QtDataSubscription
-
-    class _StubBridge(QtDataSubscription):
-        # pylint: disable=super-init-not-called
-        def __init__(self, parent):
-            QObject.__init__(self, parent)
-            self._closed = False
-            self._subscription = mock.MagicMock()
-
+    """Setting update_rate reconfigures every data subscription of the plot in place."""
     pb = create_widget(qtbot, PlotBase, client=mocked_client)
-    bridge = _StubBridge(pb)
-    with qtbot.waitSignal(pb.property_changed, timeout=500) as signal:
-        pb.update_rate = 5
+    bridge = mock.MagicMock()
+    with mock.patch.object(
+        pb.bec_dispatcher, "data_subscriptions", return_value=[bridge]
+    ) as subscriptions:
+        with qtbot.waitSignal(pb.property_changed, timeout=500) as signal:
+            pb.update_rate = 5
     assert signal.args == ["update_rate", 5.0]
-    bridge._subscription.set_min_emit_interval.assert_called_once_with(0.2)
+    subscriptions.assert_called_once_with(pb)
+    bridge.set_min_emit_interval.assert_called_once_with(0.2)
 
 
 def test_update_rate_widget_defaults():

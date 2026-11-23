@@ -152,7 +152,7 @@ class MotorMap(PlotBase):
 
         # Data delivery through the DataAPI device streams (readback), paired
         # into (x, y) rows by the backend's continuous correlation.
-        self._data_bridge: QtDataSubscription | None = None
+        self._data_subscription: QtDataSubscription | None = None
         self._connected_limit_endpoints: list = []
         # First row ordinal shown in the trail (advanced by reset_history)
         # and the last one seen.
@@ -675,16 +675,14 @@ class MotorMap(PlotBase):
         if not device_x or not device_y:
             return
         try:
-            self._data_bridge = QtDataSubscription(
-                self.client,
+            self._data_subscription = self.bec_dispatcher.connect_data_subscription(
+                self._on_data_update,
                 devices=[device_x, device_y],
                 scan=None,
-                parent=self,
                 min_emit_interval=self.update_interval_s,
                 max_points=self.config.max_points,
                 correlation=CorrelationMode.CONTINUOUS,
             )
-            self._data_bridge.updated.connect(self._on_data_update)
         except Exception as exc:
             logger.warning(f"Failed to configure motor map data subscription: {exc}")
             self._cleanup_data_api_subscription()
@@ -693,12 +691,12 @@ class MotorMap(PlotBase):
         self._trail_start = 0
         self._last_row = None
         self._data_binding = None
-        if self._data_bridge is None:
+        if self._data_subscription is None:
             return
         try:
-            self._data_bridge.close()
+            self.bec_dispatcher.disconnect_data_subscription(self._data_subscription)
         finally:
-            self._data_bridge = None
+            self._data_subscription = None
 
     ################################################################################
     # Utility Methods
@@ -915,7 +913,7 @@ class MotorMap(PlotBase):
 
     def cleanup(self):
         """
-        Cleanup the widget: close the DataAPI bridge, stop the plot update proxy and
+        Cleanup the widget: close the DataAPI subscription, stop the plot update proxy and
         close the settings popup. The limits dispatcher slot is released by
         BECWidget.cleanup via disconnect_owner.
         """

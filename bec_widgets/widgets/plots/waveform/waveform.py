@@ -368,13 +368,15 @@ class Waveform(PlotBase):
         self._dap_curves = []
         self._mode = None
 
-        # Data delivery through the DataAPI: one bridge follows the widget's
+        # Data delivery through the DataAPI: one subscription follows the widget's
         # scan (live or a history scan pinned via update_with_scan_history),
-        # plus one bridge per scan pinned by individual history curves.
-        self._data_bridge: QtDataSubscription | None = None
-        self._data_bridge_scan: str | None = None  # the scan target the bridge was made for
+        # plus one subscription per scan pinned by individual history curves.
+        self._data_subscription: QtDataSubscription | None = None
+        self._data_subscription_scan: str | None = (
+            None  # the scan target the subscription was made for
+        )
         self._data_api_scan: str = ScanTarget.LIVE
-        self._history_bridges: dict[str, QtDataSubscription] = {}
+        self._history_subscriptions: dict[str, QtDataSubscription] = {}
         self._history_x_keys: dict[str, tuple[str, str] | None] = {}
         # History curves whose data has not arrived yet; the view ranges to it once.
         self._history_curves_awaiting_data: set[str] = set()
@@ -2260,7 +2262,7 @@ class Waveform(PlotBase):
         """
         if not self._async_curves:
             return True
-        groups = {} if self._data_bridge is None else self._data_bridge.groups
+        groups = {} if self._data_subscription is None else self._data_subscription.groups
         scan_group = {tuple(key) for key in groups.get(SCAN_GROUP, ())}
         return all(
             (curve.config.signal.device, curve.config.signal.signal) in scan_group
@@ -2338,9 +2340,9 @@ class Waveform(PlotBase):
         if not sources:
             self._cleanup_data_api_subscription()
             return
-        if self._data_bridge is not None and self._data_bridge_scan == scan:
+        if self._data_subscription is not None and self._data_subscription_scan == scan:
             try:
-                self._data_bridge.set_sources(sources)
+                self._data_subscription.set_sources(sources)
                 self._forget_groups_without_sources()
                 self._check_x_alignment(sources, scan)
                 return
@@ -2350,23 +2352,21 @@ class Waveform(PlotBase):
                 )
         self._cleanup_data_api_subscription()
         try:
-            self._data_bridge = QtDataSubscription(
-                self.client,
+            self._data_subscription = self.bec_dispatcher.connect_data_subscription(
+                self._on_data_update,
                 sources=sources,
                 scan=scan,
-                parent=self,
+                progress_slot=self._on_data_load_progress,
                 min_emit_interval=self.update_interval_s,
                 size_limit_bytes=self._live_size_limit_bytes(scan),
             )
-            self._data_bridge_scan = scan
+            self._data_subscription_scan = scan
             self._withheld_file_scan = None
-            self._data_bridge.updated.connect(self._on_data_update)
-            self._data_bridge.progress.connect(self._on_data_load_progress)
-            if self._data_bridge.size_gated:
+            if self._data_subscription.size_gated:
                 # Opened after a large scan: the subscription is bound to its file and
                 # withholds it, so no update will come to ask about.
                 self._offer_withheld_file(
-                    self._data_bridge.scan_id, self._data_bridge.estimated_bytes
+                    self._data_subscription.scan_id, self._data_subscription.estimated_bytes
                 )
         except Exception as exc:
             logger.warning(f"Failed to configure waveform data subscription: {exc}")
@@ -2376,7 +2376,7 @@ class Waveform(PlotBase):
 
     def _forget_groups_without_sources(self) -> None:
         """After the sources changed in place: drop what belongs to groups that are gone."""
-        groups = self._data_bridge.groups if self._data_bridge is not None else {}
+        groups = self._data_subscription.groups if self._data_subscription is not None else {}
         if not groups:
             return  # not bound: nothing is known about the groups
         self.clear_data_warnings(keep=groups)
@@ -2506,12 +2506,12 @@ class Waveform(PlotBase):
         self.setup_dap_for_scan()
 
     def _cleanup_data_api_subscription(self):
-        if self._data_bridge is None:
+        if self._data_subscription is None:
             return
         try:
-            self._data_bridge.close()
+            self.bec_dispatcher.disconnect_data_subscription(self._data_subscription)
         finally:
-            self._data_bridge = None
+            self._data_subscription = None
             if not self._shutting_down:
                 self.clear_data_warnings()  # they were about this subscription
 
@@ -2541,29 +2541,28 @@ class Waveform(PlotBase):
                 sources.append(x_key)
             self._history_x_keys[scan_id] = x_key
             try:
-                bridge = QtDataSubscription(
-                    self.client,
-                    sources=list(dict.fromkeys(sources)),
-                    scan=scan_id,
-                    parent=self,
-                    min_emit_interval=self.update_interval_s,
-                    view_limit_bytes=self._view_limit_bytes(scan_id, sources),
+                self._history_subscriptions[scan_id] = (
+                    self.bec_dispatcher.connect_data_subscription(
+                        self._on_history_data_update,
+                        sources=list(dict.fromkeys(sources)),
+                        scan=scan_id,
+                        progress_slot=self._on_data_load_progress,
+                        min_emit_interval=self.update_interval_s,
+                        view_limit_bytes=self._view_limit_bytes(scan_id, sources),
+                    )
                 )
-                bridge.updated.connect(self._on_history_data_update)
-                bridge.progress.connect(self._on_data_load_progress)
-                self._history_bridges[scan_id] = bridge
             except Exception as exc:
                 logger.warning(
                     f"Failed to configure history data subscription for scan {scan_id}: {exc}"
                 )
 
     def _cleanup_history_subscriptions(self):
-        for bridge in self._history_bridges.values():
+        for subscription in self._history_subscriptions.values():
             try:
-                bridge.close()
+                self.bec_dispatcher.disconnect_data_subscription(subscription)
             except Exception:  # pylint: disable=broad-except
                 pass
-        self._history_bridges = {}
+        self._history_subscriptions = {}
         self._history_x_keys = {}
 
     def _estimate_source_bytes(self, scan: str, source: tuple[str, str]) -> int | None:
@@ -2685,7 +2684,7 @@ class Waveform(PlotBase):
             estimated_bytes (int | None): Its size as the DataAPI estimates it.
         """
         offered = scan_id is not None and self._withheld_file_scan == scan_id
-        if offered or self._data_bridge is None:
+        if offered or self._data_subscription is None:
             return
         self._withheld_file_scan = scan_id
         size_mb = (estimated_bytes or 0) / (1024 * 1024)
@@ -2695,15 +2694,15 @@ class Waveform(PlotBase):
         )
         if self._skip_large_dataset_warning:
             return
-        bridge = self._data_bridge
+        subscription = self._data_subscription
 
         def ask():
             # Not from inside the update slot: the dialog runs its own event loop.
-            if self._shutting_down or self._data_bridge is not bridge:
+            if self._shutting_down or self._data_subscription is not subscription:
                 return
             # The dialog was about this scan: a scan that started meanwhile is not confirmed.
-            if self._confirm_large_dataset(size_mb) and bridge.scan_id == scan_id:
-                bridge.confirm_size()
+            if self._confirm_large_dataset(size_mb) and subscription.scan_id == scan_id:
+                subscription.confirm_size()
 
         QTimer.singleShot(0, ask)
 
@@ -2765,7 +2764,7 @@ class Waveform(PlotBase):
 
         Monitored sources are drawn from the aligned columns; async sources
         are reconstructed from their columnar fragments according to the
-        async update type. History curves have their own bridges and slot
+        async update type. History curves have their own subscriptions and slot
         (:meth:`_on_history_data_update`), so a history scan never redraws the
         device curves.
 
@@ -2790,7 +2789,7 @@ class Waveform(PlotBase):
             return
         if update.metadata.get("size_gated"):
             self._offer_withheld_file(update.scan_id, update.metadata.get("estimated_bytes"))
-        self.report_data_state(update, self._data_bridge)
+        self.report_data_state(update, self._data_subscription)
         x_key = self._resolve_x_axis()
         aligned_columns = update.aligned()
         had_timestamps = "timestamp" in self._curve_data_axes.values()
@@ -2811,7 +2810,7 @@ class Waveform(PlotBase):
     @SafeSlot(object)
     def _on_history_data_update(self, update) -> None:
         """
-        Render one update of a history bridge into the history curves of its scan.
+        Render one update of a history subscription into the history curves of its scan.
 
         Each history curve takes x from its own scan (``_history_x_keys``), so
         scans of different lengths plot side by side.
@@ -2828,7 +2827,7 @@ class Waveform(PlotBase):
             return
         x_key = self._history_x_keys.get(update.scan_id)
         self.report_data_state(
-            update, self._history_bridges.get(update.scan_id), scope=str(update.scan_id)
+            update, self._history_subscriptions.get(update.scan_id), scope=str(update.scan_id)
         )
         if not any(curve.config.source == "device" for curve in self.curves):
             # No live binding labels the axis of a plot with history curves only.
@@ -3244,11 +3243,11 @@ class Waveform(PlotBase):
             first, last = max(0, start - margin), min(total, stop + margin)
             if curve._view_pending == (first, last):
                 continue
-            bridge = self._history_bridges.get(view["scan_id"])
-            if bridge is None:
+            subscription = self._history_subscriptions.get(view["scan_id"])
+            if subscription is None:
                 continue
             max_points = int(width * VIEW_POINTS_PER_PIXEL * (1 + 2 * VIEW_MARGIN))
-            if bridge.request_view(view["key"], first, last, max_points):
+            if subscription.request_view(view["key"], first, last, max_points):
                 curve._view_pending = (first, last)
 
     def _ensure_load_progress_bar(self) -> QProgressBar:

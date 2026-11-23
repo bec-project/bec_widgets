@@ -4,14 +4,16 @@ Qt bridge for DataAPI subscriptions.
 Wraps a :class:`bec_lib.data_api.Subscription` in a ``QObject``: columnar
 :class:`~bec_lib.data_api.SubscriptionUpdate` snapshots arriving on
 dispatcher/worker threads are marshalled onto the Qt thread via a queued
-signal, stale-scan payloads are dropped, and the subscription is closed with
-the widget. This is the one-line integration point for plotting widgets —
-no per-widget signal bridges, rate-limit proxies or health checks needed.
+signal, stale-scan payloads are dropped, and the widget's slot is called with what is
+left. Widgets do not create it themselves: ``BECDispatcher.connect_data_subscription``
+does, and the dispatcher holds it and closes it with its owner, exactly as it does for
+the slots of Redis topics.
 """
 
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
@@ -23,20 +25,21 @@ from bec_lib.data_api import (
     SubscriptionUpdate,
     UpdateReason,
 )
-from qtpy.QtCore import QObject, Qt, Signal
+from qtpy.QtCore import Qt, Signal
+
+from bec_widgets.utils.qt_owned_callback import QtOwnedCallback
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.client import BECClient
 
 
-class QtDataSubscription(QObject):
-    """One DataAPI subscription delivered on the Qt thread."""
+class QtDataSubscription(QtOwnedCallback):
+    """
+    One DataAPI subscription delivered to a slot on the Qt thread.
 
-    #: Emitted on the Qt thread with each SubscriptionUpdate.
-    updated = Signal(object)
-    #: Emitted on the Qt thread with the bulk-load fraction (0..1) while the
-    #: backend reads history data.
-    progress = Signal(float)
+    The slot and its owner are held as :class:`QtOwnedCallback` describes, with the same
+    checks before every delivery as for the slots of Redis topics.
+    """
 
     #: Carries a correlation-group key; the update itself waits in ``_pending``.
     _raw = Signal(object)
@@ -53,9 +56,11 @@ class QtDataSubscription(QObject):
     def __init__(
         self,
         client: BECClient,
+        slot: Callable[[SubscriptionUpdate], Any],
         sources: list[SourceKey] | None = None,
         scan: str | None = ScanTarget.LIVE,
-        parent: QObject | None = None,
+        owner: object | None = None,
+        progress_slot: Callable[[float], Any] | None = None,
         min_emit_interval: float = 0.1,
         max_points: int | None = None,
         size_limit_bytes: int | None = None,
@@ -65,10 +70,12 @@ class QtDataSubscription(QObject):
         **options: Any,
     ):
         """
-        Subscribe to data for the given sources.
+        Subscribe to data for the given sources. Use
+        ``BECDispatcher.connect_data_subscription`` instead of calling this directly.
 
         Args:
-            client (BECClient): The widget's BEC client.
+            client (BECClient): The BEC client.
+            slot (Callable): Called on the Qt thread with each ``SubscriptionUpdate``.
             sources (list[SourceKey] | None): (device, entry) pairs; they are
                 partitioned into correlation groups by the backend and each
                 group emits its own updates.
@@ -76,15 +83,16 @@ class QtDataSubscription(QObject):
                 concrete (possibly finished) scan id, or ``None`` for
                 scan-less device streams (readback, configuration,
                 preview signals).
-            parent (QObject | None): Qt parent; closing follows the parent's
-                destruction.
+            owner (object | None): Lifetime anchor for a slot that is not a bound method.
+            progress_slot (Callable | None): Called on the Qt thread with the fraction
+                (0..1) of a stored scan that is loaded. It belongs to the same owner.
             min_emit_interval (float): Backend emission coalescing interval.
             max_points (int | None): Per-source retention cap; oldest points
                 are dropped beyond it. Recommended for endless device-stream
                 subscriptions (``scan=None``).
             size_limit_bytes (int | None): Withhold the load when the backend
                 can estimate the payload up front (history scans) and the
-                estimate exceeds this limit. Nothing is read; the bridge
+                estimate exceeds this limit. Nothing is read; the subscription
                 reports :attr:`size_gated` with :attr:`estimated_bytes` and
                 waits for :meth:`confirm_size`.
             force_source (str | None): Pin the subscription to one data
@@ -103,8 +111,8 @@ class QtDataSubscription(QObject):
                 arguments contradict each other.
             CorrelationGroupError: If the source list is empty.
         """
-        super().__init__(parent)
-        self._closed = False
+        super().__init__(slot, owner)
+        self._progress = None if progress_slot is None else QtOwnedCallback(progress_slot, owner)
         # Latest undelivered update per correlation group: a slow GUI thread sees
         # the newest state, never a backlog of superseded snapshots.
         self._pending: dict[Any, SubscriptionUpdate] = {}
@@ -112,7 +120,7 @@ class QtDataSubscription(QObject):
         # Explicitly queued: the backend delivers the initial backfill
         # SYNCHRONOUSLY inside subscribe() when called on the Qt thread; an
         # auto-connection would then invoke _filter before _subscription is
-        # assigned and before the widget had a chance to connect `updated`.
+        # assigned.
         self._raw.connect(self._filter, Qt.QueuedConnection)
         self._raw_progress.connect(self._emit_progress, Qt.QueuedConnection)
         self._api = client.data_api
@@ -129,13 +137,11 @@ class QtDataSubscription(QObject):
             correlation=correlation,
             **options,
         )
-        # The Qt object is gone by then: only the data subscription is left to close.
-        self.destroyed.connect(lambda: self._close_subscription())
 
     # --- api-thread side -----------------------------------------------------
 
     def _deliver(self, update: SubscriptionUpdate) -> None:
-        if self._closed:
+        if not self._active:
             return
         group = update.metadata.get("group")
         with self._pending_lock:
@@ -149,21 +155,23 @@ class QtDataSubscription(QObject):
             self._raw.emit(group)
 
     def _deliver_progress(self, fraction: float) -> None:
-        if not self._closed:
+        if self._active:
             self._raw_progress.emit(float(fraction))
 
     # --- qt-thread side ------------------------------------------------------
 
     def _emit_progress(self, fraction: float) -> None:
-        if not self._closed and not self._api.closed:
-            self.progress.emit(fraction)
+        callback = None if self._progress is None else self._progress.live_callback()
+        if callback is not None and self._active and not self._api.closed:
+            callback(fraction)
 
     def _filter(self, group: Any) -> None:
         with self._pending_lock:
             update = self._pending.pop(group, None)
         if update is None:
             return
-        if self._closed or self._api.closed:
+        callback = self.live_callback()
+        if callback is None or self._api.closed:
             return
         if update.generation != self._subscription.generation:
             return  # source/path rebind within the same scan, while this was queued
@@ -172,9 +180,14 @@ class QtDataSubscription(QObject):
             # A payload queued before a rebind; the bound scan's own emission
             # follows.
             return
-        self.updated.emit(update)
+        callback(update)
 
     # --- public --------------------------------------------------------------
+
+    @property
+    def closed(self) -> bool:
+        """Whether the subscription was closed; nothing is delivered any more."""
+        return not self._active
 
     @property
     def groups(self) -> dict:
@@ -206,7 +219,7 @@ class QtDataSubscription(QObject):
         Returns:
             bool: Whether the request was taken; the rows arrive in a later update.
         """
-        if self._closed:
+        if not self._active:
             return False
         return self._subscription.request_view(source, start, stop, max_points)
 
@@ -257,16 +270,18 @@ class QtDataSubscription(QObject):
         """Atomically replace the source set."""
         self._subscription.set_sources(sources)
 
-    def _close_subscription(self) -> bool:
-        """Close the underlying subscription; returns whether this call closed it."""
-        if self._closed:
-            return False
-        self._closed = True
-        self._subscription.close()
-        return True
-
     def close(self) -> None:
-        """Close the underlying subscription and delete the bridge (idempotent)."""
-        if self._close_subscription():
-            # A closed bridge is of no use: do not let it pile up as a child of its owner.
-            self.deleteLater()
+        """
+        Close the DataAPI subscription and delete this object (idempotent).
+
+        Widgets call ``BECDispatcher.disconnect_data_subscription``, which also makes the
+        dispatcher forget it.
+        """
+        if not self._active:
+            return
+        self.invalidate()
+        if self._progress is not None:
+            self._progress.invalidate()
+        self._subscription.close()
+        # On the GUI thread's next turn: no data thread is inside this object any more.
+        self.deleteLater()

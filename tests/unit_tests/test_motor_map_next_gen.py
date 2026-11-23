@@ -11,6 +11,7 @@ from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtTest import QSignalSpy
 
 from bec_widgets.tests.client_mocks import mocked_client
+from bec_widgets.tests.utils import fake_data_subscriptions
 from bec_widgets.widgets.plots.motor_map.motor_map import MotorConfig, MotorMap, MotorMapConfig
 from bec_widgets.widgets.plots.motor_map.settings.motor_map_settings import MotorMapSettings
 
@@ -25,7 +26,7 @@ def _fake_bridge_factory(monkeypatch):
     created = []
 
     class _FakeBridge:
-        def __init__(self, client, sources=None, scan="live", parent=None, **kwargs):
+        def __init__(self, client, sources=None, scan="live", owner=None, **kwargs):
             self.client = client
             self.sources = list(sources) if sources is not None else None
             self.devices = list(kwargs.get("devices") or [])
@@ -43,12 +44,12 @@ def _fake_bridge_factory(monkeypatch):
         def close(self):
             self.closed = True
 
-    def factory(client, sources=None, scan="live", parent=None, **kwargs):
+    def factory(client, sources=None, scan="live", owner=None, **kwargs):
         bridge = _FakeBridge(client, sources, scan=scan, **kwargs)
         created.append(bridge)
         return bridge
 
-    monkeypatch.setattr("bec_widgets.widgets.plots.motor_map.motor_map.QtDataSubscription", factory)
+    fake_data_subscriptions(monkeypatch, factory)
     return created
 
 
@@ -203,7 +204,7 @@ def test_motor_map_selected_devices_start_data_delivery(qtbot, mocked_client, pr
     selection.motor_y.setCurrentText("samy")
     assert selection.motor_x.currentText() == "samx"
     assert selection.motor_y.currentText() == "samy"
-    assert mm._data_bridge is not None
+    assert mm._data_subscription is not None
     qtbot.waitUntil(lambda: mm._buffer == {"x": [2.5], "y": [-1.25]})
     assert mm.v_line.value() == 2.5
     assert mm.h_line.value() == -1.25
@@ -212,11 +213,11 @@ def test_motor_map_selected_devices_start_data_delivery(qtbot, mocked_client, pr
 def test_motor_map_partial_config_starts_when_second_motor_is_selected(qtbot, mocked_client):
     config = MotorMapConfig(widget_class="MotorMap", device_x=MotorConfig(device="samx"))
     mm = create_widget(qtbot, MotorMap, client=mocked_client, config=config)
-    assert mm._data_bridge is None
+    assert mm._data_subscription is None
     selection = mm.toolbar.components.get_action("motor_selection").widget
     selection.motor_y.setCurrentText("samy")
-    assert mm._data_bridge is not None
-    assert mm._data_bridge.sources == [("samx", "samx"), ("samy", "samy")]
+    assert mm._data_subscription is not None
+    assert mm._data_subscription.sources == [("samx", "samx"), ("samy", "samy")]
 
 
 def test_motor_map_waits_for_both_readbacks(qtbot, mocked_client, monkeypatch):
@@ -308,7 +309,7 @@ def test_motor_map_bridge_lifecycle(qtbot, mocked_client, monkeypatch):
 
     mm._cleanup_data_api_subscription()
     assert bridges[-1].closed is True
-    assert mm._data_bridge is None
+    assert mm._data_subscription is None
     assert mm._trail_start == 0 and mm._last_row is None
 
 

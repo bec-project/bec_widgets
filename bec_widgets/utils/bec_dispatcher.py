@@ -8,18 +8,18 @@ import weakref
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, DefaultDict, Hashable
 
-import louie
 import redis
-import shiboken6
 from bec_lib.client import BECClient
+from bec_lib.data_api import ScanTarget, SourceKey
 from bec_lib.logger import bec_logger
 from bec_lib.redis_connector import MessageObject, RedisConnector
 from bec_lib.redis_connector.managed_redis_connection import ManagedRedisConnection
 from bec_lib.service_config import ServiceConfig
-from qtpy.QtCore import QObject
 from qtpy.QtCore import Signal as pyqtSignal
 
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.qt_data_subscription import QtDataSubscription
+from bec_widgets.utils.qt_owned_callback import QtOwnedCallback
 from bec_widgets.utils.rpc_logging import elapsed_seconds, format_elapsed
 from bec_widgets.utils.serialization import register_serializer_extension
 
@@ -65,16 +65,13 @@ def _log_rpc_dispatcher_receive(msg_content: Any, metadata: Any) -> None:
         )
 
 
-class QtThreadSafeCallback(QObject):
+class QtThreadSafeCallback(QtOwnedCallback):
     """
     QtThreadSafeCallback is a wrapper around a callback function to make it thread-safe for Qt.
 
-    Bound methods are held only through weak references: the dispatcher must never keep
-    the owning widget alive. Non-method callables (lambdas, partials, module functions)
-    have no owning object whose lifetime could be tracked, so they are kept alive by the
-    wrapper itself; pass ``owner=`` to ``connect_slot`` to bind their lifetime to a widget.
-    Create the wrapper on the GUI thread: queued messages are delivered to its Qt slot,
-    which resolves the callback only when delivery occurs.
+    The callback and its owner are held as :class:`QtOwnedCallback` describes: weakly, and
+    resolved only when a delivery occurs. Queued messages are delivered to the wrapper's
+    own Qt slot.
     """
 
     cb_signal = pyqtSignal(dict, dict)
@@ -90,29 +87,10 @@ class QtThreadSafeCallback(QObject):
             owner (object, optional): Lifetime anchor for non-method callables. Ignored for
                 bound methods (their ``__self__`` is the owner). Defaults to None.
         """
-        super().__init__()
+        super().__init__(cb, owner)
         self.cb_info = cb_info
-
-        if hasattr(cb, "__self__"):
-            # Bound method: the owner is the method's instance; hold NO strong reference
-            # anywhere so the dispatcher can never keep a widget alive.
-            self.cb_owner = louie.saferef.safe_ref(cb.__self__)
-            self._strong_cb = None
-        else:
-            # No trackable owner on the callable itself: keep it alive explicitly,
-            # released together with this wrapper (disconnect_owner / dead-slot sweep
-            # when owner is given, disconnect_slot otherwise).
-            self.cb_owner = louie.saferef.safe_ref(owner) if owner is not None else None
-            self._strong_cb = cb
-        self.cb_ref = louie.saferef.safe_ref(cb)
-        self._active = True
         self.cb_signal.connect(self._deliver)
         self.topics = set()
-
-    @property
-    def cb(self) -> Callable | None:
-        """The wrapped callback, or None if it has been garbage collected."""
-        return self.cb_ref()
 
     def __hash__(self):
         # make 2 differents QtThreadSafeCallback to look
@@ -125,28 +103,10 @@ class QtThreadSafeCallback(QObject):
             return False
         return self.cb_ref == other.cb_ref and self.cb_info == other.cb_info
 
-    def invalidate(self) -> None:
-        """Suppress pending deliveries and release any strongly held callback."""
-        self._active = False
-        self._strong_cb = None
-
     @SafeSlot(dict, dict)
     def _deliver(self, msg_content: dict, metadata: dict) -> None:
         """Resolve and retain a live callback for the duration of this delivery."""
-        if not self._active:
-            return
-        owner = self.cb_owner() if self.cb_owner is not None else None
-        if self.cb_owner is not None and owner is None:
-            return
-        if isinstance(owner, QObject) and not shiboken6.isValid(owner):
-            return
-        if owner is not None and getattr(owner, "_destroyed", False):
-            return
-
-        # Never connect Qt directly to a plain Python receiver's bound method: a
-        # queued invocation can outlive that receiver. Resolving here also holds
-        # the receiver alive while its callback runs.
-        callback = self.cb_ref()
+        callback = self.live_callback()
         if callback is not None:
             if self.cb_info is not None:
                 metadata = {**metadata, "cb_info": dict(self.cb_info)}
@@ -212,6 +172,9 @@ class BECDispatcher:
         self._registered_slots: DefaultDict[Hashable, QtThreadSafeCallback] = (
             collections.defaultdict()
         )
+        # The DataAPI subscriptions of the widgets. Held here, not by the widgets, for
+        # the reason the slot wrappers are: data threads emit on them.
+        self._data_subscriptions: list[QtDataSubscription] = []
 
         if client is None:
             if config is not None and not isinstance(config, ServiceConfig):
@@ -384,6 +347,88 @@ class BECDispatcher:
             topics.update(connected_slot.topics)
         if topics:
             self.disconnect_topics(list(topics))
+        for subscription in list(self._data_subscriptions):
+            self.disconnect_data_subscription(subscription)
+
+    def connect_data_subscription(
+        self,
+        slot: Callable,
+        sources: list[SourceKey] | None = None,
+        scan: str | None = ScanTarget.LIVE,
+        owner: object | None = None,
+        progress_slot: Callable | None = None,
+        **kwargs,
+    ) -> QtDataSubscription:
+        """
+        Connect a widget's slot to data of the DataAPI, so that it is called on the Qt
+        thread with every ``SubscriptionUpdate``.
+
+        The counterpart of :meth:`connect_slot` for scan and device data: the dispatcher
+        holds the subscription, never the widget, and releases it when the owner is cleaned
+        up (:meth:`disconnect_owner`) or found dead (:meth:`cleanup_dead_slots`).
+
+        Args:
+            slot (Callable): A slot that accepts one ``SubscriptionUpdate``.
+            sources (list[SourceKey] | None): The (device, entry) pairs to subscribe to.
+            scan (str | None): ``ScanTarget.LIVE`` to follow the running scan, a scan id, or
+                None for scan-less device streams.
+            owner (object | None): Lifetime anchor for a slot that is not a bound method, as
+                for :meth:`connect_slot`. Defaults to None.
+            progress_slot (Callable | None): A slot that accepts the fraction (0..1) of a
+                stored scan that is loaded. Defaults to None.
+            **kwargs: Further options of ``QtDataSubscription`` (``min_emit_interval``,
+                ``max_points``, ``size_limit_bytes``, ``devices``, ``correlation``, ...).
+
+        Returns:
+            QtDataSubscription: The subscription: its state (``groups``, ``routes``,
+                ``scan_id``, ...) and what can be changed while it runs (``set_sources``,
+                ``request_view``, ``confirm_size``). Pass it to
+                :meth:`disconnect_data_subscription` to end it.
+        """
+        if not hasattr(slot, "__self__") and owner is None:
+            logger.warning(
+                f"connect_data_subscription({slot!r}): the callable has no owner, so it cannot "
+                "be released automatically and stays subscribed until "
+                "disconnect_data_subscription is called. Pass owner=<widget> to bind its "
+                "lifetime to a widget."
+            )
+        self.cleanup_dead_slots()
+        subscription = QtDataSubscription(
+            self.client,
+            slot,
+            sources=sources,
+            scan=scan,
+            owner=owner,
+            progress_slot=progress_slot,
+            **kwargs,
+        )
+        self._data_subscriptions.append(subscription)
+        return subscription
+
+    def disconnect_data_subscription(self, subscription: QtDataSubscription | None) -> None:
+        """
+        End a subscription made with :meth:`connect_data_subscription`. Idempotent.
+
+        Args:
+            subscription (QtDataSubscription | None): The subscription; None is ignored.
+        """
+        if subscription is None:
+            return
+        subscription.close()
+        if subscription in self._data_subscriptions:
+            self._data_subscriptions.remove(subscription)
+
+    def data_subscriptions(self, owner: object) -> list[QtDataSubscription]:
+        """
+        The data subscriptions of one owner.
+
+        Args:
+            owner (object): The widget whose slots they deliver to.
+
+        Returns:
+            list[QtDataSubscription]: Its open subscriptions.
+        """
+        return [s for s in self._data_subscriptions if s.owner is owner]
 
     def disconnect_owner(self, owner: BECWidget) -> int:
         """
@@ -411,6 +456,8 @@ class BECDispatcher:
                 f"Released {len(slots_to_disconnect)} dispatcher slot(s) owned by "
                 f"{type(owner).__name__}"
             )
+        for subscription in self.data_subscriptions(owner):
+            self.disconnect_data_subscription(subscription)
         return len(slots_to_disconnect)
 
     def _release_slot(self, qt_slot: QtThreadSafeCallback) -> None:
@@ -435,26 +482,13 @@ class BECDispatcher:
         Returns:
             int: The number of released slot wrappers.
         """
-        dead_slots = []
-        for qt_slot in list(self._registered_slots.values()):
-            cb = qt_slot.cb
-            if cb is None:
-                # The callback itself was garbage collected.
-                dead_slots.append(qt_slot)
-                continue
-            owner = qt_slot.cb_owner() if qt_slot.cb_owner is not None else None
-            if qt_slot.cb_owner is not None and owner is None:
-                # The owner was garbage collected (also anchors owner-bound lambdas).
-                dead_slots.append(qt_slot)
-                continue
-            if isinstance(owner, QObject) and not shiboken6.isValid(owner):
-                # The owner's C++ object was destroyed (e.g. with its parent) while a
-                # Python reference keeps the wrapper alive.
-                dead_slots.append(qt_slot)
+        dead_slots = [slot for slot in list(self._registered_slots.values()) if slot.is_dead()]
         for qt_slot in dead_slots:
             self._release_slot(qt_slot)
         if dead_slots:
             logger.info(f"Released {len(dead_slots)} dispatcher slot(s) with dead owners")
+        for subscription in [s for s in self._data_subscriptions if s.is_dead()]:
+            self.disconnect_data_subscription(subscription)
         return len(dead_slots)
 
     def start_cli_server(self, gui_id: str | None = None):

@@ -266,7 +266,7 @@ def test_positioner_rebind_drops_queued_old_values(qtbot, positioner_box):
     )
     positioner_box.device = "samy"
     qtbot.waitUntil(lambda: positioner_box.ui.readback.text() == "3.000")
-    assert old._closed
+    assert old.closed
     positioner_box.close()
     assert not positioner_box._readback_subscriptions
 
@@ -323,7 +323,7 @@ def test_positioner_uses_declared_auxiliary_signal_names(qtbot, positioner_box, 
 def test_positioner_empty_device_closes_subscription(positioner_box):
     subscription = next(iter(positioner_box._readback_subscriptions.values()))
     positioner_box.device = ""
-    assert subscription._closed
+    assert subscription.closed
     assert not positioner_box._readback_subscriptions
     assert not positioner_box.ui.setpoint.isEnabled()
     assert positioner_box._get_setpoint() is None

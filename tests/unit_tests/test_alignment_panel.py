@@ -46,6 +46,6 @@ def test_alignment_panel_clear_closes_positioner_subscription(qtbot, mocked_clie
     subscription = next(iter(panel.positioner._readback_subscriptions.values()))
     panel.set_positioner_device(None)
     assert panel.positioner.device == ""
-    assert subscription._closed
+    assert subscription.closed
     assert not panel.positioner._readback_subscriptions
     assert panel.positioner.ui.readback.text() == "__"

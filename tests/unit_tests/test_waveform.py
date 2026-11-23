@@ -30,6 +30,7 @@ from bec_widgets.tests.client_mocks import (
     mocked_client_with_dap,
 )
 from bec_widgets.tests.fake_devices import FakeDevice
+from bec_widgets.tests.utils import fake_data_subscriptions
 from bec_widgets.utils import error_popups
 from bec_widgets.widgets.plots.plot_base import UIMode
 from bec_widgets.widgets.plots.waveform.curve import DeviceSignal
@@ -93,7 +94,7 @@ def _fake_bridge_factory(monkeypatch, gated_bytes: int | None = None):
             client,
             sources,
             scan="live",
-            parent=None,
+            owner=None,
             min_emit_interval=0.1,
             size_limit_bytes=None,
             view_limit_bytes=None,
@@ -137,18 +138,18 @@ def _fake_bridge_factory(monkeypatch, gated_bytes: int | None = None):
         client,
         sources,
         scan="live",
-        parent=None,
+        owner=None,
         min_emit_interval=0.1,
         size_limit_bytes=None,
         view_limit_bytes=None,
     ):
         bridge = _FakeBridge(
-            client, sources, scan, parent, min_emit_interval, size_limit_bytes, view_limit_bytes
+            client, sources, scan, owner, min_emit_interval, size_limit_bytes, view_limit_bytes
         )
         created.append(bridge)
         return bridge
 
-    monkeypatch.setattr("bec_widgets.widgets.plots.waveform.waveform.QtDataSubscription", factory)
+    fake_data_subscriptions(monkeypatch, factory)
     return created
 
 
@@ -2382,7 +2383,7 @@ def test_history_subscription_gates_before_reading(qtbot, mocked_client, monkeyp
     with mock.patch.object(wf, "_confirm_large_dataset", return_value=False):
         wf._setup_data_api_subscription(scan="scan-1")
     assert not bridges
-    assert wf._data_bridge is None
+    assert wf._data_subscription is None
 
     with mock.patch.object(wf, "_confirm_large_dataset", return_value=True):
         wf._setup_data_api_subscription(scan="scan-1")
@@ -2569,7 +2570,7 @@ def test_history_curve_receives_data_from_scan_bound_subscription(
     inject_scan_history(wf, scan_history_factory, ("hist1", 1))
 
     c = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist1")
-    history_bridge = wf._history_bridges["hist1"]
+    history_bridge = wf._history_subscriptions["hist1"]
     assert history_bridge in bridges
     assert history_bridge.scan == "hist1"
     assert ("bpm4i", "bpm4i") in history_bridge.sources
@@ -2584,7 +2585,7 @@ def test_history_curve_receives_data_from_scan_bound_subscription(
         scan_id="hist1",
         reason="history",
     )
-    history_bridge.updated.connect.assert_called_once_with(wf._on_history_data_update)
+    assert history_bridge.slot == wf._on_history_data_update
     wf._on_history_data_update(update)
 
     x_data, y_data = c.get_data()
@@ -2696,7 +2697,7 @@ def _view_waveform(qtbot, mocked_client, scan_history_factory, monkeypatch, x_mo
     inject_scan_history(wf, scan_history_factory, ("hist1", 1))
     monkeypatch.setattr(wf, "_loads_as_view", lambda scan, source, sources=None: True)
     curve = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist1")
-    return wf, curve, wf._history_bridges["hist1"], bridges
+    return wf, curve, wf._history_subscriptions["hist1"], bridges
 
 
 def test_view_curve_is_drawn_against_its_rows(
@@ -3746,7 +3747,7 @@ def test_auto_mode_history_curves_use_their_own_scan_motor(
     wf._current_x_device = ("samy", "samy")  # the live scan scanned samy
     wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist1")
     assert wf._history_x_keys["hist1"] == ("samx", "samx")
-    assert ("samx", "samx") in wf._history_bridges["hist1"].sources
+    assert ("samx", "samx") in wf._history_subscriptions["hist1"].sources
 
 
 def test_history_curves_of_different_lengths_use_their_own_x(
