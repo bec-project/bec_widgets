@@ -170,7 +170,8 @@ class ScanStatusItem(StatusPillItem):
     and saved per user.
     """
 
-    DOCK_WIDGET = "ScanProgressBar"
+    DOCK_WIDGET = "BECQueue"  # the running scan and the waiting ones
+    DOCK_HINT = "Double-click to add the scan queue to the current dock area"
 
     def __init__(
         self,

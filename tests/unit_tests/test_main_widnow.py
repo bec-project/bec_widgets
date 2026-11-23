@@ -404,21 +404,23 @@ def test_status_bar_holds_several_pills_each_with_its_own_fill(bec_main_window, 
 
 def test_open_in_dock_area_adds_one_dock_then_raises_it(bec_main_window, qtbot):
     from bec_widgets.widgets.containers.dock_area.dock_area import BECDockArea
-    from bec_widgets.widgets.progress.scan_progressbar.scan_progressbar import ScanProgressBar
+    from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
 
     item = bec_main_window._scan_status_item
-    assert item.DOCK_WIDGET == "ScanProgressBar"
+    assert item.DOCK_WIDGET == "BECQueue"  # the scan pill docks the queue
     item._prepare_card()
     assert item.card.hint.isHidden()  # no dock area as central widget yet
-    assert bec_main_window.open_in_dock_area("ScanProgressBar") is None
+    assert bec_main_window.open_in_dock_area("BECQueue") is None
 
     dock_area = BECDockArea(parent=bec_main_window, client=bec_main_window.client)
     bec_main_window.setCentralWidget(dock_area)
     item._prepare_card()
     assert not item.card.hint.isHidden()
+    assert item.card.hint.text() == "Double-click to add the scan queue to the current dock area"
+    assert item.pill.toolTip().endswith(item.card.hint.text())
 
     def docked():
-        return [w for w in dock_area.widget_list() if isinstance(w, ScanProgressBar)]
+        return [w for w in dock_area.widget_list() if isinstance(w, BECQueue)]
 
     with qtbot.waitSignal(item.dock_requested):
         qtbot.mouseDClick(item.pill, Qt.MouseButton.LeftButton)
@@ -427,4 +429,4 @@ def test_open_in_dock_area_adds_one_dock_then_raises_it(bec_main_window, qtbot):
     # a second double-click raises the docked one instead of adding another
     qtbot.mouseDClick(item.pill, Qt.MouseButton.LeftButton)
     assert len(docked()) == 1
-    assert bec_main_window.open_in_dock_area("ScanProgressBar") is first
+    assert bec_main_window.open_in_dock_area("BECQueue") is first
