@@ -812,7 +812,7 @@ class MultiWaveform(PlotBase):
             signal (str): The selected signal/entry.
 
         Returns:
-            tuple | None: ``(scan, entry, max_points)`` or None if the selection
+            tuple | None: ``(scan, entry, max_buffer_size)`` or None if the selection
                 cannot be served (connection status is set accordingly).
         """
         signal_config = self._signal_config or {}
@@ -854,14 +854,14 @@ class MultiWaveform(PlotBase):
         route = self._resolve_route(device, signal)
         if route is None:
             return
-        scan, entry, max_points = route
+        scan, entry, max_buffer_size = route
         try:
             self._data_subscription = self.bec_dispatcher.connect_data_subscription(
                 self._on_data_update,
                 sources=[(device, entry)],
                 scan=scan,
-                min_emit_interval=self.update_interval_s,
-                max_points=max_points,
+                update_rate=self.update_rate,
+                max_buffer_size=max_buffer_size,
             )
         except Exception as exc:  # pylint: disable=broad-except
             logger.warning(

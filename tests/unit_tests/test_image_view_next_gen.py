@@ -42,12 +42,12 @@ def _fake_bridge_factory(monkeypatch):
 
     class _FakeBridge:
         def __init__(
-            self, client, sources, scan="live", owner=None, min_emit_interval=0.1, max_points=None
+            self, client, sources, scan="live", owner=None, update_rate=10.0, max_buffer_size=None
         ):
             self.client = client
             self.sources = list(sources)
             self.scan = scan
-            self.max_points = max_points
+            self.max_buffer_size = max_buffer_size
             self.healthy = True
             # What the widgets read of a real bridge about its binding.
             self.groups = {}
@@ -59,8 +59,8 @@ def _fake_bridge_factory(monkeypatch):
         def close(self):
             self.closed = True
 
-    def factory(client, sources, scan="live", owner=None, min_emit_interval=0.1, max_points=None):
-        bridge = _FakeBridge(client, sources, scan=scan, max_points=max_points)
+    def factory(client, sources, scan="live", owner=None, update_rate=10.0, max_buffer_size=None):
+        bridge = _FakeBridge(client, sources, scan=scan, max_buffer_size=max_buffer_size)
         created.append(bridge)
         return bridge
 
@@ -538,7 +538,7 @@ def test_image_setup_preview_signal_1d(qtbot, mocked_client, monkeypatch):
     bridge = bridges[-1]
     assert bridge.scan is None
     assert bridge.sources == [("waveform1d", "img")]
-    assert bridge.max_points == Image.PREVIEW_1D_MAX_ROWS
+    assert bridge.max_buffer_size == Image.PREVIEW_1D_MAX_ROWS
 
     # Simulate a waveform update from the DataAPI
     waveform = np.arange(25, dtype=float)
@@ -576,7 +576,7 @@ def test_image_setup_preview_signal_2d(qtbot, mocked_client, monkeypatch):
     bridge = bridges[-1]
     assert bridge.scan is None
     assert bridge.sources == [("eiger", "img2d")]
-    assert bridge.max_points == Image.PREVIEW_2D_MAX_FRAMES
+    assert bridge.max_buffer_size == Image.PREVIEW_2D_MAX_FRAMES
 
     # Only the newest frame of the stream is displayed
     test_data = np.arange(16, dtype=float).reshape(4, 4)
@@ -743,7 +743,7 @@ def test_image_async_signal_uses_obj_name(qtbot, mocked_client, monkeypatch):
     bridge = bridges[-1]
     assert bridge.scan == "live"
     assert bridge.sources == [("eiger", "async_obj")]
-    assert bridge.max_points is None
+    assert bridge.max_buffer_size is None
 
     # Rendering reads the source keyed by (device, obj_name)
     payload = np.array([1, 2, 3])
@@ -2175,7 +2175,7 @@ def test_image_async_2d_keeps_only_the_newest_frames_and_draws_the_latest(
         mocked_client, "eiger", "frames", signal_class="AsyncSignal", ndim=2, obj_name="eiger_fr"
     )
     view.image(device="eiger", signal="frames")
-    assert bridges[-1].max_points == Image.ASYNC_2D_MAX_FRAMES
+    assert bridges[-1].max_buffer_size == Image.ASYNC_2D_MAX_FRAMES
     # One add fragment carrying two frames: the latest frame is drawn, not the fragment.
     fragment = np.stack([np.zeros((2, 3)), np.ones((2, 3))])
     source = _make_source(

@@ -1415,16 +1415,10 @@ class PlotBase(BECWidget, QWidget):
         self._apply_update_rate()
         self.property_changed.emit("update_rate", rate)
 
-    @property
-    def update_interval_s(self) -> float:
-        """The subscription coalescing interval in seconds for :attr:`update_rate`."""
-        return 1.0 / self._update_rate
-
     def _apply_update_rate(self):
         """Propagate the current update rate to every active data subscription."""
-        interval = self.update_interval_s
         for subscription in self.bec_dispatcher.data_subscriptions(self):
-            subscription.set_min_emit_interval(interval)
+            subscription.set_update_rate(self._update_rate)
 
     ################################################################################
     # FPS Counter

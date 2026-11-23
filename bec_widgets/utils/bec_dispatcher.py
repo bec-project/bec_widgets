@@ -376,8 +376,8 @@ class BECDispatcher:
                 for :meth:`connect_slot`. Defaults to None.
             progress_slot (Callable | None): A slot that accepts the fraction (0..1) of a
                 stored scan that is loaded. Defaults to None.
-            **kwargs: Further options of ``QtDataSubscription`` (``min_emit_interval``,
-                ``max_points``, ``size_limit_bytes``, ``devices``, ``correlation``, ...).
+            **kwargs: Further options of ``QtDataSubscription`` (``update_rate``,
+                ``max_buffer_size``, ``size_limit_bytes``, ``devices``, ``pair_sources``, ...).
 
         Returns:
             QtDataSubscription: The subscription: its state (``groups``, ``routes``,

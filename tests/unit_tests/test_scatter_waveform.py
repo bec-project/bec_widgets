@@ -61,7 +61,7 @@ def _fake_bridge_factory(monkeypatch):
     created = []
 
     class _FakeBridge:
-        def __init__(self, client, sources, scan="live", owner=None, min_emit_interval=0.1):
+        def __init__(self, client, sources, scan="live", owner=None, update_rate=10.0):
             self.client = client
             self.sources = list(sources)
             self.scan = scan
@@ -76,7 +76,7 @@ def _fake_bridge_factory(monkeypatch):
         def close(self):
             self.closed = True
 
-    def factory(client, sources, scan="live", owner=None, min_emit_interval=0.1):
+    def factory(client, sources, scan="live", owner=None, update_rate=10.0):
         bridge = _FakeBridge(client, sources, scan=scan)
         created.append(bridge)
         return bridge

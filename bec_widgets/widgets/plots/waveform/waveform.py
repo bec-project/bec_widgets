@@ -2357,7 +2357,7 @@ class Waveform(PlotBase):
                 sources=sources,
                 scan=scan,
                 progress_slot=self._on_data_load_progress,
-                min_emit_interval=self.update_interval_s,
+                update_rate=self.update_rate,
                 size_limit_bytes=self._live_size_limit_bytes(scan),
             )
             self._data_subscription_scan = scan
@@ -2547,7 +2547,7 @@ class Waveform(PlotBase):
                         sources=list(dict.fromkeys(sources)),
                         scan=scan_id,
                         progress_slot=self._on_data_load_progress,
-                        min_emit_interval=self.update_interval_s,
+                        update_rate=self.update_rate,
                         view_limit_bytes=self._view_limit_bytes(scan_id, sources),
                     )
                 )
