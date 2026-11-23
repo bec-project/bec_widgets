@@ -325,5 +325,7 @@ def test_positioner_empty_device_closes_subscription(positioner_box):
     positioner_box.device = ""
     assert subscription.closed
     assert not positioner_box._readback_subscriptions
+    # The dispatcher owns the subscriptions: it must not keep listing a closed one.
+    assert positioner_box.bec_dispatcher.data_subscriptions(positioner_box) == []
     assert not positioner_box.ui.setpoint.isEnabled()
     assert positioner_box._get_setpoint() is None

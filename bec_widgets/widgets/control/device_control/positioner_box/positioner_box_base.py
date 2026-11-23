@@ -96,10 +96,9 @@ class PositionerBoxBase(BECWidget, QWidget):
             return
 
         ui = self._device_ui_components(device)
-        previous = self._readback_subscriptions.pop(ui["readback"], None)
-        if previous is not None:
-            previous.close()
-            previous.deleteLater()
+        self.bec_dispatcher.disconnect_data_subscription(
+            self._readback_subscriptions.pop(ui["readback"], None)
+        )
         self._device_values[device] = {}
         ui["readback"].setText("__")
         ui["setpoint"].clear()
@@ -269,10 +268,9 @@ class PositionerBoxBase(BECWidget, QWidget):
     ):
         logger.info(f"Device changed from {old_device} to {new_device}")
         if not new_device:
-            previous = self._readback_subscriptions.pop(ui["readback"], None)
-            if previous is not None:
-                previous.close()
-                previous.deleteLater()
+            self.bec_dispatcher.disconnect_data_subscription(
+                self._readback_subscriptions.pop(ui["readback"], None)
+            )
             self._device_values.pop(old_device, None)
             self._device_roles.pop(old_device, None)
             ui["readback"].setText("__")
