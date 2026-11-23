@@ -176,10 +176,22 @@ def _cursor_at(monkeypatch, point):
     monkeypatch.setattr(hover_card.QCursor, "pos", staticmethod(lambda: point))
 
 
-def test_hover_card_and_outline_clear_without_a_leave_event(item, qtbot, monkeypatch):
-    from qtpy.QtCore import QEvent, QObject, QPoint
-    from qtpy.QtGui import QCursor, QEnterEvent
-    from qtpy.QtWidgets import QApplication
+def _show_settled(item, qtbot):
+    """
+    Show the item as a roomy window (room for the Stop to slide in, as in the status bar) and
+    wait until the window system has settled its size: a resized window closes the card.
+    """
+    item.resize(900, 60)
+    item.show()
+    qtbot.waitExposed(item)
+    window = item.window().windowHandle()
+    qtbot.waitUntil(lambda: window.size() == item.size(), timeout=2000)
+    qtbot.wait(50)
+
+
+def test_outline_clears_without_a_leave_event_once_the_card_closes(item, qtbot, monkeypatch):
+    from qtpy.QtCore import QEvent, QObject, QPoint, Qt
+    from qtpy.QtGui import QCursor
 
     class SwallowLeave(QObject):
         """Like macOS with the card shown: the pill never gets its Leave event."""
@@ -187,24 +199,22 @@ def test_hover_card_and_outline_clear_without_a_leave_event(item, qtbot, monkeyp
         def eventFilter(self, _obj, event):  # pylint: disable=invalid-name
             return event.type() in (QEvent.Type.Leave, QEvent.Type.HoverLeave)
 
-    item.show()
-    qtbot.waitExposed(item)
+    _show_settled(item, qtbot)
     swallow = SwallowLeave()
     item.pill.installEventFilter(swallow)
     inside = item.pill.mapToGlobal(QPoint(5, 5))
     _cursor_at(monkeypatch, inside)
-    local = QPoint(5, 5).toPointF()
-    QApplication.sendEvent(item.pill, QEnterEvent(local, local, inside.toPointF()))
-    assert item.pill.hovered and item.card.isVisible() and item._poll.isActive()
-    qtbot.wait(item.GRACE_MS + 150)
-    assert item.card.isVisible()  # still over the pill
+    qtbot.mouseClick(item.pill, Qt.MouseButton.LeftButton)
+    assert item.card.isVisible() and item.pill.outlined
+    assert not item._poll.isActive()  # no cursor poll for a click card
 
     outside = inside + QPoint(2000, 2000)
-    QCursor.setPos(outside)  # so Qt itself does not re-enter the pill when the card hides
+    QCursor.setPos(outside)
     _cursor_at(monkeypatch, outside)
-    qtbot.waitUntil(lambda: not item.card.isVisible(), timeout=2000)
-    assert not item.pill.hovered
-    assert not item._poll.isActive()
+    qtbot.wait(item.GRACE_MS + 150)
+    assert item.card.isVisible()  # leaving does not close it
+    item.close_card()  # e.g. a click elsewhere
+    assert not item.pill.hovered and not item.pill.outlined
     item.pill.removeEventFilter(swallow)
 
 
@@ -212,8 +222,7 @@ def test_card_stays_while_a_stop_waits_for_confirmation(item, qtbot, monkeypatch
     from qtpy.QtCore import QPoint
 
     item.tracker.on_scan_status(*status())
-    item.show()
-    qtbot.waitExposed(item)
+    _show_settled(item, qtbot)
     _cursor_at(monkeypatch, QPoint(-5000, -5000))
     item.card.progress.confirm_before_stop = True
     item.open_card()
@@ -332,7 +341,7 @@ def test_pill_stripes_stop_while_hidden_or_minimized(item, qtbot):
 
 
 @pytest.mark.parametrize(
-    "reason, opens",
+    "reason, outlined",
     [
         ("ActiveWindowFocusReason", False),  # the window is activated or the app switched back
         ("OtherFocusReason", False),
@@ -341,7 +350,7 @@ def test_pill_stripes_stop_while_hidden_or_minimized(item, qtbot):
         ("BacktabFocusReason", True),
     ],
 )
-def test_card_opens_on_focus_only_when_tabbed_to(item, qtbot, monkeypatch, reason, opens):
+def test_focus_never_opens_the_card_and_tab_outlines(item, qtbot, monkeypatch, reason, outlined):
     from qtpy.QtCore import QEvent, QPoint, Qt
     from qtpy.QtGui import QFocusEvent
     from qtpy.QtWidgets import QApplication
@@ -352,14 +361,9 @@ def test_card_opens_on_focus_only_when_tabbed_to(item, qtbot, monkeypatch, reaso
     QApplication.sendEvent(
         item.pill, QFocusEvent(QEvent.Type.FocusIn, getattr(Qt.FocusReason, reason))
     )
-    assert item.card.isVisible() is opens
-    assert item.pill.keyboard_focus is opens
-    if opens:
-        # kept open while tabbed to, wherever the cursor is: the poll never starts the grace
-        # period (checked directly; the offscreen platform lets the card window take activation)
-        item._check_cursor()
-        assert item._outside_since is None and item.card.isVisible()
-    item.close_card()
+    assert not item.card.isVisible()
+    assert item.pill.keyboard_focus is outlined
+    assert item.pill.outlined is outlined
 
 
 def test_card_has_no_native_window_shadow(item):
@@ -375,26 +379,28 @@ def test_card_has_no_native_window_shadow(item):
 def test_card_stays_while_its_stop_menu_is_open(item, qtbot, monkeypatch):
     """The emergency-stop path: the Stop's menu usually reaches past the card's right edge."""
     from qtpy.QtCore import QPoint
-    from qtpy.QtGui import QCursor
+
+    from .test_status_pill import _press_in_window
 
     item.tracker.on_scan_status(*status())
-    item.show()
-    qtbot.waitExposed(item)
+    _show_settled(item, qtbot)
     item.open_card()
     stop = item.card.progress.stop_button
     card = item.card.card
     stop.menu.popup(card.mapToGlobal(QPoint(card.width() - 30, card.height() - 40)))
     qtbot.waitUntil(stop.menu.isVisible)
-    on_last_item = stop.menu.geometry().bottomRight() - QPoint(5, 5)
-    _cursor_at(monkeypatch, on_last_item)  # outside the card, the pill and the gap
+    _cursor_at(monkeypatch, stop.menu.geometry().bottomRight() - QPoint(5, 5))
     qtbot.wait(item.GRACE_MS + 300)
     assert item.card.isVisible() and stop.menu.isVisible()
+    elsewhere = item.mapToGlobal(QPoint(item.width() - 2, item.height() // 2))
+    _press_in_window(item, elsewhere)
+    assert item.card.isVisible()  # a popup of the card is open
 
     stop.menu.close()
-    away = item.card.frameGeometry().bottomRight() + QPoint(2000, 2000)
-    QCursor.setPos(away)  # so Qt itself does not re-enter the card when the menu closes
-    _cursor_at(monkeypatch, away)
-    qtbot.waitUntil(lambda: not item.card.isVisible(), timeout=2000)
+    qtbot.waitUntil(lambda: not stop.menu.isVisible())
+    assert item.card.isVisible()  # closing the menu does not close the card
+    _press_in_window(item, elsewhere)
+    assert not item.card.isVisible()
 
 
 def _stored_queue_status(waiting: int):

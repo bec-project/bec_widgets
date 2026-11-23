@@ -1,7 +1,7 @@
 """
 The BEC server pill for the main window status bar: an icon for the overall state of the core
 services with the label "BEC", the number of core services that are down, and the full
-BECStatusBox in a card that opens on hover.
+BECStatusBox in a card that opens on a click.
 """
 
 from __future__ import annotations
@@ -63,7 +63,7 @@ def server_indicator(model: ServiceStatusModel) -> ToolIndicator:
 
 
 class ServerStatusCard(HoverCard):
-    """The hover card of the server pill, with the full BECStatusBox."""
+    """The card of the server pill, with the full BECStatusBox."""
 
     def __init__(self, owner: "ServerStatusItem"):
         super().__init__(owner, width=380, object_name="server_status_card")
@@ -76,7 +76,7 @@ class ServerStatusCard(HoverCard):
 
 class ServerStatusItem(StatusPillItem):
     """
-    Status-bar pill with the overall state of the BEC server, with the full BECStatusBox on hover.
+    Status-bar pill with the overall state of the BEC server; a click opens the full BECStatusBox.
 
     The status box in the card is the only source of the state: its model drives both the pill
     and the card. The pill is the compact icon style (the state icon and "BEC"); the large size is

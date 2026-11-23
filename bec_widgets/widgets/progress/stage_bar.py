@@ -293,12 +293,16 @@ class StageBar(QWidget):
             return min(rect.width(), self.scale_width) if rect.width() < 1 else self.scale_width
         return rect.width()
 
-    def _sync_tooltip(self) -> None:
-        """Show the full label as a tooltip only while the painted label is cut."""
+    def tooltip_text(self) -> str:
+        """The tooltip: the full label while the painted label is cut, else empty."""
         rect = self._bar_rect()
         metrics = QFontMetricsF(self.label_font(rect.height(), self._label_width(rect)))
         cut = bool(self._text) and metrics.horizontalAdvance(self._text) > rect.width() - 12
-        tooltip = self._text if cut else ""
+        return self._text if cut else ""
+
+    def _sync_tooltip(self) -> None:
+        """Apply tooltip_text, e.g. after the label or the size changed."""
+        tooltip = self.tooltip_text()
         if tooltip != self.toolTip():
             self.setToolTip(tooltip)
 

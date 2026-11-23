@@ -1,6 +1,6 @@
 """
 The scan pill for the main window status bar: a small live progress bar, a Stop button, the number
-of waiting scans, and the full ScanProgressBar in a card that opens on hover.
+of waiting scans, and the full ScanProgressBar in a card that opens on a click.
 """
 
 from __future__ import annotations
@@ -146,7 +146,7 @@ def _read_queue_status(connector, result: _QueueStatusRead) -> None:
 
 
 class ScanProgressCard(HoverCard):
-    """The hover card of the scan pill, with the full ScanProgressBar."""
+    """The card of the scan pill, with the full ScanProgressBar."""
 
     def __init__(self, owner: "ScanStatusItem"):
         super().__init__(owner, width=400, object_name="scan_status_card")
@@ -163,7 +163,7 @@ class ScanProgressCard(HoverCard):
 
 class ScanStatusItem(StatusPillItem):
     """
-    Status-bar scan pill, Stop button and waiting count, with the full ScanProgressBar on hover.
+    Status-bar scan pill, Stop button and waiting count, with the full ScanProgressBar on a click.
 
     One ScanHookTracker (the card's ScanProgressBar) drives both the pill and the card. The pill
     width (compact, normal, wide, fill) and the large size are chosen in its right-click menu
