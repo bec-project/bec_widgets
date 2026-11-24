@@ -1079,6 +1079,16 @@ def test_run_scan_confirms_typed_scan_name(scan_control, qtbot):
     scans.grid_scan.assert_called_once_with()
 
 
+@pytest.mark.parametrize("typed, fetched", [("grid_scan", "grid_scan"), ("grid_sca", "line_scan")])
+def test_restore_last_scan_parameters_confirms_typed_scan_name(scan_control, qtbot, typed, fetched):
+    _type_scan_name(qtbot, scan_control, typed)
+    with patch.object(scan_control, "submit_task") as submit:
+        scan_control.request_last_executed_scan_parameters()
+
+    assert scan_control.current_scan == fetched
+    assert submit.call_args.args[2] == fetched  # (fetch, generation, scan name)
+
+
 def test_run_scan_discards_unfinished_scan_name(scan_control, qtbot):
     combo = scan_control.comboBox_scan_selection
     _type_scan_name(qtbot, scan_control, "grid_sca")
