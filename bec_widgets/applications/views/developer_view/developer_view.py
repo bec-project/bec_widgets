@@ -37,7 +37,7 @@ class DeveloperView(ViewBase):
 
         # IDE Toolbar
         def get_ide_toolbar():
-            main_app.set_current("developer_view")
+            main_app.set_current(self.view_id)
             return (dev_widget.toolbar, None)
 
         step_id = guided_tour.register_widget(
@@ -49,7 +49,7 @@ class DeveloperView(ViewBase):
 
         # IDE Explorer
         def get_ide_explorer():
-            main_app.set_current("developer_view")
+            main_app.set_current(self.view_id)
             return (dev_widget.explorer_dock.widget(), None)
 
         step_id = guided_tour.register_widget(
@@ -61,7 +61,7 @@ class DeveloperView(ViewBase):
 
         # IDE Editor
         def get_ide_editor():
-            main_app.set_current("developer_view")
+            main_app.set_current(self.view_id)
             return (dev_widget.monaco_dock.widget(), None)
 
         step_id = guided_tour.register_widget(
@@ -73,7 +73,7 @@ class DeveloperView(ViewBase):
 
         # IDE Console
         def get_ide_console():
-            main_app.set_current("developer_view")
+            main_app.set_current(self.view_id)
             return (dev_widget.console_dock.widget(), None)
 
         step_id = guided_tour.register_widget(
@@ -85,7 +85,7 @@ class DeveloperView(ViewBase):
 
         # IDE Plotting Area
         def get_ide_plotting():
-            main_app.set_current("developer_view")
+            main_app.set_current(self.view_id)
             return (dev_widget.plotting_ads, None)
 
         step_id = guided_tour.register_widget(

@@ -149,7 +149,7 @@ class BECMainApp(BECMainWindow):
                 mini_text="Stack",
             )
 
-        self.set_current("dock_area")
+        self.set_current(self.dock_area.view_id)
         self.sidebar.add_dark_mode_item()
 
         # Add guided tour to Help menu
@@ -162,7 +162,7 @@ class BECMainApp(BECMainWindow):
 
     def show_dock_area(self) -> None:
         """Switch to the dock area view."""
-        self.set_current("dock_area")
+        self.set_current(self.dock_area.view_id)
 
     # --- Public API ------------------------------------------------------
     def add_section(self, title: str, id: str, position: int | None = None):
@@ -287,7 +287,7 @@ class BECMainApp(BECMainWindow):
         tour_steps.append(toggle_step)
 
         # Register the sidebar icons
-        sidebar_dock_area = self.sidebar.components.get("dock_area")
+        sidebar_dock_area = self.sidebar.components.get(self.dock_area.view_id)
         if sidebar_dock_area:
             dock_step = self.guided_tour.register_widget(
                 widget=sidebar_dock_area,
@@ -296,7 +296,7 @@ class BECMainApp(BECMainWindow):
             )
             tour_steps.append(dock_step)
 
-        sidebar_device_manager = self.sidebar.components.get("device_manager")
+        sidebar_device_manager = self.sidebar.components.get(self.device_manager.view_id)
         if sidebar_device_manager:
             device_manager_step = self.guided_tour.register_widget(
                 widget=sidebar_device_manager,
@@ -305,7 +305,11 @@ class BECMainApp(BECMainWindow):
             )
             tour_steps.append(device_manager_step)
 
-        sidebar_developer_view = self.sidebar.components.get("developer_view")
+        sidebar_developer_view = (
+            self.sidebar.components.get(self.developer_view.view_id)
+            if self.developer_view is not None
+            else None
+        )
         if sidebar_developer_view:
             developer_view_step = self.guided_tour.register_widget(
                 widget=sidebar_developer_view,

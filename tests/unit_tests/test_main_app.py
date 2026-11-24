@@ -161,8 +161,29 @@ def app_with_spies(qtbot, mocked_client):
     app.add_view(icon="widgets", title="Veto View", view_id="vv", widget=vv, mini_text="vv")
 
     # Start from dock_area (default) to avoid extra enter/exit counts on spies
-    assert app.stack.currentIndex() == app._view_index["Docks"]
+    assert app.stack.currentIndex() == app._view_index[app.dock_area.view_id]
     return app, v1, v2, vv
+
+
+def test_dock_area_nav_item_is_active_on_startup(app_with_spies):
+    app, _, _, _ = app_with_spies
+    dock_id = app.dock_area.view_id
+    assert app.sidebar.components[dock_id].is_active()
+    assert app._current_view_id == dock_id
+    assert app.sidebar._active_id == dock_id
+
+
+def test_show_dock_area_switches_back_and_checks_its_nav_item(app_with_spies, qtbot):
+    app, v1, _, _ = app_with_spies
+    v1.activate()
+    qtbot.wait(10)
+    assert app.stack.currentIndex() == app._view_index["v1"]
+    app.show_dock_area()
+    qtbot.wait(10)
+    dock_id = app.dock_area.view_id
+    assert app.stack.currentIndex() == app._view_index[dock_id]
+    assert app.sidebar.components[dock_id].is_active()
+    assert not app.sidebar.components["v1"].is_active()
 
 
 def test_viewbase_initializes(viewbase):
@@ -236,7 +257,7 @@ def test_added_view_gets_short_object_name(app_with_spies):
 
 def test_view_switch_method_switches_to_target(app_with_spies, qtbot):
     app, v1, _, _ = app_with_spies
-    app.set_current("dock_area")
+    app.set_current(app.dock_area.view_id)
     qtbot.wait(10)
     v1.activate()
     qtbot.wait(10)
@@ -419,6 +440,6 @@ def test_status_pill_opens_its_widget_in_the_dock_area_view(
     qtbot.mouseDClick(item.pill, Qt.MouseButton.LeftButton)
     after = [w for w in dock_area.widget_list() if isinstance(w, BECQueue)]
     assert len(after) == len(before) + 1
-    assert switched == ["dock_area"]
+    assert switched == [app.dock_area.view_id]
     qtbot.mouseDClick(item.pill, Qt.MouseButton.LeftButton)
     assert [w for w in dock_area.widget_list() if isinstance(w, BECQueue)] == after
