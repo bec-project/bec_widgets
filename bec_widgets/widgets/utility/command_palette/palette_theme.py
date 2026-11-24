@@ -51,9 +51,12 @@ class ThemeTokens:
         """Return ``color`` mixed into the card background by ``amount`` (0 = card)."""
         return Colors._blend(self.card, color, amount)  # pylint: disable=protected-access
 
-    def readable(self, color: QColor, ratio: float = 4.5) -> QColor:
+    def readable(
+        self, color: QColor, background: QColor | None = None, ratio: float = 4.5
+    ) -> QColor:
         """``color`` lightened (dark theme) or darkened (light theme) until text in it reaches
-        ``ratio`` contrast on the card."""
+        ``ratio`` contrast on ``background`` (the card by default)."""
+        background = self.card if background is None else background
 
         def contrast(a: QColor, b: QColor) -> float:
             la, lb = Colors.relative_luminance(a), Colors.relative_luminance(b)
@@ -62,7 +65,7 @@ class ThemeTokens:
         result = QColor(color)
         target = QColor("#ffffff") if self.dark else QColor("#000000")
         for step in range(1, 11):
-            if contrast(result, self.card) >= ratio:
+            if contrast(result, background) >= ratio:
                 break
             result = Colors._blend(color, target, step / 10)  # pylint: disable=protected-access
         return result

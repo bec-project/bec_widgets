@@ -136,13 +136,19 @@ class PaletteDelegate(QStyledItemDelegate):
         danger = index.data(_role("tone")) == "danger"
         hovered = bool(option.state & QStyle.StateFlag.State_MouseOver) and enabled
         row = rect.adjusted(ROW_INSET, 1, -ROW_INSET, -1)
+        # a row Enter cannot run gets the neutral hover fill, not the "will run" tint
+        if current and enabled:
+            fill = tokens.soft(tokens.primary, 0.16)
+        elif current or hovered:
+            fill = tokens.hover
+        else:
+            fill = tokens.card
         if current or hovered:
             painter.setPen(Qt.PenStyle.NoPen)
-            # a row Enter cannot run gets the neutral hover fill, not the "will run" tint
-            painter.setBrush(
-                tokens.soft(tokens.primary, 0.16) if current and enabled else tokens.hover
-            )
+            painter.setBrush(fill)
             painter.drawRoundedRect(row, 8, 8)
+        # secondary text stays readable on the row fill, which is lighter than the card
+        secondary = tokens.readable(tokens.danger if danger else tokens.fg_muted, fill)
 
         # icon on the content line, no tile behind it
         icon_left = rect.left() + CONTENT_INSET
@@ -161,7 +167,7 @@ class PaletteDelegate(QStyledItemDelegate):
         if current and enabled:
             right = draw_keycap(painter, right, row.center().y(), "↵", tokens) - 6
             painter.setFont(_font(12))
-            painter.setPen(tokens.fg_muted)
+            painter.setPen(secondary)
             hint = str(index.data(_role("hint")) or "")
             width = QFontMetrics(painter.font()).horizontalAdvance(hint)
             painter.drawText(
@@ -176,7 +182,7 @@ class PaletteDelegate(QStyledItemDelegate):
             right = draw_keycap(painter, right, row.center().y(), shortcut, tokens) - 10
         elif not self.controller.sectioned and self.controller.scope == "all":
             painter.setFont(_font(11))
-            painter.setPen(tokens.fg_muted)
+            painter.setPen(secondary)
             category = str(index.data(_role("category")) or "")
             width = QFontMetrics(painter.font()).horizontalAdvance(category)
             painter.drawText(
@@ -219,7 +225,7 @@ class PaletteDelegate(QStyledItemDelegate):
 
         if subtitle:
             painter.setFont(_font(11))
-            painter.setPen(tokens.danger_text if danger else tokens.fg_muted)
+            painter.setPen(secondary)
             painter.drawText(
                 QRectF(left, row.top() + 24, available, 16),
                 Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
