@@ -582,7 +582,6 @@ class BECQueue(BECWidget, QWidget):
         layout.addWidget(self.pause_button)
         # actions that are rarely needed and cannot be undone sit in a menu, out of the way
         self.more_button = MoreButton("More queue actions", parent=self.header)
-        self.more_button.setFocusPolicy(Qt.FocusPolicy.TabFocus)  # keyboard: Tab, then Space
         more_menu = QMenu(self.more_button)
         self.reset_action = QAction("Reset queue…", more_menu)
         self.reset_action.setToolTip(

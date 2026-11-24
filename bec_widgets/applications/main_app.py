@@ -15,6 +15,7 @@ from bec_widgets.applications.views.developer_view.developer_view import Develop
 from bec_widgets.applications.views.device_manager_view.device_manager_view import DeviceManagerView
 from bec_widgets.applications.views.dock_area_view.dock_area_view import DockAreaView
 from bec_widgets.applications.views.view import ViewBase, WaveformViewInline, WaveformViewPopup
+from bec_widgets.utils.button_focus import disable_button_keyboard_focus
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.guided_tour import GuidedTour
@@ -455,6 +456,7 @@ def main():  # pragma: no cover
 
     app = QApplication([sys.argv[0], *qt_args])
     app.setApplicationName("BEC")
+    disable_button_keyboard_focus(app)  # Space or Enter must never press a button by accident
     startup_profiler.mark("QApplication")
     apply_theme("dark")
     startup_profiler.mark("theme applied")
