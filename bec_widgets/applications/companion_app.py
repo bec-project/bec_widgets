@@ -27,6 +27,7 @@ from qtpy.QtWidgets import QApplication
 import bec_widgets
 from bec_widgets.applications.launch_window import LaunchWindow
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
+from bec_widgets.utils.button_focus import disable_button_keyboard_focus
 from bec_widgets.utils.rpc_register import RPCRegister
 
 # isort: on
@@ -109,6 +110,7 @@ class GUIServer:
         """
         logger.info("Starting GUIServer", repr(self))
         self.app = QApplication(sys.argv)
+        disable_button_keyboard_focus(self.app)  # Space or Enter must never press a button
         startup_profiler.mark("QApplication")
         if darkdetect.isDark():
             apply_theme("dark")
