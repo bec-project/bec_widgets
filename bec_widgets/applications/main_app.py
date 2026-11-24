@@ -453,6 +453,8 @@ class BECMainApp(BECMainWindow):
         # typed device commands such as "samx 10" or "stop samx"
         self._device_command_source = DeviceCommandSource(self, self)
         self.command_palette.controller.add_query_source(self._device_command_source)
+        self._device_command_source.changed.connect(self.command_palette.controller.refresh_live)
+        self.command_palette.closed.connect(self._device_command_source.release)
         self._command_palette_action.triggered.connect(self.command_palette.toggle)
         for action in self.menuBar().actions():
             if action.text() == "View" and action.menu() is not None:
@@ -475,6 +477,7 @@ class BECMainApp(BECMainWindow):
         self.command_palette.open_palette(text)
 
     def cleanup(self):
+        self._device_command_source.release()
         self.command_palette.cleanup()
         for view_id, idx in self._view_index.items():
             view = self.stack.widget(idx)

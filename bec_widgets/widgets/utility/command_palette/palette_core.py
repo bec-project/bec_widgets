@@ -73,6 +73,7 @@ class PaletteCommand:
         hint(str): Verb shown on the selected row, e.g. ``"Open"``.
         enabled(bool): False shows the row but Enter does nothing; the subtitle says why.
         tone(str): ``"danger"`` marks a row that was refused, e.g. a move outside the limits.
+        keep_open(bool): Run without closing the palette, so the row can show what happens.
     """
 
     uid: str
@@ -86,6 +87,7 @@ class PaletteCommand:
     hint: str = "Run"
     enabled: bool = True
     tone: str = ""
+    keep_open: bool = False
     _title_l: str = field(default="", init=False, repr=False)
     _extra_l: str = field(default="", init=False, repr=False)
 
@@ -438,8 +440,8 @@ class CommandPaletteController(QObject):
     def execute(self, index: int = -1) -> None:
         """Run the result at ``index`` (the selected one by default).
 
-        :attr:`accepted` is emitted first so the view can close; the command itself runs on the
-        next event-loop turn.
+        :attr:`accepted` is emitted first so the view can close, unless the command keeps the
+        palette open; the command itself runs on the next event-loop turn.
         """
         if index < 0:
             index = self._current
@@ -454,7 +456,8 @@ class CommandPaletteController(QObject):
             self._recent.insert(0, command.uid)
             del self._recent[20:]
         self._pending = command
-        self.accepted.emit(command.uid)
+        if not command.keep_open:
+            self.accepted.emit(command.uid)
         QTimer.singleShot(0, self._run_pending)
 
     @SafeSlot(popup_error=True)

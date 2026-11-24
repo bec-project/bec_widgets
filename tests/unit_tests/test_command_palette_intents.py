@@ -152,8 +152,12 @@ def test_units_match_aliases():
 
 @pytest.fixture
 def source(mocked_client):
-    widget = SimpleNamespace(client=mocked_client, submit_task=mock.MagicMock())
-    yield DeviceCommandSource(widget)
+    widget = SimpleNamespace(
+        client=mocked_client, submit_task=mock.MagicMock(), bec_dispatcher=mock.MagicMock()
+    )
+    source = DeviceCommandSource(widget)
+    yield source
+    source.release()
 
 
 def rows(source, text, scope="all"):
@@ -276,6 +280,78 @@ def test_controller_lists_query_rows_first_and_skips_refused_ones(qtbot, source)
     assert accepted == [] and not source.widget.submit_task.called
     controller.set_query("samx 5")
     controller.execute()
-    assert accepted == ["intent:move:samx"]
+    # a move keeps the palette open so its row can follow the motor
     qtbot.waitUntil(lambda: source.widget.submit_task.called, timeout=1000)
+    assert accepted == []
     controller.deleteLater()
+
+
+# ---------------------------------------------------------------- after Enter
+
+
+def readback(source, value, moving=None):
+    signals = {"samx": {"value": value}}
+    if moving is not None:
+        signals["samx_motor_is_moving"] = {"value": int(moving)}
+    source._on_readback({"signals": signals}, {})
+
+
+def test_row_follows_the_readback_after_enter(source):
+    dispatcher = source.widget.bec_dispatcher
+    [command] = source("samx 5", "all")
+    dispatcher.connect_slot.assert_called_once_with(
+        source._on_readback, MessageEndpoints.device_readback("samx")
+    )
+    changed = []
+    source.changed.connect(lambda: changed.append(True))
+    command.callback()
+    assert changed and source("samx 5", "all")[0].subtitle == "moving · now 2.000"
+    readback(source, 3.5, moving=True)
+    assert source("samx 5", "all")[0].subtitle == "moving · now 3.500"
+    readback(source, 5.0, moving=False)
+    assert source("samx 5", "all")[0].subtitle == "arrived · now 5.000"
+    # other text shows a fresh preview again; leaving the device stops following it
+    assert source("samx 6", "all")[0].subtitle.startswith("now 5.000")
+    source("waveform", "all")
+    dispatcher.disconnect_slot.assert_called_once_with(
+        source._on_readback, MessageEndpoints.device_readback("samx")
+    )
+
+
+def test_relative_move_tracks_the_target_taken_on_enter(source):
+    [command] = source("samx +2", "all")
+    command.callback()
+    readback(source, 4.0, moving=False)
+    [command] = source("samx +2", "all")
+    assert command.subtitle == "arrived · now 4.000"
+    assert command.title == "Move samx by +2.000"
+
+
+def test_a_stopped_motor_short_of_the_target(source):
+    [command] = source("samx 9", "all")
+    command.callback()
+    readback(source, 6.0, moving=False)
+    assert source("samx 9", "all")[0].subtitle == "stopped · now 6.000"
+
+
+def test_a_failed_send_is_shown_on_the_row(source):
+    [command] = source("samx 5", "all")
+    command.callback()
+    source._on_failed("Traceback (most recent call last):\n  ...\nRuntimeError: queue locked\n")
+    [command] = source("samx 5", "all")
+    assert command.subtitle == "Not sent: RuntimeError: queue locked"
+    assert command.tone == "danger" and command.enabled  # Enter tries again
+
+
+def test_stop_row_after_enter(source):
+    [command] = source("stop samx", "all")
+    command.callback()
+    assert source("stop samx", "all")[0].subtitle == "stop sent · now 2.000"
+
+
+def test_release_forgets_the_last_move(source):
+    [command] = source("samx 5", "all")
+    command.callback()
+    source.release()
+    source.widget.bec_dispatcher.disconnect_slot.assert_called_once()
+    assert source("samx 5", "all")[0].subtitle.startswith("now 2.000")
