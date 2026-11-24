@@ -1,9 +1,7 @@
 """Ctrl+K command palette overlay for BEC windows.
 
-The overlay dims the window and shows a search card near its top. The card is rendered either
-with QWidgets (:mod:`command_palette_qwidget`) or with Qt Quick (:mod:`command_palette_qml`);
-both drive the same :class:`CommandPaletteController`, so search, ranking and keyboard handling
-are identical.
+The overlay dims the window and shows a search card (:mod:`command_palette_qwidget`) near its
+top; :class:`CommandPaletteController` holds the search state behind it.
 
 Typical use::
 
@@ -13,31 +11,23 @@ Typical use::
 
 from __future__ import annotations
 
-import os
-from typing import Iterable, Literal
+from typing import Iterable
 
 from qtpy.QtCore import QEvent, QObject, QRect, QRectF, Qt, Signal
 from qtpy.QtGui import QColor, QKeySequence, QPainter, QShortcut
 from qtpy.QtWidgets import QApplication, QWidget
 
-from bec_widgets.utils.quick.host import ThemeTokens
+from bec_widgets.widgets.utility.command_palette.command_palette_qwidget import PaletteCardWidget
 from bec_widgets.widgets.utility.command_palette.palette_core import (
     CommandPaletteController,
     CommandSource,
 )
+from bec_widgets.widgets.utility.command_palette.palette_theme import ThemeTokens
 
-Flavour = Literal["qwidget", "qml"]
-FLAVOUR_ENV = "BEC_COMMAND_PALETTE"
 SHORTCUTS = ("Ctrl+K", "Ctrl+Shift+P")
 CARD_WIDTH = 640
 CARD_HEIGHT = 440
 SHADOW_LAYERS = 6
-
-
-def default_flavour() -> Flavour:
-    """Renderer chosen by the ``BEC_COMMAND_PALETTE`` environment variable (``qwidget``)."""
-    value = os.environ.get(FLAVOUR_ENV, "qwidget").strip().lower()
-    return "qml" if value in ("qml", "quick") else "qwidget"
 
 
 class CommandPalette(QWidget):
@@ -46,35 +36,20 @@ class CommandPalette(QWidget):
     Args:
         window(QWidget): Window to cover, usually the main window.
         sources(Iterable[CommandSource]): Command sources, called each time the palette opens.
-        flavour(Flavour | None): ``"qwidget"`` or ``"qml"``; defaults to :func:`default_flavour`.
     """
 
     opened = Signal()
     closed = Signal()
 
-    def __init__(
-        self, window: QWidget, sources: Iterable[CommandSource] = (), flavour: Flavour | None = None
-    ):
+    def __init__(self, window: QWidget, sources: Iterable[CommandSource] = ()):
         super().__init__(window)
         self.setObjectName("CommandPalette")
-        self.flavour: Flavour = flavour or default_flavour()
         self.controller = CommandPaletteController(sources, self)
         self.controller.accepted.connect(self.close_palette)
         self.controller.dismissRequested.connect(self.close_palette)
         self._previous_focus: QWidget | None = None
         self._shortcuts: list[QShortcut] = []
-
-        # imported lazily so the QWidget flavour does not load Qt Quick
-        # pylint: disable=import-outside-toplevel
-        if self.flavour == "qml":
-            from bec_widgets.widgets.utility.command_palette.command_palette_qml import (
-                PaletteCardQuick as Card,
-            )
-        else:
-            from bec_widgets.widgets.utility.command_palette.command_palette_qwidget import (
-                PaletteCardWidget as Card,
-            )
-        self.card = Card(self.controller, self)
+        self.card = PaletteCardWidget(self.controller, self)
 
         window.installEventFilter(self)
         self.hide()
@@ -107,13 +82,11 @@ class CommandPalette(QWidget):
         Args:
             text(str): Initial query; a leading ``>``, ``+``, ``@`` or ``#`` selects a scope.
         """
-        tokens = ThemeTokens()
-        self.controller.set_highlight_color(tokens.primary.name())
         self.controller.reset()
         self.controller.refresh()
         if text:
             self.controller.set_query(text)
-        self.card.refresh_theme(tokens)
+        self.card.refresh_theme(ThemeTokens())
         focus = QApplication.focusWidget()
         if focus is not None and focus is not self and not self.isAncestorOf(focus):
             self._previous_focus = focus
@@ -150,8 +123,7 @@ class CommandPalette(QWidget):
         if window is None:
             return
         self.setGeometry(window.rect())
-        margin = getattr(self.card, "shadow_margin", 0)
-        self.card.setGeometry(self.card_geometry().adjusted(-margin, -margin, margin, margin))
+        self.card.setGeometry(self.card_geometry())
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # pylint: disable=invalid-name
         if watched is self.parentWidget() and event.type() == QEvent.Type.Resize:
@@ -163,17 +135,16 @@ class CommandPalette(QWidget):
         tokens = ThemeTokens()
         painter = QPainter(self)
         painter.fillRect(self.rect(), QColor(0, 0, 0, 120 if tokens.dark else 70))
-        if not getattr(self.card, "shadow_margin", 0):
-            # layered soft shadow below the QWidget card, the same recipe the QML card uses;
-            # a QGraphicsDropShadowEffect would re-render the whole card on every list repaint
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            painter.setPen(Qt.PenStyle.NoPen)
-            card = QRectF(self.card_geometry())
-            for i in range(SHADOW_LAYERS):
-                alpha = (0.11 if tokens.dark else 0.045) * (1 - i / (SHADOW_LAYERS + 1))
-                painter.setBrush(QColor(0, 0, 0, int(255 * alpha)))
-                rect = card.adjusted(-3 * i, 10 - 2 * i, 3 * i, 10 + 3 * i)
-                painter.drawRoundedRect(rect, 12 + 3 * i, 12 + 3 * i)
+        # layered soft shadow below the card; a QGraphicsDropShadowEffect would re-render the
+        # whole card on every list repaint
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(Qt.PenStyle.NoPen)
+        card = QRectF(self.card_geometry())
+        for i in range(SHADOW_LAYERS):
+            alpha = (0.11 if tokens.dark else 0.045) * (1 - i / (SHADOW_LAYERS + 1))
+            painter.setBrush(QColor(0, 0, 0, int(255 * alpha)))
+            rect = card.adjusted(-3 * i, 10 - 2 * i, 3 * i, 10 + 3 * i)
+            painter.drawRoundedRect(rect, 12 + 3 * i, 12 + 3 * i)
         painter.end()
 
     def mousePressEvent(self, event):  # pylint: disable=invalid-name
@@ -191,10 +162,8 @@ class CommandPalette(QWidget):
         super().keyPressEvent(event)
 
     def cleanup(self) -> None:
-        """Release the card, e.g. unload the QML scene before the controller is deleted."""
+        """Stop watching the window and the application theme."""
         window = self.parentWidget()
         if window is not None:
             window.removeEventFilter(self)
-        release = getattr(self.card, "release", None)
-        if callable(release):
-            release()
+        self.card.release()

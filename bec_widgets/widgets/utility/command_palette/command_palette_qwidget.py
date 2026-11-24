@@ -1,7 +1,6 @@
-"""QWidget rendering of the command palette card.
+"""Card of the command palette: search field, scope chips, result list and key hints.
 
-Twin of ``qml/CommandPaletteView.qml``: same layout, colours and keyboard handling, painted with
-a :class:`QStyledItemDelegate` over the controller's list model.
+Result rows are painted with a :class:`QStyledItemDelegate` over the controller's list model.
 """
 
 from __future__ import annotations
@@ -31,12 +30,12 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets.utils.error_popups import SafeConnect, SafeSlot
-from bec_widgets.utils.quick.host import ThemeTokens
 from bec_widgets.widgets.utility.command_palette.palette_core import (
     ROLES,
     SCOPES,
     CommandPaletteController,
 )
+from bec_widgets.widgets.utility.command_palette.palette_theme import ThemeTokens
 
 ROW_HEIGHT = 46
 SINGLE_LINE_ROW_HEIGHT = 36
@@ -220,7 +219,7 @@ class PaletteDelegate(QStyledItemDelegate):
 
 
 class ScopeChip(QAbstractButton):
-    """Checkable pill showing a scope and its query prefix, painted like the QML chip."""
+    """Checkable pill showing a scope and its query prefix."""
 
     def __init__(self, label: str, scope: str, parent: QWidget | None = None):
         super().__init__(parent)
@@ -265,8 +264,6 @@ class PaletteCardWidget(QFrame):
         controller(CommandPaletteController): Shared search state.
         parent(QWidget | None): The hosting overlay.
     """
-
-    shadow_margin = 0
 
     def __init__(self, controller: CommandPaletteController, parent: QWidget | None = None):
         super().__init__(parent)

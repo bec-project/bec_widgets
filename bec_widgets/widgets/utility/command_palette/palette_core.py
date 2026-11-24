@@ -1,24 +1,21 @@
-"""Search model of the command palette, shared by the QML and QWidget views.
+"""Search model of the command palette.
 
 The palette searches a flat list of :class:`PaletteCommand` objects collected from command
 sources (see :mod:`palette_sources`). :class:`CommandPaletteController` owns the query, the scope
-filter, the ranked results and the keyboard selection; the two views only render its
-:class:`~bec_widgets.utils.quick.DictListModel` and forward key presses to it, so both behave
-exactly the same.
+filter, the ranked results and the keyboard selection; the card only renders its
+:class:`ResultModel` and forwards key presses to it.
 """
 
 from __future__ import annotations
 
-import html
 import time
 from dataclasses import dataclass, field
-from typing import Callable, Iterable
+from typing import Any, Callable, Iterable, Sequence
 
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import Property, QObject, QTimer, Signal
+from qtpy.QtCore import Property, QAbstractListModel, QModelIndex, QObject, Qt, QTimer, Signal
 
 from bec_widgets.utils.error_popups import SafeSlot
-from bec_widgets.utils.quick.list_model import DictListModel
 
 logger = bec_logger.logger
 
@@ -45,18 +42,7 @@ MAX_RESULTS = 60
 EMPTY_QUERY_SECTION_LIMIT = 6
 RECENT_LIMIT = 5
 
-ROLES = [
-    "uid",
-    "title",
-    "titleRich",
-    "positions",
-    "subtitle",
-    "icon",
-    "category",
-    "section",
-    "shortcut",
-    "hint",
-]
+ROLES = ["uid", "title", "positions", "subtitle", "icon", "category", "section", "shortcut", "hint"]
 
 
 @dataclass
@@ -195,27 +181,59 @@ def score_command(tokens: list[str], command: PaletteCommand) -> tuple[float, li
     return total, sorted(positions)
 
 
-def rich_title(title: str, positions: Iterable[int], color: str) -> str:
-    """Return ``title`` as Qt rich text with the matched characters bold and coloured."""
-    matched = set(positions)
-    if not matched:
-        return html.escape(title)
-    parts = []
-    run: list[str] = []
-    run_matched = False
-    for i, char in enumerate(title):
-        is_match = i in matched
-        if run and is_match != run_matched:
-            parts.append((run_matched, "".join(run)))
-            run = []
-        run.append(char)
-        run_matched = is_match
-    if run:
-        parts.append((run_matched, "".join(run)))
-    return "".join(
-        f'<b><font color="{color}">{html.escape(text)}</font></b>' if hit else html.escape(text)
-        for hit, text in parts
-    )
+class ResultModel(QAbstractListModel):
+    """List model whose rows are dictionaries keyed by :data:`ROLES`.
+
+    :meth:`set_items` updates rows in place when the row count is unchanged, so the list view
+    repaints changed rows instead of resetting.
+    """
+
+    def __init__(self, parent: QObject | None = None):
+        super().__init__(parent)
+        self._roles = {Qt.ItemDataRole.UserRole + 1 + i: key for i, key in enumerate(ROLES)}
+        self._items: list[dict[str, Any]] = []
+
+    # pylint: disable=invalid-name
+    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
+        if parent.isValid():
+            return 0
+        return len(self._items)
+
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
+        if not index.isValid() or not 0 <= index.row() < len(self._items):
+            return None
+        key = self._roles.get(role)
+        if key is None:
+            return None
+        return self._items[index.row()].get(key)
+
+    @property
+    def items(self) -> list[dict[str, Any]]:
+        """Copy of the current rows."""
+        return [dict(item) for item in self._items]
+
+    def set_items(self, items: Sequence[dict[str, Any]]) -> None:
+        """Replace the rows, reusing existing rows where possible."""
+        items = [dict(item) for item in items]
+        old_count, new_count = len(self._items), len(items)
+        for row in range(min(old_count, new_count)):
+            changed = [
+                role
+                for role, key in self._roles.items()
+                if self._items[row].get(key) != items[row].get(key)
+            ]
+            self._items[row] = items[row]
+            if changed:
+                index = self.index(row, 0)
+                self.dataChanged.emit(index, index, changed)
+        if new_count > old_count:
+            self.beginInsertRows(QModelIndex(), old_count, new_count - 1)
+            self._items.extend(items[old_count:])
+            self.endInsertRows()
+        elif new_count < old_count:
+            self.beginRemoveRows(QModelIndex(), new_count, old_count - 1)
+            del self._items[new_count:]
+            self.endRemoveRows()
 
 
 class CommandPaletteController(QObject):
@@ -233,7 +251,6 @@ class CommandPaletteController(QObject):
     resultsChanged = Signal()
     accepted = Signal(str)
     dismissRequested = Signal()
-    highlightChanged = Signal()
 
     def __init__(self, sources: Iterable[CommandSource] = (), parent: QObject | None = None):
         super().__init__(parent)
@@ -248,10 +265,9 @@ class CommandPaletteController(QObject):
         self._total = 0
         self._positions: dict[str, list[int]] = {}
         self._sections: dict[str, str] = {}
-        self._highlight = "#3b82f6"
         self._pending: PaletteCommand | None = None
         self.last_search_ms = 0.0
-        self.model = DictListModel(ROLES, self)
+        self.model = ResultModel(self)
 
     # ------------------------------------------------------------------ sources
     def add_source(self, source: CommandSource) -> None:
@@ -327,17 +343,6 @@ class CommandPaletteController(QObject):
             self._current = index
             self.currentIndexChanged.emit()
 
-    def _get_highlight(self) -> str:
-        return self._highlight
-
-    def set_highlight_color(self, color: str) -> None:
-        """Colour used for matched characters in ``titleRich``."""
-        if color == self._highlight:
-            return
-        self._highlight = color
-        self.highlightChanged.emit()
-        self._publish()
-
     def _get_result_count(self) -> int:
         return len(self._results)
 
@@ -354,12 +359,6 @@ class CommandPaletteController(QObject):
     # matches before MAX_RESULTS cut the list; equals resultCount when nothing was cut
     totalCount = Property(int, _get_total_count, notify=resultsChanged)
     sectioned = Property(bool, _get_sectioned, notify=resultsChanged)
-    scopes = Property(
-        "QVariantList",
-        lambda self: [{"id": s, "label": label, "prefix": prefix} for s, label, prefix in SCOPES],
-        constant=True,
-    )
-    emptyText = Property(str, lambda self: self.empty_text(), notify=resultsChanged)
 
     # ------------------------------------------------------------------ keyboard
     @SafeSlot(int)
@@ -507,7 +506,6 @@ class CommandPaletteController(QObject):
                 {
                     "uid": cmd.uid,
                     "title": cmd.title,
-                    "titleRich": rich_title(cmd.title, pos, self._highlight),
                     "positions": pos,
                     "subtitle": cmd.subtitle,
                     "icon": cmd.icon,

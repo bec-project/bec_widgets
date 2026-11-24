@@ -6,16 +6,12 @@ from qtpy.QtWidgets import QMainWindow, QWidget
 
 from bec_widgets.applications.main_app import BECMainApp
 from bec_widgets.tests.client_mocks import mocked_client
-from bec_widgets.widgets.utility.command_palette.command_palette import (
-    CommandPalette,
-    default_flavour,
-)
+from bec_widgets.widgets.utility.command_palette.command_palette import CommandPalette
 from bec_widgets.widgets.utility.command_palette.palette_core import (
     MAX_RESULTS,
     CommandPaletteController,
     PaletteCommand,
     fuzzy_match,
-    rich_title,
 )
 
 
@@ -63,14 +59,6 @@ def test_fuzzy_match_prefers_substring_and_word_starts():
     assert fuzzy_match("scc", "Scan Control")[1] == [0, 1, 5]
     assert fuzzy_match("zz", "Waveform") is None
     assert fuzzy_match("", "anything") == (0.0, [])
-
-
-def test_rich_title_highlights_and_escapes():
-    text = rich_title("a<b", [0, 2], "#ff0000")
-    assert text == (
-        '<b><font color="#ff0000">a</font></b>&lt;<b><font color="#ff0000">b</font></b>'
-    )
-    assert rich_title("plain", [], "#000") == "plain"
 
 
 # ---------------------------------------------------------------- controller
@@ -176,23 +164,16 @@ def test_failing_source_is_skipped(qtbot):
     ctrl.deleteLater()
 
 
-def test_default_flavour(monkeypatch):
-    monkeypatch.delenv("BEC_COMMAND_PALETTE", raising=False)
-    assert default_flavour() == "qwidget"
-    monkeypatch.setenv("BEC_COMMAND_PALETTE", "QML")
-    assert default_flavour() == "qml"
+# ---------------------------------------------------------------- overlay
 
 
-# ---------------------------------------------------------------- overlay, both renderers
-
-
-@pytest.fixture(params=["qwidget", "qml"])
-def palette_window(qtbot, request):
+@pytest.fixture
+def palette_window(qtbot):
     window = QMainWindow()
     window.setCentralWidget(QWidget())
     window.resize(900, 640)
     calls = []
-    palette = CommandPalette(window, sources=[lambda: _commands(calls)], flavour=request.param)
+    palette = CommandPalette(window, sources=[lambda: _commands(calls)])
     palette.install_shortcuts()
     palette.calls = calls
     qtbot.addWidget(window)
@@ -203,16 +184,11 @@ def palette_window(qtbot, request):
 
 
 def _type(qtbot, palette, text):
-    if palette.flavour == "qml":
-        palette.card.view.setFocus()
-        qtbot.keyClicks(palette.card.view, text)
-    else:
-        qtbot.keyClicks(palette.card.input, text)
+    qtbot.keyClicks(palette.card.input, text)
 
 
 def _key(qtbot, palette, key):
-    target = palette.card.view if palette.flavour == "qml" else palette.card.input
-    qtbot.keyClick(target, key)
+    qtbot.keyClick(palette.card.input, key)
 
 
 def test_overlay_opens_with_shortcut_and_runs_command(qtbot, palette_window):
@@ -256,10 +232,8 @@ def test_overlay_click_outside_closes(qtbot, palette_window):
     assert palette.controller.scope == "all" and palette.controller.query == ""
 
 
-def test_qwidget_card_follows_controller(qtbot, palette_window):
+def test_card_follows_controller(qtbot, palette_window):
     _window, palette = palette_window
-    if palette.flavour != "qwidget":
-        pytest.skip("QWidget card only")
     palette.open_palette()
     card = palette.card
     palette.controller.set_query(">")
@@ -271,10 +245,8 @@ def test_qwidget_card_follows_controller(qtbot, palette_window):
     assert card.count_label.text() == ""
 
 
-def test_qwidget_card_typed_prefix_leaves_the_field(qtbot, palette_window):
+def test_card_typed_prefix_leaves_the_field(qtbot, palette_window):
     _window, palette = palette_window
-    if palette.flavour != "qwidget":
-        pytest.skip("QWidget card only")
     palette.open_palette()
     card = palette.card
     qtbot.keyClicks(card.input, "@")
@@ -285,12 +257,10 @@ def test_qwidget_card_typed_prefix_leaves_the_field(qtbot, palette_window):
     assert palette.controller.query == "sam"
 
 
-def test_qwidget_card_follows_theme_while_open(qtbot, palette_window):
+def test_card_follows_theme_while_open(qtbot, palette_window):
     from bec_widgets.utils.colors import apply_theme
 
     _window, palette = palette_window
-    if palette.flavour != "qwidget":
-        pytest.skip("QWidget card only")
     apply_theme("dark")
     palette.open_palette()
     dark = palette.card.styleSheet()
@@ -300,10 +270,8 @@ def test_qwidget_card_follows_theme_while_open(qtbot, palette_window):
     qtbot.waitUntil(lambda: palette.card.styleSheet() == dark)
 
 
-def test_qwidget_card_says_when_results_are_cut(qtbot, palette_window):
+def test_card_says_when_results_are_cut(qtbot, palette_window):
     _window, palette = palette_window
-    if palette.flavour != "qwidget":
-        pytest.skip("QWidget card only")
     many = [
         PaletteCommand(uid=f"device:d{i}", title=f"d{i}", callback=lambda: None, category="devices")
         for i in range(MAX_RESULTS + 15)
@@ -320,10 +288,8 @@ def test_qwidget_card_says_when_results_are_cut(qtbot, palette_window):
     assert card.count_label.text() == f"{palette.controller.resultCount} results"
 
 
-def test_qwidget_card_hides_labels_that_repeat_the_scope(qtbot, palette_window):
+def test_card_hides_labels_that_repeat_the_scope(qtbot, palette_window):
     _window, palette = palette_window
-    if palette.flavour != "qwidget":
-        pytest.skip("QWidget card only")
     palette.open_palette()
     card = palette.card
     first = palette.controller.model.index(0, 0)
@@ -332,10 +298,8 @@ def test_qwidget_card_hides_labels_that_repeat_the_scope(qtbot, palette_window):
     assert not card.delegate.has_header(palette.controller.model.index(0, 0))
 
 
-def test_qwidget_card_offers_search_all_after_a_scoped_miss(qtbot, palette_window):
+def test_card_offers_search_all_after_a_scoped_miss(qtbot, palette_window):
     _window, palette = palette_window
-    if palette.flavour != "qwidget":
-        pytest.skip("QWidget card only")
     palette.open_palette()
     card = palette.card
     palette.controller.set_query("@waveform")
@@ -346,15 +310,6 @@ def test_qwidget_card_offers_search_all_after_a_scoped_miss(qtbot, palette_windo
     assert card.stack.currentWidget() is card.list
     palette.controller.set_query("nothing-matches")
     assert not card.search_all_button.isVisibleTo(card)
-
-
-def test_qml_card_loads(qtbot, palette_window):
-    _window, palette = palette_window
-    if palette.flavour != "qml":
-        pytest.skip("QML card only")
-    palette.open_palette()
-    assert palette.card.view.errors() == []
-    assert palette.card.view.rootObject() is not None
 
 
 # ---------------------------------------------------------------- main app integration
