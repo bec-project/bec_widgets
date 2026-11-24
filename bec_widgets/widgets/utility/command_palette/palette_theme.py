@@ -45,10 +45,27 @@ class ThemeTokens:
         self.fg_subtle = self.mix(self.fg, 0.4)
         self.hover = self.mix(self.fg, 0.06)
         self.track = self.mix(self.fg, 0.1)
+        self.danger_text = self.readable(self.danger)
 
     def mix(self, color: QColor, amount: float) -> QColor:
         """Return ``color`` mixed into the card background by ``amount`` (0 = card)."""
         return Colors._blend(self.card, color, amount)  # pylint: disable=protected-access
+
+    def readable(self, color: QColor, ratio: float = 4.5) -> QColor:
+        """``color`` lightened (dark theme) or darkened (light theme) until text in it reaches
+        ``ratio`` contrast on the card."""
+
+        def contrast(a: QColor, b: QColor) -> float:
+            la, lb = Colors.relative_luminance(a), Colors.relative_luminance(b)
+            return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+
+        result = QColor(color)
+        target = QColor("#ffffff") if self.dark else QColor("#000000")
+        for step in range(1, 11):
+            if contrast(result, self.card) >= ratio:
+                break
+            result = Colors._blend(color, target, step / 10)  # pylint: disable=protected-access
+        return result
 
     def soft(self, color: QColor, amount: float = 0.16) -> QColor:
         """Tint ``color`` onto the card background, e.g. for chips and the selected row."""

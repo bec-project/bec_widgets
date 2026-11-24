@@ -42,7 +42,19 @@ MAX_RESULTS = 60
 EMPTY_QUERY_SECTION_LIMIT = 6
 RECENT_LIMIT = 5
 
-ROLES = ["uid", "title", "positions", "subtitle", "icon", "category", "section", "shortcut", "hint"]
+ROLES = [
+    "uid",
+    "title",
+    "positions",
+    "subtitle",
+    "icon",
+    "category",
+    "section",
+    "shortcut",
+    "hint",
+    "enabled",
+    "tone",
+]
 
 
 @dataclass
@@ -59,6 +71,8 @@ class PaletteCommand:
         keywords(str): Extra search terms that are not shown.
         shortcut(str): Keyboard shortcut shown as a hint.
         hint(str): Verb shown on the selected row, e.g. ``"Open"``.
+        enabled(bool): False shows the row but Enter does nothing; the subtitle says why.
+        tone(str): ``"danger"`` marks a row that was refused, e.g. a move outside the limits.
     """
 
     uid: str
@@ -70,6 +84,8 @@ class PaletteCommand:
     keywords: str = ""
     shortcut: str = ""
     hint: str = "Run"
+    enabled: bool = True
+    tone: str = ""
     _title_l: str = field(default="", init=False, repr=False)
     _extra_l: str = field(default="", init=False, repr=False)
 
@@ -79,6 +95,8 @@ class PaletteCommand:
 
 
 CommandSource = Callable[[], Iterable[PaletteCommand]]
+# called on every search with (query, scope); its commands are listed first, unranked
+QueryCommandSource = Callable[[str, str], Iterable[PaletteCommand]]
 
 
 def _is_boundary(text: str, index: int) -> bool:
@@ -255,6 +273,7 @@ class CommandPaletteController(QObject):
     def __init__(self, sources: Iterable[CommandSource] = (), parent: QObject | None = None):
         super().__init__(parent)
         self._sources: list[CommandSource] = list(sources)
+        self._query_sources: list[QueryCommandSource] = []
         self._commands: list[PaletteCommand] = []
         self._by_uid: dict[str, PaletteCommand] = {}
         self._recent: list[str] = []
@@ -273,6 +292,20 @@ class CommandPaletteController(QObject):
     def add_source(self, source: CommandSource) -> None:
         """Register another command source."""
         self._sources.append(source)
+
+    def add_query_source(self, source: QueryCommandSource) -> None:
+        """Register a source that turns the search text itself into commands, e.g. ``samx 10``.
+
+        It is called on every search with the query and the scope and may return nothing.
+        """
+        self._query_sources.append(source)
+
+    def refresh_live(self) -> None:
+        """Re-run the search, e.g. after a live value shown in a row changed.
+
+        The selected row stays selected if it is still listed.
+        """
+        self._search(keep_selection=True)
 
     def refresh(self) -> None:
         """Re-collect the commands from all sources and re-run the search."""
@@ -413,10 +446,13 @@ class CommandPaletteController(QObject):
         if not 0 <= index < len(self._results):
             return
         command = self._results[index]
-        if command.uid in self._recent:
-            self._recent.remove(command.uid)
-        self._recent.insert(0, command.uid)
-        del self._recent[20:]
+        if not command.enabled:
+            return
+        if command.uid in self._by_uid:  # rows made from the query itself are not remembered
+            if command.uid in self._recent:
+                self._recent.remove(command.uid)
+            self._recent.insert(0, command.uid)
+            del self._recent[20:]
         self._pending = command
         self.accepted.emit(command.uid)
         QTimer.singleShot(0, self._run_pending)
@@ -440,8 +476,20 @@ class CommandPaletteController(QObject):
             return True
         return CATEGORIES.get(command.category, ("", "actions"))[1] == self._scope
 
-    def _search(self) -> None:
+    def _live_commands(self) -> list[PaletteCommand]:
+        commands: list[PaletteCommand] = []
+        for source in self._query_sources:
+            try:
+                commands.extend(source(self._query, self._scope))
+            except Exception as exc:  # pylint: disable=broad-except
+                logger.warning(f"Command palette query source {source!r} failed: {exc}")
+        return commands
+
+    def _search(self, keep_selection: bool = False) -> None:
         started = time.perf_counter()
+        selected = None
+        if keep_selection and 0 <= self._current < len(self._results):
+            selected = self._results[self._current].uid
         candidates = [cmd for cmd in self._commands if self._in_scope(cmd)]
         positions: dict[str, list[int]] = {}
         sections: dict[str, str] = {}
@@ -462,15 +510,17 @@ class CommandPaletteController(QObject):
                 ranked.append((-score, order, cmd))
                 positions[cmd.uid] = pos
             ranked.sort(key=lambda item: (item[0], item[1]))
-            results = [cmd for _score, _order, cmd in ranked[:MAX_RESULTS]]
-            total = len(ranked)
+            live = self._live_commands()
+            results = live + [cmd for _score, _order, cmd in ranked[: MAX_RESULTS - len(live)]]
+            total = len(live) + len(ranked)
         self._results = results
         self._total = total
         self._positions = positions
         self._sections = sections
         self._publish()
+        uids = [cmd.uid for cmd in results]
         self._current = -1
-        self.set_current_index(0)
+        self.set_current_index(uids.index(selected) if selected in uids else 0)
         self.last_search_ms = (time.perf_counter() - started) * 1000
 
     def _browse(self, candidates: list[PaletteCommand], sections: dict[str, str]):
@@ -513,6 +563,8 @@ class CommandPaletteController(QObject):
                     "section": self._sections.get(cmd.uid, ""),
                     "shortcut": cmd.shortcut,
                     "hint": cmd.hint,
+                    "enabled": cmd.enabled,
+                    "tone": cmd.tone,
                 }
             )
         self.model.set_items(rows)

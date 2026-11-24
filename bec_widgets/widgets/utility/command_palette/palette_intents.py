@@ -20,7 +20,9 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Literal
+from typing import Iterable, Literal
+
+from bec_widgets.widgets.utility.command_palette.palette_core import fuzzy_match
 
 IntentKind = Literal["move", "where", "stop"]
 
@@ -35,6 +37,15 @@ _NUMBER_RE = re.compile(rf"^{_NUMBER}$", re.IGNORECASE)
 _NUMBER_UNIT_RE = re.compile(rf"^({_NUMBER})([a-zµ°%][\w/°]*)$", re.IGNORECASE)
 _NAME_RE = re.compile(r"^[A-Za-z_][\w.]*$")
 _UNIT_RE = re.compile(r"^[a-zµ°%][\w/°]*$", re.IGNORECASE)
+_UNIT_ALIASES = {
+    "°": "deg",
+    "degree": "deg",
+    "degrees": "deg",
+    "µm": "um",
+    "micron": "um",
+    "microns": "um",
+    "μm": "um",
+}
 
 
 @dataclass(frozen=True)
@@ -146,4 +157,44 @@ def parse_intent(text: str) -> DeviceIntent | None:
         return None
     return DeviceIntent(
         kind="move", device=device, value=sign * value, relative=relative, unit=unit
+    )
+
+
+def resolve_device(query: str, names: Iterable[str], fuzzy: bool = True) -> list[str]:
+    """Device names ``query`` may refer to, best first.
+
+    An exact name (ignoring case) wins on its own. Otherwise every name starting with ``query``
+    is returned, or with ``fuzzy`` every name the palette's fuzzy matcher accepts; one entry
+    means the name is unambiguous.
+
+    Args:
+        query(str): Device name as typed, possibly partial (``"sax"``).
+        names(Iterable[str]): Known device names.
+        fuzzy(bool): Also accept partial names that are not a prefix.
+
+    Returns:
+        list[str]: Matching names; empty if nothing matches.
+    """
+    names = list(names)
+    if query in names:
+        return [query]
+    folded = [name for name in names if name.lower() == query.lower()]
+    if len(folded) == 1:
+        return folded
+    if not fuzzy:
+        prefix = query.lower()
+        return sorted((n for n in names if n.lower().startswith(prefix)), key=lambda n: (len(n), n))
+    scored = []
+    for name in names:
+        match = fuzzy_match(query, name)
+        if match is not None:
+            scored.append((-match[0], name))
+    scored.sort()
+    return [name for _score, name in scored]
+
+
+def units_match(typed: str, egu: str) -> bool:
+    """Whether a typed unit names the device's engineering unit (``"deg"`` matches ``"°"``)."""
+    return _UNIT_ALIASES.get(typed.lower(), typed.lower()) == _UNIT_ALIASES.get(
+        egu.lower(), egu.lower()
     )

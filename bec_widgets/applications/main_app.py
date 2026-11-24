@@ -29,6 +29,7 @@ from bec_widgets.widgets.containers.dock_area.profile_utils import is_experiment
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 from bec_widgets.widgets.utility.command_palette.command_palette import SHORTCUTS, CommandPalette
 from bec_widgets.widgets.utility.command_palette.palette_sources import (
+    DeviceCommandSource,
     main_app_commands,
     menu_commands,
 )
@@ -449,6 +450,9 @@ class BECMainApp(BECMainWindow):
                 lambda: menu_commands(self.menuBar(), skip=[self._command_palette_action]),
             ],
         )
+        # typed device commands such as "samx 10" or "stop samx"
+        self._device_command_source = DeviceCommandSource(self, self)
+        self.command_palette.controller.add_query_source(self._device_command_source)
         self._command_palette_action.triggered.connect(self.command_palette.toggle)
         for action in self.menuBar().actions():
             if action.text() == "View" and action.menu() is not None:

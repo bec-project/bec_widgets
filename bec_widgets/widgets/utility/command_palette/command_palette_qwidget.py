@@ -132,23 +132,33 @@ class PaletteDelegate(QStyledItemDelegate):
             rect.setTop(rect.top() + HEADER_HEIGHT)
 
         current = index.row() == self.controller.currentIndex
-        hovered = bool(option.state & QStyle.StateFlag.State_MouseOver)
+        enabled = index.data(_role("enabled")) is not False
+        danger = index.data(_role("tone")) == "danger"
+        hovered = bool(option.state & QStyle.StateFlag.State_MouseOver) and enabled
         row = rect.adjusted(ROW_INSET, 1, -ROW_INSET, -1)
         if current or hovered:
             painter.setPen(Qt.PenStyle.NoPen)
-            painter.setBrush(tokens.soft(tokens.primary, 0.16) if current else tokens.hover)
+            # a row Enter cannot run gets the neutral hover fill, not the "will run" tint
+            painter.setBrush(
+                tokens.soft(tokens.primary, 0.16) if current and enabled else tokens.hover
+            )
             painter.drawRoundedRect(row, 8, 8)
 
         # icon on the content line, no tile behind it
         icon_left = rect.left() + CONTENT_INSET
-        icon_color = tokens.primary if current else tokens.fg_muted
+        if danger:
+            icon_color = tokens.danger_text
+        elif current and enabled:
+            icon_color = tokens.primary
+        else:
+            icon_color = tokens.fg_muted
         pixmap = _icon(str(index.data(_role("icon")) or "bolt"), icon_color.name(), ICON_SIZE)
         painter.drawPixmap(QPointF(icon_left, row.center().y() - ICON_SIZE / 2), pixmap)
 
         # right-hand side: shortcut keycaps, run hint on the current row, else the category
         right = rect.right() - CONTENT_INSET
         shortcut = str(index.data(_role("shortcut")) or "")
-        if current:
+        if current and enabled:
             right = draw_keycap(painter, right, row.center().y(), "↵", tokens) - 6
             painter.setFont(_font(12))
             painter.setPen(tokens.fg_muted)
@@ -160,6 +170,8 @@ class PaletteDelegate(QStyledItemDelegate):
                 hint,
             )
             right -= width + 12
+        elif current:
+            pass  # Enter does nothing here; the subtitle says why
         elif shortcut:
             right = draw_keycap(painter, right, row.center().y(), shortcut, tokens) - 10
         elif not self.controller.sectioned and self.controller.scope == "all":
@@ -207,7 +219,7 @@ class PaletteDelegate(QStyledItemDelegate):
 
         if subtitle:
             painter.setFont(_font(11))
-            painter.setPen(tokens.fg_muted)
+            painter.setPen(tokens.danger_text if danger else tokens.fg_muted)
             painter.drawText(
                 QRectF(left, row.top() + 24, available, 16),
                 Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
