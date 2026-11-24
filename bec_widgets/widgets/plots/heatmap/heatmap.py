@@ -20,6 +20,7 @@ from toolz import partition
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.colors import Colors, get_accent_colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.imported_scans import imported_scan_item
 from bec_widgets.utils.qt_data_subscription import QtDataSubscription
 from bec_widgets.utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.toolbars.actions import MaterialIconAction
@@ -474,6 +475,10 @@ class Heatmap(ImageBase):
 
     def get_history_scan_item(self, scan_id: str | None = None):
         """Fetch a scan item from history, defaulting to the latest historical scan."""
+        # A scan opened from its file, outside the history, is read from that file.
+        imported = imported_scan_item(self.client, scan_id)
+        if imported is not None:
+            return imported
         if self.client.history is None or len(self.client.history) == 0:
             logger.info("No scans executed so far. Cannot fetch scan history.")
             return None

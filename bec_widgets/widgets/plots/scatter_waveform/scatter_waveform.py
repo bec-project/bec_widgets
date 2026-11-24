@@ -10,6 +10,7 @@ from qtpy.QtWidgets import QHBoxLayout, QMainWindow, QWidget
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.colors import Colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.imported_scans import imported_scan_item
 from bec_widgets.utils.qt_data_subscription import QtDataSubscription
 from bec_widgets.utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.toolbars.toolbar import MaterialIconAction
@@ -757,7 +758,10 @@ class ScatterWaveform(PlotBase):
 
         if scan_index is None:
             self.scan_id = scan_id
-            self.scan_item = self.client.history.get_by_scan_id(scan_id)
+            # A scan opened from its file, outside the history, is read from that file.
+            self.scan_item = imported_scan_item(
+                self.client, scan_id
+            ) or self.client.history.get_by_scan_id(scan_id)
             if self.scan_item is None:
                 # A scan the history does not have, e.g. the pin of an old profile: say so.
                 self._cleanup_data_api_subscription()

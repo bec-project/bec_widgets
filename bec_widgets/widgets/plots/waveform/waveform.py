@@ -37,6 +37,7 @@ from bec_widgets.utils.bec_signal_proxy import BECSignalProxy
 from bec_widgets.utils.colors import Colors, apply_theme, get_accent_colors
 from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.imported_scans import imported_scan_item, is_imported
 from bec_widgets.utils.qt_data_subscription import QtDataSubscription
 from bec_widgets.utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.side_panel import SidePanel
@@ -1750,7 +1751,8 @@ class Waveform(PlotBase):
         """
         Name of a history curve that no curve of another scan has: the usual name while it is
         free, else with the start time of the scan added (with seconds, then the scan id, while
-        that still collides).
+        that still collides). A scan opened from its file, whose number often repeats one of the
+        session, always carries its start time.
 
         Args:
             config (CurveConfig): Config of the curve, with its scan id and number resolved.
@@ -1769,10 +1771,10 @@ class Waveform(PlotBase):
             # A curve of the same scan with the same name is a duplicate, refused later.
             return label not in names or names[label] == config.scan_id
 
-        if free(base):
+        start = getattr(getattr(scan_item, "_msg", None), "start_time", None)
+        if free(base) and not (start and is_imported(config.scan_id)):
             return base
         candidates = []
-        start = getattr(getattr(scan_item, "_msg", None), "start_time", None)
         if start:
             moment = datetime.fromtimestamp(float(start))
             candidates += [
@@ -4080,6 +4082,10 @@ class Waveform(PlotBase):
             scan_index = -1
 
         if scan_index is None:
+            # A scan opened from its file, outside the history, is read from that file.
+            imported = imported_scan_item(self.client, scan_id)
+            if imported is not None:
+                return imported
             return self.client.history.get_by_scan_id(scan_id)
 
         if scan_index == -1:
