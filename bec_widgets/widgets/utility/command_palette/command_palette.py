@@ -48,6 +48,7 @@ class CommandPalette(QWidget):
         self.controller.accepted.connect(self.close_palette)
         self.controller.dismissRequested.connect(self.close_palette)
         self._previous_focus: QWidget | None = None
+        self._anchor: QWidget | None = None
         self._shortcuts: list[QShortcut] = []
         self.card = PaletteCardWidget(self.controller, self)
 
@@ -64,6 +65,15 @@ class CommandPalette(QWidget):
             shortcut.activated.connect(self.toggle)
             self._shortcuts.append(shortcut)
         return self._shortcuts
+
+    def set_anchor(self, anchor: QWidget | None) -> None:
+        """Drop the card down from under ``anchor`` (e.g. the field of a command palette bar)
+        instead of placing it near the top of the window.
+
+        Args:
+            anchor(QWidget | None): Widget inside the window, or None for the default placement.
+        """
+        self._anchor = anchor
 
     def is_open(self) -> bool:
         """Whether the palette is currently shown."""
@@ -113,9 +123,29 @@ class CommandPalette(QWidget):
         """Geometry of the visible card (without shadow margins) in overlay coordinates."""
         width = min(CARD_WIDTH, max(320, self.width() - 32))
         height = min(CARD_HEIGHT, max(200, self.height() - 48))
-        top = max(24, int(self.height() * 0.12))
+        anchor = self._anchor_rect()
+        if anchor is None:
+            top = max(24, int(self.height() * 0.12))
+            left = (self.width() - width) // 2
+        else:
+            # at least as wide as the anchor, centred under it and kept inside the window
+            width = min(max(width, anchor.width()), max(320, self.width() - 16))
+            top = anchor.bottom() + 6
+            left = anchor.center().x() - width // 2
+            left = max(8, min(left, self.width() - width - 8))
         top = min(top, max(8, self.height() - height - 8))
-        return QRect((self.width() - width) // 2, top, width, height)
+        return QRect(left, top, width, height)
+
+    def _anchor_rect(self) -> QRect | None:
+        """Geometry of the visible anchor in overlay coordinates."""
+        anchor = self._anchor
+        try:
+            if anchor is None or not anchor.isVisible():
+                return None
+            return QRect(anchor.mapTo(self.parentWidget(), anchor.rect().topLeft()), anchor.size())
+        except RuntimeError:  # the anchor was deleted
+            self._anchor = None
+            return None
 
     # ------------------------------------------------------------------ Qt overrides
     def _update_geometry(self) -> None:

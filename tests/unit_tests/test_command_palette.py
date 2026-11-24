@@ -7,6 +7,10 @@ from qtpy.QtWidgets import QMainWindow, QWidget
 from bec_widgets.applications.main_app import BECMainApp
 from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.utility.command_palette.command_palette import CommandPalette
+from bec_widgets.widgets.utility.command_palette.command_palette_bar import (
+    CommandPaletteBar,
+    shortcut_label,
+)
 from bec_widgets.widgets.utility.command_palette.palette_core import (
     MAX_RESULTS,
     CommandPaletteController,
@@ -210,6 +214,43 @@ def test_overlay_opens_with_shortcut_and_runs_command(qtbot, palette_window):
     qtbot.waitUntil(lambda: palette.calls == ["widget:MultiWaveform"], timeout=1000)
 
 
+def test_overlay_card_drops_down_from_its_anchor(qtbot, palette_window):
+    window, palette = palette_window
+    anchor = QWidget(window.centralWidget())
+    anchor.setGeometry(500, 10, 300, 28)
+    anchor.show()
+    palette.set_anchor(anchor)
+    palette.open_palette()
+    card = palette.card_geometry()
+    anchor_rect = palette._anchor_rect()
+    assert card.top() == anchor_rect.bottom() + 6
+    assert card.width() == 640  # wider than the anchor
+    assert card.right() <= window.width() - 8  # kept inside the window
+
+    anchor.hide()  # a hidden anchor falls back to the default placement
+    assert palette.card_geometry().left() == (palette.width() - 640) // 2
+    palette.set_anchor(None)
+    assert palette._anchor_rect() is None
+
+
+def test_palette_bar_field_opens_the_palette(qtbot, palette_window):
+    window, palette = palette_window
+    bar = CommandPaletteBar(window.centralWidget())
+    bar.setGeometry(0, 0, window.width(), 40)
+    bar.show()
+    bar.field.clicked.connect(palette.toggle)
+    palette.set_anchor(bar.field)
+    assert bar.field.text() == "Command palette"
+    assert shortcut_label() in bar.field.toolTip()
+    assert bar.field.focusPolicy() == Qt.FocusPolicy.NoFocus
+    qtbot.mouseClick(bar.field, Qt.MouseButton.LeftButton)
+    assert palette.is_open()
+    field_bottom = bar.field.mapTo(window, bar.field.rect().bottomLeft()).y()
+    assert palette.card_geometry().top() == field_bottom + 6
+    bar.release()
+    bar.release()  # idempotent
+
+
 def test_overlay_tab_and_escape(qtbot, palette_window):
     _window, palette = palette_window
     palette.open_palette()
@@ -336,6 +377,19 @@ def test_main_app_palette_menu_entry(main_app):
     assert action in view_action.menu().actions()
     action.trigger()
     assert main_app.command_palette.is_open()
+
+
+def test_main_app_palette_bar_sits_on_top_and_opens_the_palette(qtbot, main_app):
+    bar = main_app.command_palette_bar
+    assert bar.isVisible()
+    assert (
+        bar.mapTo(main_app, bar.rect().topLeft()).y()
+        <= main_app.sidebar.mapTo(main_app, main_app.sidebar.rect().topLeft()).y()
+    )
+    qtbot.mouseClick(bar.field, Qt.MouseButton.LeftButton)
+    assert main_app.command_palette.is_open()
+    field_bottom = bar.field.mapTo(main_app, bar.field.rect().bottomLeft()).y()
+    assert main_app.command_palette.card_geometry().top() == field_bottom + 6
 
 
 def test_main_app_commands(main_app):

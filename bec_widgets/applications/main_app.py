@@ -5,7 +5,7 @@ from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from qtpy.QtCore import QTimer
 from qtpy.QtGui import QAction  # type: ignore
-from qtpy.QtWidgets import QApplication, QHBoxLayout, QStackedWidget, QWidget
+from qtpy.QtWidgets import QApplication, QHBoxLayout, QStackedWidget, QVBoxLayout, QWidget
 
 from bec_widgets.applications.navigation_centre.reveal_animator import ANIMATION_DURATION
 from bec_widgets.applications.navigation_centre.side_bar import SideBar
@@ -28,6 +28,7 @@ from bec_widgets.utils.screen_utils import (
 from bec_widgets.widgets.containers.dock_area.profile_utils import is_experimental_features_enabled
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 from bec_widgets.widgets.utility.command_palette.command_palette import SHORTCUTS, CommandPalette
+from bec_widgets.widgets.utility.command_palette.command_palette_bar import CommandPaletteBar
 from bec_widgets.widgets.utility.command_palette.palette_sources import (
     DeviceCommandSource,
     main_app_commands,
@@ -54,16 +55,22 @@ class BECMainApp(BECMainWindow):
         self._show_examples = bool(show_examples)
         self._launcher_ready_notified = False
 
-        # --- Compose central UI (sidebar + stack)
+        # --- Compose central UI (command palette bar over sidebar + stack)
+        self.command_palette_bar = CommandPaletteBar(self)
         self.sidebar = SideBar(parent=self, anim_duration=anim_duration)
         self.stack = QStackedWidget(self)
 
         container = QWidget(self)
-        layout = QHBoxLayout(container)
+        column = QVBoxLayout(container)
+        column.setContentsMargins(0, 0, 0, 0)
+        column.setSpacing(0)
+        column.addWidget(self.command_palette_bar, 0)
+        layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         layout.addWidget(self.sidebar, 0)
         layout.addWidget(self.stack, 1)
+        column.addLayout(layout, 1)
         self.setCentralWidget(container)
 
         # Mapping for view switching
@@ -456,6 +463,8 @@ class BECMainApp(BECMainWindow):
         self._device_command_source.changed.connect(self.command_palette.controller.refresh_live)
         self.command_palette.closed.connect(self._device_command_source.release)
         self._command_palette_action.triggered.connect(self.command_palette.toggle)
+        self.command_palette.set_anchor(self.command_palette_bar.field)
+        self.command_palette_bar.field.clicked.connect(self.command_palette.toggle)
         for action in self.menuBar().actions():
             if action.text() == "View" and action.menu() is not None:
                 view_menu = action.menu()
@@ -479,6 +488,7 @@ class BECMainApp(BECMainWindow):
     def cleanup(self):
         self._device_command_source.release()
         self.command_palette.cleanup()
+        self.command_palette_bar.release()
         for view_id, idx in self._view_index.items():
             view = self.stack.widget(idx)
             view.close()
