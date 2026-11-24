@@ -151,7 +151,10 @@ def test_units_match_aliases():
 
 
 @pytest.fixture
-def source(mocked_client):
+def source(mocked_client, monkeypatch):
+    # other tests change the shared fake samx readback; pin the value these rows expect
+    samx = mocked_client.device_manager.devices["samx"]
+    monkeypatch.setitem(samx.signals["samx"], "value", 2.0)
     widget = SimpleNamespace(
         client=mocked_client, submit_task=mock.MagicMock(), bec_dispatcher=mock.MagicMock()
     )
