@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.45.1 (2026-11-24)
+
+### Bug Fixes
+
+- **main_app**: Switch views by their registered ids so the startup view is checked
+  ([`be557f2`](https://github.com/bec-project/bec_widgets/commit/be557f2c39977459c2a036b52b3f846f5b139d34))
+
+
 ## v3.45.0 (2026-11-24)
 
 ### Features
