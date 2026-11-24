@@ -488,7 +488,9 @@ class ScanControl(BECWidget, QWidget):
         """
         if not self.last_scan_button.isEnabled():
             return
-        # A scan name that is typed but not confirmed yet must not be fetched.
+        # Like Start: confirm a typed scan name (or fall back to the selected scan) first, also
+        # when the click did not take the focus from the selector, e.g. with its popup open.
+        self.validate_scan_selection()
         current_scan = self.current_scan
         if not current_scan:
             # e.g. an empty selector after a filter change - nothing to restore
