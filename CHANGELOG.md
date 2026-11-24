@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v3.45.0 (2026-11-24)
+
+### Features
+
+- **scan_status_item**: Double-click on the scan pill docks the scan queue
+  ([`2661cdc`](https://github.com/bec-project/bec_widgets/commit/2661cdca3ff32e9aaaacdfc3dd2bf5505db424a5))
+
+- **status_pill**: Open status bar pill cards on click instead of hover
+  ([`ed679df`](https://github.com/bec-project/bec_widgets/commit/ed679df799f5d48168895afee0785c9fbb6bfe45))
+
+
 ## v3.44.1 (2026-11-17)
 
 ### Bug Fixes
