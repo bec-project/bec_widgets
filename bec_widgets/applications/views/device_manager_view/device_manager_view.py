@@ -63,7 +63,7 @@ class DeviceManagerView(ViewBase):
 
         # Register Load Current Config button
         def get_load_current():
-            main_app.set_current("device_manager")
+            main_app.set_current(self.view_id)
             if dm_widget._initialized is True:
                 return (None, None)
             return (dm_widget.button_load_current_config, None)
@@ -77,7 +77,7 @@ class DeviceManagerView(ViewBase):
 
         # Register Load Config From File button
         def get_load_file():
-            main_app.set_current("device_manager")
+            main_app.set_current(self.view_id)
             if dm_widget._initialized is True:
                 return (None, None)
             return (dm_widget.button_load_config_from_file, None)
@@ -92,7 +92,7 @@ class DeviceManagerView(ViewBase):
         ## Register steps for the initialized state
         # Register main device table
         def get_device_table():
-            main_app.set_current("device_manager")
+            main_app.set_current(self.view_id)
             if dm_widget._initialized is False:
                 return (None, None)
             return (dm_widget.device_manager_display.device_table_view, None)
@@ -120,7 +120,7 @@ class DeviceManagerView(ViewBase):
 
         # We have at least one device registered
         def get_device_table_row(column: int):
-            main_app.set_current("device_manager")
+            main_app.set_current(self.view_id)
             if dm_widget._initialized is False:
                 return (None, None)
             table = dm_widget.device_manager_display.device_table_view.table
