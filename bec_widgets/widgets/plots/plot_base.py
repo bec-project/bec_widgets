@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 from enum import Enum
+from numbers import Integral
 from typing import Literal, TypeAlias
 
 import numpy as np
@@ -71,10 +72,6 @@ class UIMode(Enum):
     NONE = 0
     POPUP = 1
     SIDE = 2
-
-
-#: The states of a scan item in which its scan no longer runs.
-ENDED_SCAN_STATES = frozenset({"closed", "aborted", "halted", "user_completed"})
 
 
 class PlotBase(BECWidget, QWidget):
@@ -486,22 +483,58 @@ class PlotBase(BECWidget, QWidget):
             if tuple(key) not in unbound
         }
 
+    def _scan_number_and_state(self, scan_id: str | None) -> tuple[int | None, bool]:
+        """Scan number of ``scan_id`` and whether the scan still runs (no file I/O)."""
+        if not scan_id:
+            return None, False
+        item = self.client.queue.scan_storage.find_scan_by_ID(scan_id)
+        if item is not None:
+            number = item.scan_number
+            running = item.status == "open" and item.status_message is not None
+        else:
+            message = self.client.history.get_message(scan_id)
+            number, running = getattr(message, "scan_number", None), False
+        return (int(number) if isinstance(number, Integral) else None), running
+
+    def _find_scan_item(self, scan_id: str) -> ScanInfoSource:
+        """The item of a scan: from the scan storage, or from the history once it is stored."""
+        item = self.client.queue.scan_storage.find_scan_by_ID(scan_id)
+        return item if item is not None else self.client.history.get_by_scan_id(scan_id)
+
     def _is_late_live_update(self, update: SubscriptionUpdate) -> bool:
         """
-        Whether a live update still shows the scan before the one this plot moved on to.
+        Whether a live update shows an older scan than the one this plot is on.
 
         The scan status moves the plot to a new scan. The live subscription follows on its
-        own, and can deliver a last snapshot of the scan before in between. Once the scan
-        of the plot is known to have ended (a stored scan, or a live one that is closed),
-        the live binding shows the most recent scan: that is not late.
+        own, and can deliver a snapshot of an earlier scan in between. The later scan is the
+        one with the higher scan number; a scan that has none yet (its status came before
+        its scan item) is the newest.
         """
         if None in (self.scan_id, update.scan_id) or update.scan_id == self.scan_id:
             return False
-        item = self.scan_item
-        ended = isinstance(item, ScanDataContainer) or (
-            getattr(item, "status", None) in ENDED_SCAN_STATES
-        )
-        return not ended
+        own = self._scan_number_and_state(self.scan_id)[0]
+        other = self._scan_number_and_state(update.scan_id)[0]
+        return own is None or other is None or other < own
+
+    def _take_live_update(self, update: SubscriptionUpdate) -> bool:
+        """
+        Whether a live update is to be drawn; the plot moves to a newer scan first.
+
+        An update of an older scan than the plot is on is dropped. For one of a newer scan
+        (the subscription is ahead of the scan status) the plot moves to that scan, so
+        that what it shows and the scan it shows it for change together.
+        """
+        if update.scan_id in (None, self.scan_id):
+            return True
+        if self._is_late_live_update(update):
+            return False
+        self._move_to_scan(update.scan_id)
+        return True
+
+    def _move_to_scan(self, scan_id: str) -> None:
+        """Make ``scan_id`` the scan of the plot; a plot adds what a new scan means to it."""
+        self.scan_id = scan_id
+        self.scan_item = self._find_scan_item(scan_id)
 
     def _alignment_binding_changed(self, update: SubscriptionUpdate) -> bool:
         """Whether ``update`` comes from a binding the alignment was not checked against."""

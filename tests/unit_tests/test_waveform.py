@@ -2045,8 +2045,8 @@ def test_late_update_of_the_scan_before_does_not_take_the_plot_back(
 ):
     """
     The live subscription can deliver a last snapshot of the scan before, after the scan
-    status moved the plot on. The plot must not adopt that scan again: it would then drop
-    every update of the running one.
+    status moved the plot on. The plot must not adopt that scan again, whatever state its
+    own scan is in: running, paused or ended. It would show an older scan as the live one.
     """
     _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
@@ -2068,10 +2068,12 @@ def test_late_update_of_the_scan_before_does_not_take_the_plot_back(
     _deliver_sync(wf, "scan-B")
     np.testing.assert_array_equal(curve.get_data()[1], [5, 6, 7])
 
-    # Once the scan has ended, the live binding may show another scan again (idle).
-    wf.on_scan_status({"scan_id": "scan-B", "status": "closed"}, {})
-    wf._on_data_update(late)
-    assert wf.scan_id == "previous"
+    for status in ("paused", "open", "closed", "aborted", "halted", "user_completed"):
+        item.status = status
+        wf.on_scan_status({"scan_id": "scan-B", "status": status}, {})
+        wf._on_data_update(late)
+        assert wf.scan_id == "scan-B" and wf.scan_item is item
+        np.testing.assert_array_equal(curve.get_data()[1], [5, 6, 7])
 
 
 def test_async_row_is_paired_with_the_x_row_of_the_same_acquisition(
@@ -2117,7 +2119,12 @@ def test_on_data_update_uses_backend_reconstruction_across_rebindings(
     _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     c = wf.plot(arg1="async_device", label="async_device-async_device")
-    wf.scan_id = None  # render updates of any scan
+    wf.scan_id = None  # the plot takes the scan of the first update
+    scans = {
+        "scan_1": _status_item("scan_1", 1, "closed"),
+        "scan_2": _status_item("scan_2", 2, "closed"),
+    }
+    monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", scans.get)
     wf.x_axis_mode["name"] = "index"
 
     steps = [
@@ -3769,10 +3776,11 @@ def test_idle_live_binding_adopts_the_most_recent_scan(qtbot, mocked_client, mon
     instead of dropping the data (e.g. after the curve dialog rebuilt the subscription)."""
     _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
-    finished = _status_item("s809", 809, "closed")
-    monkeypatch.setattr(
-        wf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: {"s809": finished}.get(scan_id)
-    )
+    scans = {
+        "s808": _status_item("s808", 808, "closed"),
+        "s809": _status_item("s809", 809, "closed"),
+    }
+    monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", scans.get)
     curve = wf.plot(device_y="bpm4i", signal_y="bpm4i")
     wf.x_mode = "index"
     wf._data_api_scan = "live"
@@ -3780,7 +3788,7 @@ def test_idle_live_binding_adopts_the_most_recent_scan(qtbot, mocked_client, mon
 
     wf._on_data_update(_make_update([_monitored_source("bpm4i", (1.0, 2.0, 3.0))], "s809"))
 
-    assert wf.scan_id == "s809"
+    assert wf.scan_id == "s809" and wf.scan_item is scans["s809"]
     _, y_data = curve.get_data()
     np.testing.assert_array_equal(y_data, [1.0, 2.0, 3.0])
     assert _legend_text(wf, curve) == "bpm4i-bpm4i&nbsp;<b>LIVE</b>&nbsp;809"

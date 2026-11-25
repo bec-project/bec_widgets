@@ -2452,19 +2452,6 @@ class Waveform(PlotBase):
             return parent is not None and parent.config.source == "device"
         return False
 
-    def _scan_number_and_state(self, scan_id: str | None) -> tuple[int | None, bool]:
-        """Scan number of ``scan_id`` and whether the scan still runs (no file I/O)."""
-        if not scan_id:
-            return None, False
-        item = self.client.queue.scan_storage.find_scan_by_ID(scan_id)
-        if item is not None:
-            number = item.scan_number
-            running = item.status == "open" and item.status_message is not None
-        else:
-            message = self.client.history.get_message(scan_id)
-            number, running = getattr(message, "scan_number", None), False
-        return (int(number) if isinstance(number, Integral) else None), running
-
     def _refresh_live_legend(self, scan_id: str | None = None, running: bool | None = None):
         """
         Show ``LIVE <scan number>`` after the name of every live curve in the legend.
@@ -2508,9 +2495,7 @@ class Waveform(PlotBase):
         """Make the scan the live binding shows (the most recent one while idle) current."""
         self.old_scan_id = self.scan_id
         self.scan_id = scan_id
-        scan_item = self.client.queue.scan_storage.find_scan_by_ID(scan_id)
-        if scan_item is None:
-            scan_item = self.client.history.get_by_scan_id(scan_id)
+        scan_item = self._find_scan_item(scan_id)
         if scan_item is None:
             return
         self.scan_item = scan_item
@@ -2524,23 +2509,14 @@ class Waveform(PlotBase):
             self._data_api_scan == ScanTarget.LIVE
             and update.scan_id != self.scan_id
             and not self._scan_number_and_state(update.scan_id)[1]
-            and not self._own_scan_runs()
+            and not self._is_late_live_update(update)
         ):
-            # Idle: the live binding shows the most recent (finished) scan until the
-            # next one opens. A newly opened scan is taken over by on_scan_status. While
-            # the scan of this plot runs, a snapshot of another scan is a late one of the
-            # scan before: the caller drops it.
+            # Idle: take the most recent finished scan. A running one is left to on_scan_status.
             self._adopt_live_scan(update.scan_id)
         if self.scan_item is None and update.scan_id is not None and update.scan_id == self.scan_id:
             self._take_late_scan_item()
         if update.scan_id == self.scan_id and update.scan_id != self._live_legend_scan_id:
             self._refresh_live_legend(update.scan_id)
-
-    def _own_scan_runs(self) -> bool:
-        """Whether the scan this plot shows still runs, by its last status or the scan storage."""
-        if self._live_legend_scan_id == self.scan_id and self._live_legend_running is not None:
-            return self._live_legend_running
-        return self._scan_number_and_state(self.scan_id)[1]
 
     def _take_late_scan_item(self) -> None:
         """Take the scan item of the current scan when the scan status came before it existed."""

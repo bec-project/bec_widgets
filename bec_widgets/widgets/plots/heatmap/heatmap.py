@@ -726,18 +726,21 @@ class Heatmap(ImageBase):
         if current_scan_id is None:
             return
         if current_scan_id != self.scan_id:
-            self._invalidate_interpolation_generation()  # Invalidate any pending interpolation work when a new scan starts
-            self.reset()
-            self.new_scan.emit()
-            self.new_scan_id.emit(current_scan_id)
-            self.old_scan_id = self.scan_id
-            self.scan_id = current_scan_id
-            self.scan_item = self.queue.scan_storage.find_scan_by_ID(self.scan_id)  # type: ignore
+            self._move_to_scan(current_scan_id)
             if self._data_subscription is None or self._data_subscription_scope != ScanTarget.LIVE:
                 # The widget started idle and bound to the latest finished
                 # scan (or has no subscription yet); a scan is running now, so
                 # switch to a live-follow subscription.
                 self._setup_data_api_subscription()
+
+    def _move_to_scan(self, scan_id: str) -> None:
+        """Make ``scan_id`` the scan of the plot: the image and the scan it is drawn for."""
+        self._invalidate_interpolation_generation()  # pending work is of the scan before
+        self.reset()
+        self.new_scan.emit()
+        self.new_scan_id.emit(scan_id)
+        self.old_scan_id = self.scan_id
+        super()._move_to_scan(scan_id)
 
     @SafeSlot(object)
     def _on_data_update(self, update) -> None:
@@ -752,8 +755,8 @@ class Heatmap(ImageBase):
             return
         if self._history_scan_id is not None and update.scan_id != self._history_scan_id:
             return
-        if self._data_subscription_scope == ScanTarget.LIVE and self._is_late_live_update(update):
-            return  # the subscription has not followed to the scan this plot shows yet
+        if self._data_subscription_scope == ScanTarget.LIVE and not self._take_live_update(update):
+            return  # an older scan than the one this plot is on
         if self._alignment_binding_changed(update):
             self._warn_if_unaligned(list(dict.fromkeys(sources)), self._data_subscription_scope)
         columns = update.aligned()

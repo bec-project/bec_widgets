@@ -1,4 +1,3 @@
-from types import SimpleNamespace
 from unittest import mock
 
 import numpy as np
@@ -225,45 +224,92 @@ def test_heatmap_forgets_its_columns_when_a_new_live_scan_starts(heatmap_widget,
     render.assert_not_called()
 
 
-def test_heatmap_ignores_a_snapshot_of_the_scan_before(heatmap_widget, fake_bridges):
-    """
-    After the scan status moved the widget on, a snapshot of the still-bound scan before
-    must neither be drawn nor cached for a later redraw.
-    """
+def _xyz_update(scan_id):
+    """One live update of ``samx``, ``samy`` and ``bpm4i`` for ``scan_id``."""
+    columns = {"samx": (0.0, 1.0), "samy": (0.0, 1.0), "bpm4i": (5.0, 6.0)}
+    return SubscriptionUpdate(
+        scan_id=scan_id,
+        reason="live",
+        sources={
+            (dev, dev): SourceData(
+                device=dev,
+                entry=dev,
+                kind="monitored",
+                ordinals=(0, 1),
+                values=values,
+                timestamps=(1.0, 2.0),
+                complete=True,
+            )
+            for dev, values in columns.items()
+        },
+        aligned_ordinals=(0, 1),
+        complete=True,
+    )
 
-    def update(scan_id):
-        columns = {"samx": (0.0, 1.0), "samy": (0.0, 1.0), "bpm4i": (5.0, 6.0)}
-        return SubscriptionUpdate(
-            scan_id=scan_id,
-            reason="live",
-            sources={
-                (dev, dev): SourceData(
-                    device=dev,
-                    entry=dev,
-                    kind="monitored",
-                    ordinals=(0, 1),
-                    values=values,
-                    timestamps=(1.0, 2.0),
-                    complete=True,
-                )
-                for dev, values in columns.items()
-            },
-            aligned_ordinals=(0, 1),
-            complete=True,
-        )
 
+def _serve_scans(widget, monkeypatch, *items):
+    """Let the scan storage of the widget find ``items`` by their scan id."""
+    by_id = {item.scan_id: item for item in items}
+    monkeypatch.setattr(widget.queue.scan_storage, "find_scan_by_ID", by_id.get)
+
+
+def test_heatmap_drops_snapshots_of_older_scans(heatmap_widget, fake_bridges, monkeypatch):
+    """
+    After the scan status moved the widget on, a snapshot of the scan before is neither
+    drawn nor cached for a later redraw, whatever state the new scan is in: running,
+    paused or ended. The image stays the one of the scan the widget is on.
+    """
     heatmap_widget.plot(device_x="samx", device_y="samy", device_z="bpm4i")
-    heatmap_widget.scan_id, heatmap_widget.scan_item = "scan-2", SimpleNamespace(status="open")
+    first = create_dummy_scan_item("scan-1", 1, "line_scan")
+    second = create_dummy_scan_item("scan-2", 2, "line_scan")
+    _serve_scans(heatmap_widget, monkeypatch, first, second)
+    heatmap_widget.on_scan_status({"scan_id": "scan-1", "status": "open"}, {})
+    heatmap_widget.on_scan_status({"scan_id": "scan-2", "status": "open"}, {})
+
     with mock.patch.object(heatmap_widget, "_render_columns") as render:
-        heatmap_widget._on_data_update(update("scan-1"))
+        for status in ("open", "paused", "closed", "aborted", "halted", "user_completed"):
+            second.status = status
+            heatmap_widget.on_scan_status({"scan_id": "scan-2", "status": status}, {})
+            heatmap_widget._on_data_update(_xyz_update("scan-1"))
+            assert heatmap_widget.scan_id == "scan-2" and heatmap_widget.scan_item is second
         render.assert_not_called()
-        heatmap_widget._on_data_update(update("scan-2"))
+        heatmap_widget._on_data_update(_xyz_update("scan-2"))
         render.assert_called_once()
-    # Once its scan has ended, the live binding shows the most recent scan: that is drawn.
-    heatmap_widget.scan_item = SimpleNamespace(status="closed")
-    with mock.patch.object(heatmap_widget, "_render_columns") as render:
-        heatmap_widget._on_data_update(update("scan-3"))
+
+        # The status of a scan can come before its item exists: that scan is the newest.
+        heatmap_widget.on_scan_status({"scan_id": "scan-3", "status": "open"}, {})
+        heatmap_widget._on_data_update(_xyz_update("scan-2"))
         render.assert_called_once()
+    assert heatmap_widget.scan_id == "scan-3"
+
+
+def test_heatmap_moves_to_a_newer_scan_with_its_data(heatmap_widget, fake_bridges, monkeypatch):
+    """
+    The live subscription can be ahead of the scan status. The widget moves to the newer
+    scan before it draws, so the image is never drawn for the scan before; the status that
+    follows changes nothing, and a late snapshot of the scan before is dropped.
+    """
+    heatmap_widget.plot(device_x="samx", device_y="samy", device_z="bpm4i")
+    first = create_dummy_scan_item("scan-1", 1, "line_scan")
+    second = create_dummy_scan_item("scan-2", 2, "line_scan")
+    _serve_scans(heatmap_widget, monkeypatch, first, second)
+    heatmap_widget.on_scan_status({"scan_id": "scan-1", "status": "open"}, {})
+    first.status = "closed"
+    heatmap_widget.on_scan_status({"scan_id": "scan-1", "status": "closed"}, {})
+
+    drawn_for = []
+    monkeypatch.setattr(
+        heatmap_widget,
+        "_render_columns",
+        lambda *columns: drawn_for.append(heatmap_widget.scan_item),
+    )
+    heatmap_widget._on_data_update(_xyz_update("scan-2"))
+    assert drawn_for == [second] and heatmap_widget.scan_id == "scan-2"
+    with mock.patch.object(heatmap_widget, "reset") as reset:
+        heatmap_widget.on_scan_status({"scan_id": "scan-2", "status": "open"}, {})
+    reset.assert_not_called()
+    heatmap_widget._on_data_update(_xyz_update("scan-1"))
+    assert drawn_for == [second] and heatmap_widget.scan_id == "scan-2"
 
 
 def test_heatmap_get_image_data_missing_data(heatmap_widget):
@@ -635,7 +681,7 @@ def test_heatmap_renders_columns_from_data_api_update(heatmap_widget):
         color_map="viridis",
     )
     heatmap_widget._data_subscription = _FakeBridge(heatmap_widget.client, [("samx", "samx")])
-    heatmap_widget.scan_item = create_dummy_scan_item()
+    heatmap_widget.scan_id, heatmap_widget.scan_item = "123", create_dummy_scan_item()
     x_levels = np.linspace(-5, 5, 10).tolist()
     y_levels = np.linspace(-5, 5, 10).tolist()
     heatmap_widget.scan_item.status_message = messages.ScanStatusMessage(

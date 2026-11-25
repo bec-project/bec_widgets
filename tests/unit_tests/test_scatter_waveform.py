@@ -1,4 +1,3 @@
-from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -111,42 +110,79 @@ def _make_update(scan_id="dummy"):
     )
 
 
-def test_scatter_waveform_ignores_a_snapshot_of_the_scan_before(qtbot, mocked_client, monkeypatch):
+def _serve_scans(widget, monkeypatch, *items):
+    """Let the scan storage of the widget find ``items`` by their scan id."""
+    by_id = {item.scan_id: item for item in items}
+    monkeypatch.setattr(widget.queue.scan_storage, "find_scan_by_ID", by_id.get)
+
+
+def test_scatter_waveform_drops_snapshots_of_older_scans(qtbot, mocked_client, monkeypatch):
     """
-    The widget moves on to a new scan with its scan status. Until the live subscription
-    has followed, its snapshots are still those of the scan before: they are not drawn.
+    The scan status moves the widget to a new scan. The live subscription follows on its
+    own and can still deliver the scan before. Whatever state the new scan is in (running,
+    paused or ended), that snapshot is not drawn and the widget stays on its scan.
     """
     _fake_bridge_factory(monkeypatch)
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
     swf.plot("samx", "samy", "bpm4i", label="test_curve")
-    swf.scan_id, swf.scan_item = "scan-2", SimpleNamespace(status="open")
+    first = create_dummy_scan_item("scan-1", 1, "line_scan")
+    second = create_dummy_scan_item("scan-2", 2, "line_scan")
+    _serve_scans(swf, monkeypatch, first, second)
+    swf.on_scan_status({"scan_id": "scan-1", "status": "open"}, {})
+    swf.on_scan_status({"scan_id": "scan-2", "status": "open"}, {})
 
-    swf._on_data_update(_make_update("scan-1"))
-    assert swf.main_curve.getData()[0] is None
-
-    swf.scan_item = None  # the scan status came before the scan item existed
-    swf._on_data_update(_make_update("scan-1"))
-    assert swf.main_curve.getData()[0] is None
+    for status in ("open", "paused", "closed", "aborted", "halted", "user_completed"):
+        second.status = status
+        swf.on_scan_status({"scan_id": "scan-2", "status": status}, {})
+        swf._on_data_update(_make_update("scan-1"))
+        assert swf.scan_id == "scan-2" and swf.scan_item is second
+        assert swf.main_curve.getData()[0] is None
 
     swf._on_data_update(_make_update("scan-2"))
     assert len(swf.main_curve.getData()[0]) == 3
 
+    # The status of a scan can come before its item exists: that scan is the newest.
+    swf.on_scan_status({"scan_id": "scan-3", "status": "open"}, {})
+    with patch.object(swf.main_curve, "set_data") as set_data:
+        swf._on_data_update(_make_update("scan-2"))
+    set_data.assert_not_called()
+    assert swf.scan_id == "scan-3"
 
-def test_scatter_waveform_shows_the_latest_scan_while_idle(qtbot, mocked_client, monkeypatch):
+
+def test_scatter_waveform_moves_to_a_newer_scan_with_its_data(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
     """
-    Once the scan of the widget has ended, the live subscription shows the most recent
-    scan. That can be another one than the widget last looked at (a history scan was
-    selected before): it is drawn, not taken for a late snapshot.
+    The live subscription can be ahead of the widget: it shows the most recent scan after
+    an older one was selected from the history, and a new scan before its status arrived.
+    The widget moves to that scan first, so the points and the scan info belong together.
     """
     _fake_bridge_factory(monkeypatch)
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+    inject_scan_history(swf, scan_history_factory, ("older", 7), ("latest", 9))
+    _serve_scans(swf, monkeypatch)
     swf.plot("samx", "samy", "bpm4i", label="test_curve")
-    # A live scan that is closed, or a scan taken from the history.
-    for ended in (SimpleNamespace(status="closed"), MagicMock(spec=ScanDataContainer)):
-        swf.main_curve.clear()
-        swf.scan_id, swf.scan_item = "older-scan", ended
-        swf._on_data_update(_make_update("latest-scan"))
-        assert len(swf.main_curve.getData()[0]) == 3
+    swf.update_with_scan_history(scan_id="older")
+    swf.plot("samx", "samy", "bpm4i", label="test_curve")  # back to the live binding
+    assert swf.scan_id == "older"
+
+    swf._on_data_update(_make_update("latest"))
+    assert swf.scan_id == "latest" and isinstance(swf.scan_item, ScanDataContainer)
+    assert [label.text for _, label in swf.info_label.items][0] == "Scan: 9 (history)"
+    assert len(swf.main_curve.getData()[0]) == 3
+
+    # A new scan whose data is here before its status: the status then changes nothing.
+    running = create_dummy_scan_item("running", 10, "line_scan")
+    _serve_scans(swf, monkeypatch, running)
+    swf._on_data_update(_make_update("running"))
+    assert swf.scan_id == "running" and swf.scan_item is running
+    with patch.object(swf, "reset") as reset:
+        swf.on_scan_status({"scan_id": "running", "status": "open"}, {})
+    reset.assert_not_called()
+
+    # The scan before is older now: its late snapshot does not take the widget back.
+    swf._on_data_update(_make_update("latest"))
+    assert swf.scan_id == "running"
 
 
 def test_scatter_waveform_update_with_scan_history(
