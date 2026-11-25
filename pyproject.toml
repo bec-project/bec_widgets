@@ -26,7 +26,7 @@ dependencies = [
   "pyqtgraph==0.14.0",
   "python-slugify>=8,<10",
   "qtconsole~=5.5, >=5.5.1",       # needed for jupyter console
-  "qtmonaco~=0.8, >=0.8.1",
+  "qtmonaco~=0.12, >=0.12.1",
   "qtpy~=2.4",
   "thefuzz~=0.22",
   "typer~=0.15",
