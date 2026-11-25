@@ -1039,6 +1039,23 @@ def test_waterfall_of_a_late_subscriber_shows_the_stored_series_as_one_row(
     np.testing.assert_array_equal(view.main_image.raw_data, samples[np.newaxis, :])
 
 
+def test_image_draws_the_last_frame_of_a_stored_stack(qtbot, mocked_client, monkeypatch):
+    """
+    A stored stack of frames is read from its end (the subscription keeps two frames): the
+    points are frames again, numbered where they are in the file, and the image is the last.
+    """
+    _fake_bridge_factory(monkeypatch)
+    view = create_widget(qtbot, Image, client=mocked_client)
+    _set_signal_config(
+        mocked_client, "eiger", "img", signal_class="AsyncSignal", ndim=2, obj_name="async_obj"
+    )
+    view.image(device="eiger", signal="img")
+    stack = np.arange(5 * 3 * 4, dtype=float).reshape(5, 3, 4)
+    tail = _make_source("eiger", "async_obj", stack[3:], ordinals=(3, 4), as_numpy=True)
+    view._on_data_update(_make_update(tail, scan_id="scan_1", reason="history"))
+    np.testing.assert_array_equal(view.main_image.raw_data, stack[4])
+
+
 def test_image_draws_a_stored_frame_whole(qtbot, mocked_client, monkeypatch):
     """
     A 2-D ``replace`` signal is one frame per point while the scan runs. The scan file
