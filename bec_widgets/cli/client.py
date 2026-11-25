@@ -1039,6 +1039,12 @@ class Curve(RPCBase):
     def get_data(self) -> "tuple[np.ndarray | None, np.ndarray | None]":
         """
         Get the data of the curve.
+
+        A curve of more than a million points that is held whole is drawn reduced, and
+        this returns the whole series: an export or a fit sees every sample at its own x.
+        A history curve that is loaded for the view (a stored column above the view
+        limit) holds an overview and the rows in view, and returns those.
+
         Returns:
             tuple[np.ndarray,np.ndarray]: X and Y data of the curve.
         """
