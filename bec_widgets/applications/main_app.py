@@ -5,7 +5,7 @@ from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from qtpy.QtCore import QTimer
 from qtpy.QtGui import QAction  # type: ignore
-from qtpy.QtWidgets import QApplication, QHBoxLayout, QStackedWidget, QWidget
+from qtpy.QtWidgets import QApplication, QHBoxLayout, QStackedWidget, QVBoxLayout, QWidget
 
 from bec_widgets.applications.navigation_centre.reveal_animator import ANIMATION_DURATION
 from bec_widgets.applications.navigation_centre.side_bar import SideBar
@@ -28,6 +28,13 @@ from bec_widgets.utils.screen_utils import (
 )
 from bec_widgets.widgets.containers.dock_area.profile_utils import is_experimental_features_enabled
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
+from bec_widgets.widgets.utility.command_palette.command_palette import SHORTCUTS, CommandPalette
+from bec_widgets.widgets.utility.command_palette.command_palette_bar import CommandPaletteBar
+from bec_widgets.widgets.utility.command_palette.palette_sources import (
+    DeviceCommandSource,
+    main_app_commands,
+    menu_commands,
+)
 
 startup_profiler.mark("module imports")
 
@@ -49,16 +56,22 @@ class BECMainApp(BECMainWindow):
         self._show_examples = bool(show_examples)
         self._launcher_ready_notified = False
 
-        # --- Compose central UI (sidebar + stack)
+        # --- Compose central UI (command palette bar over sidebar + stack)
+        self.command_palette_bar = CommandPaletteBar(self)
         self.sidebar = SideBar(parent=self, anim_duration=anim_duration)
         self.stack = QStackedWidget(self)
 
         container = QWidget(self)
-        layout = QHBoxLayout(container)
+        column = QVBoxLayout(container)
+        column.setContentsMargins(0, 0, 0, 0)
+        column.setSpacing(0)
+        column.addWidget(self.command_palette_bar, 0)
+        layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         layout.addWidget(self.sidebar, 0)
         layout.addWidget(self.stack, 1)
+        column.addLayout(layout, 1)
         self.setCentralWidget(container)
 
         # Mapping for view switching
@@ -73,6 +86,9 @@ class BECMainApp(BECMainWindow):
         self.guided_tour = GuidedTour(self)
         self._setup_guided_tour()
         startup_profiler.mark("guided tour")
+
+        self._setup_command_palette()
+        startup_profiler.mark("command palette")
 
         self.bec_dispatcher.connect_slot(self._on_client_restart, MessageEndpoints.client_restart())
 
@@ -430,7 +446,50 @@ class BECMainApp(BECMainWindow):
             tour_action.setShortcut("F1")  # Add keyboard shortcut
             help_menu.addAction(tour_action)
 
+    def _setup_command_palette(self):
+        """Create the Ctrl+K command palette and its entry in the View menu."""
+        self._command_palette_action = QAction("Command Palette…", self)
+        self._command_palette_action.setIcon(material_icon("search"))
+        self._command_palette_action.setShortcuts(list(SHORTCUTS))
+        self.command_palette = CommandPalette(
+            self,
+            sources=[
+                lambda: main_app_commands(self),
+                lambda: menu_commands(self.menuBar(), skip=[self._command_palette_action]),
+            ],
+        )
+        # typed device commands such as "samx 10" or "stop samx"
+        self._device_command_source = DeviceCommandSource(self, self)
+        self.command_palette.controller.add_query_source(self._device_command_source)
+        self._device_command_source.changed.connect(self.command_palette.controller.refresh_live)
+        self.command_palette.closed.connect(self._device_command_source.release)
+        self._command_palette_action.triggered.connect(self.command_palette.toggle)
+        self.command_palette.set_anchor(self.command_palette_bar.field)
+        self.command_palette_bar.field.clicked.connect(self.command_palette.toggle)
+        for action in self.menuBar().actions():
+            if action.text() == "View" and action.menu() is not None:
+                view_menu = action.menu()
+                first = view_menu.actions()[0] if view_menu.actions() else None
+                view_menu.insertAction(first, self._command_palette_action)
+                view_menu.insertSeparator(first)
+                break
+        else:
+            self.addAction(self._command_palette_action)
+
+    def open_command_palette(self, text: str = "") -> None:
+        """
+        Open the command palette.
+
+        Args:
+            text(str): Initial search text; start it with ``>``, ``+``, ``@`` or ``#`` to search
+                only actions, widgets, devices or workspaces.
+        """
+        self.command_palette.open_palette(text)
+
     def cleanup(self):
+        self._device_command_source.release()
+        self.command_palette.cleanup()
+        self.command_palette_bar.release()
         for view_id, idx in self._view_index.items():
             view = self.stack.widget(idx)
             view.close()

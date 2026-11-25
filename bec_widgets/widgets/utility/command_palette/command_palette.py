@@ -1,0 +1,199 @@
+"""Ctrl+K command palette overlay for BEC windows.
+
+The overlay dims the window and shows a search card (:mod:`command_palette_qwidget`) near its
+top; :class:`CommandPaletteController` holds the search state behind it.
+
+Typical use::
+
+    palette = CommandPalette(window, sources=[lambda: my_commands])
+    palette.install_shortcuts()
+"""
+
+from __future__ import annotations
+
+from typing import Iterable
+
+from qtpy.QtCore import QEvent, QObject, QRect, QRectF, Qt, Signal
+from qtpy.QtGui import QColor, QKeySequence, QPainter, QShortcut
+from qtpy.QtWidgets import QApplication, QWidget
+
+from bec_widgets.widgets.utility.command_palette.command_palette_qwidget import PaletteCardWidget
+from bec_widgets.widgets.utility.command_palette.palette_core import (
+    CommandPaletteController,
+    CommandSource,
+)
+from bec_widgets.widgets.utility.command_palette.palette_theme import ThemeTokens
+
+SHORTCUTS = ("Ctrl+K", "Ctrl+Shift+P")
+CARD_WIDTH = 640
+CARD_HEIGHT = 440
+SHADOW_LAYERS = 6
+
+
+class CommandPalette(QWidget):
+    """Window overlay hosting the command palette card.
+
+    Args:
+        window(QWidget): Window to cover, usually the main window.
+        sources(Iterable[CommandSource]): Command sources, called each time the palette opens.
+    """
+
+    opened = Signal()
+    closed = Signal()
+
+    def __init__(self, window: QWidget, sources: Iterable[CommandSource] = ()):
+        super().__init__(window)
+        self.setObjectName("CommandPalette")
+        self.controller = CommandPaletteController(sources, self)
+        self.controller.accepted.connect(self.close_palette)
+        self.controller.dismissRequested.connect(self.close_palette)
+        self._previous_focus: QWidget | None = None
+        self._anchor: QWidget | None = None
+        self._shortcuts: list[QShortcut] = []
+        self.card = PaletteCardWidget(self.controller, self)
+
+        window.installEventFilter(self)
+        self.hide()
+
+    # ------------------------------------------------------------------ public API
+    def install_shortcuts(self, sequences: Iterable[str] = SHORTCUTS) -> list[QShortcut]:
+        """Open the palette with ``sequences`` anywhere in the window (Ctrl+K, Ctrl+Shift+P)."""
+        window = self.parentWidget()
+        for sequence in sequences:
+            shortcut = QShortcut(QKeySequence(sequence), window)
+            shortcut.setContext(Qt.ShortcutContext.WindowShortcut)
+            shortcut.activated.connect(self.toggle)
+            self._shortcuts.append(shortcut)
+        return self._shortcuts
+
+    def set_anchor(self, anchor: QWidget | None) -> None:
+        """Drop the card down from under ``anchor`` (e.g. the field of a command palette bar)
+        instead of placing it near the top of the window.
+
+        Args:
+            anchor(QWidget | None): Widget inside the window, or None for the default placement.
+        """
+        self._anchor = anchor
+
+    def is_open(self) -> bool:
+        """Whether the palette is currently shown."""
+        return self.isVisible()
+
+    def toggle(self) -> None:
+        """Open the palette, or close it if it is already open."""
+        if self.is_open():
+            self.close_palette()
+        else:
+            self.open_palette()
+
+    def open_palette(self, text: str = "") -> None:
+        """Show the palette with a fresh command list.
+
+        Args:
+            text(str): Initial query; a leading ``>``, ``+``, ``@`` or ``#`` selects a scope.
+        """
+        self.controller.reset()
+        self.controller.refresh()
+        if text:
+            self.controller.set_query(text)
+        self.card.refresh_theme(ThemeTokens())
+        focus = QApplication.focusWidget()
+        if focus is not None and focus is not self and not self.isAncestorOf(focus):
+            self._previous_focus = focus
+        self._update_geometry()
+        self.show()
+        self.raise_()
+        self.card.focus_input()
+        self.opened.emit()
+
+    def close_palette(self) -> None:
+        """Hide the palette and give the focus back to where it was."""
+        if not self.isVisible():
+            return
+        self.hide()
+        previous, self._previous_focus = self._previous_focus, None
+        if previous is not None:
+            try:
+                previous.setFocus(Qt.FocusReason.PopupFocusReason)
+            except RuntimeError:
+                pass  # the widget was deleted meanwhile
+        self.closed.emit()
+
+    def card_geometry(self) -> QRect:
+        """Geometry of the visible card (without shadow margins) in overlay coordinates."""
+        width = min(CARD_WIDTH, max(320, self.width() - 32))
+        height = min(CARD_HEIGHT, max(200, self.height() - 48))
+        anchor = self._anchor_rect()
+        if anchor is None:
+            top = max(24, int(self.height() * 0.12))
+            left = (self.width() - width) // 2
+        else:
+            # at least as wide as the anchor, centred under it and kept inside the window
+            width = min(max(width, anchor.width()), max(320, self.width() - 16))
+            top = anchor.bottom() + 6
+            left = anchor.center().x() - width // 2
+            left = max(8, min(left, self.width() - width - 8))
+        top = min(top, max(8, self.height() - height - 8))
+        return QRect(left, top, width, height)
+
+    def _anchor_rect(self) -> QRect | None:
+        """Geometry of the visible anchor in overlay coordinates."""
+        anchor = self._anchor
+        try:
+            if anchor is None or not anchor.isVisible():
+                return None
+            return QRect(anchor.mapTo(self.parentWidget(), anchor.rect().topLeft()), anchor.size())
+        except RuntimeError:  # the anchor was deleted
+            self._anchor = None
+            return None
+
+    # ------------------------------------------------------------------ Qt overrides
+    def _update_geometry(self) -> None:
+        window = self.parentWidget()
+        if window is None:
+            return
+        self.setGeometry(window.rect())
+        self.card.setGeometry(self.card_geometry())
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # pylint: disable=invalid-name
+        if watched is self.parentWidget() and event.type() == QEvent.Type.Resize:
+            if self.isVisible():
+                self._update_geometry()
+        return super().eventFilter(watched, event)
+
+    def paintEvent(self, _event):  # pylint: disable=invalid-name
+        tokens = ThemeTokens()
+        painter = QPainter(self)
+        painter.fillRect(self.rect(), QColor(0, 0, 0, 120 if tokens.dark else 70))
+        # layered soft shadow below the card; a QGraphicsDropShadowEffect would re-render the
+        # whole card on every list repaint
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(Qt.PenStyle.NoPen)
+        card = QRectF(self.card_geometry())
+        for i in range(SHADOW_LAYERS):
+            alpha = (0.11 if tokens.dark else 0.045) * (1 - i / (SHADOW_LAYERS + 1))
+            painter.setBrush(QColor(0, 0, 0, int(255 * alpha)))
+            rect = card.adjusted(-3 * i, 10 - 2 * i, 3 * i, 10 + 3 * i)
+            painter.drawRoundedRect(rect, 12 + 3 * i, 12 + 3 * i)
+        painter.end()
+
+    def mousePressEvent(self, event):  # pylint: disable=invalid-name
+        if not self.card_geometry().contains(event.position().toPoint()):
+            self.close_palette()
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+    def keyPressEvent(self, event):  # pylint: disable=invalid-name
+        if event.key() == Qt.Key.Key_Escape:
+            self.close_palette()
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+    def cleanup(self) -> None:
+        """Stop watching the window and the application theme."""
+        window = self.parentWidget()
+        if window is not None:
+            window.removeEventFilter(self)
+        self.card.release()
