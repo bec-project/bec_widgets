@@ -16,6 +16,7 @@ from enum import StrEnum
 from qtpy.QtCore import QObject, Signal
 from qtpy.QtWidgets import QApplication
 
+from bec_widgets.utils.bec_connection import ConnectionState
 from bec_widgets.widgets.containers.main_window.addons.status_pill import ToolSeverity
 from bec_widgets.widgets.progress.stage_bar import Tone
 
@@ -268,6 +269,29 @@ def summarize(rows: list[ServiceRow], core_state: str) -> tuple[str, str, ToolSe
     return headline, detail, severity
 
 
+def connection_summary(
+    state: ConnectionState, address: str, error: str = ""
+) -> tuple[str, str, ToolSeverity]:
+    """Summarize a connection to BEC that is not up, for the header and the status-bar pill.
+
+    Args:
+        state (ConnectionState): The connection state, anything but connected.
+        address (str): The "host:port" of the Redis server.
+        error (str): Why the last reconnect failed, or "".
+
+    Returns:
+        tuple[str, str, ToolSeverity]: (headline, detail line, severity).
+    """
+    no_answer = f"No answer from {address or 'Redis'}"
+    if state == ConnectionState.LOST:
+        return "Connection to BEC lost", no_answer, ToolSeverity.CRITICAL
+    if state == ConnectionState.AVAILABLE:
+        return "BEC is reachable again", "Reconnect to get live data", ToolSeverity.INFO
+    if state == ConnectionState.CONNECTING:
+        return "Connecting to BEC", address, ToolSeverity.INFO
+    return "Not connected to BEC", error or no_answer, ToolSeverity.WARNING
+
+
 def core_services_down(rows: list[ServiceRow]) -> int:
     """Number of core services that are not connected or in error."""
     return sum(
@@ -289,6 +313,7 @@ class ServiceStatusModel(QObject):
     summary_changed = Signal()
     restart_changed = Signal()
     restart_requested = Signal()
+    reconnect_requested = Signal()
 
     def __init__(self, parent: QObject | None = None):
         super().__init__(parent)
@@ -299,11 +324,52 @@ class ServiceStatusModel(QObject):
         self._restart_state = RestartState.NONE
         self._restart_text = ""
         self._can_restart = False
+        self._connection = ConnectionState.CONNECTED
+        self._address = ""
+        self._connection_error = ""
 
     @property
     def rows(self) -> list[ServiceRow]:
-        """The current display rows."""
-        return list(self._rows)
+        """The current display rows; none while BEC is not connected."""
+        return list(self._rows) if self.connected else []
+
+    @property
+    def connection(self) -> ConnectionState:
+        """How the client is connected to BEC."""
+        return self._connection
+
+    @property
+    def connected(self) -> bool:
+        """Whether the client is connected and Redis answers."""
+        return self._connection == ConnectionState.CONNECTED
+
+    @property
+    def can_reconnect(self) -> bool:
+        """Whether a reconnect can be requested: the app started without BEC."""
+        return self._connection in (ConnectionState.OFFLINE, ConnectionState.AVAILABLE)
+
+    def set_connection(self, state: ConnectionState | str, address: str, error: str = "") -> None:
+        """Set the connection state shown in the header and the pill.
+
+        Args:
+            state (ConnectionState | str): The connection state.
+            address (str): The "host:port" of the Redis server.
+            error (str): Why the last reconnect failed, or "".
+        """
+        state = ConnectionState(state)
+        if (state, address, error) == (self._connection, self._address, self._connection_error):
+            return
+        was_connected = self.connected
+        self._connection, self._address, self._connection_error = state, address, error
+        self.summary_changed.emit()
+        self.restart_changed.emit()
+        if was_connected != self.connected:
+            self.rows_changed.emit()
+
+    def request_reconnect(self) -> None:
+        """Ask the owner widget to connect the client to BEC."""
+        if self.can_reconnect:
+            self.reconnect_requested.emit()
 
     def set_rows(self, rows: list[ServiceRow], core_state: str) -> None:
         """Replace the rows and update the summary.
@@ -319,25 +385,30 @@ class ServiceStatusModel(QObject):
             self.summary_changed.emit()
         self.rows_changed.emit()
 
+    def _summary(self) -> tuple[str, str, ToolSeverity]:
+        if self.connected:
+            return self._headline, self._detail, self._severity
+        return connection_summary(self._connection, self._address, self._connection_error)
+
     @property
     def headline(self) -> str:
         """The one-line overall state, e.g. "All core services running"."""
-        return self._headline
+        return self._summary()[0]
 
     @property
     def detail(self) -> str:
         """The secondary summary line with counts."""
-        return self._detail
+        return self._summary()[1]
 
     @property
     def severity(self) -> ToolSeverity:
         """The overall severity: ok, info, warning or critical."""
-        return self._severity
+        return self._summary()[2]
 
     @property
     def services_down(self) -> int:
         """Number of core services that are not connected or in error."""
-        return core_services_down(self._rows)
+        return core_services_down(self.rows)
 
     def set_restart(self, state: RestartState | str, text: str = "") -> None:
         """Set the restart progress shown in the header and the pill.
@@ -370,7 +441,7 @@ class ServiceStatusModel(QObject):
     @property
     def can_restart(self) -> bool:
         """Whether a restart can be requested now (SciHub is up and no restart is running)."""
-        return self._can_restart and self._restart_state != RestartState.RUNNING
+        return self.connected and self._can_restart and self._restart_state != RestartState.RUNNING
 
     def request_restart(self) -> None:
         """Ask the owner widget to confirm and request a BEC server restart."""

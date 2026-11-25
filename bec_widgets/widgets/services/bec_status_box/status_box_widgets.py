@@ -20,6 +20,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from bec_widgets.utils.bec_connection import ConnectionState
 from bec_widgets.utils.colors import get_theme_name
 from bec_widgets.utils.theme_utils import DPR_EVENTS, crisp_icon, crisp_pixmap, css, theme_colors
 from bec_widgets.widgets.progress.stage_bar import Tone
@@ -29,6 +30,13 @@ from bec_widgets.widgets.services.bec_status_box.status_model import (
     ServiceRow,
     ServiceStatusModel,
 )
+
+# the hint under the header while the app is not connected to BEC
+OFFLINE_HINTS = {
+    "offline": "Scans, devices and live data come back once this app is connected to BEC. "
+    "Tools that work on files keep working.",
+    "lost": "BEC connects again by itself as soon as Redis answers.",
+}
 
 
 def tone_color(colors: dict[str, QColor], tone: Tone | str) -> QColor:
@@ -128,11 +136,21 @@ class StatusHeader(QFrame):
         self.restart_button.setAutoRaise(True)
         self.restart_button.setIconSize(QSize(18, 18))
         self.restart_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.reconnect_button = QToolButton(self)
+        self.reconnect_button.setObjectName("reconnectButton")
+        self.reconnect_button.setText("Reconnect")
+        self.reconnect_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.reconnect_button.setIconSize(QSize(16, 16))
+        self.reconnect_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.reconnect_button.setVisible(False)
         layout.addWidget(self.dot)
         layout.addWidget(self.spinner)
         layout.addLayout(text, 1)
+        layout.addWidget(self.reconnect_button)
         layout.addWidget(self.restart_button)
         self._angle = 0
+        self._restarting = False
+        self._connecting = False
         self._spin = QTimer(self)
         self._spin.setInterval(80)
         self._spin.timeout.connect(self._step_spinner)
@@ -142,15 +160,34 @@ class StatusHeader(QFrame):
         self._pulse.setInterval(50)
         self._pulse.timeout.connect(self._step_pulse)
 
+    def set_connection(self, state: ConnectionState) -> None:
+        """Show the reconnect action while the app runs without BEC, and hide the restart."""
+        connecting = state == ConnectionState.CONNECTING
+        offline = state in (ConnectionState.OFFLINE, ConnectionState.AVAILABLE) or connecting
+        self.reconnect_button.setVisible(offline)
+        self.reconnect_button.setEnabled(not connecting)
+        self.reconnect_button.setText("Connecting" if connecting else "Reconnect")
+        self.reconnect_button.setToolTip(
+            "Connecting to BEC" if connecting else "Connect this app to BEC again"
+        )
+        self.restart_button.setVisible(state == ConnectionState.CONNECTED)
+        self._connecting = connecting
+        self._sync_spinner()
+
     def set_restart(self, state: RestartState, can_restart: bool) -> None:
         """Show the restart action and spinner for the model's restart state."""
         running = state == RestartState.RUNNING
+        self._restarting = running
         self.restart_button.setEnabled(can_restart)
         self.restart_button.setToolTip(
             "Restart BEC server"
             if can_restart
             else "Restart in progress" if running else "Restart needs SciHub to be running"
         )
+        self._sync_spinner()
+
+    def _sync_spinner(self) -> None:
+        running = self._restarting or self._connecting
         self.spinner.setVisible(running)
         self.dot.setVisible(not running)
         if running:
@@ -195,12 +232,20 @@ class StatusHeader(QFrame):
         self.restart_button.setIcon(
             crisp_icon("restart_alt", 18, colors["fg"], widget=self.restart_button)
         )
+        self.reconnect_button.setIcon(
+            crisp_icon("sync", 16, colors["fg"], widget=self.reconnect_button)
+        )
         self._paint_spinner()
         self.setStyleSheet(
             f"#StatusHeader {{ background: {css(accent, alpha / 255)}; border: 1px solid "
             f"{css(accent, 115 / 255)}; border-radius: 8px; }}"
             f"#headline {{ color: {colors['fg'].name()}; font-size: 14px; font-weight: bold; }}"
             f"#detail {{ color: {colors['muted'].name()}; font-size: 11px; }}"
+            f"#reconnectButton {{ color: {colors['fg'].name()}; background: {colors['card'].name()};"
+            f" border: 1px solid {colors['border'].name()}; border-radius: 6px;"
+            f" padding: 3px 8px; font-size: 12px; }}"
+            f"#reconnectButton:hover {{ border-color: {colors['primary'].name()}; }}"
+            f"#reconnectButton:disabled {{ color: {colors['muted'].name()}; }}"
         )
 
     def stop(self) -> None:
@@ -442,6 +487,13 @@ class StatusBoxWidgetView(QWidget):
         self.list_layout.setSpacing(2)
         self.list_layout.addStretch()
         self.scroll.setWidget(self.list_widget)
+        self.offline_label = QLabel(OFFLINE_HINTS["offline"], self)
+        self.offline_label.setObjectName("offlineHint")
+        self.offline_label.setWordWrap(True)
+        self.offline_label.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.offline_label.setContentsMargins(6, 10, 6, 0)
+        self.offline_label.setVisible(False)
+        layout.addWidget(self.offline_label)
         layout.addWidget(self.scroll, 1)
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
 
@@ -453,6 +505,7 @@ class StatusBoxWidgetView(QWidget):
         model.summary_changed.connect(self._update_summary)
         model.restart_changed.connect(self._update_summary)
         self.header.restart_button.clicked.connect(model.request_restart)
+        self.header.reconnect_button.clicked.connect(model.request_reconnect)
         self._update_summary()
         self.sync()
         self.apply_theme()
@@ -468,6 +521,13 @@ class StatusBoxWidgetView(QWidget):
             tone = SEVERITY_TONE[self.model.severity]
             self.header.set_summary(self.model.headline, self.model.detail, tone)
         self.header.set_restart(state, self.model.can_restart)
+        self.header.set_connection(self.model.connection)
+        self.offline_label.setText(
+            OFFLINE_HINTS["lost"]
+            if self.model.connection == ConnectionState.LOST
+            else OFFLINE_HINTS["offline"]
+        )
+        self.offline_label.setVisible(not self.model.connected)
 
     def sync(self) -> None:
         """Bring the row widgets in line with the model, reusing existing widgets."""
@@ -561,6 +621,9 @@ class StatusBoxWidgetView(QWidget):
             "QScrollArea { background: transparent; } #serviceList { background: transparent; }"
         )
         self.header.apply_theme()
+        self.offline_label.setStyleSheet(
+            f"#offlineHint {{ color: {colors['muted'].name()}; font-size: 12px; }}"
+        )
         for label in self.section_labels.values():
             self._style_section(label)
         for widget in self.rows.values():

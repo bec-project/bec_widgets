@@ -211,6 +211,7 @@ class ScanControl(BECWidget, QWidget):
 
         # Initialize scan selection
         self.populate_scans()
+        self.bec_dispatcher.connection.reconnected.connect(self.populate_scans)
 
         # Default scan from config; applied after population so the entry exists
         if self.config.default_scan is not None:
@@ -253,9 +254,11 @@ class ScanControl(BECWidget, QWidget):
 
     def populate_scans(self):
         """Populates the scan selection combo box with available scans from BEC session."""
-        self.available_scans = self.client.connector.get(
-            MessageEndpoints.available_scans()
-        ).resource
+        self.available_scans = {}
+        if self.bec_dispatcher.connected:
+            self.available_scans = self.client.connector.get(
+                MessageEndpoints.available_scans()
+            ).resource
         self._update_scan_selector()
 
     def _supported_scan_names(self) -> list[str]:

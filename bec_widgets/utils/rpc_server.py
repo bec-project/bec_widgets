@@ -11,11 +11,11 @@ from bec_lib.client import BECClient
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import
-from qtpy.QtCore import Qt, QTimer
+from qtpy.QtCore import Qt, QThreadPool, QTimer
 from qtpy.QtWidgets import QApplication, QWidget
 from redis.exceptions import RedisError
 
-from bec_widgets.utils.bec_connector import BECConnector
+from bec_widgets.utils.bec_connector import BECConnector, Worker
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
 from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import ErrorPopupUtility
@@ -103,6 +103,7 @@ class RPCServer:
 
         # Setup QTimer for heartbeat
         self._heartbeat_timer = QTimer()
+        self._heartbeat_worker: Worker | None = None
         self._heartbeat_timer.timeout.connect(self.emit_heartbeat)
         self._heartbeat_timer.start(200)
         self._broadcasted_data = {}
@@ -450,7 +451,22 @@ class RPCServer:
         """
         Emit a heartbeat message to the GUI server.
         This method is called periodically to indicate that the server is still running.
+
+        The write runs on the thread pool, one at a time: while Redis does not answer, the
+        client retries for minutes, which must not freeze the GUI. Beats are skipped meanwhile.
         """
+        if self._heartbeat_worker is not None:
+            return
+        self._heartbeat_worker = Worker(self._write_heartbeat)
+        self._heartbeat_worker.signals.completed.connect(self._on_heartbeat_written)
+        self._heartbeat_worker.signals.failed.connect(self._on_heartbeat_written)
+        QThreadPool.globalInstance().start(self._heartbeat_worker)
+
+    def _on_heartbeat_written(self, *_args) -> None:
+        self._heartbeat_worker = None
+
+    def _write_heartbeat(self) -> None:
+        """Write the heartbeat message to Redis."""
         logger.trace(f"Emitting heartbeat for {self.gui_id}")
         try:
             self.client.connector.set(
@@ -543,7 +559,9 @@ class RPCServer:
         """
         self.status = messages.BECStatus.IDLE
         self._heartbeat_timer.stop()
-        self.emit_heartbeat()
+        if self._heartbeat_worker is None and self.dispatcher.connection.state == "connected":
+            # the last beat says IDLE; skipped while Redis does not answer, not to block the exit
+            self._write_heartbeat()
         self.dispatcher.disconnect_slot(
             self.on_rpc_update, MessageEndpoints.gui_instructions(self.gui_id)
         )

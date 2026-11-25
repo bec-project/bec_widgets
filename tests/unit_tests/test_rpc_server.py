@@ -1,4 +1,5 @@
 import argparse
+import threading
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -372,3 +373,21 @@ def test_gui_server_stop_dispatcher_disconnects_before_stopping_cli_server(gui_s
     ):
         gui_server.shutdown()
     assert calls == ["disconnect_all", "stop_cli_server"]
+
+
+def test_heartbeat_is_written_off_the_gui_thread_one_at_a_time(rpc_server, qtbot):
+    writer_threads = []
+    release = threading.Event()
+
+    def slow_write():
+        writer_threads.append(threading.get_ident())
+        release.wait(5)  # Redis does not answer
+
+    with patch.object(rpc_server, "_write_heartbeat", side_effect=slow_write):
+        rpc_server.emit_heartbeat()
+        rpc_server.emit_heartbeat()  # skipped: the first write still runs
+        qtbot.waitUntil(lambda: len(writer_threads) == 1)
+        assert writer_threads[0] != threading.get_ident()
+        release.set()
+        qtbot.waitUntil(lambda: rpc_server._heartbeat_worker is None)
+    assert len(writer_threads) == 1

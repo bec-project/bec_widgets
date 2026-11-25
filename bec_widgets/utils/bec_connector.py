@@ -5,6 +5,7 @@ import os
 import time
 import traceback
 import uuid
+import weakref
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
@@ -104,6 +105,8 @@ class BECConnector:
 
     USER_ACCESS = ["_config_dict", "_get_all_rpc", "_rpc_id"]
     EXIT_HANDLERS = {}
+    # widgets that use the BEC shortcuts (self.dev, self.scans, ...), refreshed on reconnect
+    _SHORTCUT_USERS: weakref.WeakSet = weakref.WeakSet()
     widget_removed = Signal()
     name_established = Signal(str)
 
@@ -539,12 +542,28 @@ class BECConnector:
             return self
 
     def get_bec_shortcuts(self):
-        """Get BEC shortcuts for the widget."""
-        self.dev = self.client.device_manager.devices
-        self.scans = self.client.scans
-        self.queue = self.client.queue
-        self.scan_storage = self.queue.scan_storage
-        self.dap = self.client.dap
+        """Get BEC shortcuts for the widget.
+
+        Without a connection to BEC the shortcuts are empty (no devices, no scans, no queue);
+        they are filled in again once the client connects.
+        """
+        # pylint: disable=import-outside-toplevel
+        from bec_lib.devicemanager import DeviceContainer
+
+        device_manager = self.client.device_manager
+        self.dev = device_manager.devices if device_manager is not None else DeviceContainer()
+        self.scans = getattr(self.client, "scans", None)
+        self.queue = getattr(self.client, "queue", None)
+        self.scan_storage = self.queue.scan_storage if self.queue is not None else None
+        self.dap = getattr(self.client, "dap", None)
+        BECConnector._SHORTCUT_USERS.add(self)
+
+    @classmethod
+    def refresh_bec_shortcuts(cls) -> None:
+        """Get the BEC shortcuts again for all widgets that use them, after the client connected."""
+        for widget in list(cls._SHORTCUT_USERS):
+            if shb.isValid(widget) and not widget._destroyed:
+                widget.get_bec_shortcuts()
 
     def update_client(self, client) -> None:
         """Update the client and device manager from BEC and create object for BEC shortcuts.

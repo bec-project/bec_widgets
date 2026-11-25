@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from qtpy.QtCore import QObject, QThreadPool, QTimer, Signal
 from qtpy.QtWidgets import QHBoxLayout, QMessageBox, QWidget
 
+from bec_widgets.utils.bec_connection import BECConnection, redis_reachable
 from bec_widgets.utils.bec_connector import Worker
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
@@ -63,9 +64,15 @@ class BECServiceStatusMixin(QObject):
     POLL_INTERVAL_MS, and hands each new viewer the last result at once. A poller made directly
     starts polling right away and is cleaned up by its owner.
 
+    Each poll first checks that Redis answers and reports it to the dispatcher's connection, so
+    the status box and the pill show a lost connection, or that BEC is reachable again after the
+    app started without it. The services are read only while the client is connected.
+
     Args:
         client (BECClient): The client object to connect to the BEC server.
         start (bool): Start polling right away. The shared poller waits for its first viewer.
+        connection (BECConnection | None): The connection to report to. Defaults to the one of
+            the dispatcher.
     """
 
     services_update = Signal(dict, dict)
@@ -76,16 +83,27 @@ class BECServiceStatusMixin(QObject):
 
     _shared: weakref.WeakKeyDictionary = weakref.WeakKeyDictionary()
 
-    def __init__(self, parent, client: BECClient, start: bool = True):
+    def __init__(
+        self, parent, client: BECClient, start: bool = True, connection: BECConnection | None = None
+    ):
         super().__init__(parent)
         self.client = client
+        if connection is None:
+            # pylint: disable=import-outside-toplevel
+            from bec_widgets.utils.bec_dispatcher import BECDispatcher
+
+            connection = BECDispatcher().connection
+        self.connection = connection
         # the Redis reads run on the thread pool, one at a time, so a slow Redis never blocks the GUI
         self._worker: Worker | None = None
+        self._reachable = True
+        self._services_read = False
         self._viewers: set[int] = set()
         self.last_update: tuple[dict, dict] | None = None
         self._service_update_timer = QTimer()
         self._service_update_timer.setInterval(self.POLL_INTERVAL_MS)
         self._service_update_timer.timeout.connect(self._get_service_status)
+        self.connection.reconnected.connect(self._get_service_status)
         if start:
             self._service_update_timer.start()
 
@@ -127,15 +145,26 @@ class BECServiceStatusMixin(QObject):
         """Read the latest service status from the BEC server off the GUI thread."""
         if self._worker is not None:
             return
-        # pylint: disable=protected-access
-        self._worker = Worker(self.client._update_existing_services)
+        self._worker = Worker(self._read_service_status, self.connection.connected)
         self._worker.signals.completed.connect(self._on_service_status)
         self._worker.signals.failed.connect(self._on_read_failed)
         QThreadPool.globalInstance().start(self._worker)
 
+    def _read_service_status(self, read_services: bool) -> None:
+        """Check that Redis answers, then read the services if the client is connected."""
+        self._services_read = False
+        self._reachable = redis_reachable(self.client)
+        if self._reachable and read_services:
+            # pylint: disable=protected-access
+            self.client._update_existing_services()
+            self._services_read = True
+
     @SafeSlot()
     def _on_service_status(self):
         self._worker = None
+        self.connection.set_reachable(self._reachable)
+        if not self._services_read:
+            return
         # pylint: disable=protected-access
         self.last_update = (self.client._services_info, self.client._services_metric)
         self.services_update.emit(*self.last_update)
@@ -208,6 +237,9 @@ class BECStatusBox(BECWidget, QWidget):
         self.view.setMinimumSize(280, 220)
         self.main_layout.addWidget(self.view)
         self.model.restart_requested.connect(self.confirm_restart)
+        self.model.reconnect_requested.connect(self.bec_dispatcher.connection.reconnect)
+        self.bec_dispatcher.connection.state_changed.connect(self._update_connection)
+        self._update_connection()
         self._restart_baseline: dict[str, float | None] | None = None
         self._restart_timeout = QTimer(self)
         self._restart_timeout.setSingleShot(True)
@@ -230,9 +262,15 @@ class BECStatusBox(BECWidget, QWidget):
         super().hideEvent(event)
         self.bec_service_status.remove_viewer(self)
 
+    @SafeSlot()
+    def _update_connection(self) -> None:
+        """Show the connection state of the client to BEC."""
+        connection = self.bec_dispatcher.connection
+        self.model.set_connection(connection.state, connection.address, connection.error)
+
     def get_server_state(self) -> str:
         """Get the state ("RUNNING", "BUSY", "IDLE", "ERROR", "NOTCONNECTED") of the BEC server"""
-        return self.core_state
+        return self.core_state if self.model.connected else "NOTCONNECTED"
 
     @SafeSlot(str)
     def update_top_item_status(self, status: str) -> None:

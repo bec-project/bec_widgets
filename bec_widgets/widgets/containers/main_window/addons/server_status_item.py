@@ -11,6 +11,7 @@ from typing import Callable
 from qtpy.QtCore import QSettings
 from qtpy.QtWidgets import QWidget
 
+from bec_widgets.utils.bec_connection import ConnectionState
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.hover_card import HoverCard
 from bec_widgets.widgets.containers.main_window.addons.status_pill import (
@@ -30,15 +31,26 @@ SETTINGS_PREFIX = "server_status"
 
 def server_indicator(model: ServiceStatusModel) -> ToolIndicator:
     """
-    The pill indicator for the status box model: the overall state, or the restart progress while
-    a restart runs. The summary is the full state line, for the tooltip and screen readers; the
+    The pill indicator for the status box model: the overall state, the restart progress while
+    a restart runs, or the connection state while the app is not connected to BEC. The summary is the full state line, for the tooltip and screen readers; the
     pill itself only reads "BEC".
 
     Args:
         model(ServiceStatusModel): The model of the status box.
     """
-    down = model.services_down
     tooltip = f"{model.headline}\n{model.detail}".strip()
+    if not model.connected:
+        connection = model.connection
+        return ToolIndicator(
+            severity=model.severity,
+            summary=model.headline,
+            badge="offline" if connection != ConnectionState.CONNECTING else None,
+            attention=connection == ConnectionState.LOST,
+            tooltip=tooltip,
+            active=connection == ConnectionState.CONNECTING,
+            icon="cloud_off" if connection != ConnectionState.AVAILABLE else "cloud_sync",
+        )
+    down = model.services_down
     badge = f"{down} down" if down else None
     state = model.restart_state
     if state != RestartState.NONE:
@@ -106,6 +118,7 @@ class ServerStatusItem(StatusPillItem):
         self.model.summary_changed.connect(self._update_indicator)
         self.model.rows_changed.connect(self._update_indicator)
         self.model.restart_changed.connect(self._update_indicator)
+        # restart_changed and summary_changed also follow the connection state
         # the status box shares one poller with all boxes and pills of the client; the pill counts
         # as a viewer only while it is shown, not in hidden windows like the launcher
         self.poller = self.status_box.bec_service_status
