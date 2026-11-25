@@ -110,6 +110,23 @@ def _make_update(scan_id="dummy"):
     )
 
 
+def test_scatter_waveform_ignores_a_snapshot_of_the_scan_before(qtbot, mocked_client, monkeypatch):
+    """
+    The widget moves on to a new scan with its scan status. Until the live subscription
+    has followed, its snapshots are still those of the scan before: they are not drawn.
+    """
+    _fake_bridge_factory(monkeypatch)
+    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+    swf.plot("samx", "samy", "bpm4i", label="test_curve")
+    swf.scan_id = "scan-2"
+
+    swf._on_data_update(_make_update("scan-1"))
+    assert swf.main_curve.getData()[0] is None
+
+    swf._on_data_update(_make_update("scan-2"))
+    assert len(swf.main_curve.getData()[0]) == 3
+
+
 def test_scatter_waveform_update_with_scan_history(
     qtbot, mocked_client, scan_history_factory, monkeypatch
 ):

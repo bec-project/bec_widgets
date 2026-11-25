@@ -375,6 +375,12 @@ class ScatterWaveform(PlotBase):
         sources = self._config_sources()
         if curve is None or sources is None:
             return
+        if (
+            self._data_subscription_scope == ScanTarget.LIVE
+            and None not in (self.scan_id, update.scan_id)
+            and update.scan_id != self.scan_id
+        ):
+            return  # the subscription has not followed to the scan this plot shows yet
         if self._alignment_binding_changed(update):
             self._warn_if_unaligned(sources, self._data_subscription_scope)
         columns = update.aligned()
