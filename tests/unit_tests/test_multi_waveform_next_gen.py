@@ -206,12 +206,30 @@ def test_multiwaveform_preview_buffer_is_not_the_display_limit(qtbot, mocked_cli
     mw.config.flush_buffer = False
 
     mw.plot("waveform1d")
-    assert bridges[-1].max_buffer_size != 2
-    assert bridges[-1].max_buffer_size == MultiWaveform.PREVIEW_MAX_TRACES
+    assert bridges[-1].max_buffer_size is None
+
+
+def test_multiwaveform_preview_buffer_follows_the_limit_when_flushing(
+    qtbot, mocked_client, monkeypatch
+):
+    """With ``flush_buffer`` on, older traces are dropped: the backend keeps the display limit."""
+    bridges = _fake_bridge_factory(monkeypatch)
+    mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    mw.config.curve_limit = 2
+    mw.config.flush_buffer = True
+
+    mw.plot("waveform1d")
+    assert bridges[-1].max_buffer_size == 2
+    mw.set_curve_limit(5, True)  # more traces than the buffer holds: subscribe again
+    assert bridges[-1].max_buffer_size == 5 and len(bridges) == 2
+    mw.set_curve_limit(3, True)  # fewer: the buffer still fits
+    assert len(bridges) == 2
+    mw.set_curve_limit(3, False)  # keep everything from now on
+    assert bridges[-1].max_buffer_size is None and len(bridges) == 3
 
 
 def test_multiwaveform_bridge_lifecycle(qtbot, mocked_client, monkeypatch):
-    """plot() creates a scan-less bridge with a bounded buffer; re-plot replaces it."""
+    """plot() creates a scan-less bridge; re-plot replaces it."""
     bridges = _fake_bridge_factory(monkeypatch)
     mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
 
@@ -219,7 +237,7 @@ def test_multiwaveform_bridge_lifecycle(qtbot, mocked_client, monkeypatch):
     assert len(bridges) == 1
     assert bridges[-1].sources == [("waveform1d", TRACE)]
     assert bridges[-1].scan is None
-    assert bridges[-1].max_buffer_size == MultiWaveform.PREVIEW_MAX_TRACES
+    assert bridges[-1].max_buffer_size is None
     assert mw.connected is True
 
     first = bridges[-1]
@@ -314,7 +332,7 @@ def test_multiwaveform_preview_signal_routes_scanless(qtbot, mocked_client, monk
     assert mw.monitor_signal == "wave_prev"
     assert bridges[-1].scan is None
     assert bridges[-1].sources == [("waveform1d", "wave_prev")]
-    assert bridges[-1].max_buffer_size == MultiWaveform.PREVIEW_MAX_TRACES
+    assert bridges[-1].max_buffer_size is None
     _clear_signal_config(mocked_client, "waveform1d", "wave_prev")
 
 

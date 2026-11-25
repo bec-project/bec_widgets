@@ -94,8 +94,6 @@ class MultiWaveform(PlotBase):
 
     #: Async signal classes routed through the scan-scoped (live-follow) DataAPI path.
     SUPPORTED_SIGNALS = ["AsyncSignal", "AsyncMultiSignal", "DynamicSignal"]
-    #: Preview traces the backend keeps between two updates (not the display limit).
-    PREVIEW_MAX_TRACES: int = 200
 
     monitor_signal_updated = Signal()
     highlighted_curve_index_changed = Signal(int)
@@ -127,6 +125,8 @@ class MultiWaveform(PlotBase):
         # Data delivery through the DataAPI: scan-less preview signals or
         # scan-scoped async signals.
         self._data_subscription: QtDataSubscription | None = None
+        self._subscribed_scan: str | None = None
+        self._subscribed_buffer_size: int | None = None
         self._source_key: tuple[str, str] | None = None
         # The newest ordinal drawn, and the one up to which traces are gone for good.
         self._last_ordinal: int | None = None
@@ -577,6 +577,8 @@ class MultiWaveform(PlotBase):
             self.config.curve_limit = max_trace
         if flush_buffer != self.config.flush_buffer:
             self.config.flush_buffer = flush_buffer
+        if not self._preview_buffer_fits():
+            self._setup_data_api_subscription()
 
         if self.config.curve_limit is None:
             self.scale_colors()
@@ -838,12 +840,25 @@ class MultiWaveform(PlotBase):
 
         if signal_class == "PreviewSignal":
             # Scan-less device stream served by the DataAPI device plugin.
-            return (None, signal, self.PREVIEW_MAX_TRACES)
+            return (None, signal, self._preview_buffer_size())
 
         # Scan-scoped async stream; the DataAPI rebinds on new scans and hands
         # terminal scans over to history automatically (live-follow).
         entry = signal_config.get("obj_name") or f"{device}_{signal}"
         return (ScanTarget.LIVE, entry, None)
+
+    def _preview_buffer_size(self) -> int | None:
+        """Preview traces the backend keeps: all of them, unless older ones are flushed."""
+        return self.config.curve_limit if self.config.flush_buffer else None
+
+    def _preview_buffer_fits(self) -> bool:
+        """Whether the subscribed preview buffer still covers the display limit."""
+        if self._data_subscription is None or self._subscribed_scan is not None:
+            return True
+        wanted, held = self._preview_buffer_size(), self._subscribed_buffer_size
+        if wanted is None or held is None:
+            return wanted == held
+        return wanted <= held
 
     def _setup_data_api_subscription(self):
         """(Re)create the DataAPI subscription for the configured device and signal."""
@@ -873,6 +888,7 @@ class MultiWaveform(PlotBase):
             self._cleanup_data_api_subscription()
             self._set_connection_status("error", str(exc))
             return
+        self._subscribed_scan, self._subscribed_buffer_size = scan, max_buffer_size
         self._source_key = (device, entry)
         self.connected = True
         self._set_connection_status("connected")
