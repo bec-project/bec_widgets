@@ -280,6 +280,42 @@ def test_multiwaveform_burst_through_the_data_api_keeps_every_trace(qtbot, mocke
     _clear_signal_config(mocked_client, "waveform1d", "wave_prev")
 
 
+def test_multiwaveform_limit_of_zero_through_the_data_api_shows_no_trace(qtbot, mocked_client):
+    """
+    Through the real DataAPI and the controls of the settings panel: a display limit of zero
+    with ``flush_buffer`` on removes every trace and shows none of the next ones. The
+    subscription cannot keep zero traces, so it keeps one, which is not shown.
+    """
+    _set_signal_config(
+        mocked_client,
+        "waveform1d",
+        "wave_prev",
+        signal_class="PreviewSignal",
+        ndim=1,
+        obj_name="waveform1d_wave_prev",
+    )
+    mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    mw.plot("waveform1d", "wave_prev")
+    _publish_previews(mocked_client, 0, 3)
+    qtbot.waitUntil(lambda: len(mw.curves) == 3, timeout=10000)
+
+    subscription = mw._data_subscription
+    mw.controls.ui.flush_buffer.setChecked(True)
+    mw.controls.ui.max_trace.setValue(0)
+    assert mw.max_trace == 0 and len(mw.curves) == 0
+    assert mw._data_subscription is subscription
+    _publish_previews(mocked_client, 3, 2)
+    qtbot.waitUntil(lambda: mw._last_ordinal == 4, timeout=10000)
+    assert len(mw.curves) == 0
+
+    # A widget that starts with the limit of zero connects as well.
+    other = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    other.config.curve_limit, other.config.flush_buffer = 0, True
+    other.plot("waveform1d", "wave_prev")
+    assert other.connected and other._data_subscription is not None
+    _clear_signal_config(mocked_client, "waveform1d", "wave_prev")
+
+
 def test_multiwaveform_bridge_lifecycle(qtbot, mocked_client, monkeypatch):
     """plot() creates a scan-less bridge; re-plot replaces it."""
     bridges = _fake_bridge_factory(monkeypatch)

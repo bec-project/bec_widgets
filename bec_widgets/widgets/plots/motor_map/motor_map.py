@@ -368,9 +368,14 @@ class MotorMap(PlotBase):
         self.config.max_points = max_points
         if self._data_subscription is not None:
             # The trail is what the subscription holds: it keeps as many points.
-            self._data_subscription.set_max_buffer_size(max_points)
+            self._data_subscription.set_max_buffer_size(self._trail_buffer_size())
         self.update_signal.emit()
         self.property_changed.emit("max_points", max_points)
+
+    def _trail_buffer_size(self) -> int | None:
+        """Points the subscription keeps: one at least, the position, also for a limit of 0."""
+        limit = self.config.max_points
+        return None if limit is None else max(1, limit)
 
     @SafeProperty(int)
     def precision(self) -> int:
@@ -682,7 +687,7 @@ class MotorMap(PlotBase):
                 devices=[device_x, device_y],
                 scan=None,
                 update_rate=self.update_rate,
-                max_buffer_size=self.config.max_points,
+                max_buffer_size=self._trail_buffer_size(),
                 pair_sources=True,
             )
         except Exception as exc:

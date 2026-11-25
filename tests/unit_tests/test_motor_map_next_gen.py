@@ -307,31 +307,61 @@ def test_motor_map_point_limit_reaches_the_running_subscription(qtbot, mocked_cl
     assert bridges[-1].max_buffer_size == 20000 and len(bridges) == 1
 
 
+def _move_samx(client, samx):
+    """Publish a readback of ``samx`` at ``samx`` and of ``samy`` at 1.0."""
+    for name, value in (("samx", samx), ("samy", 1.0)):
+        client.connector.set_and_publish(
+            MessageEndpoints.device_readback(name),
+            messages.DeviceMessage(signals={name: {"value": value, "timestamp": samx}}),
+        )
+
+
 def test_motor_map_trail_follows_the_point_limit_through_the_data_api(qtbot, mocked_client):
     """Through the real DataAPI: the trail grows to a raised point limit without a new subscription."""
-
-    def move(samx):
-        for name, value in (("samx", samx), ("samy", 1.0)):
-            mocked_client.connector.set_and_publish(
-                MessageEndpoints.device_readback(name),
-                messages.DeviceMessage(signals={name: {"value": value, "timestamp": samx}}),
-            )
-
-    move(0.0)
+    _move_samx(mocked_client, 0.0)
     mm = create_widget(qtbot, MotorMap, client=mocked_client)
     mm.max_points = 3
     mm.map(device_x="samx", device_y="samy")
     subscription = mm._data_subscription
     for position in range(1, 6):
-        move(float(position))
+        _move_samx(mocked_client, float(position))
     qtbot.waitUntil(lambda: mm._buffer["x"][-1:] == [5.0], timeout=5000)
     assert len(mm._buffer["x"]) == 3
 
     mm.max_points = 10
     for position in range(6, 10):
-        move(float(position))
+        _move_samx(mocked_client, float(position))
     qtbot.waitUntil(lambda: mm._buffer["x"][-1:] == [9.0], timeout=5000)
     assert len(mm._buffer["x"]) > 3 and mm._data_subscription is subscription
+
+
+def test_motor_map_point_limit_of_zero_through_the_data_api(qtbot, mocked_client):
+    """
+    Through the real DataAPI: a point limit of zero shows the position without a trail. The
+    subscription cannot keep zero points, so it keeps one. The limit can be set while the
+    motors are shown, and the motors can be selected while it is set.
+    """
+    _move_samx(mocked_client, 0.0)
+    mm = create_widget(qtbot, MotorMap, client=mocked_client, popups=True)
+    mm.map(device_x="samx", device_y="samy")
+    subscription = mm._data_subscription
+    for position in range(1, 4):
+        _move_samx(mocked_client, float(position))
+    qtbot.waitUntil(lambda: mm._buffer["x"][-1:] == [3.0], timeout=5000)
+    assert len(mm._buffer["x"]) > 1
+
+    mm.show_motor_map_settings()  # the limit is set in the settings dialog
+    mm.motor_map_settings.widget.ui.max_points.setValue(0)
+    mm.motor_map_settings.widget.accept_changes()
+    mm.motor_map_settings.close()
+    assert mm.max_points == 0 and mm._data_subscription is subscription
+    _move_samx(mocked_client, 4.0)
+    qtbot.waitUntil(lambda: mm._buffer["x"] == [4.0], timeout=5000)
+
+    mm.map(device_x="samx", device_y="samy")  # a new subscription, with the limit of zero
+    assert mm._data_subscription is not None and mm._data_subscription is not subscription
+    _move_samx(mocked_client, 5.0)
+    qtbot.waitUntil(lambda: mm._buffer["x"] == [5.0], timeout=5000)
 
 
 def test_motor_map_bridge_lifecycle(qtbot, mocked_client, monkeypatch):

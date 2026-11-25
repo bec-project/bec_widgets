@@ -848,7 +848,10 @@ class MultiWaveform(PlotBase):
 
     def _preview_buffer_size(self) -> int | None:
         """Preview traces the backend keeps: all of them, unless older ones are flushed."""
-        return self.config.curve_limit if self.config.flush_buffer else None
+        limit = self.config.curve_limit
+        if limit is None or not self.config.flush_buffer:
+            return None
+        return max(1, limit)  # the backend keeps one trace at least; a limit of 0 shows none
 
     def _follow_preview_buffer_size(self) -> None:
         """Let the buffer of a preview subscription follow the display limit and the flush mode."""
