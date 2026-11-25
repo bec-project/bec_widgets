@@ -2258,16 +2258,24 @@ class Waveform(PlotBase):
         Whether every async curve can be drawn against the scan motor.
 
         That holds for async signals of the scan group: they declare the correlation
-        group ``"monitored"``, one value per scan point. The bound subscription tells.
+        group ``"monitored"``, one value per scan point. The bound subscription tells; for
+        a curve that is not subscribed yet, the DataAPI does.
         """
         if not self._async_curves:
             return True
-        groups = {} if self._data_subscription is None else self._data_subscription.groups
+        keys = [
+            (curve.config.signal.device, curve.config.signal.signal) for curve in self._async_curves
+        ]
+        subscription = self._data_subscription
+        groups = {} if subscription is None else subscription.groups
         scan_group = {tuple(key) for key in groups.get(SCAN_GROUP, ())}
-        return all(
-            (curve.config.signal.device, curve.config.signal.signal) in scan_group
-            for curve in self._async_curves
-        )
+        subscribed = set() if subscription is None else {tuple(key) for key in subscription.sources}
+        unknown = [key for key in keys if key not in subscribed]
+        if unknown:
+            # Not subscribed yet, so no binding can tell: ask what the scan will deliver.
+            labels = self._alignment_labels(unknown, self._data_api_scan) or {}
+            scan_group |= {key for key, label in labels.items() if label == SCAN_GROUP}
+        return all(key in scan_group for key in keys)
 
     def _history_x_source_key(self, scan_item) -> tuple[str, str] | None:
         """

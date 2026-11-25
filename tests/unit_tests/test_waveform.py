@@ -1984,6 +1984,28 @@ def test_auto_x_uses_the_scan_motor_for_async_curves_of_the_scan_group(
     assert wf.x_label_suffix == " (auto: samx-samx)"
 
 
+def test_auto_x_subscribes_the_scan_motor_before_the_first_binding(
+    qtbot, mocked_client, monkeypatch
+):
+    """
+    Whether an async curve follows the scan is known from the bound subscription. Before
+    there is one, the DataAPI is asked: otherwise the first subscription leaves the scan
+    motor out and the curve stays on the index until the next scan.
+    """
+    created = _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    curve = wf.plot(arg1="async_device", label="async_device-async_device")
+    key = ("async_device", "async_device")
+    monkeypatch.setattr(wf, "_report_devices_no_file_io", lambda scan_item: ["samx"])
+    monkeypatch.setattr(wf, "_alignment_labels", lambda sources, scan: {key: SCAN_GROUP})
+    wf.scan_item = mock.MagicMock()
+    wf._async_curves = [curve]
+
+    wf._cleanup_data_api_subscription()
+    wf._setup_data_api_subscription()
+    assert created[-1].sources == [key, ("samx", "samx")]
+
+
 def test_async_row_is_paired_with_the_x_row_of_the_same_acquisition(
     qtbot, mocked_client, monkeypatch
 ):
