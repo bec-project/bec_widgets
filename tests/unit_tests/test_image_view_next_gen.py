@@ -1,12 +1,16 @@
+from dataclasses import replace
 from unittest import mock
+from unittest.mock import MagicMock
 
 import numpy as np
 import pyqtgraph as pg
 import pytest
-from bec_lib.endpoints import MessageEndpoints
+from bec_lib.data_api import CorrelationGroup, SourceSeries
+from bec_lib.data_api.models import SourceData, SubscriptionUpdate
 from qtpy.QtCore import QPointF, Qt
 
 from bec_widgets.tests.client_mocks import mocked_client
+from bec_widgets.tests.utils import fake_data_subscriptions
 from bec_widgets.widgets.plots.image.bec_histogram_lut_item import (
     BECColorBarItem,
     BECHistogramLUTItem,
@@ -30,6 +34,93 @@ def _set_signal_config(
         "component_name": signal_name,
         "describe": {"signal_info": {"ndim": ndim}},
     }
+
+
+def _fake_bridge_factory(monkeypatch):
+    """Replace the widget's QtDataSubscription with a recording fake."""
+    created = []
+
+    class _FakeBridge:
+        def __init__(
+            self, client, sources, scan="live", owner=None, update_rate=10.0, max_buffer_size=None
+        ):
+            self.client = client
+            self.sources = list(sources)
+            self.scan = scan
+            self.max_buffer_size = max_buffer_size
+            self.healthy = True
+            # What the widgets read of a real bridge about its binding.
+            self.groups = {}
+            self.routes = {}
+            self.unbound_sources = []
+            self.closed = False
+            self.updated = MagicMock()
+
+        def close(self):
+            self.closed = True
+
+    def factory(client, sources, scan="live", owner=None, update_rate=10.0, max_buffer_size=None):
+        bridge = _FakeBridge(client, sources, scan=scan, max_buffer_size=max_buffer_size)
+        created.append(bridge)
+        return bridge
+
+    fake_data_subscriptions(monkeypatch, factory)
+    return created
+
+
+def _make_source(
+    device, entry, values, *, kind="async", ordinals=None, metadata=None, as_numpy=False
+):
+    values = np.asarray(values) if as_numpy else tuple(values)
+    if ordinals is None:
+        ordinals = tuple(range(len(values)))
+    wrap = np.asarray if as_numpy else tuple
+    return SourceData(
+        device=device,
+        entry=entry,
+        kind=kind,
+        ordinals=wrap(ordinals),
+        values=values,
+        timestamps=wrap([float(i) for i in range(len(values))]),
+        complete=True,
+        metadata=metadata or {},
+    )
+
+
+def _make_update(source, scan_id="scan_1", reason="live"):
+    return SubscriptionUpdate(
+        scan_id=scan_id,
+        reason=reason,
+        sources={source.key: source},
+        aligned_ordinals=source.ordinals,
+        complete=True,
+        metadata={"group": CorrelationGroup.standalone(*source.key)},
+    )
+
+
+def _preview_update(device, entry, values, *, ordinals=None, scan_id=None, scan_first_ordinal=None):
+    """
+    Build an update as delivered by a scan-less device_preview stream.
+
+    ``scan_first_ordinal`` is what the DataAPI records with the scan id of a stream: the
+    ordinal of the first point of that scan.
+    """
+    metadata = {"stream": "preview"}
+    if scan_id is not None:
+        metadata["scan_id"] = scan_id
+    if scan_first_ordinal is not None:
+        metadata["scan_first_ordinal"] = scan_first_ordinal
+    source = _make_source(
+        device, entry, values, kind="unindexed", ordinals=ordinals, metadata=metadata
+    )
+    return _make_update(source, scan_id="")
+
+
+def _add_series() -> SourceSeries:
+    """The series of a 1-D async ``add`` signal, as the DataAPI holds it for one scan."""
+    series = SourceSeries("eiger", "async_obj", "async")
+    series.declare("add", [None])
+    return series
 
 
 class _FakeClickEvent:
@@ -417,13 +508,12 @@ def test_enable_colorbar_with_vrange(qtbot, mocked_client, colorbar_type):
 # Device/signal update mechanism
 
 
-def test_image_setup_preview_signal_1d(qtbot, mocked_client):
+def test_image_setup_preview_signal_1d(qtbot, mocked_client, monkeypatch):
     """
-    Ensure that calling .image() with a 1‑D PreviewSignal connects using the 1‑D path
-    and updates correctly.
+    Ensure that calling .image() with a 1‑D PreviewSignal connects through a
+    scan-less DataAPI bridge and accumulates rows into the waterfall buffer.
     """
-    import numpy as np
-
+    bridges = _fake_bridge_factory(monkeypatch)
     view = create_widget(qtbot, Image, client=mocked_client)
 
     _set_signal_config(
@@ -444,20 +534,25 @@ def test_image_setup_preview_signal_1d(qtbot, mocked_client):
     assert view.device == "waveform1d"
     assert view.signal == "img"
 
-    # Simulate a waveform update from the dispatcher
+    # Preview signals are scan-less device streams with bounded retention
+    bridge = bridges[-1]
+    assert bridge.scan is None
+    assert bridge.sources == [("waveform1d", "img")]
+    assert bridge.max_buffer_size == Image.PREVIEW_1D_MAX_ROWS
+
+    # Simulate a waveform update from the DataAPI
     waveform = np.arange(25, dtype=float)
-    view.on_image_update_1d({"data": waveform}, {"scan_id": "scan_test"})
+    view._on_data_update(_preview_update("waveform1d", "img", [waveform]))
     assert view.main_image.raw_data.shape == (1, 25)
     np.testing.assert_array_equal(view.main_image.raw_data[0], waveform)
 
 
-def test_image_setup_preview_signal_2d(qtbot, mocked_client):
+def test_image_setup_preview_signal_2d(qtbot, mocked_client, monkeypatch):
     """
-    Ensure that calling .image() with a 2‑D PreviewSignal connects using the 2‑D path
-    and updates correctly.
+    Ensure that calling .image() with a 2‑D PreviewSignal connects through a
+    scan-less DataAPI bridge and displays the newest frame.
     """
-    import numpy as np
-
+    bridges = _fake_bridge_factory(monkeypatch)
     view = create_widget(qtbot, Image, client=mocked_client)
 
     _set_signal_config(
@@ -478,46 +573,40 @@ def test_image_setup_preview_signal_2d(qtbot, mocked_client):
     assert view.device == "eiger"
     assert view.signal == "img2d"
 
-    # Simulate a 2‑D image update
+    bridge = bridges[-1]
+    assert bridge.scan is None
+    assert bridge.sources == [("eiger", "img2d")]
+    assert bridge.max_buffer_size == Image.PREVIEW_2D_MAX_FRAMES
+
+    # Only the newest frame of the stream is displayed
     test_data = np.arange(16, dtype=float).reshape(4, 4)
-    view.on_image_update_2d({"data": test_data}, {})
+    view._on_data_update(_preview_update("eiger", "img2d", [np.zeros((4, 4)), test_data]))
     np.testing.assert_array_equal(view.main_image.image, test_data)
 
 
-def test_switching_device_disconnects_previous_preview_endpoint(qtbot, mocked_client, monkeypatch):
+def test_switching_device_replaces_preview_bridge(qtbot, mocked_client, monkeypatch):
+    bridges = _fake_bridge_factory(monkeypatch)
     view = create_widget(qtbot, Image, client=mocked_client)
     _set_signal_config(mocked_client, "eiger", "img", signal_class="PreviewSignal", ndim=2)
     _set_signal_config(mocked_client, "waveform1d", "img", signal_class="PreviewSignal", ndim=2)
 
-    connected = []
-    disconnected = []
-    monkeypatch.setattr(
-        view.bec_dispatcher,
-        "connect_slot",
-        lambda slot, endpoint, *args, **kwargs: connected.append(endpoint),
-    )
-    monkeypatch.setattr(
-        view.bec_dispatcher,
-        "disconnect_slot",
-        lambda slot, endpoint, *args, **kwargs: disconnected.append(endpoint),
-    )
-
     view.image(device="eiger", signal="img")
-    connected.clear()
-    disconnected.clear()
+    first = bridges[-1]
+    assert first.sources == [("eiger", "img")]
 
     view.device = "waveform1d"
 
-    assert MessageEndpoints.device_preview("eiger", "img") in disconnected
-    assert MessageEndpoints.device_preview("waveform1d", "img") in connected
+    assert first.closed is True
+    assert bridges[-1].sources == [("waveform1d", "img")]
+    assert bridges[-1].scan is None
 
 
-def test_switching_device_disconnects_previous_async_endpoint(qtbot, mocked_client, monkeypatch):
+def test_switching_device_replaces_async_bridge(qtbot, mocked_client, monkeypatch):
     """
-    Verify that switching device while async_update=True disconnects device_async_signal
-    endpoints for both scan_id and old_scan_id on the old device before reconnecting to
-    the new device.
+    Verify that switching device while async_update=True closes the previous
+    scan-scoped bridge before subscribing to the new device.
     """
+    bridges = _fake_bridge_factory(monkeypatch)
     view = create_widget(qtbot, Image, client=mocked_client)
     _set_signal_config(
         mocked_client, "eiger", "img", signal_class="AsyncSignal", ndim=2, obj_name="async_obj"
@@ -526,77 +615,44 @@ def test_switching_device_disconnects_previous_async_endpoint(qtbot, mocked_clie
         mocked_client, "waveform1d", "img", signal_class="AsyncSignal", ndim=2, obj_name="async_obj"
     )
 
-    connected = []
-    disconnected = []
-    monkeypatch.setattr(
-        view.bec_dispatcher,
-        "connect_slot",
-        lambda slot, endpoint, *args, **kwargs: connected.append(endpoint),
-    )
-    monkeypatch.setattr(
-        view.bec_dispatcher,
-        "disconnect_slot",
-        lambda slot, endpoint, *args, **kwargs: disconnected.append(endpoint),
-    )
-
     view.image(device="eiger", signal="img")
     assert view.async_update is True
     assert view.subscriptions["main"].async_signal_name == "async_obj"
-
-    view.scan_id = "scan_current"
-    view.old_scan_id = "scan_previous"
-    connected.clear()
-    disconnected.clear()
+    first = bridges[-1]
+    assert first.scan == "live"
+    assert first.sources == [("eiger", "async_obj")]
 
     view.device = "waveform1d"
 
-    # Both scan_id and old_scan_id endpoints for the old device must be disconnected
-    assert (
-        MessageEndpoints.device_async_signal("scan_current", "eiger", "async_obj") in disconnected
-    )
-    assert (
-        MessageEndpoints.device_async_signal("scan_previous", "eiger", "async_obj") in disconnected
-    )
-    # The new device's async endpoint for the current scan must be connected
-    assert (
-        MessageEndpoints.device_async_signal("scan_current", "waveform1d", "async_obj") in connected
-    )
+    assert first.closed is True
+    assert bridges[-1].scan == "live"
+    assert bridges[-1].sources == [("waveform1d", "async_obj")]
 
 
-def test_switching_signal_disconnects_previous_preview_endpoint(qtbot, mocked_client, monkeypatch):
+def test_switching_signal_replaces_preview_bridge(qtbot, mocked_client, monkeypatch):
+    bridges = _fake_bridge_factory(monkeypatch)
     view = create_widget(qtbot, Image, client=mocked_client)
     _set_signal_config(mocked_client, "eiger", "img_a", signal_class="PreviewSignal", ndim=2)
     _set_signal_config(mocked_client, "eiger", "img_b", signal_class="PreviewSignal", ndim=2)
 
-    connected = []
-    disconnected = []
-    monkeypatch.setattr(
-        view.bec_dispatcher,
-        "connect_slot",
-        lambda slot, endpoint, *args, **kwargs: connected.append(endpoint),
-    )
-    monkeypatch.setattr(
-        view.bec_dispatcher,
-        "disconnect_slot",
-        lambda slot, endpoint, *args, **kwargs: disconnected.append(endpoint),
-    )
-
     view.image(device="eiger", signal="img_a")
-    connected.clear()
-    disconnected.clear()
+    first = bridges[-1]
+    assert first.sources == [("eiger", "img_a")]
 
     view.signal = "img_b"
 
-    assert MessageEndpoints.device_preview("eiger", "img_a") in disconnected
-    assert MessageEndpoints.device_preview("eiger", "img_b") in connected
+    assert first.closed is True
+    assert bridges[-1].sources == [("eiger", "img_b")]
+    assert bridges[-1].scan is None
 
 
-def test_switching_signal_disconnects_previous_async_endpoint(qtbot, mocked_client, monkeypatch):
+def test_switching_signal_replaces_async_bridge(qtbot, mocked_client, monkeypatch):
     """
-    When the current monitor is an async signal, switching to a different signal must
-    disconnect the previous async endpoint (based on scan_id/async_signal_name) before
-    reconnecting with the new signal's async endpoint.
+    When the current monitor is an async signal, switching to a different
+    signal must close the previous bridge and subscribe with the new signal's
+    obj_name as the DataAPI entry.
     """
+    bridges = _fake_bridge_factory(monkeypatch)
     view = create_widget(qtbot, Image, client=mocked_client)
     _set_signal_config(
         mocked_client, "eiger", "img_a", signal_class="AsyncSignal", ndim=2, obj_name="async_obj_a"
@@ -605,40 +661,20 @@ def test_switching_signal_disconnects_previous_async_endpoint(qtbot, mocked_clie
         mocked_client, "eiger", "img_b", signal_class="AsyncSignal", ndim=2, obj_name="async_obj_b"
     )
 
-    connected = []
-    disconnected = []
-    monkeypatch.setattr(
-        view.bec_dispatcher,
-        "connect_slot",
-        lambda slot, endpoint, *args, **kwargs: connected.append(endpoint),
-    )
-    monkeypatch.setattr(
-        view.bec_dispatcher,
-        "disconnect_slot",
-        lambda slot, endpoint, *args, **kwargs: disconnected.append(endpoint),
-    )
-
-    # Connect to img_a as an async signal; scan_id is None so no actual subscription is made
     view.image(device="eiger", signal="img_a")
     assert view.async_update is True
     assert view.subscriptions["main"].async_signal_name == "async_obj_a"
     assert view.subscriptions["main"].source == "device_monitor_2d"
-
-    # Simulate an active scan so that the async endpoint is real
-    view.scan_id = "scan_123"
-    connected.clear()
-    disconnected.clear()
+    first = bridges[-1]
+    assert first.sources == [("eiger", "async_obj_a")]
 
     # Switch to a different signal
     view.signal = "img_b"
 
-    # The previous async endpoint for img_a must have been disconnected
-    expected_disconnect = MessageEndpoints.device_async_signal("scan_123", "eiger", "async_obj_a")
-    assert expected_disconnect in disconnected
-
-    # The new async endpoint for img_b must have been connected
-    expected_connect = MessageEndpoints.device_async_signal("scan_123", "eiger", "async_obj_b")
-    assert expected_connect in connected
+    assert first.closed is True
+    assert view.subscriptions["main"].async_signal_name == "async_obj_b"
+    assert bridges[-1].sources == [("eiger", "async_obj_b")]
+    assert bridges[-1].scan == "live"
 
 
 def test_preview_signals_skip_0d_entries(qtbot, mocked_client, monkeypatch):
@@ -691,8 +727,10 @@ def test_preview_signals_skip_0d_entries(qtbot, mocked_client, monkeypatch):
 
 def test_image_async_signal_uses_obj_name(qtbot, mocked_client, monkeypatch):
     """
-    Verify async signals use obj_name for endpoints/payloads and reconnect with scan_id.
+    Verify async signals subscribe with their obj_name as the DataAPI entry
+    and render the delivered fragments.
     """
+    bridges = _fake_bridge_factory(monkeypatch)
     view = create_widget(qtbot, Image, client=mocked_client)
     _set_signal_config(
         mocked_client, "eiger", "img", signal_class="AsyncSignal", ndim=1, obj_name="async_obj"
@@ -702,53 +740,33 @@ def test_image_async_signal_uses_obj_name(qtbot, mocked_client, monkeypatch):
     assert view.subscriptions["main"].async_signal_name == "async_obj"
     assert view.async_update is True
 
-    # Prepare scan ids and capture dispatcher calls
-    view.old_scan_id = "old_scan"
-    view.scan_id = "new_scan"
-    connected = []
-    disconnected = []
-    monkeypatch.setattr(
-        view.bec_dispatcher,
-        "connect_slot",
-        lambda slot, endpoint, from_start=False, cb_info=None: connected.append(
-            (slot, endpoint, from_start, cb_info)
-        ),
-    )
-    monkeypatch.setattr(
-        view.bec_dispatcher,
-        "disconnect_slot",
-        lambda slot, endpoint: disconnected.append((slot, endpoint)),
-    )
+    bridge = bridges[-1]
+    assert bridge.scan == "live"
+    assert bridge.sources == [("eiger", "async_obj")]
+    assert bridge.max_buffer_size is None
 
-    view._setup_async_image(view.scan_id)
-
-    expected_new = MessageEndpoints.device_async_signal("new_scan", "eiger", "async_obj")
-    expected_old = MessageEndpoints.device_async_signal("old_scan", "eiger", "async_obj")
-    assert any(ep == expected_new for _, ep, _, _ in connected)
-    assert any(ep == expected_old for _, ep in disconnected)
-
-    # Payload extraction should use obj_name
+    # Rendering reads the source keyed by (device, obj_name)
     payload = np.array([1, 2, 3])
-    msg = {"signals": {"async_obj": {"value": payload}}}
-    assert np.array_equal(view._get_payload_data(msg), payload)
+    source = _make_source(
+        "eiger", "async_obj", [payload], metadata={"async_update_type": "add", "max_shape": [None]}
+    )
+    view._on_data_update(_make_update(source))
+    np.testing.assert_array_equal(view.main_image.raw_data, payload.reshape(1, 3))
 
 
 def test_disconnect_clears_async_state(qtbot, mocked_client, monkeypatch):
+    bridges = _fake_bridge_factory(monkeypatch)
     view = create_widget(qtbot, Image, client=mocked_client)
     _set_signal_config(
         mocked_client, "eiger", "img", signal_class="AsyncSignal", ndim=2, obj_name="async_obj"
     )
 
     view.image(device="eiger", signal="img")
-    view.scan_id = "scan_x"
-    view.old_scan_id = "scan_y"
-    view.subscriptions["main"].async_signal_name = "async_obj"
-
-    # Avoid touching real dispatcher
-    monkeypatch.setattr(view.bec_dispatcher, "disconnect_slot", lambda *args, **kwargs: None)
+    assert view.async_update is True
 
     view.disconnect_monitor(device="eiger", signal="img")
 
+    assert bridges[-1].closed is True
     assert view.subscriptions["main"].async_signal_name is None
     assert view.async_update is False
 
@@ -757,7 +775,8 @@ def test_disconnect_clears_async_state(qtbot, mocked_client, monkeypatch):
 # Connection guardrails
 
 
-def test_image_setup_rejects_unsupported_signal_class(qtbot, mocked_client):
+def test_image_setup_rejects_unsupported_signal_class(qtbot, mocked_client, monkeypatch):
+    bridges = _fake_bridge_factory(monkeypatch)
     view = create_widget(qtbot, Image, client=mocked_client)
     _set_signal_config(mocked_client, "eiger", "img", signal_class="Signal", ndim=2)
 
@@ -766,9 +785,11 @@ def test_image_setup_rejects_unsupported_signal_class(qtbot, mocked_client):
     assert view.subscriptions["main"].source is None
     assert view.subscriptions["main"].monitor_type is None
     assert view.async_update is False
+    assert bridges == []
 
 
-def test_image_disconnects_with_missing_entry(qtbot, mocked_client):
+def test_image_disconnects_with_missing_entry(qtbot, mocked_client, monkeypatch):
+    bridges = _fake_bridge_factory(monkeypatch)
     view = create_widget(qtbot, Image, client=mocked_client)
     _set_signal_config(mocked_client, "eiger", "img", signal_class="PreviewSignal", ndim=2)
 
@@ -779,84 +800,378 @@ def test_image_disconnects_with_missing_entry(qtbot, mocked_client):
     view.image(device="eiger", signal=None)
     assert view.device == ""
     assert view.signal == ""
+    assert all(bridge.closed for bridge in bridges)
 
 
-def test_handle_scan_change_clears_buffers_and_resets_crosshair(qtbot, mocked_client, monkeypatch):
+def test_scan_rollover_resets_accumulation_and_crosshair(qtbot, mocked_client, monkeypatch):
+    """A new scan id in the update stream starts a fresh 1D accumulation and
+    resets the crosshair (replaces the legacy _handle_scan_change data path)."""
+    _fake_bridge_factory(monkeypatch)
     view = create_widget(qtbot, Image, client=mocked_client)
-    view.scan_id = "scan_1"
-    view.main_image.buffer = [np.array([1.0, 2.0])]
-    view.main_image.max_len = 2
+    _set_signal_config(
+        mocked_client, "eiger", "img", signal_class="AsyncSignal", ndim=1, obj_name="async_obj"
+    )
+    view.image(device="eiger", signal="img")
 
-    clear_called = []
-    monkeypatch.setattr(view.main_image, "clear", lambda: clear_called.append(True))
+    view._on_data_update(
+        _make_update(_make_source("eiger", "async_obj", [np.arange(4)]), scan_id="scan_1")
+    )
+    assert view.scan_id == "scan_1"
+    assert view.main_image.raw_data.shape == (1, 4)
+
+    view.hook_crosshair()
     reset_called = []
-    if view.crosshair is not None:
-        monkeypatch.setattr(view.crosshair, "reset", lambda: reset_called.append(True))
+    monkeypatch.setattr(view.crosshair, "reset", lambda: reset_called.append(True))
 
-    view._handle_scan_change("scan_2")
+    # First update of the new scan: the DataAPI delivers a fresh per-scan series
+    view._on_data_update(
+        _make_update(_make_source("eiger", "async_obj", [np.arange(6)]), scan_id="scan_2")
+    )
 
     assert view.old_scan_id == "scan_1"
     assert view.scan_id == "scan_2"
     assert view.info_label.rows == []
-    assert clear_called == [True]
-    assert view.main_image.buffer == []
-    assert view.main_image.max_len == 0
-    if view.crosshair is not None:
-        assert reset_called == [True]
+    assert reset_called == [True]
+    assert view.main_image.raw_data.shape == (1, 6)
 
 
-def test_handle_scan_change_reconnects_async(qtbot, mocked_client, monkeypatch):
+def test_preview_scan_rollover_restricts_display_window(qtbot, mocked_client, monkeypatch):
+    """Preview streams retain pre-rollover points; a scan change restricts the
+    displayed accumulation to the newest point onward."""
+    _fake_bridge_factory(monkeypatch)
     view = create_widget(qtbot, Image, client=mocked_client)
-    view.scan_id = "scan_1"
-    view.async_update = True
+    _set_signal_config(mocked_client, "waveform1d", "img", signal_class="PreviewSignal", ndim=1)
+    view.image(device="waveform1d", signal="img")
 
-    called = []
-    monkeypatch.setattr(view, "_setup_async_image", lambda scan_id: called.append(scan_id))
+    rows = [np.full(5, i, dtype=float) for i in range(3)]
+    view._on_data_update(_preview_update("waveform1d", "img", rows, scan_id="scan_1"))
+    assert view.scan_id == "scan_1"
+    assert view.main_image.raw_data.shape == (3, 5)
 
-    view._handle_scan_change("scan_2")
+    # The device stream keeps the old rows; the newest one belongs to scan_2.
+    rows_after = rows + [np.full(5, 99.0)]
+    view._on_data_update(_preview_update("waveform1d", "img", rows_after, scan_id="scan_2"))
 
-    assert called == ["scan_2"]
+    assert view.old_scan_id == "scan_1"
+    assert view.scan_id == "scan_2"
+    assert view.main_image.raw_data.shape == (1, 5)
+    np.testing.assert_array_equal(view.main_image.raw_data[0], np.full(5, 99.0))
+
+    # Subsequent scan_2 rows extend the new accumulation.
+    rows_more = rows_after + [np.full(5, 100.0)]
+    view._on_data_update(_preview_update("waveform1d", "img", rows_more, scan_id="scan_2"))
+    assert view.main_image.raw_data.shape == (2, 5)
 
 
-def test_handle_scan_change_same_scan_noop(qtbot, mocked_client, monkeypatch):
+def test_preview_scan_rollover_starts_at_the_first_row_of_the_scan(
+    qtbot, mocked_client, monkeypatch
+):
+    """
+    The last row of a scan and the first rows of the next can arrive in one update. The
+    stream says where the new scan starts: the waterfall shows all its rows, and none of
+    the scan before.
+    """
+    _fake_bridge_factory(monkeypatch)
     view = create_widget(qtbot, Image, client=mocked_client)
-    view.scan_id = "scan_1"
-    view.main_image.buffer = [np.array([1.0])]
-    view.main_image.max_len = 1
+    _set_signal_config(mocked_client, "waveform1d", "img", signal_class="PreviewSignal", ndim=1)
+    view.image(device="waveform1d", signal="img")
 
-    clear_called = []
-    monkeypatch.setattr(view.main_image, "clear", lambda: clear_called.append(True))
+    rows = [np.full(5, i, dtype=float) for i in range(3)]
+    view._on_data_update(
+        _preview_update("waveform1d", "img", rows, scan_id="scan_1", scan_first_ordinal=0)
+    )
+    assert view.main_image.raw_data.shape == (3, 5)
 
-    view._handle_scan_change("scan_1")
+    # one more row of scan_1 and the first two of scan_2
+    rows_after = rows + [np.full(5, 3.0), np.full(5, 98.0), np.full(5, 99.0)]
+    view._on_data_update(
+        _preview_update("waveform1d", "img", rows_after, scan_id="scan_2", scan_first_ordinal=4)
+    )
+    assert view.scan_id == "scan_2"
+    assert view.main_image.raw_data.tolist() == [[98.0] * 5, [99.0] * 5]
+
+
+def test_scan_rollover_same_scan_noop(qtbot, mocked_client, monkeypatch):
+    _fake_bridge_factory(monkeypatch)
+    view = create_widget(qtbot, Image, client=mocked_client)
+    _set_signal_config(
+        mocked_client, "eiger", "img", signal_class="AsyncSignal", ndim=1, obj_name="async_obj"
+    )
+    view.image(device="eiger", signal="img")
+
+    view._on_data_update(
+        _make_update(_make_source("eiger", "async_obj", [np.arange(3)]), scan_id="scan_1")
+    )
+    view._on_data_update(
+        _make_update(
+            _make_source("eiger", "async_obj", [np.arange(3), np.arange(3)]), scan_id="scan_1"
+        )
+    )
 
     assert view.scan_id == "scan_1"
-    assert clear_called == []
-    assert view.main_image.buffer == [np.array([1.0])]
-    assert view.main_image.max_len == 1
+    assert view.old_scan_id is None
+    assert view.main_image.raw_data.shape == (2, 3)
 
 
-def test_image_data_update_2d(qtbot, mocked_client):
+def test_build_1d_buffer_incremental_matches_full_rebuild(qtbot, mocked_client, monkeypatch):
+    """
+    The incremental waterfall buffer must equal the from-scratch construction
+    across live appends (contiguous and gapped), an unchanged reused
+    snapshot, a wider new row, an out-of-order hole-fill, a row replaced under
+    its ordinal, a non-live reason and a scan change — and must only fall back
+    to the full rebuild for the emissions that cannot be pure appends.
+
+    The snapshots are those of a real series: an appended point extends the
+    delivered column, a changed one moves the column to new memory.
+    """
+    _fake_bridge_factory(monkeypatch)
+    view = create_widget(qtbot, Image, client=mocked_client)
+    _set_signal_config(
+        mocked_client, "eiger", "img", signal_class="AsyncSignal", ndim=1, obj_name="async_obj"
+    )
+    view.image(device="eiger", signal="img")
+
+    from_scratch = Image._rebuild_1d_buffer
+    rebuilds = []
+
+    def counting(self, source):
+        rebuilds.append(source)
+        return from_scratch(self, source)
+
+    monkeypatch.setattr(Image, "_rebuild_1d_buffer", counting)
+
+    def reference(values):
+        rows = [np.atleast_1d(np.asarray(value)) for value in values]
+        width = max(row.shape[0] for row in rows)
+        return np.vstack([np.pad(row, (0, width - row.shape[0])) for row in rows])
+
+    scans = {"scan_1": _add_series(), "scan_2": _add_series()}
+    steps = [
+        # (scan_id, reason, (ordinal, row) to insert or None, expected rebuild count so far)
+        ("scan_1", "live", (0, [1.0, 2.0]), 1),  # first emission seeds the cache
+        ("scan_1", "live", (1, [3.0, 4.0]), 1),  # append
+        ("scan_1", "live", None, 1),  # unchanged reused snapshot
+        ("scan_1", "live", (3, [5.0]), 1),  # gapped short append
+        ("scan_1", "live", (4, [6.0] * 4), 2),  # row wider than the cached buffer -> rebuild
+        ("scan_1", "live", (2, [4.5]), 3),  # late hole-fill below the frontier -> rebuild
+        ("scan_1", "live", (1, [3.5, 4.5]), 4),  # row replaced under its ordinal -> rebuild
+        ("scan_1", "backfill", None, 5),  # non-live reason -> rebuild
+        ("scan_2", "live", (0, [9.0, 9.0]), 6),  # scan change -> rebuild
+        ("scan_2", "live", (1, [10.0, 11.0]), 6),  # incremental resumes
+    ]
+    for scan_id, reason, point, expected_rebuilds in steps:
+        series = scans[scan_id]
+        if point is not None:
+            series.insert(point[0], np.asarray(point[1]), float(point[0]))
+        source = series.snapshot()
+        view._on_data_update(_make_update(source, scan_id=scan_id, reason=reason))
+        np.testing.assert_array_equal(view.main_image.raw_data, reference(source.values))
+        assert len(rebuilds) == expected_rebuilds
+
+
+def test_waterfall_shows_a_row_that_was_replaced_under_its_ordinal(
+    qtbot, mocked_client, monkeypatch
+):
+    """
+    An ``add`` source can replace a row it has delivered: same ordinal, new values. Equal
+    ordinals are no sign of equal rows: the waterfall shows the new one, also after more
+    rows were appended.
+    """
+    _fake_bridge_factory(monkeypatch)
+    view = create_widget(qtbot, Image, client=mocked_client)
+    _set_signal_config(
+        mocked_client, "eiger", "img", signal_class="AsyncSignal", ndim=1, obj_name="async_obj"
+    )
+    view.image(device="eiger", signal="img")
+    series = _add_series()
+
+    def show(ordinal, row):
+        series.insert(ordinal, np.asarray(row), float(ordinal))
+        view._on_data_update(_make_update(series.snapshot(), scan_id="scan_1"))
+        return view.main_image.raw_data.tolist()
+
+    assert show(0, [0.0, 0.0]) == [[0.0, 0.0]]
+    assert show(0, [2.0, 2.0]) == [[2.0, 2.0]]
+    assert show(1, [5.0, 5.0]) == [[2.0, 2.0], [5.0, 5.0]]
+    assert show(0, [3.0, 3.0]) == [[3.0, 3.0], [5.0, 5.0]]
+
+
+def test_waterfall_keeps_its_rows_when_the_scan_moves_to_its_file(
+    qtbot, mocked_client, monkeypatch
+):
+    """
+    The scan file stores a growing 1-D signal as one series of samples, without the
+    acquisitions it arrived in. When the subscription moves to the file after the scan,
+    that update holds no rows: the waterfall drawn while the scan ran stays.
+    """
+    _fake_bridge_factory(monkeypatch)
+    view = create_widget(qtbot, Image, client=mocked_client)
+    _set_signal_config(
+        mocked_client, "eiger", "img", signal_class="AsyncSignal", ndim=1, obj_name="async_obj"
+    )
+    view.image(device="eiger", signal="img")
+    rows = [np.full(5, float(index)) for index in range(4)]
+    meta = {"async_update_type": "add", "max_shape": [None]}
+    live = _make_update(_make_source("eiger", "async_obj", rows, metadata=meta), scan_id="scan_1")
+    view._on_data_update(live)
+    assert view.main_image.raw_data.shape == (4, 5)
+
+    stored = _make_source("eiger", "async_obj", np.concatenate(rows), as_numpy=True)
+    from_file = replace(_make_update(stored, scan_id="scan_1", reason="history"), generation=1)
+    view._on_data_update(from_file)
+    assert view.main_image.raw_data.shape == (4, 5)
+    np.testing.assert_array_equal(view.main_image.raw_data, np.vstack(rows))
+
+
+def test_waterfall_of_a_late_subscriber_shows_the_stored_series_as_one_row(
+    qtbot, mocked_client, monkeypatch
+):
+    """A waterfall that has nothing of the scan draws its stored 1-D series as one row."""
+    _fake_bridge_factory(monkeypatch)
+    view = create_widget(qtbot, Image, client=mocked_client)
+    _set_signal_config(
+        mocked_client, "eiger", "img", signal_class="AsyncSignal", ndim=1, obj_name="async_obj"
+    )
+    view.image(device="eiger", signal="img")
+    samples = np.arange(6.0)
+    stored = _make_source("eiger", "async_obj", samples, as_numpy=True)
+    view._on_data_update(_make_update(stored, scan_id="scan_1", reason="history"))
+    np.testing.assert_array_equal(view.main_image.raw_data, samples[np.newaxis, :])
+
+
+def test_image_draws_a_stored_frame_whole(qtbot, mocked_client, monkeypatch):
+    """
+    A 2-D ``replace`` signal is one frame per point while the scan runs. The scan file
+    stores that frame as its rows, one point per row. The image is the frame in both
+    cases: at the hand-over to the file, and for a subscriber that only sees the file.
+    """
+    _fake_bridge_factory(monkeypatch)
+    view = create_widget(qtbot, Image, client=mocked_client)
+    _set_signal_config(
+        mocked_client, "eiger", "img", signal_class="AsyncSignal", ndim=2, obj_name="async_obj"
+    )
+    view.image(device="eiger", signal="img")
+    frame = np.arange(12.0).reshape(3, 4)
+    live = _make_source(
+        "eiger",
+        "async_obj",
+        [frame],
+        metadata={"async_update_type": "replace", "max_shape": [3, 4]},
+    )
+    view._on_data_update(_make_update(live, scan_id="scan_1"))
+    np.testing.assert_array_equal(view.main_image.raw_data, frame)
+
+    stored = _make_source("eiger", "async_obj", frame, as_numpy=True)
+    from_file = replace(_make_update(stored, scan_id="scan_1", reason="history"), generation=1)
+    view._on_data_update(from_file)
+    np.testing.assert_array_equal(view.main_image.raw_data, frame)
+
+    late = create_widget(qtbot, Image, client=mocked_client)
+    late.image(device="eiger", signal="img")
+    late._on_data_update(_make_update(stored, scan_id="scan_1", reason="history"))
+    np.testing.assert_array_equal(late.main_image.raw_data, frame)
+
+    # the retention cap of the subscription dropped the first row: that is no frame
+    capped = _make_source("eiger", "async_obj", frame[1:], ordinals=(1, 2), as_numpy=True)
+    view._on_data_update(
+        replace(_make_update(capped, scan_id="scan_1", reason="history"), generation=2)
+    )
+    np.testing.assert_array_equal(view.main_image.raw_data, frame)
+
+
+def test_waterfall_compares_plain_columns_value_by_value(qtbot, mocked_client, monkeypatch):
+    """A column that is no numpy view is reused only for the values that are the same objects."""
+    _fake_bridge_factory(monkeypatch)
+    view = create_widget(qtbot, Image, client=mocked_client)
+    _set_signal_config(
+        mocked_client, "eiger", "img", signal_class="AsyncSignal", ndim=1, obj_name="async_obj"
+    )
+    view.image(device="eiger", signal="img")
+    meta = {"async_update_type": "add", "max_shape": [None]}
+
+    def show(values):
+        source = _make_source("eiger", "async_obj", values, metadata=dict(meta))
+        view._on_data_update(_make_update(source, scan_id="scan_1"))
+        return view.main_image.raw_data.tolist()
+
+    first, second = np.array([0.0, 0.0]), np.array([5.0, 5.0])
+    assert show([first]) == [[0.0, 0.0]]
+    assert show([np.array([2.0, 2.0])]) == [[2.0, 2.0]]
+    assert show([first, second]) == [[0.0, 0.0], [5.0, 5.0]]
+    assert show([np.array([3.0, 3.0]), second]) == [[3.0, 3.0], [5.0, 5.0]]
+
+
+def test_image_data_update_2d(qtbot, mocked_client, monkeypatch):
+    _fake_bridge_factory(monkeypatch)
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
-    test_data = np.random.rand(20, 30)
-    message = {"data": test_data}
-    metadata = {}
+    _set_signal_config(mocked_client, "eiger", "img", signal_class="PreviewSignal", ndim=2)
+    bec_image_view.image(device="eiger", signal="img")
 
-    bec_image_view.on_image_update_2d(message, metadata)
+    test_data = np.random.rand(20, 30)
+    bec_image_view._on_data_update(_preview_update("eiger", "img", [test_data]))
 
     np.testing.assert_array_equal(bec_image_view.main_image.image, test_data)
 
 
-def test_image_data_update_1d(qtbot, mocked_client):
+def test_image_data_update_1d(qtbot, mocked_client, monkeypatch):
+    _fake_bridge_factory(monkeypatch)
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    _set_signal_config(mocked_client, "waveform1d", "img", signal_class="PreviewSignal", ndim=1)
+    bec_image_view.image(device="waveform1d", signal="img")
+
     waveform1 = np.random.rand(50)
     waveform2 = np.random.rand(60)  # Different length, tests padding logic
-    metadata = {"scan_id": "scan_test"}
 
-    bec_image_view.on_image_update_1d({"data": waveform1}, metadata)
+    bec_image_view._on_data_update(_preview_update("waveform1d", "img", [waveform1]))
     assert bec_image_view.main_image.raw_data.shape == (1, 50)
 
-    bec_image_view.on_image_update_1d({"data": waveform2}, metadata)
+    bec_image_view._on_data_update(_preview_update("waveform1d", "img", [waveform1, waveform2]))
     assert bec_image_view.main_image.raw_data.shape == (2, 60)
+
+
+def test_async_add_slice_displays_accumulated_rows(qtbot, mocked_client, monkeypatch):
+    """add_slice sources deliver one accumulated row per ordinal; shorter rows
+    are zero-padded to the longest one."""
+    _fake_bridge_factory(monkeypatch)
+    view = create_widget(qtbot, Image, client=mocked_client)
+    _set_signal_config(
+        mocked_client, "eiger", "img", signal_class="AsyncSignal", ndim=1, obj_name="async_obj"
+    )
+    view.image(device="eiger", signal="img")
+
+    source = _make_source(
+        "eiger",
+        "async_obj",
+        [[1.0, 2.0, 3.0], [4.0]],
+        metadata={"async_update_type": "add_slice", "max_shape": [None, None]},
+    )
+    view._on_data_update(_make_update(source))
+
+    np.testing.assert_array_equal(
+        view.main_image.raw_data, np.array([[1.0, 2.0, 3.0], [4.0, 0.0, 0.0]])
+    )
+
+
+def test_async_replace_displays_current_state(qtbot, mocked_client, monkeypatch):
+    """replace sources expose a single element: the current full state."""
+    _fake_bridge_factory(monkeypatch)
+    view = create_widget(qtbot, Image, client=mocked_client)
+    _set_signal_config(
+        mocked_client, "eiger", "img", signal_class="AsyncSignal", ndim=2, obj_name="async_obj"
+    )
+    view.image(device="eiger", signal="img")
+
+    frame = np.arange(12, dtype=float).reshape(3, 4)
+    source = _make_source(
+        "eiger",
+        "async_obj",
+        [frame],
+        ordinals=(0,),
+        metadata={"async_update_type": "replace", "max_shape": [3, 4]},
+    )
+    view._on_data_update(_make_update(source))
+
+    np.testing.assert_array_equal(view.main_image.image, frame)
 
 
 ##############################################
@@ -950,6 +1265,7 @@ def test_setting_vrange_with_colorbar(qtbot, mocked_client, colorbar_type):
 
 
 def test_setup_image_from_toolbar(qtbot, mocked_client, monkeypatch):
+    bridges = _fake_bridge_factory(monkeypatch)
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
 
     _set_signal_config(mocked_client, "eiger", "img", signal_class="PreviewSignal", ndim=2)
@@ -1258,7 +1574,7 @@ def test_roi_plot_data_from_image(qtbot, mocked_client):
 
     # Provide deterministic 2D data
     test_data = np.arange(25).reshape(5, 5)
-    bec_image_view.on_image_update_2d({"data": test_data}, {})
+    bec_image_view._render_image_data(test_data)
 
     # Activate ROI crosshair
     switch = bec_image_view.toolbar.components.get_action("image_switch_crosshair")
@@ -1288,7 +1604,7 @@ def test_roi_plots_ignore_rgb_images_and_clear_stale_curves(qtbot, mocked_client
     """RGB images have vector-valued pixels and cannot produce scalar profile curves."""
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
     scalar_image = np.arange(25).reshape(5, 5)
-    bec_image_view.on_image_update_2d({"data": scalar_image}, {})
+    bec_image_view._render_image_data(scalar_image)
 
     switch = bec_image_view.toolbar.components.get_action("image_switch_crosshair")
     switch.actions["crosshair_roi"].action.trigger()
@@ -1301,7 +1617,7 @@ def test_roi_plots_ignore_rgb_images_and_clear_stale_curves(qtbot, mocked_client
     assert bec_image_view.y_roi_pinned is not None
 
     rgb_image = np.zeros((5, 5, 3), dtype=np.uint8)
-    bec_image_view.on_image_update_2d({"data": rgb_image}, {})
+    bec_image_view._render_image_data(rgb_image)
 
     assert bec_image_view._compute_image_slices(bec_image_view.main_image, 2, 3) is None
     assert bec_image_view.x_roi_curve is None
@@ -1318,7 +1634,7 @@ def test_pinned_roi_profiles_freeze_and_clear(qtbot, mocked_client):
 
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
     test_data = np.arange(25).reshape(5, 5)
-    bec_image_view.on_image_update_2d({"data": test_data}, {})
+    bec_image_view._render_image_data(test_data)
 
     switch = bec_image_view.toolbar.components.get_action("image_switch_crosshair")
     switch.actions["crosshair_roi"].action.trigger()
@@ -1355,7 +1671,7 @@ def test_pinned_roi_profiles_keep_style_on_theme_change(qtbot, mocked_client):
     import numpy as np
 
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
-    bec_image_view.on_image_update_2d({"data": np.arange(25).reshape(5, 5)}, {})
+    bec_image_view._render_image_data(np.arange(25).reshape(5, 5))
     switch = bec_image_view.toolbar.components.get_action("image_switch_crosshair")
     switch.actions["crosshair_roi"].action.trigger()
     qtbot.wait(50)
@@ -1377,7 +1693,7 @@ def test_pin_survives_scan_reset(qtbot, mocked_client):
     import numpy as np
 
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
-    bec_image_view.on_image_update_2d({"data": np.arange(25).reshape(5, 5)}, {})
+    bec_image_view._render_image_data(np.arange(25).reshape(5, 5))
     switch = bec_image_view.toolbar.components.get_action("image_switch_crosshair")
     switch.actions["crosshair_roi"].action.trigger()
     qtbot.wait(50)
@@ -1387,7 +1703,7 @@ def test_pin_survives_scan_reset(qtbot, mocked_client):
     pin_point = bec_image_view.crosshair.pinned_point
     assert pin_point is not None
 
-    # Image._handle_scan_change calls crosshair.reset() on each new scan id.
+    # Image._handle_scan_rollover calls crosshair.reset() on each new scan id.
     bec_image_view.crosshair.reset()
 
     # The pin marker and the frozen reference profiles must still be there.
@@ -1403,7 +1719,7 @@ def test_pin_and_profiles_restored_after_roi_toggle(qtbot, mocked_client):
 
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
     test_data = np.arange(25).reshape(5, 5)
-    bec_image_view.on_image_update_2d({"data": test_data}, {})
+    bec_image_view._render_image_data(test_data)
     switch = bec_image_view.toolbar.components.get_action("image_switch_crosshair")
     switch.actions["crosshair_roi"].action.trigger()
     qtbot.wait(50)
@@ -1435,7 +1751,7 @@ def test_detached_pin_can_be_removed_with_right_click(qtbot, mocked_client, monk
     from qtpy.QtWidgets import QMenu
 
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
-    bec_image_view.on_image_update_2d({"data": np.arange(25).reshape(5, 5)}, {})
+    bec_image_view._render_image_data(np.arange(25).reshape(5, 5))
     switch = bec_image_view.toolbar.components.get_action("image_switch_crosshair")
     switch.actions["crosshair_roi"].action.trigger()
     qtbot.wait(50)
@@ -1465,7 +1781,7 @@ def test_pinned_profiles_follow_image_updates(qtbot, mocked_client):
     exactly like the pin's intensity label."""
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
     test_data = np.arange(25, dtype=float).reshape(5, 5)
-    bec_image_view.on_image_update_2d({"data": test_data}, {})
+    bec_image_view._render_image_data(test_data)
     switch = bec_image_view.toolbar.components.get_action("image_switch_crosshair")
     switch.actions["crosshair_roi"].action.trigger()
     qtbot.wait(50)
@@ -1475,7 +1791,7 @@ def test_pinned_profiles_follow_image_updates(qtbot, mocked_client):
     np.testing.assert_array_equal(x_pinned, test_data[:, 3])
 
     updated = test_data + 100.0
-    bec_image_view.on_image_update_2d({"data": updated}, {})
+    bec_image_view._render_image_data(updated)
 
     qtbot.waitUntil(
         lambda: np.array_equal(bec_image_view.x_roi_pinned.getData()[1], updated[:, 3]), timeout=500
@@ -1488,7 +1804,7 @@ def test_detached_pin_profiles_follow_image_updates(qtbot, mocked_client):
     """Pinned profiles keep following image data while the crosshair is toggled off."""
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
     test_data = np.arange(25, dtype=float).reshape(5, 5)
-    bec_image_view.on_image_update_2d({"data": test_data}, {})
+    bec_image_view._render_image_data(test_data)
     switch = bec_image_view.toolbar.components.get_action("image_switch_crosshair")
     switch.actions["crosshair_roi"].action.trigger()
     qtbot.wait(50)
@@ -1499,7 +1815,7 @@ def test_detached_pin_profiles_follow_image_updates(qtbot, mocked_client):
     assert bec_image_view.x_roi_pinned is not None
 
     updated = test_data + 100.0
-    bec_image_view.on_image_update_2d({"data": updated}, {})
+    bec_image_view._render_image_data(updated)
 
     qtbot.waitUntil(
         lambda: np.array_equal(bec_image_view.x_roi_pinned.getData()[1], updated[:, 3]), timeout=500
@@ -1511,7 +1827,7 @@ def test_crosshair_moves_update_profiles_immediately(qtbot, mocked_client):
     them at the current crosshair position."""
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
     test_data = np.arange(25, dtype=float).reshape(5, 5)
-    bec_image_view.on_image_update_2d({"data": test_data}, {})
+    bec_image_view._render_image_data(test_data)
     switch = bec_image_view.toolbar.components.get_action("image_switch_crosshair")
     switch.actions["crosshair_roi"].action.trigger()
     qtbot.wait(50)
@@ -1526,7 +1842,7 @@ def test_crosshair_moves_update_profiles_immediately(qtbot, mocked_client):
 
     # New frames refresh the live profile at the crosshair position.
     updated = test_data + 100.0
-    bec_image_view.on_image_update_2d({"data": updated}, {})
+    bec_image_view._render_image_data(updated)
     np.testing.assert_array_equal(bec_image_view.x_roi_curve.getData()[1], updated[:, 2])
 
 
@@ -1535,7 +1851,7 @@ def test_live_label_intensity_updates_on_image_update(qtbot, mocked_client):
     not only when the mouse moves."""
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
     test_data = np.arange(25, dtype=float).reshape(5, 5)
-    bec_image_view.on_image_update_2d({"data": test_data}, {})
+    bec_image_view._render_image_data(test_data)
     bec_image_view.hook_crosshair()
     bec_image_view.crosshair.plot_item.vb.setRange(
         xRange=(0, test_data.shape[0]), yRange=(0, test_data.shape[1]), padding=0
@@ -1544,14 +1860,14 @@ def test_live_label_intensity_updates_on_image_update(qtbot, mocked_client):
     bec_image_view.crosshair.mouse_moved(manual_pos=(2.5, 3.5))
     assert "Intensity: 13.000" in bec_image_view.crosshair.coord_label.toPlainText()
 
-    bec_image_view.on_image_update_2d({"data": test_data + 100.0}, {})
+    bec_image_view._render_image_data(test_data + 100.0)
     assert "Intensity: 113.000" in bec_image_view.crosshair.coord_label.toPlainText()
 
 
 def test_active_pin_label_intensity_updates_on_image_update(qtbot, mocked_client):
     """Pinned crosshair label intensity follows image updates at the pinned position."""
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
-    bec_image_view.on_image_update_2d({"data": np.arange(25).reshape(5, 5)}, {})
+    bec_image_view._render_image_data(np.arange(25).reshape(5, 5))
     bec_image_view.hook_crosshair()
 
     bec_image_view.crosshair.set_pin(2.0, 3.0)
@@ -1559,7 +1875,7 @@ def test_active_pin_label_intensity_updates_on_image_update(qtbot, mocked_client
         "pin (2.500, 3.500)\nIntensity: 13.000"
     )
 
-    bec_image_view.on_image_update_2d({"data": np.arange(25).reshape(5, 5) + 100}, {})
+    bec_image_view._render_image_data(np.arange(25).reshape(5, 5) + 100)
 
     qtbot.waitUntil(
         lambda: bec_image_view.crosshair.pinned_label.toPlainText()
@@ -1573,7 +1889,7 @@ def test_image_update_does_not_replay_active_crosshair_mouse_handling(
 ):
     """Image updates refresh a pin without re-snapping or emitting live crosshair updates."""
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
-    bec_image_view.on_image_update_2d({"data": np.arange(25).reshape(5, 5)}, {})
+    bec_image_view._render_image_data(np.arange(25).reshape(5, 5))
     bec_image_view.hook_crosshair()
     bec_image_view.crosshair.set_pin(2.0, 3.0)
 
@@ -1584,7 +1900,7 @@ def test_image_update_does_not_replay_active_crosshair_mouse_handling(
         lambda *args, **kwargs: mouse_moves.append((args, kwargs)),
     )
 
-    bec_image_view.on_image_update_2d({"data": np.arange(25).reshape(5, 5) + 100}, {})
+    bec_image_view._render_image_data(np.arange(25).reshape(5, 5) + 100)
 
     qtbot.waitUntil(
         lambda: bec_image_view.crosshair.pinned_label.toPlainText()
@@ -1597,7 +1913,7 @@ def test_image_update_does_not_replay_active_crosshair_mouse_handling(
 def test_detached_pin_label_intensity_updates_on_image_update(qtbot, mocked_client):
     """Detached pin labels keep following image updates while crosshair is disabled."""
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
-    bec_image_view.on_image_update_2d({"data": np.arange(25).reshape(5, 5)}, {})
+    bec_image_view._render_image_data(np.arange(25).reshape(5, 5))
     bec_image_view.hook_crosshair()
     bec_image_view.crosshair.set_pin(2.0, 3.0)
     bec_image_view.unhook_crosshair()
@@ -1608,7 +1924,7 @@ def test_detached_pin_label_intensity_updates_on_image_update(qtbot, mocked_clie
         "pin (2.500, 3.500)\nIntensity: 13.000"
     )
 
-    bec_image_view.on_image_update_2d({"data": np.arange(25).reshape(5, 5) + 200}, {})
+    bec_image_view._render_image_data(np.arange(25).reshape(5, 5) + 200)
 
     qtbot.waitUntil(
         lambda: bec_image_view._detached_pin["label"].toPlainText()
@@ -1620,7 +1936,7 @@ def test_detached_pin_label_intensity_updates_on_image_update(qtbot, mocked_clie
 def test_detached_pin_label_omits_scalar_intensity_for_rgb_image(qtbot, mocked_client):
     """Detached RGB pin labels only show coordinates because a pixel is an array."""
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
-    bec_image_view.on_image_update_2d({"data": np.zeros((5, 5, 3))}, {})
+    bec_image_view._render_image_data(np.zeros((5, 5, 3)))
     bec_image_view.hook_crosshair()
     bec_image_view.crosshair.set_pin(2.0, 3.0)
     bec_image_view.unhook_crosshair()
@@ -1712,7 +2028,7 @@ def test_log_scale_does_not_crash_with_full_colorbar(qtbot, mocked_client, data)
 
     view.log = True
     # This is the exact path that used to raise "Cannot set range [nan, nan]".
-    view.on_image_update_2d({"data": data}, {})
+    view._render_image_data(data)
 
     vmin, vmax = view.main_image.v_range
     assert np.isfinite(vmin) and np.isfinite(vmax)
@@ -1728,7 +2044,7 @@ def test_log_scale_all_negative_keeps_finite_image(qtbot, mocked_client):
     view.log = True
     data = (-np.abs(np.random.rand(15, 15)) - 1.0).astype(np.float32)
 
-    view.on_image_update_2d({"data": data}, {})
+    view._render_image_data(data)
 
     assert view.main_image.image is not None
     assert np.all(np.isfinite(view.main_image.image))
@@ -1737,7 +2053,7 @@ def test_log_scale_all_negative_keeps_finite_image(qtbot, mocked_client):
 def test_set_v_range_ignores_non_finite_levels(qtbot, mocked_client):
     """Non-finite v_range requests are rejected rather than forwarded to pg."""
     view = create_widget(qtbot, Image, client=mocked_client)
-    view.on_image_update_2d({"data": np.random.rand(10, 10)}, {})
+    view._render_image_data(np.random.rand(10, 10))
     good = view.main_image.v_range
 
     view.main_image.set_v_range((np.nan, np.nan))
@@ -1767,16 +2083,20 @@ def test_image_processor_log_is_finite_for_non_positive():
 ##############################################
 
 
-def test_adjust_image_buffer_coerces_list_and_scalar(qtbot, mocked_client):
+def test_1d_buffer_coerces_list_and_scalar(qtbot, mocked_client, monkeypatch):
     """Non-ndarray payloads (python list, 0-d scalar) must not crash the
     1D buffer accumulation."""
+    _fake_bridge_factory(monkeypatch)
     view = create_widget(qtbot, Image, client=mocked_client)
-    image = view.main_image
+    _set_signal_config(mocked_client, "waveform1d", "img", signal_class="PreviewSignal", ndim=1)
+    view.image(device="waveform1d", signal="img")
 
-    buf = view.adjust_image_buffer(image, [1, 2, 3])  # python list
-    assert buf.shape == (1, 3)
-    buf = view.adjust_image_buffer(image, np.array(42.0))  # 0-d scalar
-    assert buf.shape[0] == 2
+    view._on_data_update(_preview_update("waveform1d", "img", [[1, 2, 3]]))  # python list
+    assert view.main_image.raw_data.shape == (1, 3)
+    view._on_data_update(
+        _preview_update("waveform1d", "img", [[1, 2, 3], np.array(42.0)])  # 0-d scalar
+    )
+    assert view.main_image.raw_data.shape == (2, 3)
 
 
 ##############################################
@@ -1821,3 +2141,88 @@ def test_deferred_toolbar_sync_runs_while_open(qtbot, mocked_client):
         create_widget(qtbot, Image, client=mocked_client)
 
         qtbot.waitUntil(lambda: sync_device_selection.call_count == 1, timeout=1000)
+
+
+def test_history_numpy_source_renders(qtbot, mocked_client, monkeypatch):
+    """Regression: numpy-array source columns from the history bulk path must
+    render (a truth-test on source.values raised ValueError, swallowed by
+    SafeSlot, leaving the image blank)."""
+    _fake_bridge_factory(monkeypatch)
+    view = create_widget(qtbot, Image, client=mocked_client)
+    _set_signal_config(
+        mocked_client, "eiger", "img", signal_class="AsyncSignal", ndim=2, obj_name="async_obj"
+    )
+    view.image(device="eiger", signal="img")
+    frame = np.arange(12, dtype=float).reshape(3, 4)
+    source = _make_source(
+        "eiger",
+        "async_obj",
+        np.asarray([frame]),
+        # 2D frames are added with max_shape [None, H, W] (one frame per point).
+        metadata={"async_update_type": "add", "max_shape": [None, 3, 4]},
+        as_numpy=True,
+    )
+    view._on_data_update(_make_update(source, reason="history"))
+    np.testing.assert_array_equal(view.main_image.raw_data, frame)
+
+
+def test_image_async_2d_keeps_only_the_newest_frames_and_draws_the_latest(
+    qtbot, mocked_client, monkeypatch
+):
+    bridges = _fake_bridge_factory(monkeypatch)
+    view = create_widget(qtbot, Image, client=mocked_client)
+    _set_signal_config(
+        mocked_client, "eiger", "frames", signal_class="AsyncSignal", ndim=2, obj_name="eiger_fr"
+    )
+    view.image(device="eiger", signal="frames")
+    assert bridges[-1].max_buffer_size == Image.ASYNC_2D_MAX_FRAMES
+    # One add fragment carrying two frames: the latest frame is drawn, not the fragment.
+    fragment = np.stack([np.zeros((2, 3)), np.ones((2, 3))])
+    source = _make_source(
+        "eiger",
+        "eiger_fr",
+        [fragment],
+        metadata={"async_update_type": "add", "max_shape": [None, 2, 3]},
+    )
+    view._on_data_update(_make_update(source))
+    assert view.main_image.raw_data.shape == (2, 3)
+    assert view.main_image.raw_data.max() == 1.0
+
+
+def test_image_waterfall_expands_fragments_and_refreshes_rows_grown_in_place(
+    qtbot, mocked_client, monkeypatch
+):
+    _fake_bridge_factory(monkeypatch)
+    view = create_widget(qtbot, Image, client=mocked_client)
+    _set_signal_config(
+        mocked_client, "eiger", "img", signal_class="AsyncSignal", ndim=1, obj_name="async_obj"
+    )
+    view.image(device="eiger", signal="img")
+    # A (2, 4) add fragment is two waterfall rows (it used to be dropped).
+    fragment = np.arange(8).reshape(2, 4)
+    meta = {"async_update_type": "add", "max_shape": [None, 4]}
+    view._on_data_update(
+        _make_update(_make_source("eiger", "async_obj", [fragment], metadata=meta))
+    )
+    assert view.main_image.raw_data.shape == (2, 4)
+    # add_slice: the same row grows in place - the buffer must follow, not stay stale.
+    meta = {"async_update_type": "add_slice", "max_shape": [None, 4]}
+    view._on_data_update(_make_update(_make_source("eiger", "async_obj", [[1, 2]], metadata=meta)))
+    view._on_data_update(
+        _make_update(_make_source("eiger", "async_obj", [[1, 2, 3, 4]], metadata=meta))
+    )
+    np.testing.assert_array_equal(view.main_image.raw_data, [[1, 2, 3, 4]])
+
+
+def test_image_waterfall_accepts_bulk_numpy_ordinals(qtbot, mocked_client, monkeypatch):
+    """History snapshots carry numpy ordinal columns: no truth-value errors."""
+    _fake_bridge_factory(monkeypatch)
+    view = create_widget(qtbot, Image, client=mocked_client)
+    _set_signal_config(
+        mocked_client, "eiger", "img", signal_class="AsyncSignal", ndim=1, obj_name="async_obj"
+    )
+    view.image(device="eiger", signal="img")
+    rows = np.arange(12).reshape(3, 4)
+    source = _make_source("eiger", "async_obj", list(rows), as_numpy=True)
+    view._on_data_update(_make_update(source, reason="history"))
+    assert view.main_image.raw_data.shape == (3, 4)

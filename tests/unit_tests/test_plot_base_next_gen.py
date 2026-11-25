@@ -1,3 +1,5 @@
+from unittest import mock
+
 import numpy as np
 import pytest
 from bec_lib import messages
@@ -792,3 +794,43 @@ def test_limits_accept_fractional_values(qtbot, mocked_client):
     pb.y_limits = (-1.75, 3.5)
     assert (pb.x_limits.x(), pb.x_limits.y()) == (0.5, 9.25)
     assert (pb.y_limits.x(), pb.y_limits.y()) == (-1.75, 3.5)
+
+
+def test_update_rate_default_and_clamp(qtbot, mocked_client):
+    """update_rate defaults to the class rate and clamps to 1-100 Hz."""
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    assert pb.update_rate == 25.0
+
+    pb.update_rate = 0.2
+    assert pb.update_rate == 1.0
+    pb.update_rate = 500
+    assert pb.update_rate == 100.0
+    pb.update_rate = 10
+    assert pb.update_rate == 10.0
+    pb.update_rate = "not-a-number"
+    assert pb.update_rate == 10.0
+
+
+def test_update_rate_propagates_to_bridges(qtbot, mocked_client):
+    """Setting update_rate reconfigures every data subscription of the plot in place."""
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    bridge = mock.MagicMock()
+    with mock.patch.object(
+        pb.bec_dispatcher, "data_subscriptions", return_value=[bridge]
+    ) as subscriptions:
+        with qtbot.waitSignal(pb.property_changed, timeout=500) as signal:
+            pb.update_rate = 5
+    assert signal.args == ["update_rate", 5.0]
+    subscriptions.assert_called_once_with(pb)
+    bridge.set_update_rate.assert_called_once_with(5.0)
+
+
+def test_update_rate_widget_defaults():
+    """Per-widget defaults preserve the benchmarked rates."""
+    from bec_widgets.widgets.plots.heatmap.heatmap import Heatmap
+    from bec_widgets.widgets.plots.image.image import Image
+    from bec_widgets.widgets.plots.waveform.waveform import Waveform
+
+    assert Waveform.DEFAULT_UPDATE_RATE == 15.0
+    assert Heatmap.DEFAULT_UPDATE_RATE == 5.0
+    assert Image.DEFAULT_UPDATE_RATE == 25.0
