@@ -53,7 +53,7 @@ dev = [
   "pytest-xvfb~=3.0",
   "pytest~=8.0",
   "pytest-benchmark~=5.2",
-  "watchdog~=6.0",
+  "watchdog>=6,<8",
   "pre_commit~=4.2",
 ]
 qtermwidget = ["pyside6_qtermwidget==0.6.6.11.1"]
