@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v3.45.2 (2026-11-25)
+
+### Bug Fixes
+
+- **button_focus**: Space and enter no longer press buttons
+  ([`b3b3615`](https://github.com/bec-project/bec_widgets/commit/b3b3615dcbe93b6a2044235ae3a38682d41add8a))
+
+- **scan_control**: Restore confirms a typed scan name like start
+  ([`850a6d5`](https://github.com/bec-project/bec_widgets/commit/850a6d57f603982737cc772b5746ea96a4816474))
+
+
 ## v3.45.1 (2026-11-24)
 
 ### Bug Fixes
