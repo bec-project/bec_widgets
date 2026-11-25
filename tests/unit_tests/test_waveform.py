@@ -2006,41 +2006,72 @@ def test_auto_x_subscribes_the_scan_motor_before_the_first_binding(
     assert created[-1].sources == [key, ("samx", "samx")]
 
 
-def test_auto_x_subscribes_the_scan_motor_when_the_scan_item_arrives_late(
-    qtbot, mocked_client, monkeypatch
+def test_scan_status_before_the_scan_item_keeps_the_new_scan(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
 ):
     """
-    The scan status can arrive before the scan item exists, and the groups of the scan are
-    only known once the subscription is bound. The scan motor is subscribed as soon as the
-    first update of the scan shows both, not at the next scan.
+    The scan status can arrive before the scan item exists. The plot stays on the new scan
+    instead of falling back on the latest stored one, takes the item with the first update
+    of the scan, and subscribes the scan motor then: not at the next scan.
     """
     created = _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
-    curve = wf.plot(arg1="async_device", label="async_device-async_device")
+    inject_scan_history(wf, scan_history_factory, ("previous", 24))
+    wf.plot(arg1="async_device", label="async_device-async_device")
     key = ("async_device", "async_device")
-    monkeypatch.setattr(wf, "_alignment_labels", lambda sources, scan: {})
-    monkeypatch.setattr(wf, "_categorise_device_curves", lambda: "async")
-    wf._async_curves = [curve]
+    monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: None)
 
-    # The scan opened, but its item is not there yet: only y can be subscribed.
-    wf.scan_id, wf.scan_item = "scan-1", None
-    wf._setup_data_api_subscription()
-    assert wf._data_subscription.sources == [key]
+    wf.on_scan_status({"scan_id": "scan-B", "status": "open"}, {})
+    assert wf.scan_id == "scan-B" and wf.scan_item is None
+    assert wf._data_subscription.sources == [key]  # the scan motor is not known yet
 
-    # The first update of the scan: the item exists now and the binding knows the group.
-    monkeypatch.setattr(wf, "_report_devices_no_file_io", lambda scan_item: ["samx"])
-    monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: mock.MagicMock())
+    item = create_dummy_scan_item(scan_id="scan-B", scan_number=25, scan_name="line_scan")
+    monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: item)
     wf._data_subscription.groups = {SCAN_GROUP: [key]}
     y = _async_source("async_device", values=(1, 2, 3))
-    wf._on_data_update(_make_update([y], scan_id="scan-1"))
-    assert wf.scan_item is not None
+    wf._on_data_update(_make_update([y], scan_id="scan-B"))
+    assert wf.scan_item is item
     assert wf._data_subscription.sources == [key, ("samx", "samx")]
 
     # The same update again does not set the sources a second time.
     count = len(created)
     wf._data_subscription.sources = [key]  # as if the motor could not be subscribed
-    wf._on_data_update(_make_update([y], scan_id="scan-1"))
+    wf._on_data_update(_make_update([y], scan_id="scan-B"))
     assert len(created) == count and wf._data_subscription.sources == [key]
+
+
+def test_late_update_of_the_scan_before_does_not_take_the_plot_back(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    """
+    The live subscription can deliver a last snapshot of the scan before, after the scan
+    status moved the plot on. The plot must not adopt that scan again: it would then drop
+    every update of the running one.
+    """
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    inject_scan_history(wf, scan_history_factory, ("previous", 24))
+    curve = wf.plot(arg1="bpm4i")
+    item = create_dummy_scan_item(scan_id="scan-B", scan_number=25, scan_name="line_scan")
+    monkeypatch.setattr(
+        wf.queue.scan_storage,
+        "find_scan_by_ID",
+        lambda scan_id: item if scan_id == "scan-B" else None,
+    )
+    wf.on_scan_status({"scan_id": "scan-B", "status": "open"}, {})
+
+    late = _make_update([_monitored_source("bpm4i", values=(9, 9, 9))], scan_id="previous")
+    wf._on_data_update(late)
+    assert wf.scan_id == "scan-B"
+    assert curve.get_data()[1] is None  # nothing of the scan before is drawn
+
+    _deliver_sync(wf, "scan-B")
+    np.testing.assert_array_equal(curve.get_data()[1], [5, 6, 7])
+
+    # Once the scan has ended, the live binding may show another scan again (idle).
+    wf.on_scan_status({"scan_id": "scan-B", "status": "closed"}, {})
+    wf._on_data_update(late)
+    assert wf.scan_id == "previous"
 
 
 def test_async_row_is_paired_with_the_x_row_of_the_same_acquisition(

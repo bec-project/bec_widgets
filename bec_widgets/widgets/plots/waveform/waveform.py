@@ -2126,7 +2126,10 @@ class Waveform(PlotBase):
             self.scan_item = self.queue.scan_storage.find_scan_by_ID(self.scan_id)  # live scan
             self.update_scan_info_from_source(self.scan_item)
             self._update_curve_visibility()
-            self._mode = self._categorise_device_curves()
+            if self.scan_item is not None:
+                # The status can come before the item. The curves are then sorted with the
+                # first update of the scan; sorting them now would fall back on the scan before.
+                self._mode = self._categorise_device_curves()
             # Rebuild the subscription so the per-scan source resolution
             # (e.g. the auto x device) follows the new scan.
             self._setup_data_api_subscription(scan=ScanTarget.LIVE)
@@ -2515,6 +2518,12 @@ class Waveform(PlotBase):
         self._mode = self._categorise_device_curves()
         self.setup_dap_for_scan()
 
+    def _own_scan_runs(self) -> bool:
+        """Whether the scan this plot shows still runs, by its last status or the scan storage."""
+        if self._live_legend_scan_id == self.scan_id and self._live_legend_running is not None:
+            return self._live_legend_running
+        return self._scan_number_and_state(self.scan_id)[1]
+
     def _take_late_scan_item(self) -> None:
         """Take the scan item of the current scan when the scan status came before it existed."""
         scan_item = self.queue.scan_storage.find_scan_by_ID(self.scan_id)
@@ -2816,9 +2825,12 @@ class Waveform(PlotBase):
             self._data_api_scan == ScanTarget.LIVE
             and update.scan_id != self.scan_id
             and not self._scan_number_and_state(update.scan_id)[1]
+            and not self._own_scan_runs()
         ):
             # Idle: the live binding shows the most recent (finished) scan until the
-            # next one opens. A newly opened scan is taken over by on_scan_status.
+            # next one opens. A newly opened scan is taken over by on_scan_status. While
+            # the scan of this plot runs, a snapshot of another scan is a late one of the
+            # scan before: it is dropped below.
             self._adopt_live_scan(update.scan_id)
         if self.scan_item is None and update.scan_id is not None and update.scan_id == self.scan_id:
             self._take_late_scan_item()
