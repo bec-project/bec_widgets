@@ -3,6 +3,7 @@ from unittest import mock
 import numpy as np
 import pytest
 from bec_lib import messages
+from bec_lib.data_api.models import SourceData, SubscriptionUpdate
 from bec_lib.scan_history import ScanHistory
 from qtpy.QtCore import QPointF
 from qtpy.QtGui import QTransform
@@ -221,6 +222,42 @@ def test_heatmap_forgets_its_columns_when_a_new_live_scan_starts(heatmap_widget,
     with mock.patch.object(heatmap_widget, "_render_columns") as render:
         heatmap_widget.update_plot()
     render.assert_not_called()
+
+
+def test_heatmap_ignores_a_snapshot_of_the_scan_before(heatmap_widget, fake_bridges):
+    """
+    After the scan status moved the widget on, a snapshot of the still-bound scan before
+    must neither be drawn nor cached for a later redraw.
+    """
+
+    def update(scan_id):
+        columns = {"samx": (0.0, 1.0), "samy": (0.0, 1.0), "bpm4i": (5.0, 6.0)}
+        return SubscriptionUpdate(
+            scan_id=scan_id,
+            reason="live",
+            sources={
+                (dev, dev): SourceData(
+                    device=dev,
+                    entry=dev,
+                    kind="monitored",
+                    ordinals=(0, 1),
+                    values=values,
+                    timestamps=(1.0, 2.0),
+                    complete=True,
+                )
+                for dev, values in columns.items()
+            },
+            aligned_ordinals=(0, 1),
+            complete=True,
+        )
+
+    heatmap_widget.plot(device_x="samx", device_y="samy", device_z="bpm4i")
+    heatmap_widget.scan_id = "scan-2"
+    with mock.patch.object(heatmap_widget, "_render_columns") as render:
+        heatmap_widget._on_data_update(update("scan-1"))
+        render.assert_not_called()
+        heatmap_widget._on_data_update(update("scan-2"))
+        render.assert_called_once()
 
 
 def test_heatmap_get_image_data_missing_data(heatmap_widget):
