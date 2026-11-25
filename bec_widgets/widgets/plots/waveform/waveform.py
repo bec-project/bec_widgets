@@ -2518,6 +2518,24 @@ class Waveform(PlotBase):
         self._mode = self._categorise_device_curves()
         self.setup_dap_for_scan()
 
+    def _follow_live_scan(self, update) -> None:
+        """Keep the scan this plot shows in step with what the live binding delivers."""
+        if (
+            self._data_api_scan == ScanTarget.LIVE
+            and update.scan_id != self.scan_id
+            and not self._scan_number_and_state(update.scan_id)[1]
+            and not self._own_scan_runs()
+        ):
+            # Idle: the live binding shows the most recent (finished) scan until the
+            # next one opens. A newly opened scan is taken over by on_scan_status. While
+            # the scan of this plot runs, a snapshot of another scan is a late one of the
+            # scan before: the caller drops it.
+            self._adopt_live_scan(update.scan_id)
+        if self.scan_item is None and update.scan_id is not None and update.scan_id == self.scan_id:
+            self._take_late_scan_item()
+        if update.scan_id == self.scan_id and update.scan_id != self._live_legend_scan_id:
+            self._refresh_live_legend(update.scan_id)
+
     def _own_scan_runs(self) -> bool:
         """Whether the scan this plot shows still runs, by its last status or the scan storage."""
         if self._live_legend_scan_id == self.scan_id and self._live_legend_running is not None:
@@ -2821,21 +2839,7 @@ class Waveform(PlotBase):
         Args:
             update (SubscriptionUpdate): Full-state columnar snapshot.
         """
-        if (
-            self._data_api_scan == ScanTarget.LIVE
-            and update.scan_id != self.scan_id
-            and not self._scan_number_and_state(update.scan_id)[1]
-            and not self._own_scan_runs()
-        ):
-            # Idle: the live binding shows the most recent (finished) scan until the
-            # next one opens. A newly opened scan is taken over by on_scan_status. While
-            # the scan of this plot runs, a snapshot of another scan is a late one of the
-            # scan before: it is dropped below.
-            self._adopt_live_scan(update.scan_id)
-        if self.scan_item is None and update.scan_id is not None and update.scan_id == self.scan_id:
-            self._take_late_scan_item()
-        if update.scan_id == self.scan_id and update.scan_id != self._live_legend_scan_id:
-            self._refresh_live_legend(update.scan_id)
+        self._follow_live_scan(update)
         if self._alignment_binding_changed(update):
             sources = self._config_sources()
             if sources is not None:
