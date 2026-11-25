@@ -7,6 +7,7 @@ import pytest
 from bec_lib import messages
 from bec_lib.data_api import CorrelationGroup
 from bec_lib.data_api.models import SourceData, SubscriptionUpdate
+from bec_lib.endpoints import MessageEndpoints
 from bec_lib.scan_items import ScanItem
 
 from bec_widgets.tests.client_mocks import mocked_client
@@ -54,6 +55,9 @@ def _fake_bridge_factory(monkeypatch):
             self.unbound_sources = []
             self.closed = False
             self.updated = MagicMock()
+
+        def set_max_buffer_size(self, max_buffer_size):
+            self.max_buffer_size = max_buffer_size
 
         def close(self):
             self.closed = True
@@ -212,7 +216,7 @@ def test_multiwaveform_preview_buffer_is_not_the_display_limit(qtbot, mocked_cli
 def test_multiwaveform_preview_buffer_follows_the_limit_when_flushing(
     qtbot, mocked_client, monkeypatch
 ):
-    """With ``flush_buffer`` on, older traces are dropped: the backend keeps the display limit."""
+    """With ``flush_buffer`` on the backend keeps the display limit, also when that changes."""
     bridges = _fake_bridge_factory(monkeypatch)
     mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
     mw.config.curve_limit = 2
@@ -220,12 +224,60 @@ def test_multiwaveform_preview_buffer_follows_the_limit_when_flushing(
 
     mw.plot("waveform1d")
     assert bridges[-1].max_buffer_size == 2
-    mw.set_curve_limit(5, True)  # more traces than the buffer holds: subscribe again
-    assert bridges[-1].max_buffer_size == 5 and len(bridges) == 2
-    mw.set_curve_limit(3, True)  # fewer: the buffer still fits
-    assert len(bridges) == 2
+    mw.set_curve_limit(5, True)
+    assert bridges[-1].max_buffer_size == 5
+    mw.set_curve_limit(3, True)
+    assert bridges[-1].max_buffer_size == 3
     mw.set_curve_limit(3, False)  # keep everything from now on
-    assert bridges[-1].max_buffer_size is None and len(bridges) == 3
+    assert bridges[-1].max_buffer_size is None
+    # The same subscription all along: a new one would count its traces from zero again.
+    assert len(bridges) == 1 and not bridges[-1].closed
+
+
+def _publish_previews(client, start, count):
+    """Publish ``count`` preview traces of ``waveform1d/wave_prev``, numbered from ``start``."""
+    for index in range(start, start + count):
+        message = messages.DevicePreviewMessage(
+            device="waveform1d", signal="wave_prev", data=np.full(4, float(index))
+        )
+        client.connector.xadd(
+            MessageEndpoints.device_preview("waveform1d", "wave_prev"), {"data": message}
+        )
+
+
+def test_multiwaveform_burst_through_the_data_api_keeps_every_trace(qtbot, mocked_client):
+    """
+    Through the real DataAPI: a burst of more traces than the display limit, all within one
+    update, is kept whole while ``flush_buffer`` is off. Switching it on keeps the
+    subscription and its numbering, so the newest traces follow the ones already shown.
+    """
+    _set_signal_config(
+        mocked_client,
+        "waveform1d",
+        "wave_prev",
+        signal_class="PreviewSignal",
+        ndim=1,
+        obj_name="waveform1d_wave_prev",
+    )
+    mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    mw.update_rate = 1  # Hz: the whole burst falls into one update
+    mw.config.curve_limit = 2
+    mw.config.flush_buffer = False
+    mw.plot("waveform1d", "wave_prev")
+
+    _publish_previews(mocked_client, 0, 205)
+    qtbot.waitUntil(lambda: len(mw.curves) == 205, timeout=10000)
+    assert len([curve for curve in mw.curves if curve.isVisible()]) == 2
+    mw.set_curve_limit(500, False)
+    assert len([curve for curve in mw.curves if curve.isVisible()]) == 205
+
+    subscription = mw._data_subscription
+    mw.set_curve_limit(50, True)
+    assert mw._data_subscription is subscription and len(mw.curves) == 50
+    _publish_previews(mocked_client, 205, 60)
+    qtbot.waitUntil(lambda: mw._last_ordinal == 264, timeout=10000)
+    assert [curve._data_api_ordinal for curve in mw.curves] == list(range(215, 265))
+    _clear_signal_config(mocked_client, "waveform1d", "wave_prev")
 
 
 def test_multiwaveform_bridge_lifecycle(qtbot, mocked_client, monkeypatch):

@@ -234,6 +234,16 @@ class QtDataSubscription(QtOwnedCallback):
         """
         self._subscription.set_update_rate(update_rate)
 
+    def set_max_buffer_size(self, max_buffer_size: int | None) -> None:
+        """
+        Change how many points the live subscription keeps per source.
+
+        Args:
+            max_buffer_size (int | None): Most points kept per source; ``None`` keeps
+                every point. A smaller value drops the oldest points at once.
+        """
+        self._subscription.set_max_buffer_size(max_buffer_size)
+
     @property
     def scan_id(self) -> str | None:
         """The currently bound scan id."""

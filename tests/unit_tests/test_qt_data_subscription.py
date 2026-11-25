@@ -136,6 +136,16 @@ def test_size_limit_defaults_to_none(fake_api):
     bridge.close()
 
 
+def test_rate_and_buffer_of_a_running_subscription_can_be_changed(fake_api):
+    api, subscription = fake_api
+    bridge, _, _ = collecting(api, sources=[("samx", "samx")], scan=None)
+    bridge.set_update_rate(5.0)
+    subscription.set_update_rate.assert_called_once_with(5.0)
+    bridge.set_max_buffer_size(20)
+    subscription.set_max_buffer_size.assert_called_once_with(20)
+    bridge.close()
+
+
 def test_size_gate_properties_and_confirm(fake_api):
     api, subscription = fake_api
     subscription.size_gated = True

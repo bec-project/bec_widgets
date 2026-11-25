@@ -577,8 +577,7 @@ class MultiWaveform(PlotBase):
             self.config.curve_limit = max_trace
         if flush_buffer != self.config.flush_buffer:
             self.config.flush_buffer = flush_buffer
-        if not self._preview_buffer_fits():
-            self._setup_data_api_subscription()
+        self._follow_preview_buffer_size()
 
         if self.config.curve_limit is None:
             self.scale_colors()
@@ -851,14 +850,14 @@ class MultiWaveform(PlotBase):
         """Preview traces the backend keeps: all of them, unless older ones are flushed."""
         return self.config.curve_limit if self.config.flush_buffer else None
 
-    def _preview_buffer_fits(self) -> bool:
-        """Whether the subscribed preview buffer still covers the display limit."""
+    def _follow_preview_buffer_size(self) -> None:
+        """Let the buffer of a preview subscription follow the display limit and the flush mode."""
         if self._data_subscription is None or self._subscribed_scan is not None:
-            return True
-        wanted, held = self._preview_buffer_size(), self._subscribed_buffer_size
-        if wanted is None or held is None:
-            return wanted == held
-        return wanted <= held
+            return  # only a preview stream is buffered for the display
+        wanted = self._preview_buffer_size()
+        if wanted != self._subscribed_buffer_size:
+            self._data_subscription.set_max_buffer_size(wanted)
+            self._subscribed_buffer_size = wanted
 
     def _setup_data_api_subscription(self):
         """(Re)create the DataAPI subscription for the configured device and signal."""
