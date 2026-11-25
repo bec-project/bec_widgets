@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from unittest import mock
 
 import numpy as np
@@ -252,11 +253,16 @@ def test_heatmap_ignores_a_snapshot_of_the_scan_before(heatmap_widget, fake_brid
         )
 
     heatmap_widget.plot(device_x="samx", device_y="samy", device_z="bpm4i")
-    heatmap_widget.scan_id = "scan-2"
+    heatmap_widget.scan_id, heatmap_widget.scan_item = "scan-2", SimpleNamespace(status="open")
     with mock.patch.object(heatmap_widget, "_render_columns") as render:
         heatmap_widget._on_data_update(update("scan-1"))
         render.assert_not_called()
         heatmap_widget._on_data_update(update("scan-2"))
+        render.assert_called_once()
+    # Once its scan has ended, the live binding shows the most recent scan: that is drawn.
+    heatmap_widget.scan_item = SimpleNamespace(status="closed")
+    with mock.patch.object(heatmap_widget, "_render_columns") as render:
+        heatmap_widget._on_data_update(update("scan-3"))
         render.assert_called_once()
 
 

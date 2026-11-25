@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -118,13 +119,34 @@ def test_scatter_waveform_ignores_a_snapshot_of_the_scan_before(qtbot, mocked_cl
     _fake_bridge_factory(monkeypatch)
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
     swf.plot("samx", "samy", "bpm4i", label="test_curve")
-    swf.scan_id = "scan-2"
+    swf.scan_id, swf.scan_item = "scan-2", SimpleNamespace(status="open")
 
+    swf._on_data_update(_make_update("scan-1"))
+    assert swf.main_curve.getData()[0] is None
+
+    swf.scan_item = None  # the scan status came before the scan item existed
     swf._on_data_update(_make_update("scan-1"))
     assert swf.main_curve.getData()[0] is None
 
     swf._on_data_update(_make_update("scan-2"))
     assert len(swf.main_curve.getData()[0]) == 3
+
+
+def test_scatter_waveform_shows_the_latest_scan_while_idle(qtbot, mocked_client, monkeypatch):
+    """
+    Once the scan of the widget has ended, the live subscription shows the most recent
+    scan. That can be another one than the widget last looked at (a history scan was
+    selected before): it is drawn, not taken for a late snapshot.
+    """
+    _fake_bridge_factory(monkeypatch)
+    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+    swf.plot("samx", "samy", "bpm4i", label="test_curve")
+    # A live scan that is closed, or a scan taken from the history.
+    for ended in (SimpleNamespace(status="closed"), MagicMock(spec=ScanDataContainer)):
+        swf.main_curve.clear()
+        swf.scan_id, swf.scan_item = "older-scan", ended
+        swf._on_data_update(_make_update("latest-scan"))
+        assert len(swf.main_curve.getData()[0]) == 3
 
 
 def test_scatter_waveform_update_with_scan_history(

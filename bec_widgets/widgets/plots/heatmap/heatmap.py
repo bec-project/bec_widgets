@@ -752,11 +752,7 @@ class Heatmap(ImageBase):
             return
         if self._history_scan_id is not None and update.scan_id != self._history_scan_id:
             return
-        if (
-            self._data_subscription_scope == ScanTarget.LIVE
-            and None not in (self.scan_id, update.scan_id)
-            and update.scan_id != self.scan_id
-        ):
+        if self._data_subscription_scope == ScanTarget.LIVE and self._is_late_live_update(update):
             return  # the subscription has not followed to the scan this plot shows yet
         if self._alignment_binding_changed(update):
             self._warn_if_unaligned(list(dict.fromkeys(sources)), self._data_subscription_scope)

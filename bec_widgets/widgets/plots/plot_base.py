@@ -73,6 +73,10 @@ class UIMode(Enum):
     SIDE = 2
 
 
+#: The states of a scan item in which its scan no longer runs.
+ENDED_SCAN_STATES = frozenset({"closed", "aborted", "halted", "user_completed"})
+
+
 class PlotBase(BECWidget, QWidget):
     PLUGIN = False
     RPC = False
@@ -83,6 +87,9 @@ class PlotBase(BECWidget, QWidget):
     _data_subscription: QtDataSubscription | None = None
     #: The (subscription, scan, binding revision) the alignment of the sources was last checked for.
     _alignment_binding: tuple | None = None
+    #: The scan the plot shows and its scan item; the plots that follow scans set them.
+    scan_id: str | None = None
+    scan_item: ScanItem | ScanDataContainer | None = None
     BASE_USER_ACCESS = [
         "enable_toolbar",
         "enable_toolbar.setter",
@@ -478,6 +485,23 @@ class PlotBase(BECWidget, QWidget):
             for key in keys
             if tuple(key) not in unbound
         }
+
+    def _is_late_live_update(self, update: SubscriptionUpdate) -> bool:
+        """
+        Whether a live update still shows the scan before the one this plot moved on to.
+
+        The scan status moves the plot to a new scan. The live subscription follows on its
+        own, and can deliver a last snapshot of the scan before in between. Once the scan
+        of the plot is known to have ended (a stored scan, or a live one that is closed),
+        the live binding shows the most recent scan: that is not late.
+        """
+        if None in (self.scan_id, update.scan_id) or update.scan_id == self.scan_id:
+            return False
+        item = self.scan_item
+        ended = isinstance(item, ScanDataContainer) or (
+            getattr(item, "status", None) in ENDED_SCAN_STATES
+        )
+        return not ended
 
     def _alignment_binding_changed(self, update: SubscriptionUpdate) -> bool:
         """Whether ``update`` comes from a binding the alignment was not checked against."""
