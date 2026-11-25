@@ -41,6 +41,9 @@ def _fake_bridge_factory(monkeypatch):
             self.closed = False
             self.updated = MagicMock()
 
+        def set_max_buffer_size(self, max_buffer_size):
+            self.max_buffer_size = max_buffer_size
+
         def close(self):
             self.closed = True
 
@@ -288,6 +291,47 @@ def test_motor_map_reset_history_hides_earlier_rows(qtbot, mocked_client):
     assert mm._buffer == {"x": [4.0], "y": [2.5]}
     mm._on_data_update(_pair_update([2.0, 3.0], [1.0, 2.0], start=1))  # nothing new
     assert mm._buffer == {"x": [4.0], "y": [2.5]}
+
+
+def test_motor_map_point_limit_reaches_the_running_subscription(qtbot, mocked_client, monkeypatch):
+    """
+    The trail is what the subscription holds. A larger point limit has to reach it, or the
+    trail stays as short as it was when the motors were selected.
+    """
+    bridges = _fake_bridge_factory(monkeypatch)
+    mm = create_widget(qtbot, MotorMap, client=mocked_client)
+    mm.map(device_x="samx", device_y="samy")
+    assert bridges[-1].max_buffer_size == 5000
+
+    mm.max_points = 20000
+    assert bridges[-1].max_buffer_size == 20000 and len(bridges) == 1
+
+
+def test_motor_map_trail_follows_the_point_limit_through_the_data_api(qtbot, mocked_client):
+    """Through the real DataAPI: the trail grows to a raised point limit without a new subscription."""
+
+    def move(samx):
+        for name, value in (("samx", samx), ("samy", 1.0)):
+            mocked_client.connector.set_and_publish(
+                MessageEndpoints.device_readback(name),
+                messages.DeviceMessage(signals={name: {"value": value, "timestamp": samx}}),
+            )
+
+    move(0.0)
+    mm = create_widget(qtbot, MotorMap, client=mocked_client)
+    mm.max_points = 3
+    mm.map(device_x="samx", device_y="samy")
+    subscription = mm._data_subscription
+    for position in range(1, 6):
+        move(float(position))
+    qtbot.waitUntil(lambda: mm._buffer["x"][-1:] == [5.0], timeout=5000)
+    assert len(mm._buffer["x"]) == 3
+
+    mm.max_points = 10
+    for position in range(6, 10):
+        move(float(position))
+    qtbot.waitUntil(lambda: mm._buffer["x"][-1:] == [9.0], timeout=5000)
+    assert len(mm._buffer["x"]) > 3 and mm._data_subscription is subscription
 
 
 def test_motor_map_bridge_lifecycle(qtbot, mocked_client, monkeypatch):

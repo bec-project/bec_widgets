@@ -366,6 +366,9 @@ class MotorMap(PlotBase):
             max_points(int): Maximum number of points to display.
         """
         self.config.max_points = max_points
+        if self._data_subscription is not None:
+            # The trail is what the subscription holds: it keeps as many points.
+            self._data_subscription.set_max_buffer_size(max_points)
         self.update_signal.emit()
         self.property_changed.emit("max_points", max_points)
 
