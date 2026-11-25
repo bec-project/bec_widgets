@@ -194,8 +194,24 @@ def test_multiwaveform_set_monitor(qtbot, mocked_client):
     assert mw._data_subscription.scan_id == ""  # device scope
 
 
+def test_multiwaveform_preview_buffer_is_not_the_display_limit(qtbot, mocked_client, monkeypatch):
+    """
+    With ``flush_buffer`` off, traces above the display limit are kept hidden and come back
+    when the limit is raised. A burst between two updates must reach the widget whole, so
+    the backend may not drop what the display limit hides.
+    """
+    bridges = _fake_bridge_factory(monkeypatch)
+    mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    mw.config.curve_limit = 2
+    mw.config.flush_buffer = False
+
+    mw.plot("waveform1d")
+    assert bridges[-1].max_buffer_size != 2
+    assert bridges[-1].max_buffer_size == MultiWaveform.PREVIEW_MAX_TRACES
+
+
 def test_multiwaveform_bridge_lifecycle(qtbot, mocked_client, monkeypatch):
-    """plot() creates a scan-less bridge bounded by the curve limit; re-plot replaces it."""
+    """plot() creates a scan-less bridge with a bounded buffer; re-plot replaces it."""
     bridges = _fake_bridge_factory(monkeypatch)
     mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
 
@@ -203,7 +219,7 @@ def test_multiwaveform_bridge_lifecycle(qtbot, mocked_client, monkeypatch):
     assert len(bridges) == 1
     assert bridges[-1].sources == [("waveform1d", TRACE)]
     assert bridges[-1].scan is None
-    assert bridges[-1].max_buffer_size == mw.config.curve_limit
+    assert bridges[-1].max_buffer_size == MultiWaveform.PREVIEW_MAX_TRACES
     assert mw.connected is True
 
     first = bridges[-1]
@@ -298,7 +314,7 @@ def test_multiwaveform_preview_signal_routes_scanless(qtbot, mocked_client, monk
     assert mw.monitor_signal == "wave_prev"
     assert bridges[-1].scan is None
     assert bridges[-1].sources == [("waveform1d", "wave_prev")]
-    assert bridges[-1].max_buffer_size == mw.config.curve_limit
+    assert bridges[-1].max_buffer_size == MultiWaveform.PREVIEW_MAX_TRACES
     _clear_signal_config(mocked_client, "waveform1d", "wave_prev")
 
 

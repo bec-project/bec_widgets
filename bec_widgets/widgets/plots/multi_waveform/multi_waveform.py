@@ -94,6 +94,8 @@ class MultiWaveform(PlotBase):
 
     #: Async signal classes routed through the scan-scoped (live-follow) DataAPI path.
     SUPPORTED_SIGNALS = ["AsyncSignal", "AsyncMultiSignal", "DynamicSignal"]
+    #: Preview traces the backend keeps between two updates (not the display limit).
+    PREVIEW_MAX_TRACES: int = 200
 
     monitor_signal_updated = Signal()
     highlighted_curve_index_changed = Signal(int)
@@ -836,7 +838,7 @@ class MultiWaveform(PlotBase):
 
         if signal_class == "PreviewSignal":
             # Scan-less device stream served by the DataAPI device plugin.
-            return (None, signal, self.config.curve_limit)
+            return (None, signal, self.PREVIEW_MAX_TRACES)
 
         # Scan-scoped async stream; the DataAPI rebinds on new scans and hands
         # terminal scans over to history automatically (live-follow).
