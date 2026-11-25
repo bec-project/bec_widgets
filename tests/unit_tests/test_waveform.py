@@ -2006,6 +2006,43 @@ def test_auto_x_subscribes_the_scan_motor_before_the_first_binding(
     assert created[-1].sources == [key, ("samx", "samx")]
 
 
+def test_auto_x_subscribes_the_scan_motor_when_the_scan_item_arrives_late(
+    qtbot, mocked_client, monkeypatch
+):
+    """
+    The scan status can arrive before the scan item exists, and the groups of the scan are
+    only known once the subscription is bound. The scan motor is subscribed as soon as the
+    first update of the scan shows both, not at the next scan.
+    """
+    created = _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    curve = wf.plot(arg1="async_device", label="async_device-async_device")
+    key = ("async_device", "async_device")
+    monkeypatch.setattr(wf, "_alignment_labels", lambda sources, scan: {})
+    monkeypatch.setattr(wf, "_categorise_device_curves", lambda: "async")
+    wf._async_curves = [curve]
+
+    # The scan opened, but its item is not there yet: only y can be subscribed.
+    wf.scan_id, wf.scan_item = "scan-1", None
+    wf._setup_data_api_subscription()
+    assert wf._data_subscription.sources == [key]
+
+    # The first update of the scan: the item exists now and the binding knows the group.
+    monkeypatch.setattr(wf, "_report_devices_no_file_io", lambda scan_item: ["samx"])
+    monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", lambda scan_id: mock.MagicMock())
+    wf._data_subscription.groups = {SCAN_GROUP: [key]}
+    y = _async_source("async_device", values=(1, 2, 3))
+    wf._on_data_update(_make_update([y], scan_id="scan-1"))
+    assert wf.scan_item is not None
+    assert wf._data_subscription.sources == [key, ("samx", "samx")]
+
+    # The same update again does not set the sources a second time.
+    count = len(created)
+    wf._data_subscription.sources = [key]  # as if the motor could not be subscribed
+    wf._on_data_update(_make_update([y], scan_id="scan-1"))
+    assert len(created) == count and wf._data_subscription.sources == [key]
+
+
 def test_async_row_is_paired_with_the_x_row_of_the_same_acquisition(
     qtbot, mocked_client, monkeypatch
 ):

@@ -376,6 +376,8 @@ class Waveform(PlotBase):
             None  # the scan target the subscription was made for
         )
         self._data_api_scan: str = ScanTarget.LIVE
+        #: The (scan, x source) the sources were last set again for.
+        self._late_x_attempt: tuple | None = None
         self._history_subscriptions: dict[str, QtDataSubscription] = {}
         self._history_x_keys: dict[str, tuple[str, str] | None] = {}
         # History curves whose data has not arrived yet; the view ranges to it once.
@@ -2513,6 +2515,37 @@ class Waveform(PlotBase):
         self._mode = self._categorise_device_curves()
         self.setup_dap_for_scan()
 
+    def _take_late_scan_item(self) -> None:
+        """Take the scan item of the current scan when the scan status came before it existed."""
+        scan_item = self.queue.scan_storage.find_scan_by_ID(self.scan_id)
+        if scan_item is None:
+            return
+        self.scan_item = scan_item
+        self.update_scan_info_from_source(scan_item)
+        self._mode = self._categorise_device_curves()
+
+    def _subscribe_late_x_source(self, x_key: tuple[str, str] | None, update) -> bool:
+        """
+        Subscribe the x source when it could only be resolved now.
+
+        The sources are chosen when the subscription is set up. The scan item and the
+        correlation groups of the scan can arrive later, and with them the x source.
+
+        Returns:
+            bool: Whether the sources were set again; tried once per scan and x source.
+        """
+        subscription = self._data_subscription
+        if x_key is None or subscription is None:
+            return False
+        if tuple(x_key) in update.sources or tuple(x_key) in map(tuple, subscription.sources):
+            return False
+        attempt = (update.scan_id, tuple(x_key))
+        if attempt == self._late_x_attempt:
+            return False
+        self._late_x_attempt = attempt
+        self._setup_data_api_subscription(scan=self._data_api_scan)
+        return True
+
     def _cleanup_data_api_subscription(self):
         if self._data_subscription is None:
             return
@@ -2787,6 +2820,8 @@ class Waveform(PlotBase):
             # Idle: the live binding shows the most recent (finished) scan until the
             # next one opens. A newly opened scan is taken over by on_scan_status.
             self._adopt_live_scan(update.scan_id)
+        if self.scan_item is None and update.scan_id is not None and update.scan_id == self.scan_id:
+            self._take_late_scan_item()
         if update.scan_id == self.scan_id and update.scan_id != self._live_legend_scan_id:
             self._refresh_live_legend(update.scan_id)
         if self._alignment_binding_changed(update):
@@ -2799,6 +2834,8 @@ class Waveform(PlotBase):
             self._offer_withheld_file(update.scan_id, update.metadata.get("estimated_bytes"))
         self.report_data_state(update, self._data_subscription)
         x_key = self._resolve_x_axis()
+        if self._subscribe_late_x_source(x_key, update):
+            return  # the update with x follows
         aligned_columns = update.aligned()
         had_timestamps = "timestamp" in self._curve_data_axes.values()
         updated_any = False
