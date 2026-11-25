@@ -1345,6 +1345,8 @@ class Heatmap(ImageBase):
     def reset(self):
         self._cancel_interpolation()
         self._grid_index = None
+        # The image is cleared: a redraw must not bring the columns of the scan before back.
+        self._last_columns = None
         self.main_image.clear()
         if self.crosshair is not None:
             self.crosshair.reset()

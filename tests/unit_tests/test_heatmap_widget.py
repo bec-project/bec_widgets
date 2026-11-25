@@ -206,6 +206,23 @@ def test_heatmap_widget_on_scan_status_different_scan_id(heatmap_widget):
         mock_reset.assert_called_once()
 
 
+def test_heatmap_forgets_its_columns_when_a_new_live_scan_starts(heatmap_widget, fake_bridges):
+    """
+    A live subscription follows the next scan by itself, without being set up again. A
+    redraw between the start of that scan and its first data must not draw the columns of
+    the scan before under the new scan's name.
+    """
+    heatmap_widget.plot(device_x="samx", device_y="samy", device_z="bpm4i")
+    heatmap_widget.scan_id = "scan-1"
+    heatmap_widget._last_columns = ([0.0, 1.0], [0.0, 1.0], [5.0, 6.0])
+    scan_msg = messages.ScanStatusMessage(scan_id="scan-2", status="open", metadata={}, info={})
+    heatmap_widget.on_scan_status(scan_msg.content, scan_msg.metadata)
+    assert heatmap_widget._data_subscription is fake_bridges[-1] and len(fake_bridges) == 1
+    with mock.patch.object(heatmap_widget, "_render_columns") as render:
+        heatmap_widget.update_plot()
+    render.assert_not_called()
+
+
 def test_heatmap_get_image_data_missing_data(heatmap_widget):
     """
     If the data is missing or incomplete, the method should return None.
