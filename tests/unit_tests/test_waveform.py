@@ -3975,5 +3975,5 @@ def test_cleanup_stops_the_view_and_lod_timers(qtbot, mocked_client, monkeypatch
     wf.plot_item.vb.setXRange(1000, 3000, padding=0)  # the user zooms
     timers = (wf._lod_timer, wf._view_timer)
     assert all(timer.isActive() for timer in timers)
-    wf.cleanup()
+    wf.close()  # closing runs cleanup()
     assert not any(timer.isActive() for timer in timers)
