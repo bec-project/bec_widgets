@@ -1254,3 +1254,39 @@ def test_multiwaveform_keeps_the_drawn_traces_when_the_scan_moves_to_its_file(
     set_data.assert_not_called()
     _clear_signal_config(mocked_client, "eiger", "data")
 
+
+def test_multiwaveform_starts_with_the_traces_of_a_newly_chosen_signal(qtbot, mocked_client):
+    """Through the real DataAPI: after the signal was changed, only its traces are shown."""
+    for name in ("first", "second"):
+        _set_signal_config(
+            mocked_client,
+            "waveform1d",
+            name,
+            signal_class="PreviewSignal",
+            ndim=1,
+            obj_name=f"waveform1d_{name}",
+        )
+    mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    mw.plot("waveform1d", "first")
+    for _ in range(5):
+        message = messages.DevicePreviewMessage(
+            device="waveform1d", signal="first", data=np.ones(4)
+        )
+        mocked_client.connector.xadd(
+            MessageEndpoints.device_preview("waveform1d", "first"), {"data": message}
+        )
+    qtbot.waitUntil(lambda: len(mw.curves) == 5, timeout=10000)
+
+    mw.signal = "second"  # what the signal combobox of the toolbar does
+    for _ in range(2):
+        message = messages.DevicePreviewMessage(
+            device="waveform1d", signal="second", data=np.full(4, 2.0)
+        )
+        mocked_client.connector.xadd(
+            MessageEndpoints.device_preview("waveform1d", "second"), {"data": message}
+        )
+    qtbot.waitUntil(lambda: any(c.getData()[1][0] == 2.0 for c in mw.curves), timeout=10000)
+    qtbot.waitUntil(lambda: len(mw.curves) == 2, timeout=10000)
+    assert [float(curve.getData()[1][0]) for curve in mw.curves] == [2.0, 2.0]
+    for name in ("first", "second"):
+        _clear_signal_config(mocked_client, "waveform1d", name)

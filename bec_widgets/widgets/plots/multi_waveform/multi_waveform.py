@@ -919,6 +919,7 @@ class MultiWaveform(PlotBase):
         self._last_ordinal = None
         self._evicted_through = None
         self._source_key = None
+        self._data_api_binding = None  # the next subscription starts with its own traces
         self.connected = False
         if self._data_subscription is None:
             return
