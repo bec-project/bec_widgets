@@ -171,6 +171,24 @@ def test_scatter_waveform_follows_the_later_scan_after_a_scan_number_reset(
     assert swf.scan_id == "after"
 
 
+def test_scatter_waveform_takes_a_scan_item_that_comes_after_the_scan_status(
+    qtbot, mocked_client, monkeypatch
+):
+    """The status of a scan can come before its item: the scan info follows with the data."""
+    _fake_bridge_factory(monkeypatch)
+    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+    swf.plot("samx", "samy", "bpm4i", label="test_curve")
+    _serve_scans(swf, monkeypatch)
+    swf.on_scan_status({"scan_id": "scan-1", "status": "open"}, {})
+    assert swf.scan_item is None
+
+    item = create_dummy_scan_item("scan-1", 7, "line_scan")
+    _serve_scans(swf, monkeypatch, item)
+    swf._on_data_update(_make_update("scan-1"))
+    assert swf.scan_item is item
+    assert [label.text for _, label in swf.info_label.items][0] == "Scan: 7 (live)"
+
+
 def test_scatter_waveform_moves_to_a_newer_scan_with_its_data(
     qtbot, mocked_client, scan_history_factory, monkeypatch
 ):

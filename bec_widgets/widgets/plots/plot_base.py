@@ -533,11 +533,17 @@ class PlotBase(BECWidget, QWidget):
         that what it shows and the scan it shows it for change together.
         """
         if update.scan_id in (None, self.scan_id):
+            if self.scan_item is None and self.scan_id is not None:
+                self._take_late_scan_item()
             return True
         if self._is_late_live_update(update):
             return False
         self._move_to_scan(update.scan_id)
         return True
+
+    def _take_late_scan_item(self) -> None:
+        """Take the scan item of the plot's scan when the scan status came before it existed."""
+        self.scan_item = self.client.queue.scan_storage.find_scan_by_ID(self.scan_id)
 
     def _move_to_scan(self, scan_id: str) -> None:
         """Make ``scan_id`` the scan of the plot; a plot adds what a new scan means to it."""

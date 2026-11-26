@@ -284,6 +284,27 @@ def test_heatmap_drops_snapshots_of_older_scans(heatmap_widget, fake_bridges, mo
     assert heatmap_widget.scan_id == "scan-3"
 
 
+def test_heatmap_takes_a_scan_item_that_comes_after_the_scan_status(
+    heatmap_widget, fake_bridges, monkeypatch
+):
+    """The status of a scan can come before its item. The image is drawn once the item is there."""
+    heatmap_widget.plot(device_x="samx", device_y="samy", device_z="bpm4i")
+    _serve_scans(heatmap_widget, monkeypatch)
+    heatmap_widget.on_scan_status({"scan_id": "scan-1", "status": "open"}, {})
+    assert heatmap_widget.scan_item is None
+
+    item = create_dummy_scan_item("scan-1", 1, "line_scan")
+    _serve_scans(heatmap_widget, monkeypatch, item)
+    drawn_for = []
+    monkeypatch.setattr(
+        heatmap_widget,
+        "_render_columns",
+        lambda *columns: drawn_for.append(heatmap_widget.scan_item),
+    )
+    heatmap_widget._on_data_update(_xyz_update("scan-1"))
+    assert drawn_for == [item]
+
+
 def test_heatmap_moves_to_a_newer_scan_with_its_data(heatmap_widget, fake_bridges, monkeypatch):
     """
     The live subscription can be ahead of the scan status. The widget moves to the newer

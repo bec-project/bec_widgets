@@ -324,6 +324,10 @@ class ScatterWaveform(PlotBase):
         super()._move_to_scan(scan_id)
         self.update_scan_info_from_source(self.scan_item)
 
+    def _take_late_scan_item(self) -> None:
+        super()._take_late_scan_item()
+        self.update_scan_info_from_source(self.scan_item)
+
     def _config_sources(self):
         """Return the deduplicated (device, signal) sources of the curve config."""
         curve = self._main_curve
