@@ -126,6 +126,7 @@ class MultiWaveform(PlotBase):
         # scan-scoped async signals.
         self._data_subscription: QtDataSubscription | None = None
         self._subscribed_scan: str | None = None
+        self._reloading = False  # the scan shown is being read again from another path
         self._subscribed_buffer_size: int | None = None
         self._source_key: tuple[str, str] | None = None
         # The newest ordinal drawn, and the one up to which traces are gone for good.
@@ -643,9 +644,10 @@ class MultiWaveform(PlotBase):
         same_scan = bool(update.scan_id) and current_scan_id == self.scan_id
         self._data_api_binding = binding
         if binding_changed and same_scan:
-            # The same scan from another path (its file): the traces it still has stay.
-            self._drop_traces_missing_in(ordinals)
+            # The same scan from another path (its file): the traces drawn so far stay.
+            self._reloading = True
         elif current_scan_id != self.scan_id or binding_changed:
+            self._reloading = False
             self.old_scan_id = self.scan_id
             self.scan_id = current_scan_id
             self.update_scan_info_from_source(
@@ -676,9 +678,13 @@ class MultiWaveform(PlotBase):
                 self.plot_item.addItem(curve)
                 self._insert_by_ordinal(curve, ordinal)
             drawn = getattr(curve, "_data_api_value", None)
-            if drawn is not data and not (binding_changed and self._same_trace(drawn, data)):
+            if drawn is not data and not self._same_trace(drawn, data):
                 curve.setData(data)
             curve._data_api_value = data
+        if self._reloading and source.complete:
+            # The file is read block by block: only the whole scan says which traces are gone.
+            self._reloading = False
+            self._drop_traces_missing_in(ordinals)
         self._last_ordinal = int(ordinals[-1])  # ordinals are sorted ascending
 
         # Max Trace and scale colors

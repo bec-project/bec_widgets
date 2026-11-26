@@ -1249,8 +1249,11 @@ def test_multiwaveform_keeps_the_drawn_traces_when_the_scan_moves_to_its_file(
 
     stored = np.array(traces)  # the stack of the file: other arrays, the same samples
     with patch.object(pg.PlotDataItem, "setData") as set_data:
-        widget._on_data_update(replace(_async_update(list(stored)), generation=1, reason="history"))
-    assert len(widget.curves) == 50 and all(a is b for a, b in zip(drawn, widget.curves))
+        for rows in (30, 50):  # the file is read block by block; the last update is complete
+            update = replace(_async_update(list(stored[:rows])), generation=1, reason="history")
+            source = replace(update.sources[("eiger", "eiger_data")], complete=rows == 50)
+            widget._on_data_update(replace(update, sources={source.key: source}))
+            assert len(widget.curves) == 50 and all(a is b for a, b in zip(drawn, widget.curves))
     set_data.assert_not_called()
     _clear_signal_config(mocked_client, "eiger", "data")
 
