@@ -2058,6 +2058,7 @@ def test_late_update_of_the_scan_before_does_not_take_the_plot_back(
         "find_scan_by_ID",
         lambda scan_id: item if scan_id == "scan-B" else None,
     )
+    monkeypatch.setattr(wf.queue.scan_storage, "storage", [item])
     wf.on_scan_status({"scan_id": "scan-B", "status": "open"}, {})
 
     late = _make_update([_monitored_source("bpm4i", values=(9, 9, 9))], scan_id="previous")
@@ -2125,6 +2126,7 @@ def test_on_data_update_uses_backend_reconstruction_across_rebindings(
         "scan_2": _status_item("scan_2", 2, "closed"),
     }
     monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", scans.get)
+    monkeypatch.setattr(wf.queue.scan_storage, "storage", list(scans.values()))
     wf.x_axis_mode["name"] = "index"
 
     steps = [
@@ -3781,6 +3783,7 @@ def test_idle_live_binding_adopts_the_most_recent_scan(qtbot, mocked_client, mon
         "s809": _status_item("s809", 809, "closed"),
     }
     monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", scans.get)
+    monkeypatch.setattr(wf.queue.scan_storage, "storage", list(scans.values()))
     curve = wf.plot(device_y="bpm4i", signal_y="bpm4i")
     wf.x_mode = "index"
     wf._data_api_scan = "live"

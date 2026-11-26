@@ -111,9 +111,10 @@ def _make_update(scan_id="dummy"):
 
 
 def _serve_scans(widget, monkeypatch, *items):
-    """Let the scan storage of the widget find ``items`` by their scan id."""
+    """Put ``items`` into the scan storage of the widget, in the order the scans arrived."""
     by_id = {item.scan_id: item for item in items}
     monkeypatch.setattr(widget.queue.scan_storage, "find_scan_by_ID", by_id.get)
+    monkeypatch.setattr(widget.queue.scan_storage, "storage", list(items))
 
 
 def test_scatter_waveform_drops_snapshots_of_older_scans(qtbot, mocked_client, monkeypatch):
@@ -147,6 +148,27 @@ def test_scatter_waveform_drops_snapshots_of_older_scans(qtbot, mocked_client, m
         swf._on_data_update(_make_update("scan-2"))
     set_data.assert_not_called()
     assert swf.scan_id == "scan-3"
+
+
+def test_scatter_waveform_follows_the_later_scan_after_a_scan_number_reset(
+    qtbot, mocked_client, monkeypatch
+):
+    """A new experiment sets the scan number back: the scan that arrived later is the later one."""
+    _fake_bridge_factory(monkeypatch)
+    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+    swf.plot("samx", "samy", "bpm4i", label="test_curve")
+    before = create_dummy_scan_item("before", 500, "line_scan")
+    after = create_dummy_scan_item("after", 1, "line_scan")
+    before.status = "closed"
+    _serve_scans(swf, monkeypatch, before, after)
+    swf.on_scan_status({"scan_id": "before", "status": "closed"}, {})
+
+    swf._on_data_update(_make_update("after"))  # the subscription is ahead of the scan status
+    assert swf.scan_id == "after" and swf.scan_item is after
+    with patch.object(swf.main_curve, "set_data") as set_data:
+        swf._on_data_update(_make_update("before"))
+    set_data.assert_not_called()
+    assert swf.scan_id == "after"
 
 
 def test_scatter_waveform_moves_to_a_newer_scan_with_its_data(

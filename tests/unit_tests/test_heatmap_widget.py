@@ -248,9 +248,10 @@ def _xyz_update(scan_id):
 
 
 def _serve_scans(widget, monkeypatch, *items):
-    """Let the scan storage of the widget find ``items`` by their scan id."""
+    """Put ``items`` into the scan storage of the widget, in the order the scans arrived."""
     by_id = {item.scan_id: item for item in items}
     monkeypatch.setattr(widget.queue.scan_storage, "find_scan_by_ID", by_id.get)
+    monkeypatch.setattr(widget.queue.scan_storage, "storage", list(items))
 
 
 def test_heatmap_drops_snapshots_of_older_scans(heatmap_widget, fake_bridges, monkeypatch):
