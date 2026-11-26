@@ -8,7 +8,7 @@ import pyqtgraph as pg
 from bec_lib.data_api import ScanTarget
 from bec_lib.logger import bec_logger
 from pydantic import Field, ValidationError, field_validator
-from qtpy.QtCore import QTimer, Signal
+from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
@@ -173,7 +173,7 @@ class MultiWaveform(PlotBase):
 
         self._init_control_panel()
 
-        QTimer.singleShot(0, self._sync_device_selection)
+        self._call_later(0, self._sync_device_selection)
 
     def _init_control_panel(self):
         control_panel = SidePanel(self, orientation="top", panel_max_width=90)
