@@ -4016,6 +4016,9 @@ class Waveform(PlotBase):
         Cleanup the widget by disconnecting signals and closing dialogs.
         """
         self._shutting_down = True
+        for timer in (self._lod_timer, self._view_timer):
+            if timer is not None:
+                timer.stop()
         self._cleanup_data_api_subscription()
         self._cleanup_history_subscriptions()
         self.proxy_dap_request.cleanup()

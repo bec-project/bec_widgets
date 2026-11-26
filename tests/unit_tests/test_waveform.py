@@ -3965,3 +3965,16 @@ def test_alignment_warning_cleared_when_the_last_device_curve_is_removed(
     assert any(label.text.startswith("Warning:") for _, label in wf.info_label.items)
     wf.remove_curve(curve.name())
     assert not any(label.text.startswith("Warning:") for _, label in wf.info_label.items)
+
+
+def test_cleanup_stops_the_view_and_lod_timers(qtbot, mocked_client, monkeypatch):
+    """A zoom arms both debounce timers: neither may fire on a widget that was cleaned up."""
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf._ensure_lod_hooks()
+    wf._ensure_view_hooks()
+    wf.plot_item.vb.setXRange(1000, 3000, padding=0)  # the user zooms
+    timers = (wf._lod_timer, wf._view_timer)
+    assert all(timer.isActive() for timer in timers)
+    wf.cleanup()
+    assert not any(timer.isActive() for timer in timers)
