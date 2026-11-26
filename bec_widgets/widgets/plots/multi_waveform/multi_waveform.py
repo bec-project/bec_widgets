@@ -640,8 +640,12 @@ class MultiWaveform(PlotBase):
             self._stored_trace = False
         binding = (update.scan_id, update.generation)
         binding_changed = binding != getattr(self, "_data_api_binding", None)
+        same_scan = bool(update.scan_id) and current_scan_id == self.scan_id
         self._data_api_binding = binding
-        if current_scan_id != self.scan_id or binding_changed:
+        if binding_changed and same_scan:
+            # The same scan from another path (its file): the traces it still has stay.
+            self._drop_traces_missing_in(ordinals)
+        elif current_scan_id != self.scan_id or binding_changed:
             self.old_scan_id = self.scan_id
             self.scan_id = current_scan_id
             self.update_scan_info_from_source(
@@ -671,13 +675,28 @@ class MultiWaveform(PlotBase):
                 curve._data_api_ordinal = ordinal
                 self.plot_item.addItem(curve)
                 self._insert_by_ordinal(curve, ordinal)
-            if getattr(curve, "_data_api_value", None) is not data:
+            drawn = getattr(curve, "_data_api_value", None)
+            if drawn is not data and not (binding_changed and self._same_trace(drawn, data)):
                 curve.setData(data)
-                curve._data_api_value = data
+            curve._data_api_value = data
         self._last_ordinal = int(ordinals[-1])  # ordinals are sorted ascending
 
         # Max Trace and scale colors
         self.set_curve_limit(self.config.curve_limit, self.config.flush_buffer)
+
+    def _drop_traces_missing_in(self, ordinals) -> None:
+        """Remove the drawn traces whose acquisition a new snapshot of the scan does not hold."""
+        held = {int(ordinal) for ordinal in ordinals}
+        for curve in [c for c in self.curves if getattr(c, "_data_api_ordinal", None) not in held]:
+            self.curves.remove(curve)
+            self.plot_item.removeItem(curve)
+
+    @staticmethod
+    def _same_trace(drawn, data) -> bool:
+        """Whether a trace that is drawn already holds the samples of ``data``."""
+        return (
+            drawn is not None and np.shape(drawn) == np.shape(data) and np.array_equal(drawn, data)
+        )
 
     def _insert_by_ordinal(self, curve: pg.PlotDataItem, ordinal: int) -> None:
         """Add a trace at the place of its ordinal: a late one goes between its neighbours."""

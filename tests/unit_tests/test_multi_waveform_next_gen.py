@@ -1,5 +1,5 @@
 from dataclasses import replace
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pyqtgraph as pg
@@ -1228,3 +1228,29 @@ def test_multiwaveform_same_scan_rebind_discards_previous_traces(qtbot, mocked_c
     assert len(widget.curves) == 1
     np.testing.assert_array_equal(widget.curves[0].getData()[1], [5, 6])
     _clear_signal_config(mocked_client, "eiger", "data")
+
+
+def test_multiwaveform_keeps_the_drawn_traces_when_the_scan_moves_to_its_file(
+    qtbot, mocked_client, monkeypatch
+):
+    """
+    At the end of a scan the subscription moves from the stream to the file: the same scan,
+    the same acquisitions. The traces that are drawn stay and are not drawn again.
+    """
+    _fake_bridge_factory(monkeypatch)
+    widget = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    _set_signal_config(
+        mocked_client, "eiger", "data", signal_class="AsyncSignal", ndim=1, obj_name="eiger_data"
+    )
+    widget.plot("eiger", "data")
+    traces = [np.full(4, float(index)) for index in range(50)]
+    widget._on_data_update(_async_update(traces))
+    drawn = list(widget.curves)
+
+    stored = np.array(traces)  # the stack of the file: other arrays, the same samples
+    with patch.object(pg.PlotDataItem, "setData") as set_data:
+        widget._on_data_update(replace(_async_update(list(stored)), generation=1, reason="history"))
+    assert len(widget.curves) == 50 and all(a is b for a, b in zip(drawn, widget.curves))
+    set_data.assert_not_called()
+    _clear_signal_config(mocked_client, "eiger", "data")
+
