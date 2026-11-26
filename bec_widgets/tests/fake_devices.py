@@ -249,7 +249,7 @@ class DMMock:
         for device in devices:
             self.devices[device.name] = device
 
-    def get_bec_signals(self, signal_class_name: str):
+    def get_bec_signals(self, signal_class_name: str | list[str]):
         """
         Emulate DeviceManager.get_bec_signals for unit-tests.
 
@@ -259,6 +259,10 @@ class DMMock:
         API shape used by Waveform._check_async_signal_found.
         """
         signals: list[tuple[str, str, dict]] = []
+        if isinstance(signal_class_name, list):  # the device manager takes several classes
+            if "AsyncSignal" not in signal_class_name:
+                return signals
+            signal_class_name = "AsyncSignal"
         if signal_class_name != "AsyncSignal":
             return signals
 
