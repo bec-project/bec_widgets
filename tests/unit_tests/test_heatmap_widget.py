@@ -1,3 +1,4 @@
+import time
 from unittest import mock
 
 import numpy as np
@@ -248,8 +249,10 @@ def _xyz_update(scan_id):
 
 
 def _serve_scans(widget, monkeypatch, *items):
-    """Put ``items`` into the scan storage of the widget, in the order the scans arrived."""
+    """Put ``items`` into the scan storage of the widget; they started in the order given."""
     by_id = {item.scan_id: item for item in items}
+    for position, item in enumerate(items):
+        item.start_time = time.time() + position
     monkeypatch.setattr(widget.queue.scan_storage, "find_scan_by_ID", by_id.get)
     monkeypatch.setattr(widget.queue.scan_storage, "storage", list(items))
 

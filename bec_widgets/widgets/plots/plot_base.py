@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 from enum import Enum
-from numbers import Integral
+from numbers import Integral, Real
 from typing import Literal, TypeAlias
 
 import numpy as np
@@ -501,13 +501,14 @@ class PlotBase(BECWidget, QWidget):
         item = self.client.queue.scan_storage.find_scan_by_ID(scan_id)
         return item if item is not None else self.client.history.get_by_scan_id(scan_id)
 
-    def _scan_arrival(self, scan_id: str) -> tuple[int, int] | None:
-        """Where a scan stands among the scans in the order they arrived; None if unknown."""
-        for position, item in enumerate(list(self.client.queue.scan_storage.storage)):
-            if item.scan_id == scan_id:
-                return 1, position  # the scan storage is ahead of the history
-        stored = list(self.client.history._scan_ids)  # pylint: disable=protected-access
-        return (0, stored.index(scan_id)) if scan_id in stored else None
+    def _scan_start(self, scan_id: str) -> float | None:
+        """When a scan started, from the scan storage or the history; None if unknown."""
+        item = self.client.queue.scan_storage.find_scan_by_ID(scan_id)
+        if item is not None:
+            started = item.start_time or getattr(item.status_message, "timestamp", None)
+        else:
+            started = getattr(self.client.history.get_message(scan_id), "start_time", None)
+        return float(started) if isinstance(started, Real) else None
 
     def _is_late_live_update(self, update: SubscriptionUpdate) -> bool:
         """
@@ -515,13 +516,13 @@ class PlotBase(BECWidget, QWidget):
 
         The scan status moves the plot to a new scan. The live subscription follows on its
         own, and can deliver a snapshot of an earlier scan in between. The later scan is the
-        one that arrived later, as for the Data API: scan numbers start again with a new
+        one that started later, as for the Data API: scan numbers start again with a new
         experiment. A scan that is not known yet (its status came before its scan item) is
         the newest.
         """
         if None in (self.scan_id, update.scan_id) or update.scan_id == self.scan_id:
             return False
-        own, other = self._scan_arrival(self.scan_id), self._scan_arrival(update.scan_id)
+        own, other = self._scan_start(self.scan_id), self._scan_start(update.scan_id)
         return own is None or other is None or other < own
 
     def _take_live_update(self, update: SubscriptionUpdate) -> bool:

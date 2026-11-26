@@ -1,3 +1,4 @@
+import time
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -111,8 +112,10 @@ def _make_update(scan_id="dummy"):
 
 
 def _serve_scans(widget, monkeypatch, *items):
-    """Put ``items`` into the scan storage of the widget, in the order the scans arrived."""
+    """Put ``items`` into the scan storage of the widget; they started in the order given."""
     by_id = {item.scan_id: item for item in items}
+    for position, item in enumerate(items):
+        item.start_time = time.time() + position
     monkeypatch.setattr(widget.queue.scan_storage, "find_scan_by_ID", by_id.get)
     monkeypatch.setattr(widget.queue.scan_storage, "storage", list(items))
 
@@ -150,17 +153,16 @@ def test_scatter_waveform_drops_snapshots_of_older_scans(qtbot, mocked_client, m
     assert swf.scan_id == "scan-3"
 
 
-def test_scatter_waveform_follows_the_later_scan_after_a_scan_number_reset(
-    qtbot, mocked_client, monkeypatch
-):
-    """A new experiment sets the scan number back: the scan that arrived later is the later one."""
+def test_scatter_waveform_follows_the_scan_that_started_later(qtbot, mocked_client, monkeypatch):
+    """Neither the scan number nor the queue order decides: the scan that started later does."""
     _fake_bridge_factory(monkeypatch)
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
     swf.plot("samx", "samy", "bpm4i", label="test_curve")
     before = create_dummy_scan_item("before", 500, "line_scan")
     after = create_dummy_scan_item("after", 1, "line_scan")
     before.status = "closed"
-    _serve_scans(swf, monkeypatch, before, after)
+    _serve_scans(swf, monkeypatch, after, before)  # queued the other way round
+    before.start_time, after.start_time = 100.0, 200.0
     swf.on_scan_status({"scan_id": "before", "status": "closed"}, {})
 
     swf._on_data_update(_make_update("after"))  # the subscription is ahead of the scan status
