@@ -537,6 +537,8 @@ class MultiWaveform(PlotBase):
             self.device = ""
             return
         self.entry_validator.validate_monitor(monitor)
+        if color_palette is not None:
+            self.color_palette = color_palette  # also when the signal is still to be chosen
         if signal is None:
             signal = self._default_signal_for(monitor)
             if signal is None:
@@ -562,8 +564,6 @@ class MultiWaveform(PlotBase):
         finally:
             self._device_selection_updating = False
         self.signal = signal
-        if color_palette is not None:
-            self.color_palette = color_palette
 
     @SafeSlot(int, bool)
     def set_curve_limit(self, max_trace: int, flush_buffer: bool):
