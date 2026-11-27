@@ -138,20 +138,30 @@ def test_late_status_of_the_scan_before_does_not_move_the_scatter(
     assert swf.scan_id == "scan-2" and moved == []
 
 
-def test_late_status_does_not_move_the_scatter_before_its_scan_is_stored(
+def test_scatter_orders_scans_on_the_server_clock_before_its_scan_is_stored(
     qtbot, mocked_client, monkeypatch
 ):
-    """The status of the new scan can come before its scan item: the plot still stays on it."""
+    """
+    The status of a scan can come before its scan item. Until the item is there the plot
+    orders by the timestamp of that status, which is on the clock of the server like the
+    scan starts: here an hour behind this client. A late status of the scan before does
+    not move the plot, and the next scan is taken.
+    """
     _fake_bridge_factory(monkeypatch)
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
     swf.plot("samx", "samy", "bpm4i", label="test_curve")
     first = create_dummy_scan_item("scan-1", 1, "line_scan")
-    _serve_scans(swf, monkeypatch, first)  # the item of scan-2 is not stored yet
+    third = create_dummy_scan_item("scan-3", 3, "line_scan")
+    _serve_scans(swf, monkeypatch, first, third)  # the item of scan-2 is not stored
+    started = first.start_time = time.time() - 3600
+    third.start_time = started + 120
     monkeypatch.setattr(swf.client.history, "get_message", lambda _scan_id: None)
-    swf.on_scan_status({"scan_id": "scan-1", "status": "open"}, {})
-    swf.on_scan_status({"scan_id": "scan-2", "status": "open"}, {})
-    swf.on_scan_status({"scan_id": "scan-1", "status": "closed"}, {})
+    swf.on_scan_status({"scan_id": "scan-1", "status": "open", "timestamp": started}, {})
+    swf.on_scan_status({"scan_id": "scan-2", "status": "open", "timestamp": started + 60}, {})
+    swf.on_scan_status({"scan_id": "scan-1", "status": "closed", "timestamp": started + 61}, {})
     assert swf.scan_id == "scan-2"
+    swf.on_scan_status({"scan_id": "scan-3", "status": "open", "timestamp": started + 120}, {})
+    assert swf.scan_id == "scan-3"
 
 
 def test_scatter_waveform_drops_snapshots_of_older_scans(qtbot, mocked_client, monkeypatch):

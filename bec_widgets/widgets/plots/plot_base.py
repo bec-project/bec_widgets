@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from collections.abc import Iterable, Mapping
 from enum import Enum
 from numbers import Integral, Real
@@ -85,8 +84,8 @@ class PlotBase(BECWidget, QWidget):
     _data_subscription: QtDataSubscription | None = None
     #: The (subscription, scan, binding revision) the alignment of the sources was last checked for.
     _alignment_binding: tuple | None = None
-    #: The scan whose status last moved the plot, and when that status came.
-    _status_seen: tuple[str | None, float] = (None, 0.0)
+    #: The scan whose status last moved the plot, and the timestamp of that status.
+    _status_seen: tuple[str | None, float | None] = (None, None)
     #: The scan the plot shows and its scan item; the plots that follow scans set them.
     scan_id: str | None = None
     scan_item: ScanItem | ScanDataContainer | None = None
@@ -513,12 +512,17 @@ class PlotBase(BECWidget, QWidget):
             started = getattr(self.client.history.get_message(scan_id), "start_time", None)
         return float(started) if isinstance(started, Real) else None
 
-    def _is_older_scan(self, scan_id: str) -> bool:
+    def _is_older_scan(self, scan_id: str, timestamp: float | None = None) -> bool:
         """
         Whether the status of a scan is a late one of a scan before the one this plot is on.
 
-        A status of any other scan moves the plot there, and is noted with its time: the
-        plot's own scan may not be stored yet, and then started no later than its status came.
+        A status of any other scan moves the plot there and is noted with its timestamp:
+        the plot's own scan may not be stored yet, and it started no later than that status
+        was sent. The timestamp is the one of the message, on the clock of the scan starts.
+
+        Args:
+            scan_id (str): The scan of the status message.
+            timestamp (float | None): The timestamp of the status message.
         """
         if scan_id is None or scan_id == self.scan_id:
             return False
@@ -528,7 +532,7 @@ class PlotBase(BECWidget, QWidget):
         other = self._scan_start(scan_id)
         if own is not None and other is not None and other < own:
             return True
-        self._status_seen = (scan_id, time.time())
+        self._status_seen = (scan_id, float(timestamp) if isinstance(timestamp, Real) else None)
         return False
 
     def _is_late_live_update(self, update: SubscriptionUpdate) -> bool:

@@ -914,16 +914,21 @@ def test_late_status_of_the_scan_before_does_not_move_the_waveform(
 def test_late_status_does_not_move_the_waveform_before_its_scan_is_stored(
     qtbot, mocked_client, monkeypatch
 ):
-    """The status of the new scan can come before its scan item: the plot still stays on it."""
+    """
+    The status of the new scan can come before its scan item: the plot still stays on it.
+    The scans are ordered on the clock of the server, here an hour ahead of this client.
+    """
     _fake_bridge_factory(monkeypatch)
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     wf.plot(arg1="bpm4i", x_name="samx")
     scans = {"scan-1": create_dummy_scan_item("scan-1", 1, "line_scan")}
+    started = scans["scan-1"].start_time = time.time() + 3600
     monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", scans.get)
     monkeypatch.setattr(wf.client.history, "get_message", lambda _scan_id: None)
-    wf.on_scan_status({"scan_id": "scan-1", "status": "open"}, {})
-    wf.on_scan_status({"scan_id": "scan-2", "status": "open"}, {})  # its item is not stored yet
-    wf.on_scan_status({"scan_id": "scan-1", "status": "closed"}, {})
+    wf.on_scan_status({"scan_id": "scan-1", "status": "open", "timestamp": started}, {})
+    # the item of scan-2 is not stored yet
+    wf.on_scan_status({"scan_id": "scan-2", "status": "open", "timestamp": started + 60}, {})
+    wf.on_scan_status({"scan_id": "scan-1", "status": "closed", "timestamp": started + 61}, {})
     assert wf.scan_id == "scan-2"
 
 

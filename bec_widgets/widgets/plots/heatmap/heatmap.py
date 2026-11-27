@@ -725,7 +725,7 @@ class Heatmap(ImageBase):
         current_scan_id = msg.get("scan_id", None)
         if current_scan_id is None:
             return
-        if self._is_older_scan(current_scan_id):
+        if self._is_older_scan(current_scan_id, msg.get("timestamp")):
             return  # a late status of the scan before
         if current_scan_id != self.scan_id:
             self._move_to_scan(current_scan_id)
