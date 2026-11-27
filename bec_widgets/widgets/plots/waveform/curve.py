@@ -72,6 +72,21 @@ class CurveConfig(ConnectionConfig):
 
 # pylint: disable-next=too-many-public-methods
 class Curve(BECConnector, pg.PlotDataItem):
+    # Class-level defaults: pg.PlotDataItem.__init__ calls setData before Curve.__init__
+    # has set its own state.
+    _data_version = 0
+    #: The full data of a curve that is drawn decimated, and the slice shown of it
+    #: (see Waveform._apply_lod_windows).
+    _lod_raw: tuple | None = None
+    _lod_window: tuple[int, int] | None = None
+    #: ((x_min, x_max), (y_min, y_max)) of the whole series, for a curve that draws a
+    #: reduced or windowed copy of it; None for a curve that draws its data as it is.
+    _full_bounds: tuple[tuple[float, float], tuple[float, float]] | None = None
+    #: For a history curve whose column is not held whole: what the DataAPI holds of it
+    #: (``metadata["view"]`` of its source, see Waveform._render_view_curve).
+    _view: dict | None = None
+    #: The rows asked for and not delivered yet.
+    _view_pending: tuple[int, int] | None = None
     USER_ACCESS = [
         "remove",
         "_rpc_id",
@@ -116,7 +131,6 @@ class Curve(BECConnector, pg.PlotDataItem):
         self.apply_config()
         self.dap_params = None
         self.dap_summary = None
-        self.slice_index = None
         self._data_version = 0
         self._last_dap_request_fingerprint: tuple | None = None
         if kwargs:
@@ -159,6 +173,20 @@ class Curve(BECConnector, pg.PlotDataItem):
             self.setSymbolSize(self.config.symbol_size)
             # updateItems() keeps it hidden while the curve is above the symbol limit.
             self.setSymbol(self.config.symbol)
+
+    def dataBounds(self, ax, frac=1.0, orthoRange=None):
+        """
+        Range of the data along one axis, as the view box asks for it to autorange.
+
+        pyqtgraph answers from what is drawn, which with clipToView and downsampling
+        depends on the view: a new range changes the answer, and the view moves again.
+        A curve that knows the bounds of its whole series (``_full_bounds``) answers with
+        those instead.
+        """
+        bounds = self._full_bounds
+        if bounds is None or frac < 1.0 or orthoRange is not None:
+            return super().dataBounds(ax, frac, orthoRange)
+        return bounds[ax]
 
     def setData(self, *args, **kwargs):
         """
@@ -434,9 +462,18 @@ class Curve(BECConnector, pg.PlotDataItem):
     def get_data(self) -> tuple[np.ndarray | None, np.ndarray | None]:
         """
         Get the data of the curve.
+
+        A curve of more than a million points that is held whole is drawn reduced, and
+        this returns the whole series: an export or a fit sees every sample at its own x.
+        A history curve that is loaded for the view (a stored column above the view
+        limit) holds an overview and the rows in view, and returns those.
+
         Returns:
             tuple[np.ndarray,np.ndarray]: X and Y data of the curve.
         """
+        if self._lod_raw is not None:
+            x_data, y_data = self._lod_raw
+            return (np.arange(len(y_data)) if x_data is None else x_data), y_data
         try:
             x_data, y_data = self.getOriginalDataset()
         except TypeError:
@@ -445,8 +482,15 @@ class Curve(BECConnector, pg.PlotDataItem):
 
     def clear_data(self):
         """
-        Clear the data of the curve.
+        Clear the data of the curve, including what it kept for redrawing: the samples of
+        a decimated curve, the bounds of its series and the view of a stored column. A zoom,
+        a pan or an autorange must not bring back what was cleared.
         """
+        self._lod_raw = None
+        self._lod_window = None
+        self._full_bounds = None
+        self._view = None
+        self._view_pending = None
         self.setData([], [])
 
     def remove(self):

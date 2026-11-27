@@ -1,4 +1,5 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
+import time
 from math import inf
 from unittest.mock import MagicMock, PropertyMock, patch
 
@@ -211,6 +212,7 @@ def create_dummy_scan_item(
     dummy_scan.scan_id = scan_id
     dummy_scan.scan_number = scan_number
     dummy_scan.status = "open"
+    dummy_scan.start_time = time.time()
     dummy_scan.live_data = dummy_live_data
     dummy_scan.metadata = {
         "bec": {
