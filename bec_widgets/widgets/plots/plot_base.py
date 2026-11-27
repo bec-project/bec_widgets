@@ -8,7 +8,7 @@ from typing import Literal, TypeAlias
 import numpy as np
 import pyqtgraph as pg
 from bec_lib import bec_logger
-from bec_lib.data_api import CorrelationGroup, ScanTarget, SubscriptionUpdate
+from bec_lib.data_api import CorrelationGroup, ScanTarget, SubscriptionUpdate, client_views
 from bec_lib.scan_data_container import ScanDataContainer
 from bec_lib.scan_items import ScanItem
 from qtpy.QtCore import QPoint, QPointF, Qt, Signal
@@ -511,6 +511,21 @@ class PlotBase(BECWidget, QWidget):
         else:
             started = getattr(self.client.history.get_message(scan_id), "start_time", None)
         return float(started) if isinstance(started, Real) else None
+
+    def _ignores_scan_status(self, scan_id: str, timestamp: float | None = None) -> bool:
+        """
+        Whether a scan status is not for this plot: its scan ran in another queue than the
+        client's default one, or it is a late status of a scan before the one the plot is on.
+
+        Args:
+            scan_id (str): The scan of the status message.
+            timestamp (float | None): The timestamp of the status message.
+        """
+        if scan_id is not None and scan_id != self.scan_id:
+            item = self.client.queue.scan_storage.find_scan_by_ID(scan_id)
+            if not client_views.in_queue(item, client_views.default_queue(self.client)):
+                return True
+        return self._is_older_scan(scan_id, timestamp)
 
     def _is_older_scan(self, scan_id: str, timestamp: float | None = None) -> bool:
         """

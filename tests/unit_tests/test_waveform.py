@@ -932,6 +932,29 @@ def test_late_status_does_not_move_the_waveform_before_its_scan_is_stored(
     assert wf.scan_id == "scan-2"
 
 
+def test_status_of_another_queue_does_not_move_the_waveform(qtbot, mocked_client, monkeypatch):
+    """The plot follows the scans of the client's default queue: another queue's are ignored."""
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.plot(arg1="bpm4i", x_name="samx")
+    first = create_dummy_scan_item("scan-1", 1, "line_scan")
+    other = create_dummy_scan_item("scan-2", 2, "line_scan")
+    third = create_dummy_scan_item("scan-3", 3, "line_scan")
+    for item, queue in ((first, "primary"), (other, "other"), (third, "primary")):
+        item.queue = SimpleNamespace(
+            request_blocks=[SimpleNamespace(msg=SimpleNamespace(queue=queue))]
+        )
+    other.start_time, third.start_time = first.start_time + 1, first.start_time + 2
+    scans = {"scan-1": first, "scan-2": other, "scan-3": third}
+    monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", scans.get)
+    monkeypatch.setattr(wf.client.queue, "get_default_scan_queue", lambda: "primary")
+    wf.on_scan_status({"scan_id": "scan-1", "status": "open"}, {})
+    wf.on_scan_status({"scan_id": "scan-2", "status": "open"}, {})
+    assert wf.scan_id == "scan-1"
+    wf.on_scan_status({"scan_id": "scan-3", "status": "open"}, {})
+    assert wf.scan_id == "scan-3"
+
+
 def test_accumulate_scans_evicts_oldest_overlays(
     qtbot, mocked_client, monkeypatch, scan_history_factory
 ):
