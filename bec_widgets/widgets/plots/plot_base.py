@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from collections.abc import Iterable, Mapping
 from enum import Enum
 from numbers import Integral, Real
@@ -84,6 +85,8 @@ class PlotBase(BECWidget, QWidget):
     _data_subscription: QtDataSubscription | None = None
     #: The (subscription, scan, binding revision) the alignment of the sources was last checked for.
     _alignment_binding: tuple | None = None
+    #: The scan whose status last moved the plot, and when that status came.
+    _status_seen: tuple[str | None, float] = (None, 0.0)
     #: The scan the plot shows and its scan item; the plots that follow scans set them.
     scan_id: str | None = None
     scan_item: ScanItem | ScanDataContainer | None = None
@@ -511,11 +514,22 @@ class PlotBase(BECWidget, QWidget):
         return float(started) if isinstance(started, Real) else None
 
     def _is_older_scan(self, scan_id: str) -> bool:
-        """Whether a scan started before the one this plot is on: its late status changes nothing."""
-        if None in (self.scan_id, scan_id) or scan_id == self.scan_id:
+        """
+        Whether the status of a scan is a late one of a scan before the one this plot is on.
+
+        A status of any other scan moves the plot there, and is noted with its time: the
+        plot's own scan may not be stored yet, and then started no later than its status came.
+        """
+        if scan_id is None or scan_id == self.scan_id:
             return False
-        own, other = self._scan_start(self.scan_id), self._scan_start(scan_id)
-        return own is not None and other is not None and other < own
+        own = self._scan_start(self.scan_id) if self.scan_id is not None else None
+        if own is None and self._status_seen[0] == self.scan_id:
+            own = self._status_seen[1]
+        other = self._scan_start(scan_id)
+        if own is not None and other is not None and other < own:
+            return True
+        self._status_seen = (scan_id, time.time())
+        return False
 
     def _is_late_live_update(self, update: SubscriptionUpdate) -> bool:
         """

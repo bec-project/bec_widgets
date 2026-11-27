@@ -911,6 +911,22 @@ def test_late_status_of_the_scan_before_does_not_move_the_waveform(
     assert wf.scan_id == "scan-2" and moved == []
 
 
+def test_late_status_does_not_move_the_waveform_before_its_scan_is_stored(
+    qtbot, mocked_client, monkeypatch
+):
+    """The status of the new scan can come before its scan item: the plot still stays on it."""
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.plot(arg1="bpm4i", x_name="samx")
+    scans = {"scan-1": create_dummy_scan_item("scan-1", 1, "line_scan")}
+    monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", scans.get)
+    monkeypatch.setattr(wf.client.history, "get_message", lambda _scan_id: None)
+    wf.on_scan_status({"scan_id": "scan-1", "status": "open"}, {})
+    wf.on_scan_status({"scan_id": "scan-2", "status": "open"}, {})  # its item is not stored yet
+    wf.on_scan_status({"scan_id": "scan-1", "status": "closed"}, {})
+    assert wf.scan_id == "scan-2"
+
+
 def test_accumulate_scans_evicts_oldest_overlays(
     qtbot, mocked_client, monkeypatch, scan_history_factory
 ):
