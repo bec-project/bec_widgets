@@ -1313,6 +1313,24 @@ def test_multiwaveform_signal_change_clears_the_traces_at_once(qtbot, mocked_cli
         _clear_signal_config(mocked_client, "eiger", name)
 
 
+def test_multiwaveform_rejected_signal_clears_the_traces(qtbot, mocked_client, monkeypatch):
+    """A signal the device does not have is not shown: the traces of the one before go too."""
+    _fake_bridge_factory(monkeypatch)
+    _eiger_with_two_signals(mocked_client)
+    widget = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    widget.plot("eiger", "data")
+    widget._on_data_update(_async_update([np.full(4, 1.0), np.full(4, 1.0)]))
+    assert len(widget.curves) == 2
+
+    widget.monitor_signal = "does_not_exist"
+    assert widget.config.connection_status == "error"
+    assert widget._data_subscription is None
+    assert len(widget.curves) == 0
+    assert not [item for item in widget.plot_item.items if isinstance(item, pg.PlotDataItem)]
+    for name in ("data", "other"):
+        _clear_signal_config(mocked_client, "eiger", name)
+
+
 @pytest.mark.parametrize("change", ["no signal", "no device", "device with several signals"])
 def test_multiwaveform_shows_no_traces_when_no_signal_is_chosen(
     qtbot, mocked_client, monkeypatch, change

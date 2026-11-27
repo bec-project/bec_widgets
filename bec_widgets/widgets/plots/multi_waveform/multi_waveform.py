@@ -481,6 +481,7 @@ class MultiWaveform(PlotBase):
                     f"on device '{self.config.monitor}'."
                 )
                 self._signal_config = None
+                self._show_source(None)  # the traces of the signal before are not this one's
                 self._set_connection_status("error", f"Signal '{value}' not found")
                 return
         self._signal_config = signal_config
