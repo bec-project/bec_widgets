@@ -257,6 +257,20 @@ def _serve_scans(widget, monkeypatch, *items):
     monkeypatch.setattr(widget.queue.scan_storage, "storage", list(items))
 
 
+def test_late_status_of_the_scan_before_does_not_move_the_heatmap(
+    heatmap_widget, fake_bridges, monkeypatch
+):
+    """The status of an older scan can come after the next scan started: the plot stays."""
+    heatmap_widget.plot(device_x="samx", device_y="samy", device_z="bpm4i")
+    first = create_dummy_scan_item("scan-1", 1, "line_scan")
+    second = create_dummy_scan_item("scan-2", 2, "line_scan")
+    _serve_scans(heatmap_widget, monkeypatch, first, second)
+    heatmap_widget.on_scan_status({"scan_id": "scan-1", "status": "open"}, {})
+    heatmap_widget.on_scan_status({"scan_id": "scan-2", "status": "open"}, {})
+    heatmap_widget.on_scan_status({"scan_id": "scan-1", "status": "closed"}, {})
+    assert heatmap_widget.scan_id == "scan-2"
+
+
 def test_heatmap_drops_snapshots_of_older_scans(heatmap_widget, fake_bridges, monkeypatch):
     """
     After the scan status moved the widget on, a snapshot of the scan before is neither

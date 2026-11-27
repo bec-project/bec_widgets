@@ -2101,6 +2101,8 @@ class Waveform(PlotBase):
         current_scan_id = msg.get("scan_id", None)
         if current_scan_id is None:
             return
+        if self._is_older_scan(current_scan_id):
+            return  # a late status of the scan before
 
         if self.curves and not any(curve.config.source == "device" for curve in self.curves):
             return

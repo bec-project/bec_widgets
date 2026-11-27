@@ -305,6 +305,8 @@ class ScatterWaveform(PlotBase):
         current_scan_id = msg.get("scan_id", None)
         if current_scan_id is None:
             return
+        if self._is_older_scan(current_scan_id):
+            return  # a late status of the scan before
         if current_scan_id != self.scan_id:
             self._move_to_scan(current_scan_id)
             if self._data_subscription is None or self._data_subscription_scope != ScanTarget.LIVE:

@@ -510,6 +510,13 @@ class PlotBase(BECWidget, QWidget):
             started = getattr(self.client.history.get_message(scan_id), "start_time", None)
         return float(started) if isinstance(started, Real) else None
 
+    def _is_older_scan(self, scan_id: str) -> bool:
+        """Whether a scan started before the one this plot is on: its late status changes nothing."""
+        if None in (self.scan_id, scan_id) or scan_id == self.scan_id:
+            return False
+        own, other = self._scan_start(self.scan_id), self._scan_start(scan_id)
+        return own is not None and other is not None and other < own
+
     def _is_late_live_update(self, update: SubscriptionUpdate) -> bool:
         """
         Whether a live update shows an older scan than the one this plot is on.

@@ -891,6 +891,26 @@ def test_accumulate_scans_overlays_previous_device_data(
     assert wf.get_curve(saved.name()) is not None
 
 
+def test_late_status_of_the_scan_before_does_not_move_the_waveform(
+    qtbot, mocked_client, monkeypatch
+):
+    """The status of an older scan can come after the next scan started: the plot stays."""
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.plot(arg1="bpm4i", x_name="samx")
+    first = create_dummy_scan_item("scan-1", 1, "line_scan")
+    second = create_dummy_scan_item("scan-2", 2, "line_scan")
+    second.start_time = first.start_time + 1
+    scans = {"scan-1": first, "scan-2": second}
+    monkeypatch.setattr(wf.queue.scan_storage, "find_scan_by_ID", scans.get)
+    wf.on_scan_status({"scan_id": "scan-1", "status": "open"}, {})
+    wf.on_scan_status({"scan_id": "scan-2", "status": "open"}, {})
+    moved = []
+    wf.new_scan_id.connect(moved.append)
+    wf.on_scan_status({"scan_id": "scan-1", "status": "closed"}, {})
+    assert wf.scan_id == "scan-2" and moved == []
+
+
 def test_accumulate_scans_evicts_oldest_overlays(
     qtbot, mocked_client, monkeypatch, scan_history_factory
 ):
@@ -904,7 +924,11 @@ def test_accumulate_scans_evicts_oldest_overlays(
     monkeypatch.setattr(
         wf.queue.scan_storage,
         "find_scan_by_ID",
-        lambda scan_id: create_dummy_scan_item(scan_id=scan_id, scan_number=int(scan_id)),
+        lambda scan_id: (  # the scan storage holds the live scans, not the saved one
+            create_dummy_scan_item(scan_id=scan_id, scan_number=int(scan_id))
+            if scan_id.isdigit()
+            else None
+        ),
     )
     wf.toolbar.components.get_action("accumulate_scans").action.trigger()
     wf.on_scan_status({"scan_id": "1"}, {})
@@ -946,7 +970,11 @@ def test_accumulated_scan_keeps_the_live_symbol_limit(
     monkeypatch.setattr(
         wf.queue.scan_storage,
         "find_scan_by_ID",
-        lambda scan_id: create_dummy_scan_item(scan_id=scan_id, scan_number=int(scan_id)),
+        lambda scan_id: (  # the scan storage holds the live scans, not the saved one
+            create_dummy_scan_item(scan_id=scan_id, scan_number=int(scan_id))
+            if scan_id.isdigit()
+            else None
+        ),
     )
     wf.toolbar.components.get_action("accumulate_scans").action.trigger()
     wf.on_scan_status({"scan_id": "1"}, {})
