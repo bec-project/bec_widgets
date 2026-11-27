@@ -127,6 +127,7 @@ class MultiWaveform(PlotBase):
         self._data_subscription: QtDataSubscription | None = None
         self._subscribed_scan: str | None = None
         self._reloading = False  # the scan shown is being read again from another path
+        self._shown_source: tuple[str, str] | None = None  # device and signal of the traces drawn
         self._subscribed_buffer_size: int | None = None
         self._source_key: tuple[str, str] | None = None
         # The newest ordinal drawn, and the one up to which traces are gone for good.
@@ -901,6 +902,13 @@ class MultiWaveform(PlotBase):
         if not device or not signal:
             self._set_connection_status("disconnected")
             return
+        if (device, signal) != self._shown_source:
+            # Another signal: its traces replace the ones drawn, also before it has data.
+            self._shown_source = (device, signal)
+            self.clear_curves()
+            self.curves.clear()
+            if self.crosshair:
+                self.crosshair.clear_markers()
         route = self._resolve_route(device, signal)
         if route is None:
             return
