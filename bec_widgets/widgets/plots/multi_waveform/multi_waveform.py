@@ -628,22 +628,28 @@ class MultiWaveform(PlotBase):
             return
         ordinals, traces = source.ordinals, source.values
         current_scan_id = self._effective_scan_id(update, source)
+        previous = getattr(self, "_data_api_binding", None)  # None: a new subscription
         if isinstance(traces, np.ndarray) and traces.ndim == 1 and traces.dtype != object:
             # One number per point: the scan file stores a 1-D signal as one series of
             # samples, without the acquisitions it arrived in. Traces that were drawn
             # while this scan ran stay; a widget that has none of the scan (it subscribed
             # after the scan) draws the stored series as its one trace.
-            if self.curves and current_scan_id == self.scan_id and not self._stored_trace:
+            if (
+                self.curves
+                and previous is not None
+                and current_scan_id == self.scan_id
+                and not self._stored_trace
+            ):
                 return
             ordinals, traces = (0,), (traces,)
             self._stored_trace = True  # it grows while the file is read block by block
         else:
             self._stored_trace = False
         binding = (update.scan_id, update.generation)
-        binding_changed = binding != getattr(self, "_data_api_binding", None)
+        binding_changed = binding != previous
         same_scan = bool(update.scan_id) and current_scan_id == self.scan_id
         self._data_api_binding = binding
-        if binding_changed and same_scan:
+        if binding_changed and same_scan and previous is not None:
             # The same scan from another path (its file): the traces drawn so far stay.
             self._reloading = True
         elif current_scan_id != self.scan_id or binding_changed:

@@ -1258,6 +1258,67 @@ def test_multiwaveform_keeps_the_drawn_traces_when_the_scan_moves_to_its_file(
     _clear_signal_config(mocked_client, "eiger", "data")
 
 
+def _eiger_with_two_signals(mocked_client):
+    for name in ("data", "other"):
+        _set_signal_config(
+            mocked_client,
+            "eiger",
+            name,
+            signal_class="AsyncSignal",
+            ndim=1,
+            obj_name=f"eiger_{name}",
+        )
+
+
+def test_multiwaveform_signal_change_in_a_scan_drops_the_traces_before(
+    qtbot, mocked_client, monkeypatch
+):
+    """
+    Another signal of the same scan is a new subscription, not the scan moving to its file:
+    its traces replace the ones drawn, from the first block of the file on.
+    """
+    _fake_bridge_factory(monkeypatch)
+    _eiger_with_two_signals(mocked_client)
+    widget = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    widget.plot("eiger", "data")
+    widget._on_data_update(_async_update([np.full(4, 1.0), np.full(4, 1.0)]))
+
+    widget.signal = "other"  # what the signal combobox of the toolbar does
+    stack = [np.full(4, 2.0) for _ in range(4)]
+    block = _async_update(stack[:1], entry="eiger_other")
+    source = replace(block.sources[("eiger", "eiger_other")], complete=False)
+    widget._on_data_update(replace(block, sources={source.key: source}, reason="history"))
+    assert [float(curve.getData()[1][0]) for curve in widget.curves] == [2.0]
+    widget._on_data_update(replace(_async_update(stack, entry="eiger_other"), reason="history"))
+    assert [float(curve.getData()[1][0]) for curve in widget.curves] == [2.0] * 4
+    for name in ("data", "other"):
+        _clear_signal_config(mocked_client, "eiger", name)
+
+
+def test_multiwaveform_signal_change_in_a_scan_draws_the_stored_series(
+    qtbot, mocked_client, monkeypatch
+):
+    """The stored 1-D series of a newly chosen signal is drawn, also for the scan shown."""
+    _fake_bridge_factory(monkeypatch)
+    _eiger_with_two_signals(mocked_client)
+    widget = create_widget(qtbot, MultiWaveform, client=mocked_client)
+    widget.plot("eiger", "data")
+    widget._on_data_update(_async_update([np.full(4, 1.0), np.full(4, 1.0)]))
+
+    widget.signal = "other"
+    update = _async_update([np.full(4, 2.0)], entry="eiger_other")
+    series = replace(
+        update.sources[("eiger", "eiger_other")],
+        ordinals=np.arange(8),
+        values=np.full(8, 2.0),
+        timestamps=np.full(8, None, dtype=object),
+    )
+    widget._on_data_update(replace(update, sources={series.key: series}, reason="history"))
+    assert [curve.getData()[1].tolist() for curve in widget.curves] == [[2.0] * 8]
+    for name in ("data", "other"):
+        _clear_signal_config(mocked_client, "eiger", name)
+
+
 def test_multiwaveform_starts_with_the_traces_of_a_newly_chosen_signal(qtbot, mocked_client):
     """Through the real DataAPI: after the signal was changed, only its traces are shown."""
     for name in ("first", "second"):
