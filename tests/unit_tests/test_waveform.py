@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 import threading
 from types import SimpleNamespace
 from unittest import mock
@@ -32,6 +33,7 @@ from bec_widgets.widgets.services.scan_history_browser.scan_history_browser impo
 )
 
 from .conftest import create_widget
+
 
 # pylint: disable=unexpected-keyword-arg
 
@@ -254,7 +256,7 @@ def test_get_all_data_empty(qtbot, mocked_client):
     Test that get_all_data returns an empty dictionary when no curves have been added.
     """
     wf = create_widget(qtbot, Waveform, client=mocked_client)
-    all_data = wf.get_all_data(output="dict")
+    all_data = wf.get_all_data()
     assert all_data == {}
 
 
@@ -266,13 +268,25 @@ def test_get_all_data_dict(qtbot, mocked_client):
     wf.plot(x=[1, 2, 3], y=[4, 5, 6], label="curve1")
     wf.plot(x=[7, 8, 9], y=[10, 11, 12], label="curve2")
 
-    all_data = wf.get_all_data(output="dict")
+    all_data = wf.get_all_data()
 
     expected = {
         "curve1": {"x": [1, 2, 3], "y": [4, 5, 6]},
         "curve2": {"x": [7, 8, 9], "y": [10, 11, 12]},
     }
     assert all_data == expected
+
+
+def test_get_all_data_skips_curves_without_data(qtbot, mocked_client):
+    """
+    Test that get_all_data leaves out curves that hold no data yet instead of failing on them.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.plot(x=[1, 2, 3], y=[4, 5, 6], label="curve1")
+    empty = wf.plot(x=[7, 8, 9], y=[10, 11, 12], label="curve2")
+    empty.clear_data()
+
+    assert wf.get_all_data() == {"curve1": {"x": [1, 2, 3], "y": [4, 5, 6]}}
 
 
 def test_curve_json_getter_setter(qtbot, mocked_client):
@@ -395,7 +409,7 @@ def test_curve_json_rejects_label_of_kept_custom_curve(qtbot, mocked_client):
 
 @pytest.mark.parametrize("label", ["history_alias", None], ids=["aliased", "omitted"])
 def test_curve_json_rejects_generated_history_label_of_kept_custom_curve(
-    qtbot, mocked_client, scan_history_factory, label
+        qtbot, mocked_client, scan_history_factory, label
 ):
     """
     History curves are relabelled '<device>-<signal>-scan-<N>' when they are added, so the
@@ -420,7 +434,7 @@ def test_curve_json_rejects_generated_history_label_of_kept_custom_curve(
 
 
 def test_curve_json_rejects_payload_before_removing_curves(
-    qtbot, mocked_client, scan_history_factory
+        qtbot, mocked_client, scan_history_factory
 ):
     """
     Entries that cannot be added (a history scan that is not in the history, or two entries
@@ -594,7 +608,7 @@ def test_on_scan_status(qtbot, mocked_client, monkeypatch, mode, calls):
 
 
 def test_accumulate_scans_overlays_previous_device_data(
-    qtbot, mocked_client, monkeypatch, scan_history_factory
+        qtbot, mocked_client, monkeypatch, scan_history_factory
 ):
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     inject_scan_history(wf, scan_history_factory, ("saved", 10))
@@ -656,7 +670,7 @@ def test_accumulate_scans_overlays_previous_device_data(
 
 
 def test_accumulate_scans_evicts_oldest_overlays(
-    qtbot, mocked_client, monkeypatch, scan_history_factory
+        qtbot, mocked_client, monkeypatch, scan_history_factory
 ):
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     inject_scan_history(wf, scan_history_factory, ("saved", 100))
@@ -698,7 +712,7 @@ def test_accumulate_scans_evicts_oldest_overlays(
 
 
 def test_accumulated_scan_keeps_the_live_symbol_limit(
-    qtbot, mocked_client, monkeypatch, scan_history_factory
+        qtbot, mocked_client, monkeypatch, scan_history_factory
 ):
     """The overlay copies the live curve's symbol limit along with its symbol."""
     wf = create_widget(qtbot, Waveform, client=mocked_client)
@@ -724,7 +738,7 @@ def test_accumulated_scan_keeps_the_live_symbol_limit(
 
 
 def test_accumulated_scan_uses_saved_points_and_hides_on_incompatible_auto_axis(
-    qtbot, mocked_client, monkeypatch, scan_history_factory
+        qtbot, mocked_client, monkeypatch, scan_history_factory
 ):
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     live = wf.plot("bpm4i")
@@ -759,7 +773,7 @@ def test_accumulated_scan_uses_saved_points_and_hides_on_incompatible_auto_axis(
 @pytest.mark.parametrize("x_mode", ["samx", "timestamp"])
 @pytest.mark.parametrize("streaming", [False, True])
 def test_accumulated_async_curve_uses_actual_x_axis(
-    qtbot, mocked_client, monkeypatch, scan_history_factory, x_mode, streaming
+        qtbot, mocked_client, monkeypatch, scan_history_factory, x_mode, streaming
 ):
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     wf.x_mode = x_mode
@@ -802,7 +816,7 @@ def test_accumulated_async_curve_uses_actual_x_axis(
 
 @pytest.mark.parametrize("switch_to", [None, "samx", "auto"])
 def test_accumulated_sync_indices_are_hidden_on_motor_axis(
-    qtbot, mocked_client, monkeypatch, scan_history_factory, switch_to
+        qtbot, mocked_client, monkeypatch, scan_history_factory, switch_to
 ):
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     wf.x_mode = "auto" if switch_to is None else "index"
@@ -930,7 +944,7 @@ def test_request_dap_skips_unchanged_static_parent(qtbot, mocked_client_with_dap
 
 
 def test_request_dap_resubmits_on_roi_change_for_static_parent(
-    qtbot, mocked_client_with_dap, monkeypatch
+        qtbot, mocked_client_with_dap, monkeypatch
 ):
     """
     Changing the linear region selector changes the cropped fit inputs, so a DAP
@@ -967,7 +981,7 @@ def test_request_dap_resubmits_on_roi_change_for_static_parent(
 
 
 def test_request_dap_releases_proxy_when_nothing_published(
-    qtbot, mocked_client_with_dap, monkeypatch
+        qtbot, mocked_client_with_dap, monkeypatch
 ):
     """
     When request_dap skips every DAP curve (static parents, unchanged inputs), no
@@ -1037,7 +1051,7 @@ def test_waveform_cleanup_drops_queued_proxy_updates(qtbot, waveform_with_proxy_
 
 
 def test_waveform_cleanup_detaches_proxies_from_update_signals(
-    qtbot, waveform_with_proxy_slot_spies
+        qtbot, waveform_with_proxy_slot_spies
 ):
     """
     After cleanup() the update signals must no longer reach the widget through the signal
@@ -1200,7 +1214,7 @@ def test_resolve_alignment_positioner(qtbot, mocked_client):
 
 
 def test_alignment_panel_updates_when_auto_x_motor_changes(
-    qtbot, mocked_client_with_dap, monkeypatch
+        qtbot, mocked_client_with_dap, monkeypatch
 ):
     wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
     wf.plot(arg1="bpm4i", dap="GaussianModel")
@@ -1253,7 +1267,7 @@ def test_alignment_marker_updates_from_positioner_readback(qtbot, mocked_client_
 
 
 def test_alignment_panel_uses_existing_dap_curves_and_moves_positioner(
-    qtbot, mocked_client_with_dap
+        qtbot, mocked_client_with_dap
 ):
     wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
     source_curve = wf.plot(arg1="bpm4i")
@@ -1639,7 +1653,7 @@ def test_on_async_readback_add_update(qtbot, mocked_client):
                 "async_device": {
                     "value": np.array(range(waveform_shape // n_cycles)),
                     "timestamp": (ii + 1)
-                    * np.linspace(0, waveform_shape // n_cycles - 1, waveform_shape // n_cycles),
+                                 * np.linspace(0, waveform_shape // n_cycles - 1, waveform_shape // n_cycles),
                 }
             }
         }
@@ -2197,7 +2211,7 @@ def test_update_with_scan_history_by_index(qtbot, mocked_client, scan_history_fa
 
 
 def test_on_scan_status_clears_info_label_when_scan_item_is_missing(
-    qtbot, mocked_client, monkeypatch
+        qtbot, mocked_client, monkeypatch
 ):
     """Regression: a scan whose ScanItem is not in scan storage kept the previous scan's rows."""
     wf = create_widget(qtbot, Waveform, client=mocked_client)
@@ -2271,7 +2285,7 @@ def test_history_curve_x_modes_post_plot(qtbot, mocked_client, scan_history_fact
 
 @pytest.mark.parametrize("removal", ["remove_curve", "clear_all"])
 def test_removed_history_curve_leaves_history_tracking(
-    qtbot, mocked_client, scan_history_factory, removal
+        qtbot, mocked_client, scan_history_factory, removal
 ):
     """
     Regression for #1314: a removed history curve must not stay in the list of curves
@@ -2292,7 +2306,7 @@ def test_removed_history_curve_leaves_history_tracking(
 
 
 def test_history_refresh_skips_curve_that_is_no_longer_history(
-    qtbot, mocked_client, scan_history_factory
+        qtbot, mocked_client, scan_history_factory
 ):
     """
     Regression for #1314: a curve whose source is no longer 'history' is dropped from the
@@ -2341,7 +2355,7 @@ def test_history_curve_incompatible_x_mode_hides_curve(qtbot, mocked_client, sca
 
 
 def test_fetch_history_data_no_stored_data_raises(
-    qtbot, mocked_client, monkeypatch, suppress_message_box
+        qtbot, mocked_client, monkeypatch, suppress_message_box
 ):
     """
     Test that fetching history data when stored_data_info is missing raises ValueError.
@@ -2373,7 +2387,7 @@ def test_history_curve_device_missing_returns_none(qtbot, mocked_client, scan_hi
 
 
 def test_history_curve_custom_shape_mismatch_hides_curve(
-    qtbot, mocked_client, scan_history_factory
+        qtbot, mocked_client, scan_history_factory
 ):
     """
     For custom x-mode, if x and y shapes mismatch, curve should be hidden.
@@ -2414,7 +2428,7 @@ def test_history_curve_timestamp_mode_plots_curve(qtbot, mocked_client, scan_his
 
 
 def test_history_curve_auto_valid_uses_first_report_device(
-    qtbot, mocked_client, scan_history_factory
+        qtbot, mocked_client, scan_history_factory
 ):
     """
     Test that 'auto' x_mode uses the first available report device and shows the curve.
