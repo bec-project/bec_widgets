@@ -3009,40 +3009,20 @@ class Waveform(PlotBase):
     ################################################################################
     # Export Methods
     ################################################################################
-    def get_all_data(self, output: Literal["dict", "pandas"] = "dict") -> dict:  # | pd.DataFrame:
+    def get_all_data(self) -> dict[str, dict[str, list]]:
         """
-        Extract all curve data into a dictionary or a pandas DataFrame.
-
-        Args:
-            output (Literal["dict", "pandas"]): Format of the output data.
+        Extract the data of all curves into a dictionary.
 
         Returns:
-            dict | pd.DataFrame: Data of all curves in the specified format.
+            dict[str, dict[str, list]]: The x and y data of each curve that holds data, keyed by
+                curve name, e.g. ``{"bpm4i-bpm4i": {"x": [...], "y": [...]}}``.
         """
         data = {}
-        if output == "pandas":  # pragma: no cover
-            try:
-                import pandas as pd
-            except ModuleNotFoundError:
-                raise ModuleNotFoundError(
-                    "Pandas is not installed. Please install pandas using 'pip install pandas'."
-                )
-
         for curve in self.curves:
             x_data, y_data = curve.get_data()
-            if x_data is not None or y_data is not None:
-                if output == "dict":
-                    data[curve.name()] = {"x": x_data.tolist(), "y": y_data.tolist()}
-                elif output == "pandas" and pd is not None:
-                    data[curve.name()] = pd.DataFrame({"x": x_data, "y": y_data})
-
-        if output == "pandas" and pd is not None:  # pragma: no cover
-            combined_data = pd.concat(
-                [data[curve.name()] for curve in self.curves],
-                axis=1,
-                keys=[curve.name() for curve in self.curves],
-            )
-            return combined_data
+            if x_data is None or y_data is None:
+                continue
+            data[curve.name()] = {"x": x_data.tolist(), "y": y_data.tolist()}
         return data
 
     def export_to_matplotlib(self):  # pragma: no cover

@@ -6620,15 +6620,13 @@ class Waveform(RPCBase):
         """
 
     @rpc_call
-    def get_all_data(self, output: "Literal['dict', 'pandas']" = "dict") -> "dict":
+    def get_all_data(self) -> "dict[str, dict[str, list]]":
         """
-        Extract all curve data into a dictionary or a pandas DataFrame.
-
-        Args:
-            output (Literal["dict", "pandas"]): Format of the output data.
+        Extract the data of all curves into a dictionary.
 
         Returns:
-            dict | pd.DataFrame: Data of all curves in the specified format.
+            dict[str, dict[str, list]]: The x and y data of each curve that holds data, keyed by
+                curve name, e.g. ``{"bpm4i-bpm4i": {"x": [...], "y": [...]}}``.
         """
 
     @rpc_call
