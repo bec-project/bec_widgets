@@ -403,6 +403,7 @@ class MultiWaveform(PlotBase):
                 self.config.monitor_signal = None
                 self._signal_config = None
                 self._set_connection_status("disconnected")
+            self._show_source(None)
             return
 
         old_device = self.config.monitor
@@ -454,6 +455,7 @@ class MultiWaveform(PlotBase):
                 self.config.monitor_signal = None
                 self._signal_config = None
                 self._set_connection_status("disconnected")
+            self._show_source(None)
             return
 
         old_signal = self.config.monitor_signal
@@ -550,6 +552,7 @@ class MultiWaveform(PlotBase):
                     self.device = monitor
                 finally:
                     self._device_selection_updating = False
+                self._show_source(None)
                 self._set_connection_status(
                     "error", f"Select a signal: '{monitor}' has no single 1D preview/async signal"
                 )
@@ -899,16 +902,10 @@ class MultiWaveform(PlotBase):
         self._cleanup_data_api_subscription()
         device = self.config.monitor
         signal = self.config.monitor_signal
+        self._show_source((device, signal) if device and signal else None)
         if not device or not signal:
             self._set_connection_status("disconnected")
             return
-        if (device, signal) != self._shown_source:
-            # Another signal: its traces replace the ones drawn, also before it has data.
-            self._shown_source = (device, signal)
-            self.clear_curves()
-            self.curves.clear()
-            if self.crosshair:
-                self.crosshair.clear_markers()
         route = self._resolve_route(device, signal)
         if route is None:
             return
@@ -934,6 +931,17 @@ class MultiWaveform(PlotBase):
         self.connected = True
         self._set_connection_status("connected")
         logger.info(f"Connected to {device}.{signal} via {'live' if scan else 'device'} scope")
+
+    def _show_source(self, source: tuple[str, str] | None) -> None:
+        """Name the device and signal the plot shows: the traces of another one are removed."""
+        if source == self._shown_source:
+            return
+        # Also before the new signal has data, and when nothing is chosen any more.
+        self._shown_source = source
+        self.clear_curves()
+        self.curves.clear()
+        if self.crosshair:
+            self.crosshair.clear_markers()
 
     def _cleanup_data_api_subscription(self):
         self._last_ordinal = None
