@@ -3230,6 +3230,71 @@ def test_history_curve_device_missing_returns_none(qtbot, mocked_client, scan_hi
     assert c is None
 
 
+def test_history_curve_of_a_device_that_left_the_session_plots(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    """
+    A history curve is checked against what its scan stored, not against the devices of the
+    current session, so scans of devices that have left the session can still be plotted.
+    """
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_mode = "index"
+    [history_msg] = inject_scan_history(wf, scan_history_factory, ("hist_gone", 1))
+    info = history_msg.stored_data_info["bpm4i"]["bpm4i"]
+    history_msg.stored_data_info["old_diode"] = {"old_diode": info}
+    assert "old_diode" not in wf.entry_validator.devices
+
+    c = wf.plot(device_y="old_diode", scan_id=history_msg.scan_id)
+
+    assert c is not None
+    assert c.config.source == "history"
+    assert c.config.signal.signal == "old_diode"
+    assert c.name() == "old_diode-old_diode-scan-1"
+    # Such a device can also be the x axis of the history curves that stored it.
+    wf.x_mode = "old_diode"
+    assert wf.x_axis_mode["entry"] == "old_diode"
+
+
+def test_curve_tree_keeps_a_history_curve_of_a_device_that_left_the_session(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    # pylint: disable=import-outside-toplevel
+    from bec_widgets.widgets.plots.waveform.settings.curve_settings.curve_tree import CurveTree
+
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_mode = "index"
+    [history_msg] = inject_scan_history(wf, scan_history_factory, ("hist_tree", 1))
+    # The scan picker of the curve rows lists the scans by number.
+    wf.client.history._scan_numbers.append(1)  # pylint: disable=protected-access
+    info = history_msg.stored_data_info["bpm4i"]["bpm4i"]
+    history_msg.stored_data_info["old_diode"] = {"old_diode": info}
+    wf.plot(device_y="old_diode", scan_id=history_msg.scan_id)
+
+    tree = create_widget(qtbot, CurveTree, waveform=wf)
+    [row] = tree.all_items
+    assert row.device_edit.currentText() == "old_diode"
+    assert row.entry_edit.currentText() == "old_diode"
+    exported = row.export_data()
+    assert (exported["signal"]["device"], exported["signal"]["signal"]) == (
+        "old_diode",
+        "old_diode",
+    )
+    assert exported["source"] == "history"
+
+    # Applying the dialog keeps the curve.
+    tree.send_curve_json()
+    assert [curve.name() for curve in wf.curves] == ["old_diode-old_diode-scan-1"]
+
+
+def test_live_curve_of_a_device_that_is_not_in_the_session_is_refused(qtbot, mocked_client):
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    with pytest.raises(ValueError, match="not found in current BEC session"):
+        wf.plot(device_y="old_diode", _override_slot_params={"raise_error": True})
+    assert wf.curves == []
+
+
 def test_history_curve_custom_shape_mismatch_keeps_curve(
     qtbot, mocked_client, scan_history_factory, monkeypatch
 ):

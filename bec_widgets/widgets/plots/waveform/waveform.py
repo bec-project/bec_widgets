@@ -1155,10 +1155,16 @@ class Waveform(PlotBase):
                 self.x_axis_mode["entry"] = self.entry_validator.validate_signal(value, None)
             except ValueError:
                 if value not in self.entry_validator.devices:
-                    raise
-                # No default signal (e.g. a device exposing only AsyncMultiSignal
-                # sub-signals): the x signal is chosen through signal_x.
-                self.x_axis_mode["entry"] = None
+                    # A device that has left the session can still be the x axis of
+                    # history curves whose scans stored it.
+                    entry = self._history_x_entry(value, None)
+                    if entry is None:
+                        raise
+                    self.x_axis_mode["entry"] = entry
+                else:
+                    # No default signal (e.g. a device exposing only AsyncMultiSignal
+                    # sub-signals): the x signal is chosen through signal_x.
+                    self.x_axis_mode["entry"] = None
             self._current_x_device = (value, self.x_axis_mode["entry"])
         self._switch_x_axis_item(mode=value)
         self._current_x_device = None
@@ -1189,7 +1195,16 @@ class Waveform(PlotBase):
         if self.x_axis_mode["name"] in ["auto", "index", "timestamp"]:
             logger.warning("Cannot set signal_x when x_mode is not 'device'.")
             return
-        self.x_axis_mode["entry"] = self.entry_validator.validate_signal(self.x_mode, value)
+        if self.x_mode not in self.entry_validator.devices:
+            entry = self._history_x_entry(self.x_mode, value)
+            if entry is None:
+                raise ValueError(
+                    f"Entry '{value}' of device '{self.x_mode}' is neither in the current BEC "
+                    "session nor stored in the scans of the history curves."
+                )
+            self.x_axis_mode["entry"] = entry
+        else:
+            self.x_axis_mode["entry"] = self.entry_validator.validate_signal(self.x_mode, value)
         self._switch_x_axis_item(mode="device")
         self._refresh_history_curves()
         self._update_curve_visibility()
@@ -1458,8 +1473,13 @@ class Waveform(PlotBase):
         # If device_y is set => device data
         if device_y is not None and x_data is None and y_data is None:
             source = "device"
-            # Validate or obtain entry
-            signal_y = self.entry_validator.validate_signal(device_y, signal_y)
+            # Validate or obtain entry: a history curve against what its scan stored, so that
+            # devices that have left the session can still be plotted; a live one against the
+            # session.
+            if scan_id is not None or scan_number is not None:
+                signal_y = self._history_entry(device_y, signal_y, scan_id, scan_number)
+            else:
+                signal_y = self.entry_validator.validate_signal(device_y, signal_y)
 
         # If user gave device_x => store in x_axis_mode, but do not set data here
         if device_x is not None:
@@ -1716,6 +1736,84 @@ class Waveform(PlotBase):
         curve.visibleChanged.connect(self._refresh_crosshair_markers)
         curve.visibleChanged.connect(self.auto_range)
         return curve
+
+    @staticmethod
+    def _stored_data_info(scan_item) -> dict | None:
+        """What a history scan stored, by device and entry, or None when it does not say."""
+        if scan_item is None:
+            return None
+        return getattr(getattr(scan_item, "_msg", None), "stored_data_info", None) or getattr(
+            scan_item, "stored_data_info", None
+        )
+
+    def _history_entry(
+        self, device: str, signal: str | None, scan_id: str | None, scan_number: int | None
+    ) -> str:
+        """
+        Entry of a history curve, checked against what its scan stored instead of against the
+        devices of the current session (no file I/O).
+
+        Without ``signal``, the device's entry of the same name is taken if the scan stored it,
+        else its first stored entry. A short signal name is translated through the session when
+        the device is still part of it.
+
+        Args:
+            device(str): Device of the curve.
+            signal(str | None): Entry of the curve, or None for the default.
+            scan_id(str | None): Scan ID of the curve.
+            scan_number(int | None): Scan number of the curve.
+
+        Returns:
+            str: The entry.
+
+        Raises:
+            ValueError: If the scan stored neither the device nor the entry.
+        """
+        scan_item = self.get_history_scan_item(scan_id=scan_id, scan_index=scan_number)
+        stored = self._stored_data_info(scan_item)
+        if stored is None:
+            # Old scans do not say what they stored: fall back to the session, as before.
+            if device in self.entry_validator.devices:
+                return self.entry_validator.validate_signal(device, signal)
+            return signal or device
+        entries = stored.get(device)
+        if entries is None:
+            raise ValueError(f"Device '{device}' was not stored in scan {scan_id or scan_number}.")
+        if signal in entries:
+            return signal
+        if signal is None or signal == "":
+            return device if device in entries else next(iter(entries), device)
+        if device in self.entry_validator.devices:
+            try:
+                full = self.entry_validator.validate_signal(device, signal)
+            except ValueError:
+                full = None
+            if full in entries:
+                return full
+        raise ValueError(
+            f"Entry '{signal}' of device '{device}' was not stored in scan "
+            f"{scan_id or scan_number}."
+        )
+
+    def _history_x_entry(self, device: str, signal: str | None) -> str | None:
+        """
+        Entry of an x device that the session does not know, taken from the scans of the
+        history curves, or None when none of them stored the device.
+        """
+        for curve in self._history_curves:
+            stored = self._stored_data_info(
+                self.get_history_scan_item(
+                    scan_id=curve.config.scan_id, scan_index=curve.config.scan_number
+                )
+            )
+            entries = (stored or {}).get(device)
+            if not entries:
+                continue
+            if signal in entries:
+                return signal
+            if signal is None:
+                return device if device in entries else next(iter(entries))
+        return None
 
     def _validate_history_curve(self, curve: Curve, scan_item: ScanDataContainer) -> None:
         """
