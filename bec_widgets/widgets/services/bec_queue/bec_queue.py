@@ -53,6 +53,7 @@ from bec_widgets.widgets.services.bec_queue.queue_ui import (
     entry_detail_columns,
     finished_times,
     finished_tooltip,
+    row_muted_color,
     set_style,
 )
 
@@ -136,7 +137,7 @@ class ListRow(AnimatedRow):
     ) -> None:
         """Fill the row from an entry; index and count place a waiting row in its list."""
         colors = theme_colors()
-        muted = css(colors["muted"])
+        muted = css(row_muted_color(colors, selected))
         if self.finished:
             icon, tone, _ = entry.history_status
             self.lead.set_status(icon, tone, finished_tooltip(entry))

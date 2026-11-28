@@ -55,6 +55,9 @@ ROW_BUTTON_ICON_SIZE = 16
 ROW_HOVER_ALPHA = 0.06
 #: Opacity of the primary colour over a selected row.
 ROW_SELECTED_ALPHA = 0.16
+#: Opacity of the foreground colour for muted text on a selected row. The plain muted text
+#: (0.62) falls under a contrast of 4.5:1 on the selected tint in the dark theme.
+ROW_SELECTED_MUTED_ALPHA = 0.66
 #: Group titles: font size and letter spacing in pixels.
 GROUP_TITLE_FONT_PX = 11
 GROUP_TITLE_LETTER_SPACING = 1
@@ -62,6 +65,24 @@ GROUP_TITLE_LETTER_SPACING = 1
 BADGE_RADIUS = 9
 BADGE_PADDING = 7
 BADGE_ALPHA = 0.15
+
+
+def row_muted_color(colors: dict[str, QColor], selected: bool) -> QColor:
+    """
+    Colour of muted text on a row: a little stronger on a selected row.
+
+    Args:
+        colors (dict[str, QColor]): The theme colours, see :func:`theme_colors`.
+        selected (bool): Whether the row is selected.
+
+    Returns:
+        QColor: The colour.
+    """
+    if not selected:
+        return QColor(colors["muted"])
+    muted = QColor(colors["fg"])
+    muted.setAlphaF(ROW_SELECTED_MUTED_ALPHA)
+    return muted
 
 
 def set_style(widget: QWidget, sheet: str) -> None:

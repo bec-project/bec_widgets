@@ -7,11 +7,16 @@ from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtCore import Qt, QThreadPool
 
 from bec_widgets.tests.utils import create_widget
+from bec_widgets.utils.theme_utils import css, theme_colors
 from bec_widgets.widgets.progress.scan_progressbar.scan_ui import args_items, args_summary
 from bec_widgets.widgets.progress.stage_bar import Tone
 from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
 from bec_widgets.widgets.services.bec_queue.queue_model import QueueMove, ScanQueueModel
-from bec_widgets.widgets.services.bec_queue.queue_ui import entry_detail_columns
+from bec_widgets.widgets.services.bec_queue.queue_ui import (
+    ROW_SELECTED_MUTED_ALPHA,
+    entry_detail_columns,
+    row_muted_color,
+)
 
 
 def make_request(scan_type="line_scan", rid="rid", args=None, kwargs=None, user_metadata=None):
@@ -202,6 +207,19 @@ def test_finished_status_is_an_icon_with_tooltip(queue_widget):
     icon = stopped.status_icon if hasattr(stopped, "status_icon") else stopped.lead
     assert icon.icon_name == "cancel"
     assert icon.toolTip().startswith("Stopped")
+
+
+def test_muted_text_is_stronger_on_a_selected_row(queue_widget):
+    colors = theme_colors()
+    assert row_muted_color(colors, False) == colors["muted"]
+    assert row_muted_color(colors, True).alphaF() == pytest.approx(ROW_SELECTED_MUTED_ALPHA, 0.01)
+    row = queue_widget.finished_rows.rows["h-2"]
+    plain = css(row_muted_color(colors, False))
+    assert plain in row.meta_label.styleSheet()
+    queue_widget.select("h-2")
+    assert css(row_muted_color(colors, True)) in row.meta_label.styleSheet()
+    queue_widget.select("h-2")
+    assert plain in row.meta_label.styleSheet()
 
 
 def test_finished_durations_come_from_scan_status(qtbot, queue_widget):
