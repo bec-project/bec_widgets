@@ -43,9 +43,7 @@ from bec_widgets.widgets.plots.waveform.waveform import (
     _decimate_envelope,
     _visible_slice,
 )
-from bec_widgets.widgets.services.scan_history_browser.scan_history_browser import (
-    ScanHistoryBrowser,
-)
+from bec_widgets.widgets.services.hdf5_viewer.history_picker import HistoryPicker
 
 from .conftest import create_widget
 
@@ -2398,14 +2396,42 @@ def test_show_scan_history_popup(qtbot, mocked_client):
     assert wf.scan_history_dialog is not None
     assert wf.scan_history_dialog.isVisible()
     assert scan_action.isChecked()
-    # The embedded widget should be the correct type
-    assert isinstance(wf.scan_history_widget, ScanHistoryBrowser)
+    # The embedded widget is the picker made of the HDF5 viewer's scan and signal lists
+    assert isinstance(wf.scan_history_widget, HistoryPicker)
+    assert wf.scan_history_dialog.windowTitle() == f"{wf.object_name} · add from history"
 
     # Close the dialog (triggers _scan_history_closed)
     wf.scan_history_dialog.close()
     # Dialog reference should be cleared and action unchecked
     assert wf.scan_history_dialog is None
     assert not scan_action.isChecked()
+
+
+def test_history_picker_adds_and_removes_history_curves(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_mode = "index"
+    inject_scan_history(wf, scan_history_factory, ("hist_pick", 3))
+    wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist_pick")
+
+    wf.show_scan_history_popup()
+    picker = wf.scan_history_widget
+    qtbot.waitUntil(lambda: picker.scan_list.model.rowCount() == 1)
+    assert picker.scan_list.select("hist_pick")
+    # The Y buttons show what the plot holds of the scan; there is no X button.
+    assert picker.signal_list.y_signals() == [("bpm4i", "bpm4i")]
+    assert picker.signal_list.picker
+
+    picker.signal_list.toggle_y(("samx", "samx"))
+    assert [c.name() for c in wf.curves] == ["bpm4i-bpm4i-scan-3", "samx-samx-scan-3"]
+    assert ("samx", "samx") in picker.signal_list.y_signals()
+
+    picker.signal_list.toggle_y(("bpm4i", "bpm4i"))
+    assert [c.name() for c in wf.curves] == ["samx-samx-scan-3"]
+    assert picker.signal_list.y_signals() == [("samx", "samx")]
+    wf.scan_history_dialog.close()
 
 
 #####################################################

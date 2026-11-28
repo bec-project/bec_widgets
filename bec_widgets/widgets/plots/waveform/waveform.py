@@ -54,9 +54,6 @@ from bec_widgets.widgets.plots.waveform.utils.alignment_controller import (
 )
 from bec_widgets.widgets.plots.waveform.utils.alignment_panel import WaveformAlignmentPanel
 from bec_widgets.widgets.plots.waveform.utils.roi_manager import WaveformROIManager
-from bec_widgets.widgets.services.scan_history_browser.scan_history_browser import (
-    ScanHistoryBrowser,
-)
 
 logger = bec_logger.logger
 _DAP_PARAM = object()
@@ -1037,23 +1034,23 @@ class Waveform(PlotBase):
     # TODO this is so far quick implementation just as popup, we should make scan history also standalone widget later
     def show_scan_history_popup(self):
         """
-        Show the scan history popup.
+        Show the history picker: the scans on the left, the signals of the selected scan on the
+        right, and Y on a signal adds it to this plot as a history curve.
         """
+        # pylint: disable=import-outside-toplevel
+        from bec_widgets.widgets.services.hdf5_viewer.history_picker import HistoryPicker
+
         scan_history_action = self.toolbar.components.get_action("scan_history").action
         if self.scan_history_dialog is None or not self.scan_history_dialog.isVisible():
-            self.scan_history_widget = ScanHistoryBrowser(parent=self)
+            self.scan_history_widget = HistoryPicker(self)
             self.scan_history_dialog = QDialog(modal=False)
-            self.scan_history_dialog.setWindowTitle(f"{self.object_name} - Scan History Browser")
+            self.scan_history_dialog.setWindowTitle(f"{self.object_name} · add from history")
             self.scan_history_dialog.layout = QVBoxLayout(self.scan_history_dialog)
+            self.scan_history_dialog.layout.setContentsMargins(0, 0, 0, 0)
             self.scan_history_dialog.layout.addWidget(self.scan_history_widget)
-            self.scan_history_widget.scan_history_device_viewer.request_history_plot.connect(
-                lambda scan_id, device_name, signal_name: self.plot(
-                    device_y=device_name, signal_y=signal_name, scan_id=scan_id
-                )
-            )
             self.scan_history_dialog.finished.connect(self._scan_history_closed)
             self.scan_history_dialog.show()
-            self.scan_history_dialog.resize(780, 320)
+            self.scan_history_dialog.resize(720, 460)
             scan_history_action.setChecked(True)
         else:
             # If already open, bring it to the front
@@ -1067,6 +1064,7 @@ class Waveform(PlotBase):
         """
         if self.scan_history_dialog is None:
             return
+        self.scan_history_widget.cleanup()
         self.scan_history_widget.close()
         self.scan_history_widget.deleteLater()
         self.scan_history_dialog.deleteLater()
