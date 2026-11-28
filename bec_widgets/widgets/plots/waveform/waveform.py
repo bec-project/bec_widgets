@@ -1151,7 +1151,10 @@ class Waveform(PlotBase):
     @x_mode.setter
     def x_mode(self, value: str):
         self.x_axis_mode["name"] = value
-        if value not in ["timestamp", "index", "auto"]:
+        if value in ["timestamp", "index", "auto"]:
+            # The entry of a device that was the x axis before does not belong to these modes.
+            self.x_axis_mode["entry"] = None
+        else:
             try:
                 self.x_axis_mode["entry"] = self.entry_validator.validate_signal(value, None)
             except ValueError:

@@ -4204,3 +4204,27 @@ def test_cleanup_stops_the_view_and_lod_timers(qtbot, mocked_client, monkeypatch
     assert all(timer.isActive() for timer in timers)
     wf.close()  # closing runs cleanup()
     assert not any(timer.isActive() for timer in timers)
+
+
+def test_leaving_device_x_mode_forgets_the_x_entry(qtbot, mocked_client):
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_mode = "samx"
+    assert wf.x_axis_mode["entry"] == "samx"
+    for mode in ("auto", "index", "timestamp"):
+        wf.x_mode = mode
+        assert wf.x_axis_mode["entry"] is None
+
+
+def test_autorange_after_a_zoom_shows_all_the_data_of_a_clipped_curve(qtbot, mocked_client):
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    x = np.arange(10_000, dtype=float)
+    curve = wf.plot(x=x, y=np.sin(x / 500.0) * 10, label="long")
+    curve.setClipToView(True)  # as history and async curves are drawn
+    wf.plot_item.vb.setXRange(1000, 2000, padding=0)
+    qtbot.wait(50)
+
+    wf.auto_range()
+
+    (x0, x1), (y0, y1) = wf.plot_item.vb.viewRange()
+    assert x0 <= 0 and x1 >= 9999
+    assert y0 <= -9.9 and y1 >= 9.9
