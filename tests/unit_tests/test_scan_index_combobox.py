@@ -161,3 +161,29 @@ def test_scan_index_combobox_invalid_input_flagged(scan_index_combo, qtbot):
     assert combo.is_valid_input
     assert combo.styleSheet() == ""
     assert combo.scan_id == "hid2"
+
+
+def test_repeated_scan_numbers_are_told_apart_by_their_start_time(qtbot, mocked_client):
+    # pylint: disable=import-outside-toplevel,protected-access
+    from datetime import datetime
+    from types import SimpleNamespace
+
+    history = mocked_client.history = ScanHistory(mocked_client, False)
+    history._scan_numbers.extend([11, 11])
+    history._scan_ids.extend(["first-11", "second-11"])
+    history._scan_data.update(
+        {
+            "first-11": SimpleNamespace(start_time=datetime(2026, 11, 14, 9, 12, 30).timestamp()),
+            "second-11": SimpleNamespace(start_time=datetime(2026, 11, 16, 15, 40, 5).timestamp()),
+        }
+    )
+    combo = create_widget(qtbot, ScanIndexComboBox, client=mocked_client)
+    combo.refresh_scan_indices()
+
+    texts = [combo.itemText(i) for i in range(1, combo.count())]
+    assert texts == ["11 (14 Nov 09:12:30)", "11 (16 Nov 15:40:05)"]
+    combo.set_scan_id("second-11")
+    assert combo.scan_id == "second-11"
+    assert combo.scan_number == 11
+    combo.set_scan_id("first-11")
+    assert combo.scan_id == "first-11"

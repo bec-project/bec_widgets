@@ -20,6 +20,7 @@ from toolz import partition
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.colors import Colors, get_accent_colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.imported_scans import imported_scan_item
 from bec_widgets.utils.qt_data_subscription import QtDataSubscription
 from bec_widgets.utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.toolbars.actions import MaterialIconAction
@@ -89,6 +90,11 @@ class HeatmapConfig(ConnectionConfig):
     )
     device_z: HeatmapDeviceSignal | None = Field(
         None, description="The z device signal of the heatmap."
+    )
+    scan_id: str | None = Field(
+        None,
+        description="The stored scan the heatmap shows; None follows the running scan, or the "
+        "latest one while none runs.",
     )
 
     model_config: dict = {"validate_assignment": True}
@@ -237,6 +243,8 @@ class Heatmap(ImageBase):
         "device_z.setter",
         "signal_z",
         "signal_z.setter",
+        "history_scan_id",
+        "history_scan_id.setter",
     ]
 
     PLUGIN = True
@@ -281,8 +289,6 @@ class Heatmap(ImageBase):
         self.heatmap_dialog = None
         self.scan_history_dialog = None
         self.scan_history_widget = None
-        # Scan ID the widget is pinned to when plotting from history; None means live mode.
-        self._history_scan_id: str | None = None
         self._selected_history_scan_id: str | None = None
         self.show_info_label = self._image_config.show_config_label
         self.reload = False
@@ -356,7 +362,9 @@ class Heatmap(ImageBase):
             oversampling_factor (float | None): Factor to oversample the grid resolution.
             lock_aspect_ratio (bool | None): Whether to lock the aspect ratio of the image.
             show_config_label (bool | None): Whether to show the configuration label in the heatmap.
-            scan_id (str | None): Optional scan ID to fetch from history instead of using the live/latest scan.
+            scan_id (str | None): A stored scan to show, and keep showing while other scans
+                run; the pin is saved with the profile. None follows the running scan, or the
+                latest one while none runs.
             reload (bool): Whether to reload the heatmap with new data.
         """
         if validate_bec:
@@ -410,6 +418,7 @@ class Heatmap(ImageBase):
             enforce_interpolation=enforce_interpolation,
             lock_aspect_ratio=lock_aspect_ratio,
             show_config_label=show_config_label,
+            scan_id=scan_id or None,
         )
         self.show_info_label = show_config_label
         self.color_map = color_map
@@ -428,12 +437,26 @@ class Heatmap(ImageBase):
         # Also notifies settings widgets, which re-render via update_plot
         self.heatmap_property_changed.emit()
 
+    @property
+    def _history_scan_id(self) -> str | None:
+        """The stored scan the widget is pinned to; None means it follows the running scan."""
+        config = getattr(self, "_image_config", None)
+        return None if config is None else config.scan_id
+
+    @_history_scan_id.setter
+    def _history_scan_id(self, scan_id: str | None) -> None:
+        self._image_config.scan_id = scan_id
+
     def _start_data_feed(self):
         """
-        Bind the widget to the running scan or, while idle, to the latest
-        finished scan (served by the history plugin); a live-follow subscription
-        replaces the idle binding when the next scan starts.
+        Bind the widget to the stored scan it is pinned to, else to the running scan or,
+        while idle, to the latest finished scan (served by the history plugin); a
+        live-follow subscription replaces the idle binding when the next scan starts.
         """
+        if self._history_scan_id is not None:
+            self.update_with_scan_history(scan_id=self._history_scan_id)
+            return
+        self._say_scan_missing(None)
         self._fetch_running_scan()
         if self.scan_item is not None and not hasattr(self.scan_item, "live_data"):
             self._setup_data_api_subscription(scan=self.scan_id)
@@ -452,6 +475,10 @@ class Heatmap(ImageBase):
 
     def get_history_scan_item(self, scan_id: str | None = None):
         """Fetch a scan item from history, defaulting to the latest historical scan."""
+        # A scan opened from its file, outside the history, is read from that file.
+        imported = imported_scan_item(self.client, scan_id)
+        if imported is not None:
+            return imported
         if self.client.history is None or len(self.client.history) == 0:
             logger.info("No scans executed so far. Cannot fetch scan history.")
             return None
@@ -466,7 +493,13 @@ class Heatmap(ImageBase):
         """Update the heatmap with a scan fetched from history."""
         scan_item = self.get_history_scan_item(scan_id=scan_id)
         if scan_item is None:
+            if scan_id is not None:
+                # Pinned to a scan the history does not have: keep the pin, say so.
+                self._cleanup_data_api_subscription()
+                self.main_image.clear()
+                self._say_scan_missing(scan_id)
             return
+        self._say_scan_missing(None)
 
         self._cleanup_data_api_subscription()
 
@@ -1291,10 +1324,10 @@ class Heatmap(ImageBase):
 
         x_min, x_max = min(positions[:, 0]), max(positions[:, 0])
         y_min, y_max = min(positions[:, 1]), max(positions[:, 1])
-        x_range = x_max - x_min
-        y_range = y_max - y_min
-        x_scale = x_range / width
-        y_scale = y_range / height
+        # The grid has width (height) samples from min to max, so width - 1 steps between
+        # them: pixel i is centred on sample i, the outermost on the outermost points.
+        x_scale = (x_max - x_min) / (width - 1) if width > 1 and x_max > x_min else 1.0
+        y_scale = (y_max - y_min) / (height - 1) if height > 1 and y_max > y_min else 1.0
 
         transform = QTransform()
         transform.scale(x_scale, y_scale)
@@ -1592,10 +1625,42 @@ class Heatmap(ImageBase):
                     signal_y=signal_y,
                     signal_z=signal_z,
                     validate_bec=False,  # Don't validate - entries already validated
+                    scan_id=self._history_scan_id,
                 )
             except Exception as e:
                 logger.debug(f"Auto-plot failed: {e}")
                 pass  # Silently fail if plot cannot be called yet
+
+    @SafeProperty(str)
+    def history_scan_id(self) -> str:
+        """
+        The stored scan the heatmap is pinned to, or empty when it follows the running scan.
+
+        A pinned heatmap keeps showing its scan while other scans run, and the pin is saved with
+        the profile. Set a scan id to pin it, or an empty string to follow the running scan again.
+        """
+        return self._history_scan_id or ""
+
+    @history_scan_id.setter
+    def history_scan_id(self, scan_id: str) -> None:
+        """
+        Show a stored scan, and keep showing it while other scans run; saved with a profile.
+
+        Args:
+            scan_id(str): The scan's id, or empty to follow the running scan again.
+        """
+        scan_id = scan_id or None
+        if scan_id == self._history_scan_id:
+            return
+        self._history_scan_id = scan_id
+        self.property_changed.emit("history_scan_id", scan_id or "")
+        if self._config_sources() is None:
+            return  # without its three devices the heatmap binds when they are set
+        if scan_id is None:
+            self._start_data_feed()
+            self.heatmap_property_changed.emit()
+        else:
+            self.update_with_scan_history(scan_id=scan_id)
 
     @SafeProperty(str)
     def interpolation_method(self) -> str:

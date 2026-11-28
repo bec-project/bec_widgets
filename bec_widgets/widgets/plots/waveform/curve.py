@@ -184,9 +184,23 @@ class Curve(BECConnector, pg.PlotDataItem):
         those instead.
         """
         bounds = self._full_bounds
-        if bounds is None or frac < 1.0 or orthoRange is not None:
+        if frac < 1.0 or orthoRange is not None:
             return super().dataBounds(ax, frac, orthoRange)
-        return bounds[ax]
+        if bounds is not None:
+            return bounds[ax]
+        # Without known bounds, answer from all the data the curve holds, not from the part
+        # clipToView draws: otherwise autorange after a zoom stays on the zoomed part.
+        data = self.xData if ax == 0 else self.yData
+        if data is None or len(data) == 0 or self.opts.get("logMode", (False, False))[ax]:
+            return super().dataBounds(ax, frac, orthoRange)
+        try:
+            values = np.asarray(data, dtype=float)
+        except (TypeError, ValueError):
+            return super().dataBounds(ax, frac, orthoRange)
+        finite = values[np.isfinite(values)]
+        if finite.size == 0:
+            return (None, None)
+        return (float(finite.min()), float(finite.max()))
 
     def setData(self, *args, **kwargs):
         """

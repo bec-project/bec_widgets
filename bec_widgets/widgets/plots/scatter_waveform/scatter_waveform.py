@@ -10,6 +10,7 @@ from qtpy.QtWidgets import QHBoxLayout, QMainWindow, QWidget
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.colors import Colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.imported_scans import imported_scan_item
 from bec_widgets.utils.qt_data_subscription import QtDataSubscription
 from bec_widgets.utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.toolbars.toolbar import MaterialIconAction
@@ -32,6 +33,11 @@ class ScatterWaveformConfig(ConnectionConfig):
         "plasma",
         description="The color map of the z scaling of scatter waveform.",
         validate_default=True,
+    )
+    scan_id: str | None = Field(
+        None,
+        description="The stored scan the plot shows; None follows the running scan, or the "
+        "latest one while none runs.",
     )
 
     model_config: dict = {"validate_assignment": True}
@@ -63,6 +69,8 @@ class ScatterWaveform(PlotBase):
         "device_z.setter",
         "signal_z",
         "signal_z.setter",
+        "history_scan_id",
+        "history_scan_id.setter",
     ]
 
     new_scan = Signal()
@@ -108,7 +116,8 @@ class ScatterWaveform(PlotBase):
             shown_bundles.insert(0, "scatter_waveform_settings")
         self.toolbar.show_bundles(shown_bundles)
 
-        self.update_with_scan_history(-1)
+        if not self.config.scan_id:
+            self.update_with_scan_history(-1)
 
     ################################################################################
     # Widget Specific GUI interactions
@@ -215,6 +224,7 @@ class ScatterWaveform(PlotBase):
         color_map: str | None = "plasma",
         label: str | None = None,
         validate_bec: bool = True,
+        scan_id: str | None = None,
     ) -> ScatterCurve:
         """
         Plot the data from the device signals.
@@ -229,6 +239,9 @@ class ScatterWaveform(PlotBase):
             color_map (str | None): The color map of the scatter waveform.
             label (str | None): The label of the curve.
             validate_bec (bool): Whether to validate the device signals with current BEC instance.
+            scan_id (str | None): A stored scan to show, and keep showing while other scans
+                run; the pin is saved with the profile. None follows the running scan, or the
+                latest one while none runs.
 
         Returns:
             ScatterCurve: The scatter curve object.
@@ -259,6 +272,8 @@ class ScatterWaveform(PlotBase):
             device_z=ScatterDeviceSignal(device=device_z, signal=signal_z),
         )
 
+        self.config.scan_id = scan_id or None
+
         # Add Curve
         self._add_main_scatter_curve(config)
 
@@ -287,7 +302,15 @@ class ScatterWaveform(PlotBase):
         self.update_labels()
         self.plot_item.addItem(self._main_curve)
 
-        self._setup_data_api_subscription()
+        self._bind_data()
+
+    def _bind_data(self) -> None:
+        """Subscribe to the stored scan the plot is pinned to, or to the running scan."""
+        if self.config.scan_id:
+            self.update_with_scan_history(scan_id=self.config.scan_id)
+        else:
+            self._say_scan_missing(None)
+            self._setup_data_api_subscription()
 
     ################################################################################
     # BEC Update Methods
@@ -302,6 +325,8 @@ class ScatterWaveform(PlotBase):
             msg(dict): The message content.
             meta(dict): The message metadata.
         """
+        if self.config.scan_id:
+            return  # pinned to a stored scan: other scans do not take it over
         current_scan_id = msg.get("scan_id", None)
         if current_scan_id is None:
             return
@@ -623,6 +648,33 @@ class ScatterWaveform(PlotBase):
         except Exception:
             pass  # Silently fail if validation fails
 
+    @SafeProperty(str)
+    def history_scan_id(self) -> str:
+        """
+        The stored scan the plot is pinned to, or empty when it follows the running scan.
+
+        A pinned plot keeps showing its scan while other scans run, and the pin is saved with
+        the profile. Set a scan id to pin it, or an empty string to follow the running scan again.
+        """
+        return self.config.scan_id or ""
+
+    @history_scan_id.setter
+    def history_scan_id(self, scan_id: str) -> None:
+        """
+        Show a stored scan, and keep showing it while other scans run; saved with a profile.
+
+        Args:
+            scan_id(str): The scan's id, or empty to follow the running scan again.
+        """
+        scan_id = scan_id or None
+        if scan_id == self.config.scan_id:
+            return
+        self.config.scan_id = scan_id
+        self.property_changed.emit("history_scan_id", scan_id or "")
+        if self._config_sources() is not None:
+            # Without its three devices the plot binds when they are set.
+            self._bind_data()
+
     def _try_auto_plot(self) -> None:
         """
         Attempt to automatically call plot() if all three devices are set.
@@ -647,6 +699,7 @@ class ScatterWaveform(PlotBase):
                     signal_y=signal_y,
                     signal_z=signal_z,
                     validate_bec=False,  # Don't validate - entries already validated
+                    scan_id=self.config.scan_id,
                 )
             except Exception as e:
                 logger.debug(f"Auto-plot failed: {e}")
@@ -705,7 +758,18 @@ class ScatterWaveform(PlotBase):
 
         if scan_index is None:
             self.scan_id = scan_id
-            self.scan_item = self.client.history.get_by_scan_id(scan_id)
+            # A scan opened from its file, outside the history, is read from that file.
+            self.scan_item = imported_scan_item(
+                self.client, scan_id
+            ) or self.client.history.get_by_scan_id(scan_id)
+            if self.scan_item is None:
+                # A scan the history does not have, e.g. the pin of an old profile: say so.
+                self._cleanup_data_api_subscription()
+                if self._main_curve is not None:
+                    self._main_curve.clear()
+                self._say_scan_missing(scan_id)
+                return
+            self._say_scan_missing(None)
             self.update_scan_info_from_source(self.scan_item)
             self._setup_data_api_subscription(scan=scan_id)
             return

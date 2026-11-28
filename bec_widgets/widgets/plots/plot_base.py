@@ -195,6 +195,8 @@ class PlotBase(BECWidget, QWidget):
         self._scan_info_rows: list[tuple[str, object | None]] = []
         self._custom_info_rows: list[tuple[str, object | None]] = []
         self._warning_rows: list[tuple[str, object | None]] = []
+        #: What the plot says while the stored scan it is pinned to is not in the history.
+        self._missing_scan_text: str | None = None
         self._data_rows: list[tuple[str, object | None]] = []
         self._data_warnings: dict[str, str] = {}
         self.crosshair = None
@@ -360,6 +362,26 @@ class PlotBase(BECWidget, QWidget):
         """Show (or clear, with None) a warning row in the info label, even if it is hidden."""
         self._warning_rows = [("Warning", text)] if text else []
         self._render_info_label()
+
+    @property
+    def plot_warning(self) -> str:
+        """The warning the plot shows in its info label, or empty."""
+        return str(self._warning_rows[0][1]) if self._warning_rows else ""
+
+    def _say_scan_missing(self, scan_id: str | None) -> None:
+        """
+        Say in the plot that the stored scan it is pinned to is not in the history, for
+        example after a profile was loaded on another beamline; None takes it back.
+        """
+        text = f"The stored scan {scan_id} is not available" if scan_id else None
+        if text is None and self.plot_warning != (self._missing_scan_text or ""):
+            # Another warning took the row meanwhile: leave it.
+            self._missing_scan_text = None
+            return
+        if text is None and self._missing_scan_text is None:
+            return
+        self._missing_scan_text = text
+        self.set_plot_warning(text)
 
     def set_data_warning(self, text: str | None, group: str = "") -> None:
         """

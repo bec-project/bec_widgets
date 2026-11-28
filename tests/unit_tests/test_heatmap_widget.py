@@ -1712,3 +1712,127 @@ def test_heatmap_alignment_warning_follows_the_bound_scan(heatmap_widget, fake_b
     assert not any(
         label.text.startswith("Warning:") for _, label in heatmap_widget.info_label.items
     )
+
+
+def test_heatmap_pin_is_saved_and_restored_with_a_profile(
+    qtbot, mocked_client, fake_bridges, tmp_path
+):
+    # pylint: disable=import-outside-toplevel
+    from bec_widgets.utils.widget_state_manager import WidgetStateManager
+
+    history_scan = mock.MagicMock()
+    history_scan.scan_id = "scan-456"
+    heatmap = Heatmap(client=mocked_client)
+    qtbot.addWidget(heatmap)
+    heatmap.setObjectName("pinned_heatmap")
+    with mock.patch.object(Heatmap, "get_history_scan_item", return_value=history_scan):
+        heatmap.plot(device_x="samx", device_y="samy", device_z="bpm4i", scan_id="scan-456")
+        assert heatmap.history_scan_id == "scan-456"
+        profile = str(tmp_path / "profile.ini")
+        WidgetStateManager(heatmap).save_state(profile)
+
+        restored = Heatmap(client=mocked_client)
+        qtbot.addWidget(restored)
+        restored.setObjectName("pinned_heatmap")
+        WidgetStateManager(restored).load_state(profile)
+
+    assert (restored.device_x, restored.device_y, restored.device_z) == ("samx", "samy", "bpm4i")
+    assert restored.history_scan_id == "scan-456"
+    assert restored.scan_id == "scan-456"
+    assert fake_bridges[-1].scan == "scan-456"
+    assert fake_bridges[-1].sources == [("samx", "samx"), ("samy", "samy"), ("bpm4i", "bpm4i")]
+
+
+def test_heatmap_history_scan_id_property_pins_and_unpins(heatmap_widget, fake_bridges):
+    history_scan = mock.MagicMock()
+    history_scan.scan_id = "scan-456"
+    heatmap_widget.plot(device_x="samx", device_y="samy", device_z="bpm4i")
+    with mock.patch.object(heatmap_widget, "get_history_scan_item", return_value=history_scan):
+        heatmap_widget.history_scan_id = "scan-456"
+    assert heatmap_widget._history_scan_id == "scan-456"
+    assert fake_bridges[-1].scan == "scan-456"
+
+    # A redraw by property keeps the pin; plot() rebuilds the config but takes it along.
+    heatmap_widget.device_z = "bpm4i"
+    assert heatmap_widget.history_scan_id == "scan-456"
+
+    heatmap_widget.history_scan_id = ""
+    assert heatmap_widget._history_scan_id is None
+    assert fake_bridges[-1].scan != "scan-456"
+
+
+def test_heatmap_image_grid_places_its_first_and_last_pixel_on_the_outermost_points():
+    """The centres of the outermost pixels lie on the outermost scan points, at any size."""
+    x, y = np.meshgrid(np.linspace(-5, 5, 11), np.linspace(-5, 5, 11))
+    positions = np.column_stack([x.ravel(), y.ravel()])
+    for oversampling in (1.0, 2.0, 3.5):
+        grid_x, grid_y, transform = Heatmap.build_image_grid(positions, oversampling)
+        width, height = grid_x.shape
+        for i, j in ((0, 0), (width - 1, height - 1), (width // 2, height // 3)):
+            centre = transform.map(QPointF(i + 0.5, j + 0.5))
+            assert centre.x() == pytest.approx(grid_x[i, j])
+            assert centre.y() == pytest.approx(grid_y[i, j])
+        last = transform.map(QPointF(width - 0.5, height - 0.5))
+        assert (last.x(), last.y()) == (pytest.approx(5.0), pytest.approx(5.0))
+
+
+def test_heatmap_profile_pinned_to_a_scan_that_is_gone_says_so_in_place(
+    qtbot, mocked_client, fake_bridges, monkeypatch, tmp_path
+):
+    # pylint: disable=import-outside-toplevel
+    from bec_widgets.utils import error_popups
+    from bec_widgets.utils.widget_state_manager import WidgetStateManager
+
+    errors = mock.MagicMock()
+    monkeypatch.setattr(error_popups, "logger", errors)
+    history_scan = mock.MagicMock()
+    history_scan.scan_id = "scan-456"
+    heatmap = Heatmap(client=mocked_client)
+    qtbot.addWidget(heatmap)
+    heatmap.setObjectName("pinned_heatmap")
+    with mock.patch.object(Heatmap, "get_history_scan_item", return_value=history_scan):
+        heatmap.plot(device_x="samx", device_y="samy", device_z="bpm4i", scan_id="scan-456")
+    assert heatmap.plot_warning == ""
+    profile = str(tmp_path / "profile.ini")
+    WidgetStateManager(heatmap).save_state(profile)
+
+    # The history no longer has the scan: the plot loads, empty, and says why.
+    restored = Heatmap(client=mocked_client)
+    qtbot.addWidget(restored)
+    restored.setObjectName("pinned_heatmap")
+    with mock.patch.object(Heatmap, "get_history_scan_item", return_value=None):
+        WidgetStateManager(restored).load_state(profile)
+
+    assert not errors.error.called
+    assert (restored.device_x, restored.device_y, restored.device_z) == ("samx", "samy", "bpm4i")
+    assert restored.history_scan_id == "scan-456"
+    assert restored._data_subscription is None  # nothing to subscribe to
+    assert restored.plot_warning == "The stored scan scan-456 is not available"
+    assert restored.info_label.isVisible()
+
+    # Following the running scan again takes the message away.
+    restored.history_scan_id = ""
+    assert restored.plot_warning == ""
+
+
+def test_heatmap_profile_without_a_pin_loads_as_before(
+    qtbot, mocked_client, fake_bridges, tmp_path
+):
+    # pylint: disable=import-outside-toplevel
+    from bec_widgets.utils.widget_state_manager import WidgetStateManager
+
+    heatmap = Heatmap(client=mocked_client)
+    qtbot.addWidget(heatmap)
+    heatmap.setObjectName("live_heatmap")
+    heatmap.plot(device_x="samx", device_y="samy", device_z="bpm4i")
+    profile = str(tmp_path / "profile.ini")
+    WidgetStateManager(heatmap).save_state(profile)
+
+    restored = Heatmap(client=mocked_client)
+    qtbot.addWidget(restored)
+    restored.setObjectName("live_heatmap")
+    WidgetStateManager(restored).load_state(profile)
+
+    assert restored.history_scan_id == "" and restored.plot_warning == ""
+    assert (restored.device_x, restored.device_y, restored.device_z) == ("samx", "samy", "bpm4i")
+    assert fake_bridges[-1].scan != "scan-456"

@@ -35,6 +35,7 @@ _Widgets = {
     "BeamlineStateManager": "BeamlineStateManager",
     "BecConsole": "BecConsole",
     "DapComboBox": "DapComboBox",
+    "HDF5Viewer": "HDF5Viewer",
     "Heatmap": "Heatmap",
     "Image": "Image",
     "LogPanel": "LogPanel",
@@ -1111,6 +1112,18 @@ class DapComboBox(RPCBase):
         """
 
 
+class DataView(RPCBase):
+    """A view to browse the scans BEC has written and to look into HDF5 files, with the HDF5"""
+
+    _IMPORT_MODULE = "bec_widgets.applications.views.data_view.data_view"
+
+    @rpc_call
+    def activate(self) -> "None":
+        """
+        Switch the parent application to this view.
+        """
+
+
 class DeveloperView(RPCBase):
     """A view for users to write scripts and macros and execute them within the application."""
 
@@ -1727,6 +1740,59 @@ class EllipticalROI(RPCBase):
         Args:
             x (float): The x-coordinate of the new position.
             y (float): The y-coordinate of the new position.
+        """
+
+
+class HDF5Viewer(RPCBase):
+    """Viewer for the scans BEC has written and for HDF5 files in general."""
+
+    _IMPORT_MODULE = "bec_widgets.widgets.services.hdf5_viewer.hdf5_viewer"
+
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
+    @rpc_call
+    def open_file(self, file_path: "str", dataset: "str" = "") -> "None":
+        """
+        Show an HDF5 file in the file view.
+
+        The file is opened for each read and closed again: the file of a scan BEC lists as the
+        Data API opens it, any other file without a file lock. A file that is still being
+        written is not read until its writer is done.
+
+        Args:
+            file_path (str): Path of the file.
+            dataset (str): Path of a dataset or group inside the file to select.
+        """
+
+    @rpc_call
+    def show_scan(self, scan: "int | str") -> "None":
+        """
+        Select a scan of the scan history.
+
+        Scan numbers can repeat (e.g. after a counter reset): for a number shared by several
+        scans the newest of them is selected. A scan id always names one scan.
+
+        Args:
+            scan (int | str): Scan number or scan id.
+
+        Raises:
+            ValueError: If the scan is not in the scan history.
         """
 
 
@@ -2377,7 +2443,9 @@ class Heatmap(RPCBase):
             oversampling_factor (float | None): Factor to oversample the grid resolution.
             lock_aspect_ratio (bool | None): Whether to lock the aspect ratio of the image.
             show_config_label (bool | None): Whether to show the configuration label in the heatmap.
-            scan_id (str | None): Optional scan ID to fetch from history instead of using the live/latest scan.
+            scan_id (str | None): A stored scan to show, and keep showing while other scans
+                run; the pin is saved with the profile. None follows the running scan, or the
+                latest one while none runs.
             reload (bool): Whether to reload the heatmap with new data.
         """
 
@@ -2469,6 +2537,26 @@ class Heatmap(RPCBase):
     def signal_z(self) -> "str":
         """
         Signal entry for the Z (color) axis device.
+        """
+
+    @property
+    @rpc_call
+    def history_scan_id(self) -> "str":
+        """
+        The stored scan the heatmap is pinned to, or empty when it follows the running scan.
+
+        A pinned heatmap keeps showing its scan while other scans run, and the pin is saved with
+        the profile. Set a scan id to pin it, or an empty string to follow the running scan again.
+        """
+
+    @history_scan_id.setter
+    @rpc_call
+    def history_scan_id(self) -> "str":
+        """
+        The stored scan the heatmap is pinned to, or empty when it follows the running scan.
+
+        A pinned heatmap keeps showing its scan while other scans run, and the pin is saved with
+        the profile. Set a scan id to pin it, or an empty string to follow the running scan again.
         """
 
 
@@ -5887,6 +5975,7 @@ class ScatterWaveform(RPCBase):
         color_map: "str | None" = "plasma",
         label: "str | None" = None,
         validate_bec: "bool" = True,
+        scan_id: "str | None" = None,
     ) -> "ScatterCurve":
         """
         Plot the data from the device signals.
@@ -5901,6 +5990,9 @@ class ScatterWaveform(RPCBase):
             color_map (str | None): The color map of the scatter waveform.
             label (str | None): The label of the curve.
             validate_bec (bool): Whether to validate the device signals with current BEC instance.
+            scan_id (str | None): A stored scan to show, and keep showing while other scans
+                run; the pin is saved with the profile. None follows the running scan, or the
+                latest one while none runs.
 
         Returns:
             ScatterCurve: The scatter curve object.
@@ -6005,6 +6097,26 @@ class ScatterWaveform(RPCBase):
     def signal_z(self) -> "str":
         """
         Signal entry for the Z (color) axis device.
+        """
+
+    @property
+    @rpc_call
+    def history_scan_id(self) -> "str":
+        """
+        The stored scan the plot is pinned to, or empty when it follows the running scan.
+
+        A pinned plot keeps showing its scan while other scans run, and the pin is saved with
+        the profile. Set a scan id to pin it, or an empty string to follow the running scan again.
+        """
+
+    @history_scan_id.setter
+    @rpc_call
+    def history_scan_id(self) -> "str":
+        """
+        The stored scan the plot is pinned to, or empty when it follows the running scan.
+
+        A pinned plot keeps showing its scan while other scans run, and the pin is saved with
+        the profile. Set a scan id to pin it, or an empty string to follow the running scan again.
         """
 
 
@@ -6695,6 +6807,9 @@ class Waveform(RPCBase):
                 the y‑data (and optional x‑data) are fetched from that historical scan. Such curves are
                 never cleared by live‑scan resets.
             scan_number(int): Optional scan index. When provided, the curve is treated as a **history** curve and
+                the data come from the scan with that number. Scan numbers can repeat (e.g. after
+                a counter reset); the newest scan with the number is taken then. Give scan_id to
+                pick one of them.
 
         Returns:
             Curve: The curve object.

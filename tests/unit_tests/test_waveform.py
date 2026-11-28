@@ -4,6 +4,7 @@ import json
 import threading
 import time
 from dataclasses import replace
+from datetime import datetime
 from types import SimpleNamespace
 from unittest import mock
 from unittest.mock import MagicMock
@@ -42,9 +43,7 @@ from bec_widgets.widgets.plots.waveform.waveform import (
     _decimate_envelope,
     _visible_slice,
 )
-from bec_widgets.widgets.services.scan_history_browser.scan_history_browser import (
-    ScanHistoryBrowser,
-)
+from bec_widgets.widgets.services.hdf5_viewer.history_picker import HistoryPicker
 
 from .conftest import create_widget
 
@@ -576,17 +575,17 @@ def test_curve_json_rejects_label_of_kept_custom_curve(qtbot, mocked_client):
 
 
 @pytest.mark.parametrize("label", ["history_alias", None], ids=["aliased", "omitted"])
-def test_curve_json_rejects_generated_history_label_of_kept_custom_curve(
+def test_curve_json_history_curve_steps_around_the_name_of_a_kept_custom_curve(
     qtbot, mocked_client, scan_history_factory, label
 ):
     """
-    History curves are relabelled '<device>-<signal>-scan-<N>' when they are added, so the
-    clash check must use that label, not the one in the JSON, and still fail before any curve
-    is removed.
+    History curves are relabelled '<device>-<signal>-scan-<N>' when they are added. When a
+    kept custom curve already has that name, the history curve gets the start time of its scan
+    added instead of clashing with it, whatever label the JSON carried.
     """
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     inject_scan_history(wf, scan_history_factory, ("hist1", 1))
-    device_curve = wf.plot(arg1="bpm3a")
+    wf.plot(arg1="bpm3a")
     custom = wf.plot(x=[1, 2, 3], y=[4, 5, 6], label="bpm4i-bpm4i-scan-1")
     history = {
         "widget_class": "Curve",
@@ -596,9 +595,12 @@ def test_curve_json_rejects_generated_history_label_of_kept_custom_curve(
         "signal": {"device": "bpm4i", "signal": "bpm4i"},
     }
 
-    wf.curve_json = json.dumps([history])  # SafeProperty logs the error
+    wf.curve_json = json.dumps([history])
 
-    assert wf.curves == [device_curve, custom]
+    assert wf.curves[0] is custom
+    [restored] = wf.curves[1:]
+    assert restored.config.scan_id == "hist1"
+    assert restored.name().startswith("bpm4i-bpm4i-scan-1-")
 
 
 def test_curve_json_rejects_payload_before_removing_curves(
@@ -2394,14 +2396,42 @@ def test_show_scan_history_popup(qtbot, mocked_client):
     assert wf.scan_history_dialog is not None
     assert wf.scan_history_dialog.isVisible()
     assert scan_action.isChecked()
-    # The embedded widget should be the correct type
-    assert isinstance(wf.scan_history_widget, ScanHistoryBrowser)
+    # The embedded widget is the picker made of the HDF5 viewer's scan and signal lists
+    assert isinstance(wf.scan_history_widget, HistoryPicker)
+    assert wf.scan_history_dialog.windowTitle() == f"{wf.object_name} · add from history"
 
     # Close the dialog (triggers _scan_history_closed)
     wf.scan_history_dialog.close()
     # Dialog reference should be cleared and action unchecked
     assert wf.scan_history_dialog is None
     assert not scan_action.isChecked()
+
+
+def test_history_picker_adds_and_removes_history_curves(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_mode = "index"
+    inject_scan_history(wf, scan_history_factory, ("hist_pick", 3))
+    wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist_pick")
+
+    wf.show_scan_history_popup()
+    picker = wf.scan_history_widget
+    qtbot.waitUntil(lambda: picker.scan_list.model.rowCount() == 1)
+    assert picker.scan_list.select("hist_pick")
+    # The Y buttons show what the plot holds of the scan; there is no X button.
+    assert picker.signal_list.y_signals() == [("bpm4i", "bpm4i")]
+    assert picker.signal_list.picker
+
+    picker.signal_list.toggle_y(("samx", "samx"))
+    assert [c.name() for c in wf.curves] == ["bpm4i-bpm4i-scan-3", "samx-samx-scan-3"]
+    assert ("samx", "samx") in picker.signal_list.y_signals()
+
+    picker.signal_list.toggle_y(("bpm4i", "bpm4i"))
+    assert [c.name() for c in wf.curves] == ["samx-samx-scan-3"]
+    assert picker.signal_list.y_signals() == [("samx", "samx")]
+    wf.scan_history_dialog.close()
 
 
 #####################################################
@@ -2540,6 +2570,157 @@ def test_skip_large_dataset_warning_suppresses_dialog(qtbot, mocked_client, monk
         kept = wf._filter_oversized_sources([("waveform", "waveform_waveform")], "scan-1")
     dialog.assert_not_called()
     assert kept == []
+
+
+def _failed_source(device, error):
+    """A source whose stored data could not be read, as the Data API hands it over."""
+    return SourceData(
+        device=device,
+        entry=device,
+        kind="monitored",
+        ordinals=(),
+        values=(),
+        timestamps=(),
+        complete=True,
+        metadata={"error": error},
+    )
+
+
+def _history_waveform(qtbot, mocked_client, scan_history_factory, *scans):
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    inject_scan_history(wf, scan_history_factory, *scans)
+    return wf
+
+
+@pytest.mark.parametrize(
+    "sources, reason",
+    [
+        # (1) its own source failed
+        (
+            [_failed_source("bpm4i", "file locking flag values don't match")],
+            "file locking flag values don't match",
+        ),
+        # (2) the x source of its scan failed
+        (
+            [
+                _monitored_source("bpm4i", values=(5, 6, 7)),
+                _failed_source("samx", "Stored signal is missing."),
+            ],
+            "Stored signal is missing.",
+        ),
+        # (5) its source is not in the scan: the read ended without it
+        ([_monitored_source("samx", values=(10, 20, 30))], "not available in this scan"),
+    ],
+    ids=["own-source", "x-source", "not-in-scan"],
+)
+def test_history_curve_that_can_get_no_data_stops_waiting_with_the_reason(
+    qtbot, mocked_client, scan_history_factory, monkeypatch, sources, reason
+):
+    _fake_bridge_factory(monkeypatch)
+    wf = _history_waveform(qtbot, mocked_client, scan_history_factory, ("hist1", 1))
+    c = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist1")
+    assert wf.history_curve_waiting(c.name())
+    assert wf.history_curve_error(c.name()) is None
+
+    with qtbot.waitSignal(wf.history_read_failed) as failed:
+        wf._on_history_data_update(_make_update(sources, scan_id="hist1", reason="history"))
+    assert failed.args == ["hist1"]
+    assert wf.history_curve_error(c.name()) == reason
+    assert not wf.history_curve_waiting(c.name())
+
+
+def test_history_curve_keeps_waiting_while_the_read_of_its_scan_goes_on(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    _fake_bridge_factory(monkeypatch)
+    wf = _history_waveform(qtbot, mocked_client, scan_history_factory, ("hist1", 1))
+    c = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist1")
+    # More of the x source is to come, and a rebind carries no data at all: no verdict yet.
+    loading = replace(_monitored_source("samx", values=(10, 20)), complete=False)
+    wf._on_history_data_update(_make_update([loading], scan_id="hist1", reason="history"))
+    wf._on_history_data_update(_make_update([], scan_id="hist1", reason="rebind"))
+    assert wf.history_curve_waiting(c.name())
+    assert wf.history_curve_error(c.name()) is None
+
+
+def test_history_curve_of_a_declined_dataset_fails_without_a_read(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    # (3) the user said no to loading it
+    bridges = _fake_bridge_factory(monkeypatch)
+    wf = _history_waveform(qtbot, mocked_client, scan_history_factory, ("hist1", 1))
+    _oversized(monkeypatch, wf)
+    with mock.patch.object(wf, "_confirm_large_dataset", return_value=False):
+        c = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist1")
+    assert "hist1" not in wf._history_subscriptions
+    assert not [bridge for bridge in bridges if bridge.scan == "hist1"]
+    assert wf.history_curve_error(c.name()) == "not loaded: it is larger than the size limit"
+    assert not wf.history_curve_waiting(c.name())
+
+    # Loading it anyway reads the scan again, without asking a second time.
+    with mock.patch.object(wf, "_confirm_large_dataset", return_value=False) as ask:
+        wf.load_history_sources("hist1", [("bpm4i", "bpm4i")])
+    ask.assert_not_called()
+    assert [bridge.scan for bridge in bridges] == ["hist1"]
+    assert wf.history_curve_error(c.name()) is None
+    assert wf.history_curve_waiting(c.name())
+
+
+def test_history_curve_fails_when_the_read_of_its_scan_cannot_start(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    # (4) the subscription itself raised
+    def refuse(*_args, **_kwargs):
+        raise RuntimeError("no data path serves this scan")
+
+    fake_data_subscriptions(monkeypatch, refuse)
+    wf = _history_waveform(qtbot, mocked_client, scan_history_factory, ("hist1", 1))
+    c = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist1")
+    assert wf.history_curve_error(c.name()) == "no data path serves this scan"
+    assert not wf.history_curve_waiting(c.name())
+
+
+def test_read_history_again_reads_only_the_scan_that_failed(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    _fake_bridge_factory(monkeypatch)
+    wf = _history_waveform(qtbot, mocked_client, scan_history_factory, ("hist1", 1), ("hist2", 2))
+    failed = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist1")
+    drawn = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id="hist2")
+    wf._on_history_data_update(
+        _make_update(
+            [_monitored_source("bpm4i", values=(1, 2)), _monitored_source("samx", values=(3, 4))],
+            scan_id="hist2",
+            reason="history",
+        )
+    )
+    wf._on_history_data_update(
+        _make_update([_failed_source("bpm4i", "busy")], scan_id="hist1", reason="history")
+    )
+    old_bridge, other_bridge = (
+        wf._history_subscriptions["hist1"],
+        wf._history_subscriptions["hist2"],
+    )
+    assert wf.history_curve_error(failed.name()) == "busy"
+
+    wf.read_history_again("hist1")
+
+    assert old_bridge.closed
+    assert wf._history_subscriptions["hist1"] is not old_bridge
+    assert wf._history_subscriptions["hist2"] is other_bridge and not other_bridge.closed
+    assert wf.history_curve_error(failed.name()) is None
+    assert wf.history_curve_waiting(failed.name())
+    np.testing.assert_array_equal(drawn.get_data()[1], [1, 2])
+    # The new read delivers: the curve draws and has no error any more.
+    wf._on_history_data_update(
+        _make_update(
+            [_monitored_source("bpm4i", values=(7, 8)), _monitored_source("samx", values=(1, 2))],
+            scan_id="hist1",
+            reason="history",
+        )
+    )
+    np.testing.assert_array_equal(failed.get_data()[1], [7, 8])
+    assert not wf.history_curve_waiting(failed.name())
 
 
 def test_history_subscription_gates_before_reading(qtbot, mocked_client, monkeypatch):
@@ -3228,6 +3409,157 @@ def test_history_curve_device_missing_returns_none(qtbot, mocked_client, scan_hi
     [history_msg] = inject_scan_history(wf, scan_history_factory, ("hist_dev_missing", 1))
     c = wf.plot(device_y="non-existing", signal_y="non-existing", scan_id=history_msg.scan_id)
     assert c is None
+
+
+def test_history_curve_of_a_device_that_left_the_session_plots(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    """
+    A history curve is checked against what its scan stored, not against the devices of the
+    current session, so scans of devices that have left the session can still be plotted.
+    """
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_mode = "index"
+    [history_msg] = inject_scan_history(wf, scan_history_factory, ("hist_gone", 1))
+    info = history_msg.stored_data_info["bpm4i"]["bpm4i"]
+    history_msg.stored_data_info["old_diode"] = {"old_diode": info}
+    assert "old_diode" not in wf.entry_validator.devices
+
+    c = wf.plot(device_y="old_diode", scan_id=history_msg.scan_id)
+
+    assert c is not None
+    assert c.config.source == "history"
+    assert c.config.signal.signal == "old_diode"
+    assert c.name() == "old_diode-old_diode-scan-1"
+    # Such a device can also be the x axis of the history curves that stored it.
+    wf.x_mode = "old_diode"
+    assert wf.x_axis_mode["entry"] == "old_diode"
+
+
+def test_curve_tree_keeps_a_history_curve_of_a_device_that_left_the_session(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    # pylint: disable=import-outside-toplevel
+    from bec_widgets.widgets.plots.waveform.settings.curve_settings.curve_tree import CurveTree
+
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_mode = "index"
+    [history_msg] = inject_scan_history(wf, scan_history_factory, ("hist_tree", 1))
+    # The scan picker of the curve rows lists the scans by number.
+    wf.client.history._scan_numbers.append(1)  # pylint: disable=protected-access
+    info = history_msg.stored_data_info["bpm4i"]["bpm4i"]
+    history_msg.stored_data_info["old_diode"] = {"old_diode": info}
+    wf.plot(device_y="old_diode", scan_id=history_msg.scan_id)
+
+    tree = create_widget(qtbot, CurveTree, waveform=wf)
+    [row] = tree.all_items
+    assert row.device_edit.currentText() == "old_diode"
+    assert row.entry_edit.currentText() == "old_diode"
+    exported = row.export_data()
+    assert (exported["signal"]["device"], exported["signal"]["signal"]) == (
+        "old_diode",
+        "old_diode",
+    )
+    assert exported["source"] == "history"
+
+    # Applying the dialog keeps the curve.
+    tree.send_curve_json()
+    assert [curve.name() for curve in wf.curves] == ["old_diode-old_diode-scan-1"]
+
+
+def _two_scans_numbered_11(wf, scan_history_factory):
+    """Two scans that share the number 11 (e.g. after a counter reset), the older first."""
+    older, newer = inject_scan_history(
+        wf, scan_history_factory, ("first-11", 11), ("second-11", 11)
+    )
+    older.start_time = datetime(2026, 11, 14, 9, 12, 30).timestamp()
+    newer.start_time = datetime(2026, 11, 16, 15, 40, 5).timestamp()
+    return older, newer
+
+
+def test_history_curves_of_two_scans_that_share_a_number_both_plot(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_mode = "index"
+    older, newer = _two_scans_numbered_11(wf, scan_history_factory)
+
+    first = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id=older.scan_id)
+    second = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id=newer.scan_id)
+
+    # The usual name while it is free; the start time tells the second one apart.
+    assert first.name() == "bpm4i-bpm4i-scan-11"
+    assert second.name() == "bpm4i-bpm4i-scan-11-20261116-1540"
+    assert {c.config.scan_id for c in wf.curves} == {"first-11", "second-11"}
+    # The same signal of the same scan is still refused.
+    with pytest.raises(ValueError, match="already exists"):
+        wf.plot(
+            device_y="bpm4i",
+            signal_y="bpm4i",
+            scan_id=older.scan_id,
+            _override_slot_params={"raise_error": True},
+        )
+
+    # Saved and restored, both come back under the same names.
+    saved = wf.curve_json
+    wf.clear_all()
+    wf.curve_json = saved
+    assert sorted(c.name() for c in wf.curves) == [
+        "bpm4i-bpm4i-scan-11",
+        "bpm4i-bpm4i-scan-11-20261116-1540",
+    ]
+    wf.remove_curve("bpm4i-bpm4i-scan-11-20261116-1540")
+    assert [c.config.scan_id for c in wf.curves] == ["first-11"]
+
+
+def test_curve_tree_keeps_two_history_curves_that_share_a_scan_number(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    # pylint: disable=import-outside-toplevel,protected-access
+    from bec_widgets.widgets.plots.waveform.settings.curve_settings.curve_tree import CurveTree
+
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_mode = "index"
+    older, newer = _two_scans_numbered_11(wf, scan_history_factory)
+    wf.client.history._scan_numbers.extend([11, 11])
+    wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id=older.scan_id)
+    wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_id=newer.scan_id)
+
+    tree = create_widget(qtbot, CurveTree, waveform=wf)
+    combos = {row.config.scan_id: row.scan_index_combo for row in tree.all_items}
+    # The scan selector tells the two scans 11 apart by their start time.
+    assert combos["first-11"].currentText() == "11 (14 Nov 09:12:30)"
+    assert combos["second-11"].currentText() == "11 (16 Nov 15:40:05)"
+
+    tree.send_curve_json()
+    assert sorted((c.name(), c.config.scan_id) for c in wf.curves) == [
+        ("bpm4i-bpm4i-scan-11", "first-11"),
+        ("bpm4i-bpm4i-scan-11-20261116-1540", "second-11"),
+    ]
+
+
+def test_history_curve_by_a_repeated_scan_number_takes_the_newest_scan(
+    qtbot, mocked_client, scan_history_factory, monkeypatch
+):
+    _fake_bridge_factory(monkeypatch)
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_mode = "index"
+    _older, newer = _two_scans_numbered_11(wf, scan_history_factory)
+
+    curve = wf.plot(device_y="bpm4i", signal_y="bpm4i", scan_number=11)
+
+    assert curve.config.scan_id == newer.scan_id
+
+
+def test_live_curve_of_a_device_that_is_not_in_the_session_is_refused(qtbot, mocked_client):
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    with pytest.raises(ValueError, match="not found in current BEC session"):
+        wf.plot(device_y="old_diode", _override_slot_params={"raise_error": True})
+    assert wf.curves == []
 
 
 def test_history_curve_custom_shape_mismatch_keeps_curve(
@@ -4049,3 +4381,27 @@ def test_cleanup_stops_the_view_and_lod_timers(qtbot, mocked_client, monkeypatch
     assert all(timer.isActive() for timer in timers)
     wf.close()  # closing runs cleanup()
     assert not any(timer.isActive() for timer in timers)
+
+
+def test_leaving_device_x_mode_forgets_the_x_entry(qtbot, mocked_client):
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_mode = "samx"
+    assert wf.x_axis_mode["entry"] == "samx"
+    for mode in ("auto", "index", "timestamp"):
+        wf.x_mode = mode
+        assert wf.x_axis_mode["entry"] is None
+
+
+def test_autorange_after_a_zoom_shows_all_the_data_of_a_clipped_curve(qtbot, mocked_client):
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    x = np.arange(10_000, dtype=float)
+    curve = wf.plot(x=x, y=np.sin(x / 500.0) * 10, label="long")
+    curve.setClipToView(True)  # as history and async curves are drawn
+    wf.plot_item.vb.setXRange(1000, 2000, padding=0)
+    qtbot.wait(50)
+
+    wf.auto_range()
+
+    (x0, x1), (y0, y1) = wf.plot_item.vb.viewRange()
+    assert x0 <= 0 and x1 >= 9999
+    assert y0 <= -9.9 and y1 >= 9.9
